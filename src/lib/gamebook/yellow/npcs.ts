@@ -620,18 +620,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: y,
         dialoguesAfter: ["« Assemble ton équipe de fusion sur cet autel-machine. »"],
     })),
-    // === PANNEAU d'entrée de l'Autel (hub Zone de Combat, en 12,9) : signale l'entrée invisible en (13,9). ===
-    {
-        id: "y_autel_panneau",
-        name: "PANNEAU",
-        mapId: "yellow_zone_combat",
-        kind: "static",
-        interaction: "interactive",
-        sprite: { emoji: "🪧", color: "#7c4fc0" },
-        initialX: 12,
-        initialY: 9,
-        dialoguesAfter: ["*Tu lis le panneau.*", "🧬 AUTEL DE LA CHIMÈRE", "Entre par la case à l'EST pour fusionner 2 Daemons."],
-    },
+    // (Panneau y_autel_panneau RETIRÉ : il signalait l'entrée invisible du Dôme en (13,9) et SPOILAIT le mot « fusion ».
+    //   Le Dôme s'atteint désormais par l'échelle de fin de la Grotte du Nexus, sans indice dans la Zone de Combat.)
 
     // === DRESSEURS (combats) — dérivés de data/trainers.ts ===
     ...TRAINER_NPCS,

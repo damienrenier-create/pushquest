@@ -40,20 +40,32 @@ describe("Autel de la Chimère — salle de fusion", () => {
     const autel = YELLOW_MAPS["yellow_combat_autel"]
     const blocked = (m: typeof autel, x: number, y: number) => isBlockingTile(m.tiles[y][x])
 
-    it("la map existe (18×10, sprite fusion) + sortie retour vers le hub sur une case walkable", () => {
+    it("la map existe (18×10, sprite fusion) — PLUS de sortie piéton vers le hub (sanctuaire de fin de grotte)", () => {
         expect(autel).toBeDefined()
         expect([autel.width, autel.height]).toEqual([18, 10])
         expect(autel.backgroundImage ?? "").toContain("fusion_altar")
+        // Le Dôme ne redescend PLUS à pied vers le hub : on en sort par le menu « Téléportation » ou la porte de la Ligue.
         const back = (autel.exits ?? []).find((e) => e.targetMapId === "yellow_zone_combat")
-        expect(back).toBeDefined()
-        expect(blocked(autel, back!.x, back!.y)).toBe(false) // case de sortie praticable
+        expect(back).toBeUndefined()
+        // La porte HAUTE vers la Ligue de Fusion reste ((8,1)(9,1) → yellow_fusion_glace).
+        expect((autel.exits ?? []).some((e) => e.targetMapId === "yellow_fusion_glace")).toBe(true)
     })
 
-    it("l'entrée depuis le hub cible la salle, sur une case walkable, avec spawn walkable", () => {
-        const entry = (z.exits ?? []).find((e) => e.targetMapId === "yellow_combat_autel")
-        expect(entry).toBeDefined()
-        expect(isBlockingTile(z.tiles[entry!.y][entry!.x])).toBe(false)         // (13,9) accessible dans le hub
-        expect(blocked(autel, entry!.targetSpawnX, entry!.targetSpawnY)).toBe(false) // spawn (9,8) pas dans un mur
+    it("on ENTRE au Dôme par l'ÉCHELLE DE FIN de la Grotte (B1F 45,5), plus par le hub (entrée invisible retirée)", () => {
+        // L'ancienne entrée invisible du hub (13,9) est retirée (anti-spoil « fusion »).
+        const hubEntry = (z.exits ?? []).find((e) => e.targetMapId === "yellow_combat_autel")
+        expect(hubEntry).toBeUndefined()
+        // Nouvelle entrée : l'échelle de fin B1F (45,5) → Autel, sur un spawn walkable.
+        const b1f = YELLOW_MAPS["yellow_grotte_nexus_b1f"]
+        const ladder = (b1f.exits ?? []).find((e) => e.x === 45 && e.y === 5 && e.targetMapId === "yellow_combat_autel")
+        expect(ladder).toBeDefined()
+        expect(blocked(autel, ladder!.targetSpawnX, ladder!.targetSpawnY)).toBe(false) // spawn (9,8) hors mur
+    })
+
+    it("la Grotte 1F a une porte de SORTIE (18,39) → hub Zone de Combat", () => {
+        const g1f = YELLOW_MAPS["yellow_grotte_nexus"]
+        const door = (g1f.exits ?? []).find((e) => e.x === 18 && e.y === 39 && e.targetMapId === "yellow_zone_combat")
+        expect(door).toBeDefined()
     })
 
     it("autel central MARCHABLE (couloir vers la Ligue) · entrée Ligue (8,1)(9,1) · murs du décor · 2e porte hub", () => {
@@ -70,7 +82,7 @@ describe("Autel de la Chimère — salle de fusion", () => {
         expect(blocked(autel, 10, 1)).toBe(true)
         expect(blocked(autel, 5, 5)).toBe(true)
         expect(blocked(autel, 12, 5)).toBe(true)
-        // Double porte basse (sortie hub) : (8,9)+(9,9) ouvertes.
+        // Cases basses (8,9)+(9,9) : restent MARCHABLES (déco) mais ne sont PLUS des sorties (retirées → sanctuaire).
         expect(blocked(autel, 8, 9)).toBe(false)
         expect(blocked(autel, 9, 9)).toBe(false)
     })

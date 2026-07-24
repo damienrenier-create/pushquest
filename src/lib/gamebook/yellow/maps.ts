@@ -1155,9 +1155,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         buildings: ZONE_COMBAT_BUILDINGS,
         exits: [
             ...exitsFromBuildings(ZONE_COMBAT_BUILDINGS),
-            // ENTRÉE « AUTEL DE LA CHIMÈRE » (salle de FUSION) : exit brut sur une case walkable OUVERTE (13,9)
-            //   (le hub a un backgroundImage → pas de 4e façade rendue ; panneau PNJ y_autel_panneau en (12,9) pour signaler).
-            { x: 13, y: 9, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+            // (L'ENTRÉE du DÔME DE FUSION N'EST PLUS ICI. On y accède désormais par l'ÉCHELLE DE FIN de la Grotte du
+            //   Nexus — B1F (45,5) — puis, une fois le Dôme atteint 1×, par TÉLÉPORTATION depuis un Centre Daemon.
+            //   L'ancien warp brut (13,9) + le panneau spoiler y_autel_panneau (12,9) sont retirés — anti-spoil « fusion ».)
             // sortie SUD → retour Ville Jaune (cols 9-10, en bas : on repart par où on est arrivé)
             ...[9, 10].map((x) => ({ x, y: ZONE_H - 1, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 23, targetSpawnY: 37 })),
         ],
@@ -1185,9 +1185,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_combat_autel", name: "AUTEL DE LA CHIMÈRE", tiles: buildAutelChimereRoom(), width: 18, height: 10,
         backgroundImage: "/yellow/sprites/fusion_altar.png", backgroundImageWidth: 2752, backgroundImageHeight: 1536, backgroundImageTileSize: 153, // 2752/18 ≈ 153
         exits: [
-            // SORTIE HUB (Zone de Combat) — double porte basse (8,9)+(9,9).
-            { x: 8, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
-            { x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
+            // (Plus de porte-piéton basse vers le hub : le Dôme est le SANCTUAIRE de fin de grotte. On en sort par le
+            //   menu « Téléportation » (→ Centre Ville Jaune / Cendreville) ou par la porte HAUTE (la Ligue Ultime).
+            //   On y ENTRE par l'échelle de fin de la Grotte (B1F 45,5) ou par téléport depuis un Centre.)
             // ENTRÉE LIGUE DE FUSION — seuil de la porte à dragons, cases (8,1)+(9,1). Le gameStore gère le gate
             // d'ouverture (sprite fermé→ouvert) + resetFusionLeagueProgress + lance au palier actif.
             { x: 8, y: 1, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
@@ -1528,8 +1528,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageHeight: 744,
         backgroundImageTileSize: 24,
     },
-    // GROTTE DU NEXUS (casse-tête endgame, Mt. Moon 3 étages) — SÉPARÉE de la GROTTE ROCHEUSE. Accès PAYANT en JC
-    // via le passeur (Zone de Combat), sortie par le MENU. Les 3 sections de grotte_casse_tete.png (2352px = 3×49
+    // GROTTE DU NEXUS (casse-tête endgame, Mt. Moon 3 étages) — SÉPARÉE de la GROTTE ROCHEUSE. Accès PAYANT (50 JC)
+    // via le MARCHAND (Zone de Combat). SORTIES : porte 1F (18,39) → hub · échelle du Dôme (B1F 45,5) · KO d'équipe
+    // (plus de bouton menu « QUITTER »). Les 3 sections de grotte_casse_tete.png (2352px = 3×49
     // tuiles) = 1F (originX 0), B1F (784), B2F (1568). ÉCHELLES : même étiquette = 2 bouts. 1/2/3 relient 1F↔B2F
     // (sautent le B1F), a/b/c/d relient B1F↔B2F, « sortie » (B2F) → Nexus 3. Murs auto-générés + coords d'échelles
     // lues sur les images de solution → À CALER en jeu (debugGrid). Spawn = 1 tuile sous l'échelle d'arrivée (anti re-trigger).
@@ -1547,6 +1548,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F
             ...([[31, 17], [32, 17]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 43, targetSpawnY: 23 })),              // échelle 1 → B1F
             ...([[19, 15], [20, 15]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 25, targetSpawnY: 5 })),               // échelle 2 → B1F
+            // PORTE D'ENTRÉE / SORTIE (le trou du mur bas) : ressort au hub Zone de Combat. Avec le KO d'équipe et
+            //   l'échelle du Dôme (B1F 45,5), c'est l'UNE des 3 seules sorties (le bouton menu « QUITTER » est retiré).
+            //   Trigger sur la SEULE case (18,39) = la case de SPAWN d'entrée : anti-ping-pong (gameStore ne warpe que
+            //   sur un PAS EFFECTIF → pas de re-warp à l'arrivée) ET aucune touche unique depuis le spawn ne fait sortir
+            //   (haut=grotte, bas/gauche=mur, droite=(19,39) cul-de-sac non-exit). On sort en re-marchant sur (18,39).
+            { x: 18, y: 39, targetMapId: "yellow_zone_combat", targetSpawnX: 12, targetSpawnY: 10 },
         ],
     },
     yellow_grotte_nexus_b1f: {
@@ -1567,7 +1574,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 26, y: 37, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 17, targetSpawnY: 32 },  // échelle b → B2F
             { x: 22, y: 19, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 25, targetSpawnY: 22 },  // échelle c → B2F
             { x: 39, y: 5, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 5, targetSpawnY: 12 },    // échelle d → B2F
-            { x: 45, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 },         // SORTIE de la grotte (placeholder Zone de Combat → retarget Nexus 3 quand construit)
+            { x: 45, y: 5, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },          // ÉCHELLE DE FIN → DÔME DE FUSION (Autel de la Chimère) : l'ultime marche de la grotte-casse-tête
         ],
     },
     yellow_grotte_nexus_b2f: {

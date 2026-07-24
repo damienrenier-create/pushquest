@@ -159,6 +159,7 @@ interface GameStore {
     pendingPnj7: boolean // intro de PNJ 7 (Éclaireur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingPnj6: boolean // intro de PNJ 6 (Échangeur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingPnj10: boolean // intro de PNJ 10 (Sentinelle de la Grotte du Nexus) en cours → combat à la fermeture
+    pendingCombatShop: boolean // intro ONE-TIME du MARCHAND en cours → ouvre la boutique JC à la fermeture du dialogue
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingAquilordTrade: string | null // uid de l'Aquilothan → Aquilord (BROCANTEUR, service premium live) à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
@@ -173,6 +174,8 @@ interface GameStore {
     pressA: () => void
     pressB: () => void
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
+    /** DÔME DE FUSION → CENTRE DAEMON (menu « Téléportation ») : pose interiorReturn sur la ville choisie pour une sortie correcte. */
+    teleportToHealCenter: (city: "yellow_entrance" | "yellow_cendreville") => void
     /** Lance directement le REMATCH d'un dresseur (boss à 2 phases : enchaîne phase 2 après phase 1). */
     launchRematch: (trainerId: string) => void
     hydrate: (loaded: PlayerState) => void
@@ -214,6 +217,17 @@ function scheduleSave(player: PlayerState) {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => postPos(player), 3000) // PAS des déplacements → débounce anti-trafic Neon
 }
+
+// MARCHAND (hub Zone de Combat) — présentation ONE-TIME avant la 1re ouverture de boutique : il est le SEUL accès à
+//   la Grotte du Nexus → à l'ULTIME ÉPREUVE. Marker dans defeatedTrainers (additif, 0 migration). Ne dit JAMAIS « fusion ».
+const MERCHANT_INTRO_MARKER = "y_combat_merchant_intro"
+const MERCHANT_NAME = "MARCHAND"
+const MERCHANT_INTRO_LINES = [
+    "*Le marchand se penche vers toi et baisse la voix.*",
+    "Tu veux aller plus loin que les autres ? Je suis le SEUL à pouvoir t'ouvrir la Grotte du Nexus.",
+    "Au bout de ce dédale se tapit l'ULTIME ÉPREUVE… la LIGUE ULTIME. Rares sont ceux qui en reviennent.",
+    "Alors ? On fait affaire ?",
+]
 
 /** Sauvegarde IMMÉDIATE de la position (transitions de map : rares mais critiques). Évite la DÉSYNC
  *  position↔flags si le joueur recharge juste après un warp — ex. whiteout Ligue → infirmerie : la
@@ -644,6 +658,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingPnj7: false,
     pendingPnj6: false,
     pendingPnj10: false,
+    pendingCombatShop: false,
     pendingHhTrade: null,
     pendingAquilordTrade: null,
     pendingCaveTrade: null,
@@ -1176,6 +1191,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: doCaveTrade(get().pendingCaveTrade!), pendingCaveTrade: null })
                 } else if (get().pendingHhCollector) {
                     set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
+                } else if (get().pendingCombatShop) {
+                    set({ dialogue: null, combatShopOpen: true, pendingCombatShop: false }) // fin de l'intro marchand → boutique
                 } else {
                     set({ dialogue: null })
                 }
@@ -1345,9 +1362,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Marchand de Jetons de Combat (hub Zone de Combat) : ouvre la boutique JC.
+        // Marchand de Jetons de Combat (hub Zone de Combat). 1re rencontre : il se présente (SEUL accès à la Grotte →
+        //   à l'ultime épreuve), puis la boutique s'ouvre à la fermeture du dialogue (pendingCombatShop). Ensuite : boutique directe.
         if (npc.id === "y_combat_merchant") {
-            set({ combatShopOpen: true })
+            if (!isTrainerDefeated(MERCHANT_INTRO_MARKER)) {
+                markTrainerDefeated(MERCHANT_INTRO_MARKER)
+                persistYellowSave()
+                set({ dialogue: { npcId: npc.id, npcName: MERCHANT_NAME, lineIndex: 0, lines: MERCHANT_INTRO_LINES }, pendingCombatShop: true })
+            } else {
+                set({ combatShopOpen: true })
+            }
             return
         }
 
@@ -1802,6 +1826,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: caveTradeConfig(getActiveWorld() === "run3").cancel }, pendingCaveTrade: null })
         } else if (get().pendingHhCollector) {
             set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
+        } else if (get().pendingCombatShop) {
+            set({ dialogue: null, combatShopOpen: true, pendingCombatShop: false }) // Ⓑ pendant l'intro marchand → ouvre quand même la boutique (comme Ⓐ), sinon le flag resterait collé
         } else {
             set({ dialogue: null })
         }
@@ -1824,6 +1850,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
+    },
+
+    teleportToHealCenter: (city) => {
+        // DÔME DE FUSION → CENTRE DAEMON (menu « Téléportation »). L'intérieur du Centre est PARTAGÉ entre les villes :
+        //   on pose interiorReturn sur la ville choisie → la porte de sortie ramène à la BONNE ville (Ville Jaune / Cendreville).
+        const map = YELLOW_MAPS["yellow_infirmary"]
+        const player = createInitialPlayer("yellow_infirmary", 7, 7, "up")
+        const interiorReturn = city === "yellow_cendreville"
+            ? { mapId: "yellow_cendreville", x: 19, y: 25 }
+            : { mapId: YELLOW_ENTRANCE_MAP_ID, x: 26, y: 27 }
+        ukognofyChainArmed = false
+        set({ map, player, dialogue: null, interiorReturn })
+        saveNow(player) // transition de map → persistance immédiate (cohérent avec setMap)
     },
 
     launchRematch: (trainerId) => {

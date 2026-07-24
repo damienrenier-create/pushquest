@@ -238,6 +238,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const dialogue = useGameStore((s) => s.dialogue)
     const pendingNgplusAbandon = useGameStore((s) => s.pendingNgplusAbandon) // NG+ : offre d'abandon CHEN → confirmation
     const setMap = useGameStore((s) => s.setMap)
+    const teleportToHealCenter = useGameStore((s) => s.teleportToHealCenter)
     const launchRematch = useGameStore((s) => s.launchRematch)
     const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
@@ -953,8 +954,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (whiteout && !battle) {
             const aceTaunt = getAceLossTaunt() // lu AVANT clearWhiteout (qui l'efface) — null si défaite hors ACE
-            if (mapPlayer.mapId.startsWith("yellow_ligue_")) resetLigueProgress()
-            setMap("yellow_infirmary", 4, 3)
+            if (mapPlayer.mapId.startsWith("yellow_fusion_")) {
+                setMap("yellow_combat_autel", 9, 8) // KO en LIGUE DE FUSION → retour au DÔME DE FUSION (Autel), pas au Centre
+            } else {
+                if (mapPlayer.mapId.startsWith("yellow_ligue_")) resetLigueProgress()
+                setMap("yellow_infirmary", 4, 3)
+            }
             persistYellowSave()
             clearWhiteout()
             if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
@@ -1743,8 +1748,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setMenu("none") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
-                        {!battle && mapPlayer.mapId === "yellow_grotte_nexus" && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#c9a26b", color: "#e8c48f" }} onClick={() => { setMenu("none"); setMap("yellow_zone_combat", 12, 10) }}>🕳️ QUITTER LA GROTTE</button>
+                        {/* (Bouton « QUITTER LA GROTTE » RETIRÉ : on ne sort de la grotte que par la porte d'entrée
+                            (1F 18-19,39), l'échelle du Dôme (B1F 45,5) ou un KO d'équipe.) */}
+                        {/* TÉLÉPORTATION — dans le DÔME DE FUSION : retour à un Centre Daemon (Ville Jaune / Cendreville). */}
+                        {!battle && mapPlayer.mapId === "yellow_combat_autel" && (
+                            <>
+                                <button style={{ ...menuBtnStyle, borderColor: "#b98aff", color: "#d9b8ff" }} onClick={() => { setMenu("none"); teleportToHealCenter("yellow_entrance") }}>🌀 Téléport → Centre Ville Jaune</button>
+                                <button style={{ ...menuBtnStyle, borderColor: "#b98aff", color: "#d9b8ff" }} onClick={() => { setMenu("none"); teleportToHealCenter("yellow_cendreville") }}>🌀 Téléport → Centre Cendreville</button>
+                            </>
+                        )}
+                        {/* TÉLÉPORTATION — dans un CENTRE DAEMON, une fois le Dôme atteint 1× : retour direct au Dôme de Fusion. */}
+                        {!battle && mapPlayer.mapId === "yellow_infirmary" && player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#b98aff", color: "#d9b8ff" }} onClick={() => { setMenu("none"); setMap("yellow_combat_autel", 9, 8) }}>🌀 Téléport → Dôme de Fusion</button>
                         )}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
