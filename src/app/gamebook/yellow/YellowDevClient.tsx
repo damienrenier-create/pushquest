@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -351,6 +351,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
     const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
     const [ghostFight, setGhostFight] = useState<{ ghost: Run2Ghost; enemy: MonInstance[] } | null>(null)
+    const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
+    const [keepSel, setKeepSel] = useState<Set<string>>(new Set())
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
@@ -1583,14 +1585,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const label = run === "run1" ? "Run 1" : run === "run2" ? "Run 2" : "Run 3"
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             "*Le Dieu Spaghetti claque des doigts. Une bulle dorée t'enveloppe, hors du temps…*",
-            `« REJEU du ${label} ! Une seconde chance : bats ton score et complète ton Pokédex — tout ce que tu captures ici RESTE à jamais dans ta collection. »`,
+            `« REJEU du ${label} ! Une seconde chance : bats ton score et complète ton Pokédex (les ESPÈCES vues ici restent cochées à jamais). »`,
             "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² », à côté de l'ancien. »",
-            "« Sors quand tu veux (Menu → 🚪) : ton score² sera alors figé. Bonne chance, champion ! 🍝 »",
+            "« Et surtout : à la SORTIE, tu pourras RAMENER dans ton vrai monde autant de DAEMONS que de BADGES gagnés ici (+1 si tu bats la Ligue) — à choisir parmi ton équipe et ton PC. Le reste sera perdu. »",
+            "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé et tu choisiras tes Daemons à garder. Bonne chance, champion ! 🍝 »",
         ])
     }
 
     // REJEU — SORT de la bulle : fige le score « bis » au classement (POST) puis restaure le vrai monde INTACT.
-    const doExitReplay = async () => {
+    const doExitReplay = async (keep: MonInstance[] = []) => {
         const run = getReplayRun()
         if (run) {
             try {
@@ -1612,9 +1615,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             } catch { /* hors-ligne au moment de sortir : le score² de cette tentative n'est pas figé (perdu). Rare — refais un rejeu en ligne. */ }
         }
         await exitReplay()
+        // RAMENER dans la vraie save les Daemons choisis (uids déjà re-tagués anti-collision côté modale) : addCaught
+        //   les met en équipe s'il reste de la place, sinon au PC. Puis persistance immédiate (anti-désync).
+        let brought = 0
+        for (const m of keep) { addCaught(m); brought++ }
+        if (brought > 0) persistYellowSaveNow()
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
-        setToast("🚪 Rejeu terminé — ton score² est figé au classement. De retour dans ton vrai monde !")
+        setToast(brought > 0
+            ? `🚪 Rejeu terminé — ${brought} Daemon${brought > 1 ? "s" : ""} ramené${brought > 1 ? "s" : ""} (équipe/PC) + score² figé !`
+            : "🚪 Rejeu terminé — ton score² est figé au classement. De retour dans ton vrai monde !")
     }
 
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
@@ -1808,7 +1818,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             SALLE DORÉE (porte droite du trône après le Maître, run 2). Plus de raccourci menu. */}
                         {/* REJEU (« run bis ») — rejouer un run terminé (bulle isolée) : sortir du rejeu, ou en lancer un. */}
                         {!battle && activeWorld === "replay" && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" }} onClick={doExitReplay}>🚪 SORTIR DU REJEU (figer mon score²)</button>
+                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" }} onClick={() => {
+                                // Au moment de sortir, on ouvre la modale « ramener des Daemons » (X = badges gagnés dans le rejeu + 1 si Ligue battue).
+                                const max = getPlayer().badges.length + (getPlayer().isChampion ? 1 : 0)
+                                if (max <= 0) { doExitReplay(); return } // aucun badge gagné → rien à ramener, sortie directe
+                                setKeepSel(new Set()); setReplayKeep({ max, mons: [...getPlayer().team, ...getPlayer().pc] }); setMenu("none")
+                            }}>🚪 SORTIR DU REJEU (choisir mes Daemons à garder)</button>
                         )}
                         {!battle && activeWorld !== "replay" && resetStep === 0 && (getPlayer().ngplusUsed || getPlayer().run3Used || player.isChampion) && (
                             <button style={menuBtnDimStyle} onClick={() => setReplayMenu(true)}>🔁 REJOUER UN RUN</button>
@@ -3910,6 +3925,50 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }}
                     onCancel={() => setGhostFight(null)}
                 />
+            )}
+
+            {/* REJEU — MODALE « RAMENER DES DAEMONS » : à la sortie, garder jusqu'à X (= badges gagnés + 1 si Ligue)
+                Daemons choisis parmi l'équipe + le PC du rejeu ; le reste est perdu. */}
+            {replayKeep && !battle && (
+                <div style={menuOverlayStyle}>
+                    <div style={{ ...menuBoxStyle, maxHeight: "88%", overflowY: "auto" }}>
+                        <div style={menuTitleStyle}>🎁 RAMENER DES DAEMONS</div>
+                        <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", lineHeight: 1.4, marginBottom: 8 }}>
+                            Tu peux ramener jusqu&apos;à <b>{replayKeep.max}</b> Daemon{replayKeep.max > 1 ? "s" : ""} (1 par badge gagné + 1 si Ligue battue) dans ton vrai monde. Choisis parmi ton équipe et ton PC — <b>le reste sera perdu</b>.
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, textAlign: "center", marginBottom: 6, color: keepSel.size >= replayKeep.max ? "#c9a227" : "#e8e8ee" }}>Sélectionnés : {keepSel.size} / {replayKeep.max}</div>
+                        {replayKeep.mons.length === 0 && <div style={{ fontSize: 11, opacity: 0.6, textAlign: "center", padding: 8 }}>(Aucun Daemon dans ce rejeu.)</div>}
+                        {replayKeep.mons.map((m) => {
+                            const sp = getSpecies(m.speciesId)
+                            const sel = keepSel.has(m.uid)
+                            const full = keepSel.size >= replayKeep.max
+                            return (
+                                <button key={m.uid} style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: sel ? "#3ad06a" : undefined, opacity: (!sel && full) ? 0.45 : 1 }} onClick={() => {
+                                    setKeepSel((prev) => {
+                                        const next = new Set(prev)
+                                        if (next.has(m.uid)) next.delete(m.uid)
+                                        else if (next.size < replayKeep.max) next.add(m.uid)
+                                        return next
+                                    })
+                                }}>
+                                    <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                        <span>{sel ? "✅ " : "⬜ "}{displayName(m)}{m.shiny ? " ✨" : ""}</span>
+                                        <span style={{ opacity: 0.75, whiteSpace: "nowrap" }}>N.{m.level} · {(sp?.types ?? []).join("/")}</span>
+                                    </span>
+                                </button>
+                            )
+                        })}
+                        <button style={{ ...menuBtnStyle, borderColor: "#3ad06a", color: "#3ad06a", marginTop: 8 }} onClick={() => {
+                            const chosen = [...keepSel]
+                                .map((uid) => replayKeep.mons.find((m) => m.uid === uid))
+                                .filter((m): m is MonInstance => !!m)
+                                .map((m, i) => ({ ...m, uid: `bis${i}-${m.uid}` })) // anti-collision d'uid avec la vraie save
+                            setReplayKeep(null)
+                            doExitReplay(chosen)
+                        }}>✅ Garder {keepSel.size} Daemon{keepSel.size > 1 ? "s" : ""} et sortir</button>
+                        <button style={menuBtnDimStyle} onClick={() => { setReplayKeep(null); doExitReplay([]) }}>Ne rien garder et sortir</button>
+                    </div>
+                </div>
             )}
 
             {!battle && evolutions.length === 0 && championRun && (
