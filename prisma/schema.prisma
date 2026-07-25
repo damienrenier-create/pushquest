@@ -452,6 +452,7 @@ model FrontierProfile {
   factoryBest Int      @default(0)    // meilleure série Usine
   domeBest    Int      @default(0)    // meilleur résultat Dôme (rounds gagnés)
   symbols     Json     @default("[]") // symboles de prestige obtenus (cosmétique)
+  replaysUsed Int      @default(0)    // nb de REJEUX (« run bis ») déjà lancés → coût JC croissant du prochain (global, cf. data/replayCost)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

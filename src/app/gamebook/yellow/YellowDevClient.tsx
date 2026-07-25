@@ -74,7 +74,8 @@ import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/game
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
-import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { postRecordRun, postReplaySpend, fetchFrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, frontierEnergyRefund, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
@@ -417,6 +418,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [resetStep, setResetStep] = useState(0)
     // REJEU (« run bis ») — overlay de lancement (choix du run) + sous-choix du starter (run2 = Daemon custom, run3 = 3 lignées).
     const [replayMenu, setReplayMenu] = useState(false)
+    const [replayNextCost, setReplayNextCost] = useState<number | null>(null) // coût JC du PROCHAIN rejeu (affiché à l'ouverture du menu)
+    useEffect(() => {
+        if (!replayMenu) return
+        fetchFrontierProfile().then((p) => setReplayNextCost(replayCost(p.replaysUsed))).catch(() => setReplayNextCost(null))
+    }, [replayMenu])
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
     // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
@@ -1578,6 +1584,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // REJEU (« run bis ») — lance un rejeu ISOLÉ (bulle jetable, cf. saveManager.startReplay). run1 = intro ;
     //   run2/run3 = starter fourni. Le VRAI monde reste intact ; le score « Pseudo² » apparaît au classement.
     const doStartReplay = async (run: "run1" | "run2" | "run3", starter: ReturnType<typeof createMonInstance> | null = null) => {
+        if (getActiveWorld() !== "replay") {
+            // COÛT du rejeu : JC croissant, 1er gratuit (compteur GLOBAL côté serveur). "insufficient" → on bloque ;
+            //   "no-table"/"error" (avant db:push / hors-ligne) → on laisse passer GRATUITEMENT (dégradation propre).
+            const rc = await postReplaySpend()
+            if (!rc.ok && rc.reason === "insufficient") { setToast(`Rejeu : ${rc.cost} JC requis (tu as ${rc.jc}). Farme la Zone de Combat !`); return }
+        }
         const ok = await startReplay(run, starter)
         if (!ok) { setToast(run === "run1" ? "Rejeu impossible pour l'instant." : "Il te faut un Daemon de départ."); return }
         setReplayMenu(false); setReplayPickRun(null); setMenu("none")
@@ -2946,8 +2958,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => setReplayMenu(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔁 REJOUER UN RUN</div>
-                        <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 8, lineHeight: 1.35 }}>
+                        <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 6, lineHeight: 1.35 }}>
                             Rejoue un run terminé dans une BULLE isolée : améliore ton score et complète ton Pokédex. Ton vrai monde reste INTACT ; ton score apparaît au classement sous « {nickname || "Toi"}² ».
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 800, textAlign: "center", marginBottom: 8, color: replayNextCost ? "#c9a227" : "#3ad06a" }}>
+                            💠 Prochain rejeu : {replayNextCost === null ? "…" : replayNextCost === 0 ? "GRATUIT" : `${replayNextCost} JC`}
                         </div>
                         <button style={menuBtnStyle} onClick={() => void doStartReplay("run1")}>🏅 Rejouer le RUN 1</button>
                         {getPlayer().ngplusUsed && (

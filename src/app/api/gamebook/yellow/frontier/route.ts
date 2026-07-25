@@ -13,6 +13,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 
 export const dynamic = "force-dynamic"
 
@@ -33,6 +34,7 @@ function pickProfile(p: any) {
         factoryBest: p?.factoryBest ?? 0,
         domeBest: p?.domeBest ?? 0,
         symbols: Array.isArray(p?.symbols) ? p.symbols : [],
+        replaysUsed: p?.replaysUsed ?? 0,
     }
 }
 
@@ -99,8 +101,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: true, jc: saved.jc, symbols: pickProfile(saved).symbols })
         }
 
+        if (action === "replaySpend") {
+            // REJEU (« run bis ») : coût JC CROISSANT (server-authoritative) selon replaysUsed (compteur GLOBAL).
+            //   1er rejeu gratuit. Débit du coût + incrément du compteur, ATOMIQUES. Refus si solde insuffisant.
+            const existing = await fp.findUnique({ where: { userId: auth.userId } })
+            const used = existing?.replaysUsed ?? 0
+            const cost = replayCost(used)
+            const jc = existing?.jc ?? 0
+            if (jc < cost) return NextResponse.json({ ok: false, reason: "insufficient", jc, cost })
+            const saved = await fp.upsert({
+                where: { userId: auth.userId },
+                create: { userId: auth.userId, jc: Math.max(0, jc - cost), replaysUsed: used + 1 },
+                update: { jc: jc - cost, replaysUsed: used + 1 },
+            })
+            return NextResponse.json({ ok: true, jc: saved.jc, replaysUsed: saved.replaysUsed, cost })
+        }
+
         return NextResponse.json({ error: "Bad action" }, { status: 400 })
     } catch {
-        return NextResponse.json({ ok: false, reason: "no-table" }) // table pas encore créée → neutre
+        return NextResponse.json({ ok: false, reason: "no-table" }) // table/champ pas encore créé → neutre (rejeu gratuit avant db:push)
     }
 }

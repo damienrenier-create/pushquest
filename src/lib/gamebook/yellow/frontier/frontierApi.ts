@@ -12,9 +12,10 @@ export interface FrontierProfile {
     factoryBest: number
     domeBest: number
     symbols: string[]
+    replaysUsed: number
 }
 
-const EMPTY: FrontierProfile = { jc: 0, towerBest: 0, factoryBest: 0, domeBest: 0, symbols: [] }
+const EMPTY: FrontierProfile = { jc: 0, towerBest: 0, factoryBest: 0, domeBest: 0, symbols: [], replaysUsed: 0 }
 
 export async function fetchFrontierProfile(): Promise<FrontierProfile> {
     try {
@@ -49,4 +50,25 @@ export async function postSpend(amount: number, symbol?: string): Promise<{ ok: 
         const j = await r.json()
         return { ok: !!j?.ok, jc: typeof j?.jc === "number" ? j.jc : 0, symbols: Array.isArray(j?.symbols) ? j.symbols : undefined }
     } catch { return { ok: false, jc: 0 } }
+}
+
+/** REJEU (« run bis ») : débite le coût JC CROISSANT du prochain rejeu (calculé serveur) + incrémente le compteur global.
+ *  `reason: "insufficient"` = pas assez de JC ; "no-table"/"error" = champ pas encore créé / réseau → l'appelant laisse
+ *  passer le rejeu GRATUITEMENT (dégradation propre avant db:push). */
+export async function postReplaySpend(): Promise<{ ok: boolean; jc: number; replaysUsed: number; cost: number; reason?: string }> {
+    try {
+        const r = await fetch(BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "replaySpend" }),
+        })
+        const j = await r.json()
+        return {
+            ok: !!j?.ok,
+            jc: typeof j?.jc === "number" ? j.jc : 0,
+            replaysUsed: typeof j?.replaysUsed === "number" ? j.replaysUsed : 0,
+            cost: typeof j?.cost === "number" ? j.cost : 0,
+            reason: typeof j?.reason === "string" ? j.reason : undefined,
+        }
+    } catch { return { ok: false, jc: 0, replaysUsed: 0, cost: 0, reason: "error" } }
 }
