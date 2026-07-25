@@ -864,7 +864,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
-            if (championRun || arenaFight || pendingLearn || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
+            if (championRun || arenaFight || ghostFight || replayKeep || pendingLearn || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
             // En combat, menu pause ouvert → le D-pad/A pilotent le menu (tactile), pas le combat.
             const inBMenu = inB && menu !== "none"
@@ -3962,7 +3962,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             const chosen = [...keepSel]
                                 .map((uid) => replayKeep.mons.find((m) => m.uid === uid))
                                 .filter((m): m is MonInstance => !!m)
-                                .map((m, i) => ({ ...m, uid: `bis${i}-${m.uid}` })) // anti-collision d'uid avec la vraie save
+                                .map((m, i) => ({ ...m, uid: `bis-${Date.now()}-${i}-${m.uid}` })) // uid RÉELLEMENT unique (Date.now par sortie + index) → aucune collision entre 2 rejeux (revue : bis<i>- se répétait au reload → doublons → perte via échange)
                             setReplayKeep(null)
                             doExitReplay(chosen)
                         }}>✅ Garder {keepSel.size} Daemon{keepSel.size > 1 ? "s" : ""} et sortir</button>
