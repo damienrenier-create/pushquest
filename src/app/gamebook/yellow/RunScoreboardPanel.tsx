@@ -67,11 +67,14 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const renderRow = (r: ScoreRow, rankIdx: number) => {
         const canExpand = tab === "run2" && Array.isArray(r.factors) && r.factors!.length > 0
         const clickable = !!r.userId
-        const open = expanded === (r.userId ?? "")
+        // Clé d'expand UNIQUE par ligne : un joueur en rejeu a 2 lignes run 2 (original + « ² ») avec le MÊME userId
+        //   → utiliser userId seul déplierait les deux. Le pseudo (« Bob » vs « Bob² ») les désambiguïse.
+        const rowKey = `${r.userId ?? ""}::${r.nickname}`
+        const open = expanded === rowKey
         return (
-            <div key={`${r.userId ?? r.nickname}-${rankIdx}`}>
+            <div key={`${rowKey}-${rankIdx}`}>
                 <div style={{ ...row, background: r.me ? "rgba(79,214,208,0.14)" : rankIdx < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)", border: r.me ? "1px solid rgba(79,214,208,0.5)" : "1px solid transparent", cursor: canExpand || clickable ? "pointer" : "default" }}
-                    onClick={() => { if (canExpand) setExpanded(open ? null : (r.userId ?? "")); else openProfile(r) }}>
+                    onClick={() => { if (canExpand) setExpanded(open ? null : rowKey); else openProfile(r) }}>
                     <span style={rank}>{medal(rankIdx)}</span>
                     <span style={name}>{r.nickname}{r.me ? " ★" : ""}</span>
                     {r.live !== undefined && (

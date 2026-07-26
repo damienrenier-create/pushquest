@@ -1056,8 +1056,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // ÉNERGIE en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps) — sert au FLAVOR de
             // l'offre run 3 (« X⚡ en réserve »), PAS au classement.
             const ngplusScore = getPlayer().reps
-            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 de PERFORMANCE (3 facteurs : % victoire ×500,
-            //   Pokédex ×400, Σ niveaux ×100 — énergie & pas RETIRÉS) — surtout PAS l'énergie brute (grind poker).
+            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 de PERFORMANCE (3 facteurs : Pokédex ×500,
+            //   % victoire ×300, Σ niveaux ×200 — énergie & pas RETIRÉS) — surtout PAS l'énergie brute (grind poker).
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
             // La clôture est un dernier échantillon : on grave le PIC du run avant de figer le recap.
             recordStatMax("run2BestGrade", computeRunScores().grade)

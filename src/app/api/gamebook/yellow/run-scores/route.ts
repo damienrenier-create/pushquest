@@ -197,11 +197,13 @@ export async function GET() {
                         }
                     }
                 }
-                // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
-                const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
-                const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
-                if (duels > 0) duelsMap.set(s.userId, { nickname, wins: duels })
             }
+            // Duels : reflets battus = SOMME du compteur sur les 3 mondes. HORS gate viewerDone : les duels/reflets
+            //   sont une feature du RUN 1 (l'onglet DUELS est visible dès le run 1) et un simple compteur de reflets
+            //   ne révèle l'existence d'aucun run suivant → classement Duelliste visible pour tous, comme RUN 1.
+            const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
+            const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
+            if (duels > 0) duelsMap.set(s.userId, { nickname, wins: duels })
         }
     } catch { /* lecture saves impossible → on s'appuiera sur la table seule */ }
 

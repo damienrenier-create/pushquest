@@ -45,7 +45,7 @@ export default function PlayerBadgesModal({ userId, nickname, close }: { userId:
     const earned = new Set(data?.earnedIds ?? [])
 
     return (
-        <div style={S.overlay} onClick={close}>
+        <div style={S.overlay} onClick={(e) => { e.stopPropagation(); close() }}>
             <div style={S.panel} onClick={(e) => e.stopPropagation()}>
                 <div style={S.header}>
                     <div>
