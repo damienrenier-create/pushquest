@@ -475,7 +475,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     row.map((_t, x) => {
                         const d = Math.max(Math.abs(x - player.posX), Math.abs(y - player.posY))
                         if (d <= visionRadius) return null
-                        if (x < cam.x - 1 || x > cam.x + 10 || y < cam.y - 1 || y > cam.y + 9) return null // hors viewport 10×9 → inutile de darkener (perf sur grande map ex. Grotte 49×42)
+                        if (x < cam.x - 1 || x > cam.x + VIEWPORT_W || y < cam.y - 1 || y > cam.y + VIEWPORT_H) return null // hors viewport (15×10) + 1 marge → couvre TOUT l'écran (perf : on ne darken pas la map entière ex. Grotte 49×42)
                         return (
                             <div
                                 key={`dark-${x}-${y}`}

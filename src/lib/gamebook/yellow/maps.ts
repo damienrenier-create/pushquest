@@ -1544,7 +1544,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 0, backgroundImageOriginY: 0,
-        debugGrid: true, // rencontres ACTIVES (zone ZONES.yellow_grotte_nexus) — B1F/B2F restent sans zone → sans rencontre
+        debugGrid: false, // grille de calage COUPÉE pour les joueurs (?grid=1 en dev si besoin). N.B. les rencontres = ZONES, rien à voir avec debugGrid
         // Topologie (Sartay) : 1F ↔ B1F via les échelles 1/2/3 (un trigger par case d'échelle).
         exits: [
             ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F
@@ -1567,7 +1567,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 784, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: false, // rencontres ACTIVES par BIOTOPE (cf. ZONES.yellow_grotte_nexus_b1f.rects)
+        debugGrid: false, encountersPaused: false, // grille COUPÉE (?grid=1 en dev) ; rencontres ACTIVES par BIOTOPE (cf. ZONES.yellow_grotte_nexus_b1f.rects)
         // B1F = étage pivot : échelles 1/2/3 remontent en 1F, a/b/c/d descendent en B2F, et (45,5) SORT de la grotte.
         exits: [
             ...([[3, 3], [3, 4]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 8 })),          // échelle 3 → 1F
@@ -1589,7 +1589,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 1568, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: false, // rencontres ACTIVES (cf. ZONES.yellow_grotte_nexus_b2f) : créations catchables + finales puissantes niv 75
+        debugGrid: false, encountersPaused: false, // grille COUPÉE (?grid=1 en dev) ; rencontres ACTIVES (cf. ZONES.yellow_grotte_nexus_b2f) : créations catchables + finales puissantes niv 75
         // B2F = fond de la grotte : a/b/c/d remontent en B1F (un trigger par case d'échelle).
         exits: [
             ...([[31, 12], [32, 12]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 17, targetSpawnY: 6 })),                                     // échelle a → B1F
