@@ -2939,8 +2939,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",
                                     `Ton score final : ${score}. Il rejoint le grand registre du Nexus — sauras-tu le battre un jour ?`,
-                                    "En cet instant, tes TROIS destins fusionnent : run 1, run 2 et run 3 n'en font plus qu'un.",
-                                    "Ton équipe du concours règne désormais sur le Nexus unifié, et tous tes anciens Daemons t'attendent au PC. Le cycle est bouclé, Maître. 🍝",
+                                    "En cet instant, tes TROIS vies FUSIONNENT : run 1, run 2 et run 3 n'en font plus qu'un seul monde unifié.",
+                                    "➡️ TOUT ce que tu as entraîné t'attend : file au PC d'un Centre Daemon — tes anciennes équipes, tes captures et tes fusions des TROIS runs y sont TOUTES réunies. Tes objets et tes CT aussi, dans ton sac.",
+                                    "🧬 À toi de composer ton ÉQUIPE IDÉALE : pioche le meilleur de chacune de tes vies pour bâtir la team ultime.",
+                                    "⚔️ Puis reprends l'aventure là où tu l'avais laissée — va défier SYLVEBARBE et les dresseurs les plus aguerris du Nexus. La suite du monde t'attend, Maître ! 🍝",
                                 ])
                             })
                         }}>🌀 MÉGA-FUSION</button>
