@@ -32,9 +32,9 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
 
         // --- facteurs de la note /1000 ---
         const dexTotal = visibleDexSpecies(caught, true, true).length
-        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 500))            // 90 V / 100 décisifs → 450
-        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 400)) // 4 espèces / dex visible
-        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 100))            // Σ90 / 600 → 15
+        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 300))            // 90 V / 100 décisifs → 270
+        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 500)) // 4 espèces / dex visible
+        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 200))            // Σ90 / 600 → 30
         expect(sc.factors.find((f) => f.key === "frugality")).toBeUndefined()    // frugalité RETIRÉE de la note run 2
         expect(sc.factors.find((f) => f.key === "steps")).toBeUndefined()        // le facteur « pas » n'existe plus en run 2
 
@@ -42,9 +42,9 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
         expect(sc.grade).toBe(sc.factors.reduce((s, f) => s + f.points, 0))
     })
 
-    it("% de victoire = 100% (500 pts) si jamais mis KO", () => {
+    it("% de victoire = 100% (300 pts) si jamais mis KO", () => {
         hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), wins: 40, teamKos: 0 } })
-        expect(pts(computeRunScores(), "winrate")).toBe(500)
+        expect(pts(computeRunScores(), "winrate")).toBe(300)
     })
 
     it("l'énergie consommée n'entre PLUS dans le score du run 2 (frugalité retirée)", () => {
@@ -67,12 +67,12 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
     })
 
     it("regradeRun2FromFactors : re-note un score figé sous les poids COURANTS, ignore frugality/steps", () => {
-        // Facteurs ANCIENNE formule (le ratio [0,1] est indépendant de la formule) → re-notés 500/400/100.
+        // Facteurs ANCIENNE formule (le ratio [0,1] est indépendant de la formule) → re-notés 300/500/200.
         const oldFactors = [
             { key: "winrate", ratio: 0.9 }, { key: "species", ratio: 0.5 }, { key: "levels", ratio: 0.25 },
             { key: "frugality", ratio: 0.6 }, { key: "steps", ratio: 0.8 },
         ]
-        expect(regradeRun2FromFactors(oldFactors)).toBe(675) // 0.9*500 + 0.5*400 + 0.25*100, frugality/steps ignorés
+        expect(regradeRun2FromFactors(oldFactors)).toBe(570) // 0.9*300 + 0.5*500 + 0.25*200, frugality/steps ignorés
         expect(regradeRun2FromFactors(null)).toBeNull()
         expect(regradeRun2FromFactors([])).toBeNull()
         expect(regradeRun2FromFactors([{ key: "frugality", ratio: 0.9 }])).toBeNull() // aucun axe noté → null (garde r.score)
