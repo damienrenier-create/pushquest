@@ -99,7 +99,7 @@ function replayScoreFromBubble(w: unknown, run: string): { score: number; factor
     return run1BadgeScore(world, caught)
 }
 
-interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }
+interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }
 
 export const dynamic = "force-dynamic"
 
@@ -141,9 +141,11 @@ async function viewerHasFinishedRun1(userId: string): Promise<boolean> {
 export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
-    if (!(await viewerHasFinishedRun1(auth.userId))) {
-        return NextResponse.json({ ok: true, gated: true, run1: [], run2: [], run3: [], duels: [] }) // pas encore ≥5 badges run 1
-    }
+    // RUN 1 accessible à TOUS les joueurs Nexus Jaune (dès le run 1) : le top-10 « découverte » + les profils
+    // cliquables (hauts faits) doivent être visibles même en cours de run 1. Les onglets RUN 2/3/Survie/Duels ne
+    // sont peuplés QUE pour un spectateur ayant FINI le run 1 (≥5 badges) — anti-spoiler (un joueur run 1 ne doit
+    // pas apprendre l'existence des runs suivants). Le client masque ces onglets tant qu'il n'y a pas accès.
+    const viewerDone = await viewerHasFinishedRun1(auth.userId)
 
     const run1Map = new Map<string, LeaderEntry>()
     const run2Map = new Map<string, LeaderEntry>()
@@ -168,35 +170,38 @@ export async function GET() {
             const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
             // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
             const r1 = run1FromWorld(f)
-            if (r1) run1Map.set(s.userId, { nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
-            // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
-            const r2 = run2FromWorld(f.ngplusWorld)
-            if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps })
-            // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
-            const r3 = run3FromWorld(f.run3World)
-            if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
-            const r3e = run3EnergyFromWorld(f.run3World) // score « Survivant » (énergie conservée)
-            if (r3e !== null) run3EnergyMap.set(s.userId, { nickname, score: r3e, wonAt: null, factors: null, live: world === "run3" })
-            // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une
-            //   clé distincte (userId:bis) → il COEXISTE avec l'original gelé (déjà pullé ci-dessus depuis les mondes
-            //   réels stashés). Les deux scores s'affichent, comme demandé.
-            if (world === "replay" && f.replayWorld && typeof f.replayRun === "string") {
-                const rb = replayScoreFromBubble(f.replayWorld, f.replayRun)
-                if (rb) {
-                    const target = f.replayRun === "run3" ? run3Map : f.replayRun === "run2" ? run2Map : run1Map
-                    target.set(s.userId + ":bis", { nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps })
-                    // REJEU run 3 : le score « Survivant² » de la bulle alimente AUSSI le classement énergie (symétrie
-                    //   avec le Conquérant² ci-dessus). run3EnergyByArena est accumulé dans la bulle (runMode()="run3").
-                    if (f.replayRun === "run3") {
-                        const r3eBis = run3EnergyFromWorld(f.replayWorld)
-                        if (r3eBis !== null) run3EnergyMap.set(s.userId + ":bis", { nickname: `${nickname}²`, score: r3eBis, wonAt: null, factors: null, live: true })
+            if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
+            // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
+            if (viewerDone) {
+                // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
+                const r2 = run2FromWorld(f.ngplusWorld)
+                if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps })
+                // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
+                const r3 = run3FromWorld(f.run3World)
+                if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
+                const r3e = run3EnergyFromWorld(f.run3World) // score « Survivant » (énergie conservée)
+                if (r3e !== null) run3EnergyMap.set(s.userId, { userId: s.userId, nickname, score: r3e, wonAt: null, factors: null, live: world === "run3" })
+                // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une
+                //   clé distincte (userId:bis) → il COEXISTE avec l'original gelé (déjà pullé ci-dessus depuis les mondes
+                //   réels stashés). Les deux scores s'affichent, comme demandé.
+                if (world === "replay" && f.replayWorld && typeof f.replayRun === "string") {
+                    const rb = replayScoreFromBubble(f.replayWorld, f.replayRun)
+                    if (rb) {
+                        const target = f.replayRun === "run3" ? run3Map : f.replayRun === "run2" ? run2Map : run1Map
+                        target.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps })
+                        // REJEU run 3 : le score « Survivant² » de la bulle alimente AUSSI le classement énergie (symétrie
+                        //   avec le Conquérant² ci-dessus). run3EnergyByArena est accumulé dans la bulle (runMode()="run3").
+                        if (f.replayRun === "run3") {
+                            const r3eBis = run3EnergyFromWorld(f.replayWorld)
+                            if (r3eBis !== null) run3EnergyMap.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: r3eBis, wonAt: null, factors: null, live: true })
+                        }
                     }
                 }
+                // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
+                const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
+                const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
+                if (duels > 0) duelsMap.set(s.userId, { nickname, wins: duels })
             }
-            // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
-            const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
-            const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
-            if (duels > 0) duelsMap.set(s.userId, { nickname, wins: duels })
         }
     } catch { /* lecture saves impossible → on s'appuiera sur la table seule */ }
 
@@ -213,17 +218,18 @@ export async function GET() {
             const baseRun = isBis ? r.run.slice(0, -3) : r.run // "run2bis" → "run2", "run3energybis" → "run3energy"
             const map = baseRun === "run2" ? run2Map : baseRun === "run3" ? run3Map : baseRun === "run3energy" ? run3EnergyMap : baseRun === "run1" ? run1Map : null
             if (!map) continue
+            if (!viewerDone && baseRun !== "run1") continue // anti-spoiler : un spectateur run 1 ne voit que le fallback run 1
             const key = isBis ? `${r.userId}:bis` : r.userId
             if (map.has(key)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
             // RUN 2 : un score figé posté sous l'ANCIENNE formule (frugalité incluse) est RE-NOTÉ depuis ses ratios
             //   stockés sous les poids COURANTS → frozen et live comparés sur la même échelle (3 facteurs performance).
             const score = baseRun === "run2" ? (regradeRun2FromFactors(r.factors) ?? r.score) : r.score
-            map.set(key, { nickname: isBis ? `${r.nickname}²` : r.nickname, score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
+            map.set(key, { userId: r.userId, nickname: isBis ? `${r.nickname}²` : r.nickname, score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
         }
     } catch { /* table pas encore créée → pull seul */ }
 
     const toList = (m: Map<string, LeaderEntry>) =>
-        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
+        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
     return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
