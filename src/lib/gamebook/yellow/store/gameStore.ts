@@ -43,6 +43,7 @@ import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
+import { TOWN_STROLLER_MAP, inTownStrollerCorridor } from "../data/townStroller"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -695,6 +696,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === SYLVEBARBE_BLOCK_MAP && !getPlayerSave().sylvebarbeAwake
             && inSylvebarbeBlock(next.posX, next.posY)) {
+            set({ player: { ...player, direction: next.direction } })
+            scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+
+        // PROMENEUR de Ville Jaune (PNJ décoratif) : il arpente la colonne (31, 22-24). Sa position
+        // visuelle vient d'une animation CSS, donc on bloque TOUT le couloir — sinon le joueur pourrait
+        // se retrouver sous le sprite. La place est large, ça ne ferme aucun passage.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === TOWN_STROLLER_MAP
+            && inTownStrollerCorridor(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
             return

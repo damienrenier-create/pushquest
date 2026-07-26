@@ -299,7 +299,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         mapId: ORCALINE_TRAINER_MAP,
         kind: "static",
         interaction: "interactive",
-        sprite: { emoji: "🧑‍🦱", color: "#4fc3f7" }, // remplacé par NPC_SPRITES (dresseur_orcaline)
+        sprite: { emoji: "🧑‍🦱", color: "#4fc3f7" }, // remplacé par NPC_GEN3_IDLE (dresseur_orcaline_gen3, pose neutre)
         initialX: ORCALINE_TRAINER_POS.x,
         initialY: ORCALINE_TRAINER_POS.y,
         dialoguesAfter: ORCALINE_INTRO_LINES,

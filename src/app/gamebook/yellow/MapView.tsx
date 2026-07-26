@@ -15,6 +15,7 @@ import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
+import { TOWN_STROLLER_MAP, TOWN_STROLLER_SPRITE, TOWN_STROLLER_X, TOWN_STROLLER_Y_TOP, TOWN_STROLLER_Y_BOTTOM, TOWN_STROLLER_STEP_MS } from "@/lib/gamebook/yellow/data/townStroller"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -638,6 +639,9 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                         overrideSprite={npc.id === "y_gekroc" && getPlayer().gekrocResolved ? { url: "/yellow/sprites/pierre_gekroc.png", frames: 1, h: 1.2 } : undefined} />
                 ))}
 
+                {/* PROMENEUR : PNJ 100% décoratif qui fait les cent pas à l'est du Centre Daemon. */}
+                {map.id === TOWN_STROLLER_MAP && <TownStrollerSprite screenPos={screenPos} />}
+
                 {/* Avatars des autres joueurs (casino multijoueur) */}
                 {remotePlayers.map((rp) => (
                     <RemotePlayerSprite key={rp.userId} rp={rp} screenPos={screenPos} bubble={chatBubbles?.[rp.userId]?.text} />
@@ -670,6 +674,61 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     )
 }
 
+// === Planches PNJ "Gen 3" 40×40 (NPC Sprite Forge) ======================
+//
+// Format commun à npc_promeneur.png, dresseur_orcaline_gen3.png, etc. :
+// 760×160 px = 19 colonnes × 4 lignes de 40×40. Ligne = direction (0 Sud/face,
+// 1 Ouest, 2 Est, 3 Nord/dos) ; colonnes 0-2 = marche (0 = pas A, 1 = pose
+// NEUTRE, 2 = pas B), puis course (3-5), vélo (6-8), pêche (9-12), surf (13-14),
+// et le reste non utilisé ici.
+//
+// Échelle : comme le joueur, 16 px de sprite = 1 tuile → une cellule de 40 px
+// fait 2.5 tuiles. Dans la cellule, le perso occupe x 12-27 / y 15-35 : il reste
+// 4 px de vide sous ses pieds (= 0.25 tuile), d'où le calage du conteneur —
+// pieds posés sur la case, débordement vers le HAUT (convention Pokémon).
+
+const NPC40_COLS = 19
+const NPC40_ROWS = 4
+const NPC40_CELL_TILES = 2.5          // cellule 40 px / 16 px par tuile
+const NPC40_FOOT_OFFSET_TILES = 0.25  // 4 px de vide sous les pieds dans la cellule
+const NPC40_IDLE_COL = 1              // pose neutre (les 2 pieds au sol)
+const NPC40_ROW_DOWN = 0              // face au joueur
+// Cache-buster COMMUN à toutes les planches Gen 3 : à incrémenter dès qu'un PNG est
+// réexporté sous le même nom, sinon les navigateurs gardent l'ancienne version.
+const NPC40_ASSET_VERSION = 2
+
+function npc40BgPosition(col: number, row: number): string {
+    return `${(col / (NPC40_COLS - 1)) * 100}% ${(row / (NPC40_ROWS - 1)) * 100}%`
+}
+
+/** Conteneur d'une cellule de planche, calé sur une case (pieds sur la case, débord vers le haut). */
+function npc40ContainerStyle(
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties,
+    tileX: number,
+    tileY: number,
+): React.CSSProperties {
+    return {
+        position: "absolute",
+        ...screenPos(
+            tileX - (NPC40_CELL_TILES - 1) / 2,                            // centré sur la colonne
+            tileY - (NPC40_CELL_TILES - 1 - NPC40_FOOT_OFFSET_TILES),      // pieds sur la case
+            NPC40_CELL_TILES,
+            NPC40_CELL_TILES,
+        ),
+    }
+}
+
+/** Fond = une cellule (col,row) de la planche, à l'échelle de la case. */
+function npc40CellStyle(url: string, col: number, row: number): React.CSSProperties {
+    return {
+        backgroundImage: `url(${url}?v=${NPC40_ASSET_VERSION})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${NPC40_COLS * 100}% ${NPC40_ROWS * 100}%`,
+        backgroundPosition: npc40BgPosition(col, row),
+        imageRendering: "pixelated",
+    }
+}
+
 // === NPCs : vrais sprites Crystal (frame 0 statique pour l'instant) =====
 
 // frames > 1 : spritesheet vertical (frame 0). frames === 1 : portrait UNIQUE rendu
@@ -700,10 +759,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_centrale_hint: { url: "/yellow/sprites/npc_centrale.png", frames: 1, h: 2.0 },
     // Dénicheur à côté de l'entrée de la grotte (échange Faukon → Blaziper).
     y_cave_trader: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 2.0 },
-    // Gamin au centre de la plaine d'entraînement (indice Goshendofy de nuit).
-    y_hh_kid: { url: "/yellow/sprites/hh_kid.png", frames: 1, h: 2.0 },
-    // Dresseur d'Orcaline (plaine d'entraînement) : escalade quotidienne + cadeau.
-    y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline.png", frames: 1, h: 2.0 },
+    // Gamin au centre de la plaine d'entraînement : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
+    // Dresseur d'Orcaline (plaine d'entraînement) : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
@@ -728,9 +785,7 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_elecarena_g3: { url: "/yellow/sprites/npc_elec_droit2.png", frames: 1, h: 2.0 },
     y_elecarena_g4: { url: "/yellow/sprites/npc_elec_droit3.png", frames: 1, h: 2.0 },
     y_elecarena_boss: { url: "/yellow/sprites/npc_elec_reine.png", frames: 1, h: 2.4 },
-    // Route Nord : Gamin Léo + Exploratrice Mia (sprites entiers).
-    y_trainer_leo: { url: "/yellow/sprites/npc_leo.png", frames: 1, h: 1.9 },
-    y_trainer_mia: { url: "/yellow/sprites/npc_mia.png", frames: 1, h: 1.9 },
+    // Route Nord : Gamin Léo + Exploratrice Mia → planches Gen 3 (cf. NPC_GEN3_IDLE).
     // GÉKROC (mini-boss Centrale) sur sa pierre — devient la Pierre seule une fois résolu (override ci-dessous).
     y_gekroc: { url: "/yellow/sprites/gekroc_overworld.png", frames: 1, h: 1.8 },
     // PNJ 5 — GARDIEN de la Grotte du Nexus (intercepte en 17,33, meute des 5 Gek). Sprite 92×147 → h 1.6.
@@ -753,6 +808,19 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_eauarena_g3: { url: "/yellow/sprites/eau_g3.png", frames: 1, h: 1.9 },
     y_eauarena_g4: { url: "/yellow/sprites/eau_g4.png", frames: 1, h: 1.9 },
     y_eauarena_boss: { url: "/yellow/sprites/eau_ondine.png", frames: 1, h: 1.9 },
+}
+
+// PNJ rendus depuis une planche Gen 3 40×40 : cellule UNIQUE, pose neutre, face au
+// joueur (IDLE — le PNJ ne bouge pas, contrairement au promeneur de Ville Jaune).
+const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }> = {
+    // Dresseur d'Orcaline (HAUTES HERBES, 8-15) : escalade quotidienne + cadeau.
+    y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline_gen3.png" },
+    // Gamin (HAUTES HERBES, 8-9) : indice Goshendofy de nuit.
+    y_hh_kid: { url: "/yellow/sprites/hh_kid_gen3.png" },
+    // Gamin Léo (ROUTE DU NORD, 24-37) : 1er dresseur de la route, juste à l'arrivée depuis la ville.
+    y_trainer_leo: { url: "/yellow/sprites/npc_leo_gen3.png" },
+    // Exploratrice Mia (ROUTE DU NORD, 23-34) : 2e dresseuse, 3 cases au-dessus de Léo.
+    y_trainer_mia: { url: "/yellow/sprites/npc_mia_gen3.png" },
 }
 
 function NpcSprite({
@@ -781,6 +849,22 @@ function NpcSprite({
                     filter: "drop-shadow(0 0 3px #b040ff) drop-shadow(0 0 7px #9020e0)",
                 }} />
             </div>
+        )
+    }
+    // Planche Gen 3 (cellule idle) — prime sur NPC_SPRITES, sauf override explicite.
+    const gen3 = NPC_GEN3_IDLE[npc.id]
+    if (gen3 && !overrideSprite) {
+        return (
+            <div
+                style={{
+                    ...npc40ContainerStyle(screenPos, npc.initialX, npc.initialY),
+                    ...npc40CellStyle(gen3.url, gen3.col ?? NPC40_IDLE_COL, gen3.row ?? NPC40_ROW_DOWN),
+                    filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+                    zIndex: 4,
+                    pointerEvents: "none",
+                }}
+                title={npc.name}
+            />
         )
     }
     const sprite = overrideSprite ?? NPC_SPRITES[npc.id]
@@ -851,6 +935,62 @@ function NpcSprite({
             }}
             title={npc.name}
         />
+    )
+}
+
+// === PROMENEUR de Ville Jaune (PNJ décoratif, animé en CSS pur) ==========
+//
+// Animation : 100% CSS (MapView ne tient aucun timer). Le conteneur glisse en
+// translateY (linéaire, du haut vers le bas de la ronde puis retour) et le div
+// intérieur fait défiler les cellules par paliers — 2 rythmes différents, donc
+// 2 divs imbriqués. Géométrie de la planche : cf. bloc NPC40 plus haut.
+
+const STROLL_SPAN_TILES = TOWN_STROLLER_Y_BOTTOM - TOWN_STROLLER_Y_TOP        // 2 cases parcourues
+const STROLL_CYCLE_MS = TOWN_STROLLER_STEP_MS * STROLL_SPAN_TILES * 2         // descente + remontée
+const STROLL_TRANSLATE_PCT = (STROLL_SPAN_TILES / NPC40_CELL_TILES) * 100     // % de la HAUTEUR du conteneur
+
+const STROLL_KEYFRAMES = `
+@keyframes strollMove { 0% { transform: translateY(0) } 50% { transform: translateY(${STROLL_TRANSLATE_PCT}%) } 100% { transform: translateY(0) } }
+@keyframes strollWalk {
+  0%    { background-position: ${npc40BgPosition(0, 0)} }
+  12.5% { background-position: ${npc40BgPosition(2, 0)} }
+  25%   { background-position: ${npc40BgPosition(0, 0)} }
+  37.5% { background-position: ${npc40BgPosition(2, 0)} }
+  50%   { background-position: ${npc40BgPosition(0, 3)} }
+  62.5% { background-position: ${npc40BgPosition(2, 3)} }
+  75%   { background-position: ${npc40BgPosition(0, 3)} }
+  87.5% { background-position: ${npc40BgPosition(2, 3)} }
+}
+`
+
+function TownStrollerSprite({
+    screenPos,
+}: {
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    return (
+        <div
+            style={{
+                ...npc40ContainerStyle(screenPos, TOWN_STROLLER_X, TOWN_STROLLER_Y_TOP),
+                animation: `strollMove ${STROLL_CYCLE_MS}ms linear infinite`,
+                zIndex: 2,
+                pointerEvents: "none",
+            }}
+            title="PROMENEUR"
+        >
+            <style>{STROLL_KEYFRAMES}</style>
+            <div
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    // La cellule de départ est écrasée par l'animation strollWalk (qui pilote
+                    // background-position) : elle ne sert que de repli sans animation.
+                    ...npc40CellStyle(TOWN_STROLLER_SPRITE, 0, 0),
+                    animation: `strollWalk ${STROLL_CYCLE_MS}ms steps(1, end) infinite`,
+                    filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+                }}
+            />
+        </div>
     )
 }
 
