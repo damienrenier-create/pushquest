@@ -184,10 +184,12 @@ export interface PvpStats {
     daemonUse: Record<string, number>
     /** moveId → nb d'utilisations en PvP (→ "attaque favorite"). */
     moveUse: Record<string, number>
+    /** speciesId → total des dégâts INFLIGÉS en duel PvP (→ top-5 « plus gros dégâts »). Non rétroactif. */
+    dmgByDaemon: Record<string, number>
 }
 
 export function emptyPvpStats(): PvpStats {
-    return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
+    return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }
 }
 
 /** Stats DÔME UNIQUEMENT (≠ pvpStats qui compte TOUS les combats) : Daemons/attaques joués DANS les tournois du
@@ -1135,6 +1137,19 @@ export function recordPvpUse(speciesId: string, moveId?: string) {
     const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
     const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
     st = { ...st, pvpStats: { ...s, daemonUse, moveUse } }
+    emit()
+}
+
+/** Cumule les dégâts infligés PAR chaque Daemon (speciesId → total) sur un match PvP → top-5 « plus gros dégâts ».
+ *  `byDaemon` = accumulateur du camp du joueur pour CE combat (fourni par battleStore en fin de duel). Non rétroactif. */
+export function recordPvpDamage(byDaemon: Record<string, number>) {
+    if (!byDaemon || Object.keys(byDaemon).length === 0) return
+    const s = st.pvpStats
+    const dmgByDaemon = { ...(s.dmgByDaemon ?? {}) }
+    for (const [sid, amount] of Object.entries(byDaemon)) {
+        if (typeof amount === "number" && amount > 0) dmgByDaemon[sid] = (dmgByDaemon[sid] ?? 0) + Math.floor(amount)
+    }
+    st = { ...st, pvpStats: { ...s, dmgByDaemon } }
     emit()
 }
 

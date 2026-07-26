@@ -95,6 +95,10 @@ export interface BattleState {
     /** DÉFI CT (labo) : cumul des dégâts INFLIGÉS PAR LE JOUEUR ce combat, par type d'attaque (PvE solo).
      *  Lu en fin de combat (finishBattle) pour alimenter le défi. Absent en PvP. */
     dmgByType?: Partial<Record<PokeType, number>>
+    /** PvP UNIQUEMENT : cumul des dégâts INFLIGÉS par chaque Daemon ce combat, par camp (speciesId → total).
+     *  Lu en fin de duel (finishPvpBattle) pour le top-5 « plus gros dégâts » de la réputation PvP. Déterministe
+     *  (les 2 clients calculent à l'identique) et HORS battleChecksum → aucun risque de désync. Absent hors PvP. */
+    dmgByAttacker?: { player: Record<string, number>; enemy: Record<string, number> }
     /** STAT de partie : XP de combat cumulée gagnée par l'équipe ce combat (lue en fin de combat). */
     xpGained?: number
     /** XP de combat gagnée PAR uid de combattant (cumul ce combat). Sert à la LIGUE DE FUSION : chaque fusionné
@@ -819,6 +823,13 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     if (!state.pvp && side === "player" && dealt > 0) {
         if (!state.dmgByType) state.dmgByType = {}
         state.dmgByType[effType] = (state.dmgByType[effType] ?? 0) + dealt // effType : prend en compte le STAB adaptatif
+    }
+    // PvP : cumule les dégâts par ATTAQUANT (speciesId), par camp → top-5 « plus gros dégâts » de la réputation.
+    //   Placé APRÈS applyDamage (aucun RNG consommé ensuite) et hors battleChecksum → déterminisme/anti-désync intacts.
+    if (state.pvp && dealt > 0) {
+        if (!state.dmgByAttacker) state.dmgByAttacker = { player: {}, enemy: {} }
+        const rec = state.dmgByAttacker[side]
+        rec[attacker.speciesId] = (rec[attacker.speciesId] ?? 0) + dealt
     }
     // Grelot Coque (objet) OU talent Sangsue : soigne l'attaquant d'une fraction des dégâts infligés.
     const atkHeld = heldEffect(attacker)

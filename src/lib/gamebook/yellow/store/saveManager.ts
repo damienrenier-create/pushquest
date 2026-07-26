@@ -337,6 +337,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
             forfeits: primary.pvpStats.forfeits + secondary.pvpStats.forfeits,
             daemonUse: mergeCounts(primary.pvpStats.daemonUse, secondary.pvpStats.daemonUse),
             moveUse: mergeCounts(primary.pvpStats.moveUse, secondary.pvpStats.moveUse),
+            dmgByDaemon: mergeCounts(primary.pvpStats.dmgByDaemon ?? {}, secondary.pvpStats.dmgByDaemon ?? {}),
         },
         domeStats: { // DÔME UNIQUEMENT : somme des compteurs / union des historiques (comme pvpStats)
             wins: (primary.domeStats?.wins ?? 0) + (secondary.domeStats?.wins ?? 0),

@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -1446,6 +1446,9 @@ function finishPvpBattle(b: BattleState) {
     // Sinon setTeam(toMonInstance) écraserait la vraie équipe par les fusions (et perdrait frozenSpd).
     let evos: ReturnType<typeof evolveTeam> = []
     if (!ctx.ephemeralTeam) {
+        // Réputation PvP : dégâts infligés par MES Daemons ce duel (top-5 « plus gros dégâts »). FUSION exclue
+        //   (équipe éphémère → speciesId jetable) comme recordPvpUse. Non rétroactif (compte à partir de maintenant).
+        if (b.dmgByAttacker?.[side]) recordPvpDamage(b.dmgByAttacker[side])
         setTeam(b[side].team.map(toMonInstance))
         const team = getPlayer().team
         evos = evolveTeam(team)
@@ -1490,6 +1493,7 @@ export function pvpForfeit(byMe: boolean, deliberate = true) {
     const side = mySide(ctx)
     const ended = applyForfeitWin(battle, side, { multiplier: 1, headline: `${ctx.oppNickname} a abandonné le combat !` })
     recordPvpResult("win") // réputation
+    if (!ctx.ephemeralTeam && battle.dmgByAttacker?.[side]) recordPvpDamage(battle.dmgByAttacker[side]) // dégâts du duel joué (top-5)
     if (!ctx.ephemeralTeam) setTeam(ended[side].team.map(toMonInstance)) // FUSION : équipe éphémère jamais persistée
     if (!ctx.ephemeralTeam) healAllTeam() // combat amical terminé → équipe soignée (FUSION : rien à soigner, elle n'a pas combattu)
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
