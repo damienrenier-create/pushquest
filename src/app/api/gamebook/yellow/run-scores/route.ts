@@ -229,7 +229,7 @@ export async function GET() {
     } catch { /* table pas encore créée → pull seul */ }
 
     const toList = (m: Map<string, LeaderEntry>) =>
-        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
+        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
     return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
