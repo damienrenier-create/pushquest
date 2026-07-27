@@ -44,6 +44,10 @@ export interface TrainerData {
     intro: string[]
     /** Réplique(s) une fois battu (ré-interaction ultérieure). */
     defeat: string[]
+    /** Réplique(s) jouée(s) JUSTE APRÈS la victoire, en dialogue post-combat (via rematchReward
+     *  côté battleStore). À distinguer de `defeat`, qui ne sort qu'aux visites SUIVANTES.
+     *  Optionnel : sans ce champ, la victoire n'ouvre aucun dialogue (comportement d'origine). */
+    victory?: string[]
     /** Chef de salle d'arène : badge accordé en le battant. */
     badge?: BadgeId
     /** Champion : ne peut être défié qu'avec les 3 badges. */
@@ -166,6 +170,46 @@ export const TRAINERS: TrainerData[] = [
         defeat: [
             "Impressionnant. La Route Nord est à toi.",
             "Méfie-toi des hautes herbes, plus loin…",
+        ],
+    },
+
+    // === ROUTE DU NORD — GUETTEUR RAOUL (12,18) : 3e rival de route, à EMBUSCADE ===
+    // Même mécanique de niveaux que Léo/Mia (scaleWithBadges → niveau du garde le plus fort
+    // de la dernière arène battue + évolution au stade naturel), mais Daemons différents
+    // (Couperin COMBAT / Ruffiant INSECTE, absents des 2 autres équipes de route).
+    // Posté 15 cases sous l'entrée de la grotte, il regarde vers le SUD et interpelle
+    // quiconque entre dans sa ligne de mire — cf. data/trainerSight.ts (pas besoin de lui
+    // parler ; on peut aussi l'aborder au A comme n'importe quel dresseur).
+    {
+        id: "y_trainer_raoul",
+        name: "GUETTEUR RAOUL",
+        title: "Guetteur",
+        sprite: { emoji: "🔭", color: "#7a5cc0" }, // fallback ; PNG dédié via MapView NPC_GEN3_IDLE
+        scaleWithBadges: true,
+        mapId: "yellow_route_nord",
+        x: 12,
+        y: 18,
+        team: [
+            { speciesId: "couperin", level: 8 },
+            { speciesId: "ruffiant", level: 9 },
+        ],
+        reward: 180,
+        aiLevel: "trainer",
+        // Dialogues COURTS (3 lignes max, cf. trainerSight.test) : une embuscade qui s'enclenche
+        // au regard doit rester nerveuse — on ne fait pas cliquer 5 fois avant le combat.
+        intro: [
+            "HALTE ! Trois semaines que je guette cette route et il ne passe JAMAIS personne.",
+            "Alors toi, tu ne repars pas sans combattre !",
+        ],
+        victory: [
+            "BRAVO ! Trois semaines de planque pour me faire battre en deux minutes… presque un exploit.",
+            // Aucune promesse de récompense ici : `reward` n'est PAS versé à la 1re victoire
+            // (seuls les rematch créditent de l'énergie, cf. battleStore) — il ne donne rien.
+            "File vers la grotte, champion. Et si on te demande : je t'ai laissé gagner.",
+        ],
+        defeat: [
+            "Battu… par le premier passant en trois semaines.",
+            "Je vais demander ma mutation au Centre Daemon.",
         ],
     },
 

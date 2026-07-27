@@ -921,6 +921,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const lines = [...(revealBerry ? BERRY_SECRET_LINES_DRUIDE : []), ...(ngCtLine ? [ngCtLine] : [])]
                 if (lines.length) rematchReward = { npcId: storeState.trainer.trainerId, npcName: t?.name ?? "Boss d'arène", lines }
             }
+            // 🗣️ FÉLICITATIONS POST-COMBAT : un dresseur qui définit `victory` prend la parole juste après
+            //    sa défaite (dialogue post-combat), en plus du bandeau de récompense. Ne remplace jamais un
+            //    dialogue déjà posé ci-dessus (secret des baies / CT signature run 2).
+            if (!rematchReward && t?.victory?.length) {
+                rematchReward = { npcId: storeState.trainer.trainerId, npcName: t.name, lines: [...t.victory] }
+            }
             // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
             //     En NG+ ET en RUN 3, les arènes re-typées / boss figés sont des combats UNIQUES → pas de phase 2
             //     (sinon VOLTA enchaînerait sur sa vraie phase-2 hors-score qui draine l'énergie du concours).

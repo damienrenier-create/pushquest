@@ -11,6 +11,7 @@ import { create } from "zustand"
 import type { Direction, PlayerState } from "../engine/types"
 import { createInitialPlayer } from "../engine/types"
 import { tryMove } from "../engine/movement"
+import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
 import { YELLOW_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
@@ -35,6 +36,7 @@ import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveMan
 import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
+import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
@@ -43,7 +45,6 @@ import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
-import { TOWN_STROLLER_MAP, inTownStrollerCorridor } from "../data/townStroller"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -151,6 +152,9 @@ interface GameStore {
     pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    /** Dresseur qui vient de REPÉRER le joueur (embuscade) : affiche sa bulle « ! ».
+     *  Gèle le déplacement le temps de l'alerte, puis son intro s'ouvre (cf. move). */
+    trainerAlertId: string | null
     pendingNgplusAbandon: boolean // NG+ : offre d'abandon de CHEN en cours → confirmation UI à la fermeture du dialogue
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
@@ -654,6 +658,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
+    trainerAlertId: null,
     pendingNgplusAbandon: false,
     pendingOrcaline: false,
     pendingGekroc: false,
@@ -678,7 +683,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().signOpen !== null) return
+        // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
+        // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -696,17 +703,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === SYLVEBARBE_BLOCK_MAP && !getPlayerSave().sylvebarbeAwake
             && inSylvebarbeBlock(next.posX, next.posY)) {
-            set({ player: { ...player, direction: next.direction } })
-            scheduleSave({ ...player, direction: next.direction })
-            return
-        }
-
-        // PROMENEUR de Ville Jaune (PNJ décoratif) : il arpente la colonne (31, 22-24). Sa position
-        // visuelle vient d'une animation CSS, donc on bloque TOUT le couloir — sinon le joueur pourrait
-        // se retrouver sous le sprite. La place est large, ça ne ferme aucun passage.
-        if ((next.posX !== player.posX || next.posY !== player.posY)
-            && player.mapId === TOWN_STROLLER_MAP
-            && inTownStrollerCorridor(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
             return
@@ -1008,6 +1004,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         if (moved || dirChanged) scheduleSave(next)
 
+        // EMBUSCADE — CHAMP DE VISION D'UN DRESSEUR (cf. data/trainerSight.ts) : entrer dans sa
+        // ligne de mire déclenche sa bulle « ! », puis son intro, puis le combat. Prioritaire sur
+        // la rencontre sauvage ci-dessous (on ne peut pas être happé par une herbe en même temps).
+        // Garde-fou : équipe entièrement K.O. → il nous laisse passer, sinon on serait re-interpellé
+        // à chaque pas dans le couloir sans pouvoir combattre.
+        if (moved && getPlayerSave().team.some((m) => m.currentHp > 0)) {
+            const spotted = trainerSpotting(
+                next.mapId, next.posX, next.posY,
+                (x, y) => {
+                    const t = map.tiles[y]?.[x]
+                    return !t || isBlockingTile(t)
+                },
+                isTrainerDefeated,
+            )
+            if (spotted) {
+                set({ trainerAlertId: spotted.trainerId })
+                // Le « ! » seul d'abord (le joueur est gelé), puis l'intro s'ouvre : c'est le
+                // pendingTrainerId qui enchaînera sur le combat à la fin du dialogue.
+                setTimeout(() => {
+                    const st = get()
+                    // Garde-fous : alerte annulée entre-temps, dialogue déjà ouvert, ou joueur
+                    // parti sur une autre carte (warp/téléport) → on abandonne l'interpellation.
+                    if (st.trainerAlertId !== spotted.trainerId || st.dialogue) return
+                    if (st.player.mapId !== spotted.mapId) { set({ trainerAlertId: null }); return }
+                    const t = getTrainer(spotted.trainerId)
+                    if (!t) { set({ trainerAlertId: null }); return }
+                    set({
+                        dialogue: { npcId: t.id, npcName: t.name, lines: t.intro, lineIndex: 0 },
+                        pendingTrainerId: t.id,
+                        pendingRematch: false,
+                    })
+                }, TRAINER_ALERT_MS)
+                return
+            }
+        }
+
         // Rencontre sauvage : marcher sur des hautes herbes (zone à rencontres).
         // Le biome (proximité eau/montagne/sapins), le niveau du lead et les stats
         // d'effort du jour (pompes/squats/quota, fetchées au chargement) modulent le tirage.
@@ -1183,7 +1215,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // Fin d'un dialogue : si c'était l'intro d'un dresseur, on lance le combat.
                 const pid = get().pendingTrainerId
                 if (pid) {
-                    set({ dialogue: tryLaunchTrainer(pid, get().pendingRematch), pendingTrainerId: null, pendingRematch: false })
+                    set({ dialogue: tryLaunchTrainer(pid, get().pendingRematch), pendingTrainerId: null, pendingRematch: false, trainerAlertId: null })
                 } else if (get().pendingSbire) {
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else if (get().pendingAce) {
@@ -1814,7 +1846,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (!dialogue) return
         // Un défi ne se refuse pas : fermer l'intro lance quand même le combat.
         if (pendingTrainerId) {
-            set({ dialogue: tryLaunchTrainer(pendingTrainerId, get().pendingRematch), pendingTrainerId: null, pendingRematch: false })
+            set({ dialogue: tryLaunchTrainer(pendingTrainerId, get().pendingRematch), pendingTrainerId: null, pendingRematch: false, trainerAlertId: null })
         } else if (get().pendingSbire) {
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else if (get().pendingAce) {

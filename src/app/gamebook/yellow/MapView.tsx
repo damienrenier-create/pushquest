@@ -15,7 +15,6 @@ import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
-import { TOWN_STROLLER_MAP, TOWN_STROLLER_SPRITE, TOWN_STROLLER_X, TOWN_STROLLER_Y_TOP, TOWN_STROLLER_Y_BOTTOM, TOWN_STROLLER_STEP_MS } from "@/lib/gamebook/yellow/data/townStroller"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -360,6 +359,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
     const torchSteps = useGameStore((s) => s.torchSteps)
+    // EMBUSCADE : dresseur qui vient de nous repérer → bulle « ! » au-dessus de sa tête.
+    const trainerAlertId = useGameStore((s) => s.trainerAlertId)
     const torchRadius = useGameStore((s) => s.torchRadius)
     // BROUILLARD : rayon de vision de base de la map (true = 2 legacy · nombre = rayon), élargi par une lampe torche active.
     const darkBase = map.darkness === true ? 2 : (typeof map.darkness === "number" ? map.darkness : 0)
@@ -639,8 +640,13 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                         overrideSprite={npc.id === "y_gekroc" && getPlayer().gekrocResolved ? { url: "/yellow/sprites/pierre_gekroc.png", frames: 1, h: 1.2 } : undefined} />
                 ))}
 
-                {/* PROMENEUR : PNJ 100% décoratif qui fait les cent pas à l'est du Centre Daemon. */}
-                {map.id === TOWN_STROLLER_MAP && <TownStrollerSprite screenPos={screenPos} />}
+                {/* « ! » du dresseur qui vient de repérer le joueur (avant son intro). */}
+                {(() => {
+                    const alerted = trainerAlertId ? npcsOnMap.find((n) => n.id === trainerAlertId) : undefined
+                    return alerted
+                        ? <TrainerAlertBubble posX={alerted.initialX} posY={alerted.initialY} screenPos={screenPos} />
+                        : null
+                })()}
 
                 {/* Avatars des autres joueurs (casino multijoueur) */}
                 {remotePlayers.map((rp) => (
@@ -676,7 +682,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
 
 // === Planches PNJ "Gen 3" 40×40 (NPC Sprite Forge) ======================
 //
-// Format commun à npc_promeneur.png, dresseur_orcaline_gen3.png, etc. :
+// Format commun aux planches PNJ (dresseur_orcaline_gen3.png, hh_kid_gen3.png, …) :
 // 760×160 px = 19 colonnes × 4 lignes de 40×40. Ligne = direction (0 Sud/face,
 // 1 Ouest, 2 Est, 3 Nord/dos) ; colonnes 0-2 = marche (0 = pas A, 1 = pose
 // NEUTRE, 2 = pas B), puis course (3-5), vélo (6-8), pêche (9-12), surf (13-14),
@@ -755,10 +761,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     // PNJ devant la MAISON HANTÉE : le collectionneur (chasseur de spectres) + le brocanteur (mystique).
     y_hh_collector: { url: "/yellow/sprites/hh_collector.png", frames: 1, h: 2.0 },
     y_hh_trader: { url: "/yellow/sprites/hh_trader.png", frames: 1, h: 2.0 },
-    // Technicien devant la Centrale (indice Gékroc / Pierre).
-    y_centrale_hint: { url: "/yellow/sprites/npc_centrale.png", frames: 1, h: 2.0 },
-    // Dénicheur à côté de l'entrée de la grotte (échange Faukon → Blaziper).
-    y_cave_trader: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 2.0 },
+    // Technicien devant la Centrale : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
+    // Dénicheur à côté de l'entrée de la grotte : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
     // Gamin au centre de la plaine d'entraînement : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
     // Dresseur d'Orcaline (plaine d'entraînement) : rendu depuis une planche Gen 3 → cf. NPC_GEN3_IDLE.
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
@@ -811,7 +815,7 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
 }
 
 // PNJ rendus depuis une planche Gen 3 40×40 : cellule UNIQUE, pose neutre, face au
-// joueur (IDLE — le PNJ ne bouge pas, contrairement au promeneur de Ville Jaune).
+// joueur (IDLE — ces PNJ ne bougent pas).
 const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }> = {
     // Dresseur d'Orcaline (HAUTES HERBES, 8-15) : escalade quotidienne + cadeau.
     y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline_gen3.png" },
@@ -821,6 +825,83 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_trainer_leo: { url: "/yellow/sprites/npc_leo_gen3.png" },
     // Exploratrice Mia (ROUTE DU NORD, 23-34) : 2e dresseuse, 3 cases au-dessus de Léo.
     y_trainer_mia: { url: "/yellow/sprites/npc_mia_gen3.png" },
+    // Technicien (CENDREVILLE, 21-18) : posté devant la Centrale électrique, indice Gékroc / Pierre.
+    y_centrale_hint: { url: "/yellow/sprites/npc_centrale_gen3.png" },
+    // Dénicheur (ROUTE DU NORD, 13-4) : à côté de l'entrée de la grotte, échange Faukon → Blaziper.
+    y_cave_trader: { url: "/yellow/sprites/npc_cave_trader_gen3.png" },
+    // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
+    // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
+    y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },
+}
+
+// === Bulle « ! » du dresseur qui vient de repérer le joueur ==============
+//
+// Pixel art en CSS (pas d'image) : cadre noir, fond blanc, « ! » épais et petite queue
+// sous la bulle, façon Gen 1-3. Elle apparaît au-dessus de la tête du dresseur pendant
+// TRAINER_ALERT_MS, avant que son intro s'ouvre (cf. gameStore.move).
+
+const TRAINER_ALERT_KEYFRAMES = `
+@keyframes trainerAlertPop { 0% { transform: scale(0.35) translateY(35%) } 65% { transform: scale(1.12) translateY(0) } 100% { transform: scale(1) translateY(0) } }
+`
+
+function TrainerAlertBubble({
+    posX,
+    posY,
+    screenPos,
+}: {
+    posX: number
+    posY: number
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    return (
+        <div
+            style={{
+                position: "absolute",
+                // ~1.3 tuile au-dessus de la case : juste au-dessus de la tête du sprite.
+                ...screenPos(posX, posY - 1.35, 1, 1),
+                zIndex: 6,
+                pointerEvents: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+            }}
+        >
+            <style>{TRAINER_ALERT_KEYFRAMES}</style>
+            <div
+                style={{
+                    position: "relative",
+                    width: "72%",
+                    height: "72%",
+                    background: "#f8f8f8",
+                    border: "2px solid #101010",
+                    borderRadius: 3,
+                    boxShadow: "0 2px 0 rgba(0,0,0,0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    animation: "trainerAlertPop 200ms ease-out",
+                }}
+            >
+                <span style={{
+                    fontFamily: "system-ui, sans-serif",
+                    fontWeight: 900,
+                    fontSize: "clamp(9px, 2.2dvw, 15px)",
+                    lineHeight: 1,
+                    color: "#101010",
+                }}>!</span>
+                {/* Queue de la bulle (pointe vers le dresseur). */}
+                <span style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: "50%",
+                    marginLeft: -2,
+                    width: 4,
+                    height: 5,
+                    background: "#101010",
+                }} />
+            </div>
+        </div>
+    )
 }
 
 function NpcSprite({
@@ -935,62 +1016,6 @@ function NpcSprite({
             }}
             title={npc.name}
         />
-    )
-}
-
-// === PROMENEUR de Ville Jaune (PNJ décoratif, animé en CSS pur) ==========
-//
-// Animation : 100% CSS (MapView ne tient aucun timer). Le conteneur glisse en
-// translateY (linéaire, du haut vers le bas de la ronde puis retour) et le div
-// intérieur fait défiler les cellules par paliers — 2 rythmes différents, donc
-// 2 divs imbriqués. Géométrie de la planche : cf. bloc NPC40 plus haut.
-
-const STROLL_SPAN_TILES = TOWN_STROLLER_Y_BOTTOM - TOWN_STROLLER_Y_TOP        // 2 cases parcourues
-const STROLL_CYCLE_MS = TOWN_STROLLER_STEP_MS * STROLL_SPAN_TILES * 2         // descente + remontée
-const STROLL_TRANSLATE_PCT = (STROLL_SPAN_TILES / NPC40_CELL_TILES) * 100     // % de la HAUTEUR du conteneur
-
-const STROLL_KEYFRAMES = `
-@keyframes strollMove { 0% { transform: translateY(0) } 50% { transform: translateY(${STROLL_TRANSLATE_PCT}%) } 100% { transform: translateY(0) } }
-@keyframes strollWalk {
-  0%    { background-position: ${npc40BgPosition(0, 0)} }
-  12.5% { background-position: ${npc40BgPosition(2, 0)} }
-  25%   { background-position: ${npc40BgPosition(0, 0)} }
-  37.5% { background-position: ${npc40BgPosition(2, 0)} }
-  50%   { background-position: ${npc40BgPosition(0, 3)} }
-  62.5% { background-position: ${npc40BgPosition(2, 3)} }
-  75%   { background-position: ${npc40BgPosition(0, 3)} }
-  87.5% { background-position: ${npc40BgPosition(2, 3)} }
-}
-`
-
-function TownStrollerSprite({
-    screenPos,
-}: {
-    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
-}) {
-    return (
-        <div
-            style={{
-                ...npc40ContainerStyle(screenPos, TOWN_STROLLER_X, TOWN_STROLLER_Y_TOP),
-                animation: `strollMove ${STROLL_CYCLE_MS}ms linear infinite`,
-                zIndex: 2,
-                pointerEvents: "none",
-            }}
-            title="PROMENEUR"
-        >
-            <style>{STROLL_KEYFRAMES}</style>
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    // La cellule de départ est écrasée par l'animation strollWalk (qui pilote
-                    // background-position) : elle ne sert que de repli sans animation.
-                    ...npc40CellStyle(TOWN_STROLLER_SPRITE, 0, 0),
-                    animation: `strollWalk ${STROLL_CYCLE_MS}ms steps(1, end) infinite`,
-                    filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
-                }}
-            />
-        </div>
     )
 }
 
