@@ -541,7 +541,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g1", name: "APPRENTI BOBINE", title: "Gardien de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 4, y: 3,
+        mapId: "yellow_arena_elec", x: 4, y: 3, run3X: 2, run3Y: 5,
         team: [
             { speciesId: "trolystrik", level: 16 },
             { speciesId: "boltah", level: 16 },
@@ -565,7 +565,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g2", name: "TECHNICIENNE OHM", title: "Gardienne de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 10, y: 2,
+        mapId: "yellow_arena_elec", x: 10, y: 2, run3X: 12, run3Y: 5,
         team: [
             { speciesId: "electroatiss", level: 15 },
             { speciesId: "belunode", level: 15 },
@@ -589,7 +589,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g3", name: "PILOTE FOUDRE", title: "Gardien de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 11, y: 3,
+        mapId: "yellow_arena_elec", x: 11, y: 3, run3X: 4, run3Y: 7,
         team: [
             { speciesId: "oragron", level: 35 },
             { speciesId: "pantheon", level: 20 },
@@ -614,7 +614,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g4", name: "SENTINELLE ARC", title: "Sentinelle de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 12, y: 4,
+        mapId: "yellow_arena_elec", x: 12, y: 4, run3X: 10, run3Y: 7,
         team: [
             { speciesId: "brutetrik", level: 30 },
             { speciesId: "couranti", level: 32 },
@@ -690,7 +690,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g1", name: "PLONGEUR REMOUS", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 5, y: 8,
+        mapId: "yellow_arena_eau", x: 5, y: 8, run3X: 2, run3Y: 5,
         team: [
             { speciesId: "herondee", level: 43 },   // VOL/EAU
             { speciesId: "grenarc", level: 43 },     // ROCHE/EAU
@@ -704,7 +704,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g2", name: "DOMPTEUSE ÉCUME", title: "Gardienne des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 5, y: 11,
+        mapId: "yellow_arena_eau", x: 5, y: 11, run3X: 12, run3Y: 5,
         // Lignée loutre, du marcassin des flots au seigneur des rivières.
         team: [
             { speciesId: "ondaloutre", level: 44 },
@@ -718,7 +718,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g3", name: "PÊCHEUR ABYSSE", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 11, y: 8,
+        mapId: "yellow_arena_eau", x: 11, y: 8, run3X: 4, run3Y: 7,
         // Trois colosses des profondeurs (3 lignées différentes : crapaud-titan, tortue feu/eau, colosse abyssal).
         team: [
             { speciesId: "crapotaure", level: 47 },  // ROCHE/EAU
@@ -732,7 +732,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g4", name: "SENTINELLE RESSAC", title: "Sentinelle du Sanctuaire",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 11, y: 11,
+        mapId: "yellow_arena_eau", x: 11, y: 11, run3X: 10, run3Y: 7,
         // Une seule Daemon, mais de niveau boss.
         team: [
             { speciesId: "razmaree", level: 50 },
@@ -744,7 +744,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_boss", name: "ONDINE", title: "Reine des Marées",
         sprite: { emoji: "🌊", color: "#1e78c8" },
-        mapId: "yellow_arena_eau", x: 7, y: 3,
+        mapId: "yellow_arena_eau", x: 7, y: 3, run3X: 7, run3Y: 1,
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_eauarena_g1", "y_eauarena_g2", "y_eauarena_g3", "y_eauarena_g4"],
         team: [

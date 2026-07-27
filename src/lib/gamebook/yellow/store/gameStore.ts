@@ -950,9 +950,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (firstDomeArrival) markTrainerDefeated(AUTEL_VISITED_MARKER)
             const newMap = resolveActiveMap(targetMapId) // RUN 3 : variante re-thémée (grille 15×10 unifiée) si applicable
             if (newMap) {
-                // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14), pas au spawn générique du gym
-                // (7,8). En RUN 3, la variante Spectre est 15×10 → on garde le spawn générique (7,8), pas d'override.
-                if (targetMapId === "yellow_arena_feu" && effectiveRunWorld() !== "run3") { spawnX = 8; spawnY = 14 }
+                // Spawns SPÉCIFIQUES aux cartes de base : l'arène Feu (16×16) entre en (8,14). En RUN 3, TOUTES les
+                //   variantes d'arène sont 15×10 à entrée générique (7,8) → on force ce spawn (sinon les spawns de base
+                //   — feu 8,14, eau 7,14 depuis Cendreville — sortiraient de la grille 15×10 unifiée).
+                if (targetMapId === "yellow_arena_feu") { spawnX = 8; spawnY = 14 }
+                if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[targetMapId]) { spawnX = 7; spawnY = 8 }
                 const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
                 // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
                 // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.

@@ -1708,4 +1708,20 @@ export const RUN3_ARENA_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/arena_spectre_r3.png",
         backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
     },
+    yellow_arena_elec: {
+        ...YELLOW_MAPS.yellow_arena_elec,
+        name: "ARÈNE DRAGON",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT, // arène 4 = Ville Jaune (comme la base élec)
+        backgroundImage: "/yellow/sprites/arena_dragon_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_eau: {
+        ...YELLOW_MAPS.yellow_arena_eau,
+        name: "ARÈNE MULTI",
+        tiles: buildArenaPlante(), width: 15, height: 10,
+        // Arène 5 à CENDREVILLE → sortie (7,9) vers Cendreville (sous la porte de l'arène en 10,9), PAS Ville Jaune.
+        exits: [{ x: 7, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 10 }],
+        backgroundImage: "/yellow/sprites/arena_multi_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
 }
