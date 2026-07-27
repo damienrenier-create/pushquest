@@ -59,6 +59,7 @@ import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
+import { BATTLE_LS_KEY } from "../storage/sessionKeys"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
 function enemyActiveSpeciesId(b: BattleState): string | null {
@@ -214,7 +215,8 @@ export function getSnapshot(): BattleStoreState {
 // storeState que via `trainer` + `energySpent` → ces deux-là suffisent à l'instantané.
 // EXCLUS : PvP (réseau dual-client, désync) et séries Frontier (orchestration de vagues non
 // reprenable ici). FAIL-SAFE : toute relecture invalide efface l'instantané et retombe sur la carte.
-const BATTLE_LS_KEY = "pq_yellow_battle_v1"
+// Clé partagée avec storage/sessionKeys (source unique : un reset / le générateur de progression
+// doit pouvoir purger l'instantané sans redéclarer la chaîne).
 const BATTLE_LS_MAX_AGE_MS = 24 * 3600 * 1000 // au-delà → instantané ignoré (anti-zombie)
 
 function battlePersistable(b: BattleState | null, ctx: TrainerContext | null): boolean {

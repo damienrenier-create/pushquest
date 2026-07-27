@@ -57,6 +57,7 @@ import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
+import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
@@ -151,10 +152,10 @@ interface FrontierSnap {
     tourChoice: boolean
     usineCt: string[] | null
 }
-const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
-// RUN 2 — snapshot des 5 scores figé à la clôture du run 2 (recap perso, relisible après le run 2 / en run 3,
-// alors que l'état live ne les calcule plus). Client-only, zéro impact sur la save serveur.
-const RUN2_SCORES_LS_KEY = "pq_yellow_run2scores_v1"
+// Clés partagées avec storage/sessionKeys (source unique : un reset / le générateur de progression
+// doit pouvoir purger ces reliquats de session sans redéclarer les chaînes).
+// RUN2_SCORES_LS_KEY = snapshot des 5 scores figé à la clôture du run 2 (recap perso, relisible après
+// le run 2 / en run 3, alors que l'état live ne les calcule plus). Client-only, zéro impact sur la save.
 function readRun2Snapshot(): RunScores | null {
     try { const raw = window.localStorage.getItem(RUN2_SCORES_LS_KEY); return raw ? (JSON.parse(raw) as RunScores) : null } catch { return null }
 }
