@@ -1,16 +1,33 @@
 import { describe, it, expect } from "vitest"
-import { obedienceCap, disobeyChance, mayDisobey, MAX_OBEDIENCE_BADGES } from "./obedience"
+import { obedienceCap, obedienceCapOwned, obedienceCapTraded, disobeyChance, mayDisobey, MAX_OBEDIENCE_BADGES } from "./obedience"
 
-describe("obéissance — cap par badge + proba de désobéissance", () => {
-    it("le cap de niveau monte avec les badges (0→20 … 5→100)", () => {
-        expect(obedienceCap(0)).toBe(20)
-        expect(obedienceCap(1)).toBe(35)
-        expect(obedienceCap(2)).toBe(50)
-        expect(obedienceCap(3)).toBe(65)
-        expect(obedienceCap(4)).toBe(80)
-        expect(obedienceCap(5)).toBe(100)
-        expect(obedienceCap(MAX_OBEDIENCE_BADGES)).toBe(100)
-        expect(obedienceCap(9)).toBe(100) // borné
+describe("obéissance — 2 barèmes (à soi / échangé) + proba de désobéissance", () => {
+    it("cap À SOI (strict) : 0→20 · 1→30 · 2→40 · 3→50 · 4→65 · 5→100", () => {
+        expect(obedienceCapOwned(0)).toBe(20)
+        expect(obedienceCapOwned(1)).toBe(30)
+        expect(obedienceCapOwned(2)).toBe(40)
+        expect(obedienceCapOwned(3)).toBe(50)
+        expect(obedienceCapOwned(4)).toBe(65)
+        expect(obedienceCapOwned(5)).toBe(100)
+        expect(obedienceCapOwned(9)).toBe(100) // borné
+    })
+
+    it("cap ÉCHANGÉ (permissif) : 0→20 · 1→35 · 2→50 · 3→65 · 4→80 · 5→100", () => {
+        expect(obedienceCapTraded(0)).toBe(20)
+        expect(obedienceCapTraded(1)).toBe(35)
+        expect(obedienceCapTraded(2)).toBe(50)
+        expect(obedienceCapTraded(3)).toBe(65)
+        expect(obedienceCapTraded(4)).toBe(80)
+        expect(obedienceCapTraded(5)).toBe(100)
+        expect(obedienceCapTraded(MAX_OBEDIENCE_BADGES)).toBe(100)
+    })
+
+    it("obedienceCap(traded, badges) : choisit le bon barème selon l'origine", () => {
+        expect(obedienceCap(false, 2)).toBe(40)      // à soi
+        expect(obedienceCap(undefined, 2)).toBe(40)  // à soi (non traqué)
+        expect(obedienceCap(true, 2)).toBe(50)       // échangé
+        expect(obedienceCap(false, 4)).toBe(65)
+        expect(obedienceCap(true, 4)).toBe(80)
     })
 
     it("proba de désobéir : 0 sous le cap, ~4%/niveau au-dessus, plafond 50 %", () => {
@@ -21,11 +38,16 @@ describe("obéissance — cap par badge + proba de désobéissance", () => {
         expect(disobeyChance(100, 20)).toBe(50)  // plafond
     })
 
-    it("mayDisobey : UNIQUEMENT les Daemons échangés au-dessus de leur cap", () => {
-        expect(mayDisobey(true, 50, 1)).toBe(true)    // échangé L50, 1 badge (cap 35) → oui
-        expect(mayDisobey(true, 30, 1)).toBe(false)   // échangé sous le cap → non
-        expect(mayDisobey(false, 90, 0)).toBe(false)  // capturé soi-même → JAMAIS
-        expect(mayDisobey(undefined, 90, 0)).toBe(false)
-        expect(mayDisobey(true, 90, 5)).toBe(false)   // 5 badges → cap 100 → obéit toujours
+    it("mayDisobey : s'applique DÉSORMAIS aux Daemons à soi ET échangés, au-dessus de leur cap respectif", () => {
+        // À SOI : L55 avec 3 badges (cap 50) → désobéit ; L45 → obéit.
+        expect(mayDisobey(false, 55, 3)).toBe(true)
+        expect(mayDisobey(false, 45, 3)).toBe(false)
+        expect(mayDisobey(undefined, 90, 0)).toBe(true)   // à soi L90, 0 badge (cap 20) → désobéit (NOUVEAU)
+        // ÉCHANGÉ : cap plus haut → L55 avec 3 badges (cap 65) → obéit encore.
+        expect(mayDisobey(true, 55, 3)).toBe(false)
+        expect(mayDisobey(true, 70, 3)).toBe(true)        // L70 > 65 → désobéit
+        // 5 badges = cap 100 pour les deux → obéissance totale.
+        expect(mayDisobey(false, 100, 5)).toBe(false)
+        expect(mayDisobey(true, 100, 5)).toBe(false)
     })
 })

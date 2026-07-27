@@ -357,15 +357,19 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (act.kind === "switch") {
             doSwitch(state, act.side, act.teamIndex!, events)
         } else if (act.kind === "move") {
-            // OBÉISSANCE (PvE only) : un Daemon ÉCHANGÉ (traded), au-dessus du cap lié aux badges, peut DÉSOBÉIR :
-            // il ignore l'ordre (tour perdu, MAIS énergie remboursée → playerActed reste false, pas de double peine).
-            // RNG seedé ; consommé UNIQUEMENT pour un traded over-cap → resolveTurnPvp intact + RNG inchangé sinon.
+            // OBÉISSANCE (PvE only) : un Daemon au-dessus de son cap (lié aux badges + à son ORIGINE — À SOI = strict,
+            // ÉCHANGÉ = permissif) peut DÉSOBÉIR : il ignore l'ordre (tour perdu, MAIS énergie remboursée → playerActed
+            // reste false, pas de double peine). RNG seedé ; consommé UNIQUEMENT pour un Daemon over-cap (jamais en jeu
+            // normal où l'équipe suit la progression) → resolveTurnPvp intact (le PvP saute ce bloc via !state.pvp).
             let disobeyed = false
-            if (!state.pvp && act.side === "player" && cur.traded === true) {
-                const cap = obedienceCap(state.playerBadgeCount ?? 5)
+            if (!state.pvp && act.side === "player") {
+                const cap = obedienceCap(cur.traded, state.playerBadgeCount ?? 5)
                 if (cur.level > cap && rng.chance(disobeyChance(cur.level, cap))) {
                     disobeyed = true
-                    events.push({ kind: "message", text: `${displayName(cur)} n'en fait qu'à sa tête et IGNORE ton ordre ! 😾 (pas assez de badges pour le commander)` })
+                    const why = cur.traded === true
+                        ? "pas assez de badges pour commander un Daemon échangé"
+                        : "il est trop fort pour ton niveau de Dresseur — décroche plus de badges !"
+                    events.push({ kind: "message", text: `${displayName(cur)} n'en fait qu'à sa tête et IGNORE ton ordre ! 😾 (${why})` })
                 }
             }
             // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir : si le Daemon ne peut PAS

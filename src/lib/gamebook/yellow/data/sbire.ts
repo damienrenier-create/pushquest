@@ -224,7 +224,15 @@ export const SBIRE_TIPS: string[][] = [
         "Chaque badge agrandit ton portefeuille de reps, gonfle ton énergie par combat et débloque de nouvelles CT.",
         "Réunis les trois et le Champion t'ouvrira son trône.",
     ],
-    // 16 — CT (Capsules Techniques)
+    // 16 — OBÉISSANCE (les badges = ton autorité)
+    [
+        "Écoute bien, car peu le savent : un Daemon trop PUISSANT pour tes badges n'en fera qu'à sa tête !",
+        "En plein combat, il peut IGNORER ton ordre — tour perdu. Ton autorité de Dresseur se mérite avec les badges.",
+        "Tes PROPRES Daemons sont les plus exigeants : garde-les proches du niveau de tes arènes — ≈20 sans badge, puis 30, 40, 50, 65 badge après badge.",
+        "Un Daemon ÉCHANGÉ, reçu d'un ami, t'obéit un peu plus haut (35, 50, 65, 80…) — mais lui aussi te lâchera s'il te dépasse trop.",
+        "La seule voie : décroche plus de BADGES. Les cinq réunis, et TOUS t'obéissent jusqu'au niveau 100. 🍝",
+    ],
+    // 17 — CT (Capsules Techniques)
     [
         "Les CT enseignent de nouvelles attaques à tes Daemons, contre des reps.",
         "Certaines sont libres dès le départ ; d'autres ne s'achètent qu'une fois le bon badge en poche.",
