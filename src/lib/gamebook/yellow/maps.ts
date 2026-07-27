@@ -1677,3 +1677,35 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
 }
 
 export const YELLOW_MAP_IDS = Object.keys(YELLOW_MAPS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RUN 3 — VARIANTES d'arène re-thémées (glace / combat / spectre).
+// MÊME id de carte que le run 1/2 → TOUT le câblage (équipes re-typées, badges, score, entrée via
+// currentArenaMapId, Hall of Fame) reste INCHANGÉ. Ces variantes ne changent QUE la PRÉSENTATION quand on joue
+// en run 3 : grille UNIFIÉE 15×10 (buildArenaPlante — collisions validées en jeu par Sartay) + fond re-thémé +
+// entrée/sortie standard (7,9). Résolues par gameStore.resolveActiveMap() UNIQUEMENT si effectiveRunWorld()==="run3".
+// Les dresseurs sont repositionnés en parallèle via run3X/run3Y (cf. trainers.ts + gameStore.activeNpcs).
+// Arènes 4 (élec) & 5 (eau) : pas encore de nouveau fond → elles gardent la carte run 1/2 telle quelle.
+const RUN3_ARENA_EXIT = [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }]
+export const RUN3_ARENA_MAPS: Record<string, YellowMapData> = {
+    yellow_arena: {
+        ...YELLOW_MAPS.yellow_arena,
+        name: "ARÈNE DE GLACE",
+        backgroundImage: "/yellow/sprites/arena_glace_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_roche: {
+        ...YELLOW_MAPS.yellow_arena_roche,
+        name: "ARÈNE DE COMBAT",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_combat_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_feu: {
+        ...YELLOW_MAPS.yellow_arena_feu,
+        name: "ARÈNE SPECTRALE",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_spectre_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+}

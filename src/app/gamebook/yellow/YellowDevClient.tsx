@@ -699,6 +699,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // créditerait les vrais reps d'un compte easy/debutant (énergie découplée en modes assistés).
             setGameMode(gameMode)
             await loadYellowSave()
+            // RUN 3 — reload en pleine arène : loadYellowSave vient d'établir le monde (setActiveWorld). Si hydrate()
+            //   a posé la carte de BASE avant (course de montage), on re-résout maintenant vers la variante re-thémée.
+            if (!cancelled) useGameStore.getState().refreshActiveMap()
             // easy/debutant : crédite le remplissage d'énergie de DÉPART (idempotent — une seule fois par run).
             if (!cancelled) ensureModeStartGrant()
             // CROSS-JOUEUR : enregistre les Daemons CUSTOM (+ leurs némésis) de TOUS les joueurs → ceux créés par

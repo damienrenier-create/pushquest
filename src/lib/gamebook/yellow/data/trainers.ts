@@ -36,6 +36,10 @@ export interface TrainerData {
     mapId: string
     x: number
     y: number
+    /** RUN 3 : position ALTERNATIVE de la hitbox quand la carte est jouée en run 3 (arènes re-thémées glace/combat/
+     *  spectre → grille 15×10 unifiée, dresseurs repositionnés). Ignoré hors run 3. Défaut = (x,y). */
+    run3X?: number
+    run3Y?: number
     team: TrainerMonSpec[]
     /** Argent gagné en le battant. */
     reward: number
@@ -301,7 +305,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g1", name: "GARDE RONCE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 2, y: 1,
+        mapId: "yellow_arena", x: 2, y: 1, run3X: 2, run3Y: 5,
         team: [{ speciesId: "feuillichot", level: 7 }, { speciesId: "feuillichot", level: 9 }],
         reward: 60, aiLevel: "trainer",
         intro: ["*Un garde abaisse sa lance-feuille.*", "Le Bosquet ne laisse passer que les dignes !"],
@@ -310,7 +314,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g2", name: "GARDE LIERRE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 3, y: 1,
+        mapId: "yellow_arena", x: 3, y: 1, run3X: 12, run3Y: 5,
         team: [{ speciesId: "broussours", level: 8 }, { speciesId: "pampousse", level: 12 }],
         reward: 80, aiLevel: "trainer",
         intro: ["Mes bêtes ont soif de ton sel !"],
@@ -319,7 +323,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g3", name: "GARDE SÈVE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 11, y: 1,
+        mapId: "yellow_arena", x: 11, y: 1, run3X: 4, run3Y: 7,
         team: [{ speciesId: "tamanpousse", level: 10 }, { speciesId: "pantheon", level: 8 }],
         reward: 90, aiLevel: "trainer",
         intro: ["*Le garde caresse un étrange tamanoir feuillu.*", "Des créatures inédites veillent ici…"],
@@ -328,7 +332,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g4", name: "GARDE ÉCORCE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 12, y: 1,
+        mapId: "yellow_arena", x: 12, y: 1, run3X: 10, run3Y: 7,
         team: [{ speciesId: "feliane", level: 16 }],
         reward: 110, aiLevel: "trainer",
         intro: ["Dernier rempart avant le Doyen. En garde !"],
@@ -362,7 +366,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_rocharena_g1", name: "MINEUR BURIN", title: "Garde de la Caverne",
         sprite: { emoji: "⛏️", color: "#a08050" },
-        mapId: "yellow_arena_roche", x: 4, y: 5,
+        mapId: "yellow_arena_roche", x: 4, y: 5, run3X: 2, run3Y: 5,
         team: [
             { speciesId: "cailloutchi", level: 14 },
             { speciesId: "rembodo", level: 16 },
@@ -375,7 +379,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_rocharena_g2", name: "GAMIN GALET", title: "Garde de la Caverne",
         sprite: { emoji: "⛏️", color: "#a08050" },
-        mapId: "yellow_arena_roche", x: 4, y: 7,
+        mapId: "yellow_arena_roche", x: 4, y: 7, run3X: 12, run3Y: 5,
         // Le "collectionneur de cailloux" : sa lignée Mottoche à différents stades.
         team: [
             { speciesId: "mottoche", level: 5 },
@@ -391,7 +395,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_rocharena_g3", name: "FORGEUR BRAISE", title: "Garde de la Caverne",
         sprite: { emoji: "⛏️", color: "#a08050" },
-        mapId: "yellow_arena_roche", x: 10, y: 5,
+        mapId: "yellow_arena_roche", x: 10, y: 5, run3X: 4, run3Y: 7,
         team: [
             { speciesId: "lavapetit", level: 15 },
             { speciesId: "lavapetit", level: 15 },
@@ -404,7 +408,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_rocharena_g4", name: "GUIDE STALAGM", title: "Garde de la Caverne",
         sprite: { emoji: "⛏️", color: "#a08050" },
-        mapId: "yellow_arena_roche", x: 10, y: 7,
+        mapId: "yellow_arena_roche", x: 10, y: 7, run3X: 10, run3Y: 7,
         team: [
             { speciesId: "marmoterre", level: 18 },
             { speciesId: "tetardoc", level: 17 },
@@ -416,7 +420,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_rocharena_boss", name: "MAÎTRE GRANIT", title: "Doyen de la Caverne Minière",
         sprite: { emoji: "🗿", color: "#7a6a55" },
-        mapId: "yellow_arena_roche", x: 7, y: 3,
+        mapId: "yellow_arena_roche", x: 7, y: 3, run3X: 7, run3Y: 1,
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_rocharena_g1", "y_rocharena_g2", "y_rocharena_g3", "y_rocharena_g4"],
         team: [
@@ -447,7 +451,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_feuarena_g1", name: "NOVICE ÉTINCELLE", title: "Gardienne du Brasier",
         sprite: { emoji: "🔥", color: "#ff6a3a" },
-        mapId: "yellow_arena_feu", x: 3, y: 3,
+        mapId: "yellow_arena_feu", x: 3, y: 3, run3X: 2, run3Y: 5,
         // Jeune recrue : équipe VARIÉE mais 100% sur le thème du feu (du Feu/Combat au Roche/Feu).
         // (Avant : un Plumiot Normal/Vol hors-thème + un Panthéon LÉGENDAIRE — absurde sur un garde novice.)
         team: [
@@ -464,7 +468,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_feuarena_g2", name: "ÉLEVEUSE EMBRA", title: "Gardienne du Brasier",
         sprite: { emoji: "🔥", color: "#ff6a3a" },
-        mapId: "yellow_arena_feu", x: 5, y: 7,
+        mapId: "yellow_arena_feu", x: 5, y: 7, run3X: 12, run3Y: 5,
         // 5 Daemons de la MÊME lignée (oiseau de feu), du poussin au grand rapace.
         team: [
             { speciesId: "colibraise", level: 22 },
@@ -480,7 +484,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_feuarena_g3", name: "PRÊTRESSE LAVE", title: "Gardienne du Brasier",
         sprite: { emoji: "🔥", color: "#ff6a3a" },
-        mapId: "yellow_arena_feu", x: 11, y: 7,
+        mapId: "yellow_arena_feu", x: 11, y: 7, run3X: 4, run3Y: 7,
         // 3 costaudes (formes finales).
         team: [
             { speciesId: "tauricendre", level: 28 },
@@ -494,7 +498,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_feuarena_g4", name: "GARDIENNE MAGMA", title: "Sentinelle de la Caldeira",
         sprite: { emoji: "🔥", color: "#ff6a3a" },
-        mapId: "yellow_arena_feu", x: 13, y: 3,
+        mapId: "yellow_arena_feu", x: 13, y: 3, run3X: 10, run3Y: 7,
         // Une seule Daemon, mais de niveau boss.
         team: [
             { speciesId: "toucanyon", level: 29 },
@@ -506,7 +510,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_feuarena_boss", name: "PYRA", title: "Doyenne de la Caldeira",
         sprite: { emoji: "🌋", color: "#ff4a2a" },
-        mapId: "yellow_arena_feu", x: 8, y: 2,
+        mapId: "yellow_arena_feu", x: 8, y: 2, run3X: 7, run3Y: 1,
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_feuarena_g1", "y_feuarena_g2", "y_feuarena_g3", "y_feuarena_g4"],
         team: [

@@ -25,7 +25,7 @@ import {
     YELLOW_CHAPTER_ID,
     YELLOW_ENTRANCE_MAP_ID,
 } from "@/lib/gamebook/yellow/featureFlag"
-import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
+import { YELLOW_MAPS, RUN3_ARENA_MAPS } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { YellowMapData } from "@/lib/gamebook/yellow/maps"
 
@@ -87,8 +87,15 @@ export async function GET() {
     // Safety : si la map a évolué depuis le dernier save (refonte, building
     // ajouté à l'emplacement où le joueur était…), on retombe sur le spawn
     // par défaut pour éviter de spawn le joueur dans un mur infranchissable.
-    const map = YELLOW_MAPS[player.mapId]
-    if (!map || !isPositionWalkable(map, player.posX, player.posY)) {
+    // RUN 3 : les 3 arènes ont une VARIANTE re-thémée (grille 15×10) dont la position peut être MARCHABLE
+    //   alors qu'elle est un MUR sur la carte de BASE (roche/feu). Le serveur ignore le run → on ACCEPTE la
+    //   position si elle est valide sur la base OU sur la variante (sinon un joueur run 3 rechargeant dans
+    //   l'arène serait éjecté en ville). Sûr : n'élargit la tolérance qu'aux 3 cartes d'arène concernées.
+    const base = YELLOW_MAPS[player.mapId]
+    const variant = RUN3_ARENA_MAPS[player.mapId]
+    const walkable = (!!base && isPositionWalkable(base, player.posX, player.posY))
+        || (!!variant && isPositionWalkable(variant, player.posX, player.posY))
+    if (!walkable) {
         return NextResponse.json({ player: DEFAULT_PLAYER, recovered: true })
     }
 

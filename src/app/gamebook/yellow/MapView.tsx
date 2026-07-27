@@ -9,13 +9,12 @@
 // Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
 import { useSyncExternalStore } from "react"
-import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { useGameStore, activeNpcs } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
-import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
@@ -365,7 +364,10 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     const visionRadius = torchSteps > 0 ? Math.max(darkBase, torchRadius) : darkBase
 
     const cam = computeCamera(player.posX, player.posY, map)
-    const npcsOnMap = YELLOW_NPCS.filter((n) => n.mapId === player.mapId)
+    // RUN 3 : activeNpcs() applique les positions run-3 + rend invisibles les dresseurs d'arène (peints dans le
+    //   nouveau fond) ; hors run 3 = YELLOW_NPCS inchangé. Re-évalué à chaque rendu (le changement de monde
+    //   s'accompagne d'un changement de map → re-render).
+    const npcsOnMap = activeNpcs().filter((n) => n.mapId === player.mapId)
     const buildings = map.buildings ?? []
 
     // Re-render sur changement d'état des baies (récolte sur place OU secret révélé) SANS déplacement : le
