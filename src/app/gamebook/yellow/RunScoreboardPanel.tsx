@@ -1,30 +1,43 @@
 "use client"
 
-// LEADERBOARD des scores de RUN (concours) — consultable depuis le menu START par les joueurs ayant fini le
-// run 1 (>=5 badges). Deux classements distincts (unités différentes) : RUN 2 (NOTE GLOBALE /1000 = 3 facteurs de
-// PERFORMANCE : % victoire, Pokédex, niveaux) et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule.
+// LEADERBOARD des CONCOURS — consultable depuis le PALMARÈS. Onglets : RUN 1 (Σ points de hauts faits, visible
+// dès le run 1) · RUN 2 (note /1000) · RUN 3 « Conquérant » (Σ niveaux vaincus) · SURVIE « Survivant » (Σ énergie
+// restante) · DUELS (réputation PvP + top-5). Chaque ligne d'un classement de run est CLIQUABLE → profil des hauts
+// faits du joueur (PlayerBadgesModal). Top 10 + TA ligne toujours affichée. Lecture seule.
 
 import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
+import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import PlayerBadgesModal from "./PlayerBadgesModal"
 
-interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
-type TabId = "run1" | "run3" | "run3energy" | "run2" | "league" | "duels"
-type Data = { gated?: boolean; run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
+interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
+type TabId = "run1" | "run2" | "run3" | "run3energy" | "duels"
+type Data = { run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
-    { id: "run1", label: "🥇 RUN 1", unit: "pts", hint: "DÉCOUVERTE : Σ des points de BADGES (hauts faits) débloqués au run 1. Le + haut gagne. Consulte tes badges dans « 🎖️ TROPHÉES »." },
-    { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "CONQUÉRANT : Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
-    { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT (run 3) : Σ de l'énergie restante relevée juste après le KO du chef de chaque arène/Ligue. Conserver son énergie = monter — l'OPPOSÉ du score RUN 3 (niveaux vaincus)." },
-    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 de PERFORMANCE : % victoire (×500), Pokédex (×400) & niveaux d'équipe (×100). L'énergie et les pas ne comptent plus. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des axes." },
-    { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },
-    { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "LE DUELLISTE : nombre de reflets d'autres joueurs battus (cumulé sur tous tes runs). Le + haut gagne." },
+    { id: "run1", label: "🥇 RUN 1", unit: "pts", hint: "DÉCOUVERTE : Σ des points de HAUTS FAITS débloqués au run 1. Le + haut gagne. Clique une ligne pour voir les trophées d'un joueur." },
+    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "PERFORMANCE (note /1000) : Pokédex (×500) + % de victoire (×300) + niveaux d'équipe (×200). Score live tant qu'on est en run 2, figé une fois terminé. Clique 👤 pour le profil, la ligne pour le détail des axes." },
+    { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
+    { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
+    { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
 ]
 
-export default function RunScoreboardPanel({ close }: { close: () => void }) {
+const topN = (rec: Record<string, number> | undefined, n: number): [string, number][] =>
+    Object.entries(rec ?? {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n)
+
+export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close: () => void; hasRun2: boolean; hasRun3: boolean }) {
+    // ANTI-SPOILER : un joueur encore en run 1 ne voit que RUN 1 + DUELS (les duels/reflets existent dès le run 1).
+    //   Les onglets RUN 2 / RUN 3 / SURVIE n'apparaissent qu'une fois le run correspondant atteint — sinon leur seule
+    //   présence révélerait l'existence des runs suivants. Le serveur renvoie de toute façon ces listes vides ici.
+    const tabs = RUN_META.filter((m) =>
+        m.id === "run1" || m.id === "duels" || (m.id === "run2" && hasRun2) || ((m.id === "run3" || m.id === "run3energy") && hasRun3))
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
-    const [tab, setTab] = useState<TabId>("run3")
-    const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 3 axes de performance)
+    const [tab, setTab] = useState<TabId>("run1")
+    const [expanded, setExpanded] = useState<string | null>(null) // RUN 2 : userId de l'entrée dépliée (détail des axes)
+    const [profile, setProfile] = useState<{ userId: string; nickname: string } | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -33,7 +46,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 const r = await fetch("/api/gamebook/yellow/run-scores")
                 const j = r.ok ? await r.json() : null
                 if (cancelled) return
-                setData({ gated: j?.gated, run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], run3energy: j?.run3energy ?? [], duels: j?.duels ?? [] })
+                setData({ run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], run3energy: j?.run3energy ?? [], duels: j?.duels ?? [] })
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -41,16 +54,67 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
     }, [])
 
     const meta = RUN_META.find((m) => m.id === tab)!
-    // ⚡ LIGUE : dérivé des entrées run 2 → seulement ceux qui ont dépensé des reps en Ligue (>0 = entré),
-    //   score = reps Ligue, trié ASCENDANT (le plus économe en tête = 🥇).
-    const leagueList: ScoreRow[] = data.run2
-        .filter((r) => (r.leagueReps ?? 0) > 0)
-        .map((r) => ({ ...r, score: r.leagueReps ?? 0 }))
-        .sort((a, b) => a.score - b.score)
-    // ⚔️ DUELS : reflets battus (cumul), déjà trié desc côté serveur → ScoreRow (score = victoires).
-    const duelsList: ScoreRow[] = data.duels.map((d) => ({ nickname: d.nickname, score: d.wins, wonAt: null }))
-    const list = tab === "run1" ? data.run1 : tab === "run3" ? data.run3 : tab === "run3energy" ? data.run3energy : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
+
+    // Classement du run courant : TOP 10 + ta propre ligne toujours affichée (même hors top 10).
+    const fullList: ScoreRow[] = tab === "run1" ? data.run1 : tab === "run2" ? data.run2 : tab === "run3" ? data.run3 : tab === "run3energy" ? data.run3energy : []
+    const top = fullList.slice(0, 10)
+    const myIdx = fullList.findIndex((r) => r.me)
+    const showMineApart = myIdx >= 10
+
+    const openProfile = (r: ScoreRow) => { if (r.userId) setProfile({ userId: r.userId, nickname: r.nickname }) }
+
+    const renderRow = (r: ScoreRow, rankIdx: number) => {
+        const canExpand = tab === "run2" && Array.isArray(r.factors) && r.factors!.length > 0
+        const clickable = !!r.userId
+        // Clé d'expand UNIQUE par ligne : un joueur en rejeu a 2 lignes run 2 (original + « ² ») avec le MÊME userId
+        //   → utiliser userId seul déplierait les deux. Le pseudo (« Bob » vs « Bob² ») les désambiguïse.
+        const rowKey = `${r.userId ?? ""}::${r.nickname}`
+        const open = expanded === rowKey
+        return (
+            <div key={`${rowKey}-${rankIdx}`}>
+                <div style={{ ...row, background: r.me ? "rgba(79,214,208,0.14)" : rankIdx < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)", border: r.me ? "1px solid rgba(79,214,208,0.5)" : "1px solid transparent", cursor: canExpand || clickable ? "pointer" : "default" }}
+                    onClick={() => { if (canExpand) setExpanded(open ? null : rowKey); else openProfile(r) }}>
+                    <span style={rank}>{medal(rankIdx)}</span>
+                    <span style={name}>{r.nickname}{r.me ? " ★" : ""}</span>
+                    {r.live !== undefined && (
+                        <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
+                            style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢" : "⚪"}</span>
+                    )}
+                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
+                    {canExpand && clickable && (
+                        <button style={profBtn} title="Voir le profil" onClick={(e) => { e.stopPropagation(); openProfile(r) }}>👤</button>
+                    )}
+                    {canExpand ? <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 2 }}>{open ? "▾" : "▸"}</span>
+                        : clickable ? <span style={{ opacity: 0.4, fontSize: 12, marginLeft: 2 }}>›</span> : null}
+                </div>
+                {canExpand && open && (
+                    <div style={factorsBox}>
+                        <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>Critères pondérés (poids après « / »), additionnés → note /1000.</div>
+                        {r.factors!.filter((f) => f.key !== "frugality" && f.key !== "steps").map((f) => (
+                            f.max <= 0 ? (
+                                <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
+                                    <span>{f.label}</span>
+                                    <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>reps</span></span>
+                                </div>
+                            ) : (
+                                <div key={f.key} style={{ fontSize: 10.5 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>{f.label}</span>
+                                        <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
+                                    </div>
+                                    <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
+                                        <div style={{ width: `${Math.round((f.ratio ?? 0) * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                    </div>
+                                    <div style={{ fontSize: 8.5, opacity: 0.55 }}>{f.detail}</div>
+                                </div>
+                            )
+                        ))}
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div style={overlay} onClick={close}>
@@ -58,7 +122,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 <div style={titleStyle}>📊 CLASSEMENT DES CONCOURS</div>
 
                 <div style={tabsRow}>
-                    {RUN_META.map((m) => (
+                    {tabs.map((m) => (
                         <button key={m.id} onClick={() => { setTab(m.id); setExpanded(null) }}
                             style={{ ...tabBtn, borderColor: tab === m.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: tab === m.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: tab === m.id ? "#11121a" : "#fff" }}>
                             {m.label}
@@ -70,68 +134,88 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
-                {state === "ok" && data.gated && (
-                    <div style={muted}>🔒 Le classement des concours se débloque quand tu as conquis les <b>5 arènes du run 1</b>.<br />Termine la Ligue pour y accéder !</div>
-                )}
-                {state === "ok" && !data.gated && list.length === 0 && (
-                    tab === "league"
-                        ? <div style={muted}>Personne n&apos;a encore livré de combat en Ligue (run 2).<br />Le plus économe en reps prendra la tête ! ⚡</div>
-                        : tab === "duels"
-                        ? <div style={muted}>Personne n&apos;a encore battu de reflet.<br />Va défier les doubles de tes potes (Viridian / arène eau) ! ⚔️</div>
-                        : <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "🏅"}</div>
+
+                {/* Onglets de RUN : top 10 + ta ligne */}
+                {state === "ok" && tab !== "duels" && (
+                    fullList.length === 0
+                        ? <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à briller ! {tab === "run1" ? "🥇" : tab === "run3" ? "🏆" : tab === "run3energy" ? "🔋" : "🏅"}</div>
+                        : <div style={scroll}>
+                            {top.map((r, i) => renderRow(r, i))}
+                            {showMineApart && (
+                                <>
+                                    <div style={{ textAlign: "center", opacity: 0.4, fontSize: 12, padding: "2px 0" }}>⋯</div>
+                                    {renderRow(fullList[myIdx], myIdx)}
+                                </>
+                            )}
+                        </div>
                 )}
 
-                {state === "ok" && !data.gated && list.length > 0 && (
-                    <div style={scroll}>
-                        {list.map((r, i) => {
-                            const canExpand = (tab === "run2" || tab === "run1") && Array.isArray(r.factors) && r.factors!.length > 0
-                            const open = expanded === i
-                            return (
-                                <div key={i}>
-                                    <div style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)", cursor: canExpand ? "pointer" : "default" }}
-                                        onClick={() => { if (canExpand) setExpanded(open ? null : i) }}>
-                                        <span style={rank}>{medal(i)}</span>
-                                        <span style={name}>{r.nickname}</span>
-                                        {r.live !== undefined && (
-                                            <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
-                                                style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢 live" : "⚪ figé"}</span>
-                                        )}
-                                        <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
-                                        {canExpand && <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 2 }}>{open ? "▾" : "▸"}</span>}
-                                    </div>
-                                    {canExpand && open && (
-                                        <div style={factorsBox}>
-                                            <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>Critères pondérés (poids après « / »), additionnés → note /1000.</div>
-                                            {/* On masque les axes PÉRIMÉS (frugality/steps) d'un score figé posté sous l'ancienne formule. */}
-                                            {r.factors!.filter((f) => f.key !== "frugality" && f.key !== "steps").map((f) => (
-                                                f.max <= 0 ? (
-                                                    // Ligne INFO (hors note /1000) — ex. « 🏆 Reps en Ligue » : valeur brute, pas de barre.
-                                                    <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
-                                                        <span>{f.label}</span>
-                                                        <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>reps</span></span>
-                                                    </div>
-                                                ) : (
-                                                    <div key={f.key} style={{ fontSize: 10.5 }}>
-                                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                            <span>{f.label}</span>
-                                                            <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
-                                                        </div>
-                                                        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
-                                                            <div style={{ width: `${Math.round((f.ratio ?? 0) * 100)}%`, height: "100%", background: "#ffe36b" }} />
-                                                        </div>
-                                                        <div style={{ fontSize: 8.5, opacity: 0.55 }}>{f.detail}</div>
-                                                    </div>
-                                                )
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
+                {/* Onglet DUELS : réputation PvP (local) + top-5 + classement duelliste (serveur) */}
+                {state === "ok" && tab === "duels" && <DuelsTab duels={data.duels} />}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
+            </div>
+
+            {profile && <PlayerBadgesModal userId={profile.userId} nickname={profile.nickname} close={() => setProfile(null)} />}
+        </div>
+    )
+}
+
+/** Onglet DUELS : bilan PvP perso + Daemon/attaque fétiches + 3 top-5 (données LOCALES) puis classement DUELLISTE. */
+function DuelsTab({ duels }: { duels: { nickname: string; wins: number }[] }) {
+    const pvp = getPlayer().pvpStats
+    const total = pvp.wins + pvp.losses
+    const winrate = total > 0 ? Math.round((pvp.wins / total) * 100) : 0
+    const spName = (id: string) => getSpecies(id)?.name ?? id
+    const mvName = (id: string) => getMove(id)?.name ?? id
+    const usedTop = topN(pvp.daemonUse, 5)
+    const dmgTop = topN(pvp.dmgByDaemon, 5)
+    const moveTop = topN(pvp.moveUse, 5)
+    const duelsTop = duels.slice(0, 10)
+
+    // Helper de rendu (PAS un composant → appelé comme une fonction, jamais <TopList/>, pour éviter la remontée d'état).
+    const renderTopList = (title: string, rows: [string, number][], fmt: (id: string) => string, valFmt: (v: number) => string) => (
+        <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitle}>{title}</div>
+            {rows.length === 0 ? <div style={{ fontSize: 10.5, opacity: 0.5, padding: "2px 2px" }}>—</div>
+                : rows.map(([id, v], i) => (
+                    <div key={id} style={miniRow}>
+                        <span style={{ width: 16, opacity: 0.6, fontSize: 11 }}>{i + 1}.</span>
+                        <span style={{ flex: 1, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fmt(id)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#ffe36b", fontVariantNumeric: "tabular-nums" }}>{valFmt(v)}</span>
+                    </div>
+                ))}
+        </div>
+    )
+
+    return (
+        <div style={scroll}>
+            {/* Bilan */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                {[["Victoires", pvp.wins, "#4fd6d0"], ["Défaites", pvp.losses, "#ff8a8a"], ["Abandons", pvp.forfeits, "#c3cbdc"], [`${winrate}%`, "ratio", "#ffe36b"]].map(([a, b, c], i) => (
+                    <div key={i} style={statCard}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: c as string }}>{typeof b === "number" ? b : a}</div>
+                        <div style={{ fontSize: 9, opacity: 0.65 }}>{typeof b === "number" ? a : b}</div>
+                    </div>
+                ))}
+            </div>
+            {total === 0 && <div style={{ fontSize: 11, opacity: 0.6, textAlign: "center", padding: "4px 0 10px" }}>Aucun duel joué pour l&apos;instant. Va défier les reflets de tes potes ! ⚔️</div>}
+
+            {renderTopList("🐾 Top 5 Daemons les plus utilisés", usedTop, spName, (v) => `${v}×`)}
+            {renderTopList("💥 Top 5 Daemons — plus gros dégâts (cumul)", dmgTop, spName, (v) => v.toLocaleString("fr-FR"))}
+            {renderTopList("⚡ Top 5 attaques préférées", moveTop, mvName, (v) => `${v}×`)}
+            {dmgTop.length === 0 && total > 0 && <div style={{ fontSize: 9.5, opacity: 0.5, marginTop: -6, marginBottom: 10 }}>Les dégâts se comptent à partir de maintenant (nouveau) — rejoue quelques duels pour peupler ce top.</div>}
+
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 8 }}>
+                <div style={sectionTitle}>🏆 Classement DUELLISTE</div>
+                {duelsTop.length === 0 ? <div style={{ fontSize: 11, opacity: 0.6, padding: "4px 2px" }}>Personne n&apos;a encore battu de reflet.</div>
+                    : duelsTop.map((d, i) => (
+                        <div key={i} style={miniRow}>
+                            <span style={{ width: 22, textAlign: "center", fontWeight: 800 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                            <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.nickname}</span>
+                            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#ffe36b" }}>{d.wins} <span style={{ fontSize: 9, opacity: 0.6 }}>reflets</span></span>
+                        </div>
+                    ))}
             </div>
         </div>
     )
@@ -140,8 +224,8 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(8,6,18,0.82)", fontFamily: "inherit" }
 const box: React.CSSProperties = { width: "min(420px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", background: "#171430", border: "2px solid #ffd54a", borderRadius: 12, padding: 14, color: "#fff", boxShadow: "0 0 30px rgba(255,213,74,.25)" }
 const titleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: "#ffd54a", textAlign: "center", letterSpacing: 1, marginBottom: 10 }
-const tabsRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 8 }
-const tabBtn: React.CSSProperties = { flex: 1, padding: "7px 0", border: "1.5px solid", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 12 }
+const tabsRow: React.CSSProperties = { display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }
+const tabBtn: React.CSSProperties = { flex: "1 1 auto", padding: "6px 4px", border: "1.5px solid", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 10.5, whiteSpace: "nowrap" }
 const hintStyle: React.CSSProperties = { fontSize: 9.5, opacity: 0.65, textAlign: "center", lineHeight: 1.4, marginBottom: 10 }
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.75, textAlign: "center", padding: "16px 8px", lineHeight: 1.6 }
 const scroll: React.CSSProperties = { overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }
@@ -151,4 +235,8 @@ const rank: React.CSSProperties = { fontSize: 14, fontWeight: 800, width: 30, te
 const name: React.CSSProperties = { flex: 1, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
 const score: React.CSSProperties = { fontSize: 14, fontWeight: 800, color: "#ffe36b", fontVariantNumeric: "tabular-nums" }
 const unit: React.CSSProperties = { fontSize: 10, opacity: 0.7, fontWeight: 600 }
+const profBtn: React.CSSProperties = { background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, cursor: "pointer", fontSize: 12, padding: "1px 5px", lineHeight: 1.4 }
 const closeBtn: React.CSSProperties = { marginTop: 12, padding: "10px 0", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, cursor: "pointer" }
+const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: "#ffd54a", marginBottom: 5, letterSpacing: 0.3 }
+const miniRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "4px 4px", borderBottom: "1px solid rgba(255,255,255,0.05)" }
+const statCard: React.CSSProperties = { flex: 1, textAlign: "center", background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 2px" }

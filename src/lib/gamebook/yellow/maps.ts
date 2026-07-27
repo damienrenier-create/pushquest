@@ -1544,7 +1544,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 0, backgroundImageOriginY: 0,
-        debugGrid: true, // rencontres ACTIVES (zone ZONES.yellow_grotte_nexus) — B1F/B2F restent sans zone → sans rencontre
+        debugGrid: false, // grille de calage COUPÉE pour les joueurs (?grid=1 en dev si besoin). N.B. les rencontres = ZONES, rien à voir avec debugGrid
         // Topologie (Sartay) : 1F ↔ B1F via les échelles 1/2/3 (un trigger par case d'échelle).
         exits: [
             ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F
@@ -1567,7 +1567,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 784, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: false, // rencontres ACTIVES par BIOTOPE (cf. ZONES.yellow_grotte_nexus_b1f.rects)
+        debugGrid: false, encountersPaused: false, // grille COUPÉE (?grid=1 en dev) ; rencontres ACTIVES par BIOTOPE (cf. ZONES.yellow_grotte_nexus_b1f.rects)
         // B1F = étage pivot : échelles 1/2/3 remontent en 1F, a/b/c/d descendent en B2F, et (45,5) SORT de la grotte.
         exits: [
             ...([[3, 3], [3, 4]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 8 })),          // échelle 3 → 1F
@@ -1589,7 +1589,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 1568, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: false, // rencontres ACTIVES (cf. ZONES.yellow_grotte_nexus_b2f) : créations catchables + finales puissantes niv 75
+        debugGrid: false, encountersPaused: false, // grille COUPÉE (?grid=1 en dev) ; rencontres ACTIVES (cf. ZONES.yellow_grotte_nexus_b2f) : créations catchables + finales puissantes niv 75
         // B2F = fond de la grotte : a/b/c/d remontent en B1F (un trigger par case d'échelle).
         exits: [
             ...([[31, 12], [32, 12]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 17, targetSpawnY: 6 })),                                     // échelle a → B1F
@@ -1677,3 +1677,51 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
 }
 
 export const YELLOW_MAP_IDS = Object.keys(YELLOW_MAPS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RUN 3 — VARIANTES d'arène re-thémées (glace / combat / spectre).
+// MÊME id de carte que le run 1/2 → TOUT le câblage (équipes re-typées, badges, score, entrée via
+// currentArenaMapId, Hall of Fame) reste INCHANGÉ. Ces variantes ne changent QUE la PRÉSENTATION quand on joue
+// en run 3 : grille UNIFIÉE 15×10 (buildArenaPlante — collisions validées en jeu par Sartay) + fond re-thémé +
+// entrée/sortie standard (7,9). Résolues par gameStore.resolveActiveMap() UNIQUEMENT si effectiveRunWorld()==="run3".
+// Les dresseurs sont repositionnés en parallèle via run3X/run3Y (cf. trainers.ts + gameStore.activeNpcs).
+// Arènes 4 (élec) & 5 (eau) : pas encore de nouveau fond → elles gardent la carte run 1/2 telle quelle.
+const RUN3_ARENA_EXIT = [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }]
+export const RUN3_ARENA_MAPS: Record<string, YellowMapData> = {
+    yellow_arena: {
+        ...YELLOW_MAPS.yellow_arena,
+        name: "ARÈNE DE GLACE",
+        backgroundImage: "/yellow/sprites/arena_glace_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_roche: {
+        ...YELLOW_MAPS.yellow_arena_roche,
+        name: "ARÈNE DE COMBAT",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_combat_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_feu: {
+        ...YELLOW_MAPS.yellow_arena_feu,
+        name: "ARÈNE SPECTRALE",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_spectre_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_elec: {
+        ...YELLOW_MAPS.yellow_arena_elec,
+        name: "ARÈNE DRAGON",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT, // arène 4 = Ville Jaune (comme la base élec)
+        backgroundImage: "/yellow/sprites/arena_dragon_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+    yellow_arena_eau: {
+        ...YELLOW_MAPS.yellow_arena_eau,
+        name: "ARÈNE MULTI",
+        tiles: buildArenaPlante(), width: 15, height: 10,
+        // Arène 5 à CENDREVILLE → sortie (7,9) vers Cendreville (sous la porte de l'arène en 10,9), PAS Ville Jaune.
+        exits: [{ x: 7, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 10 }],
+        backgroundImage: "/yellow/sprites/arena_multi_r3.png",
+        backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
+    },
+}

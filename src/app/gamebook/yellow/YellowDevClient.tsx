@@ -699,6 +699,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // créditerait les vrais reps d'un compte easy/debutant (énergie découplée en modes assistés).
             setGameMode(gameMode)
             await loadYellowSave()
+            // RUN 3 — reload en pleine arène : loadYellowSave vient d'établir le monde (setActiveWorld). Si hydrate()
+            //   a posé la carte de BASE avant (course de montage), on re-résout maintenant vers la variante re-thémée.
+            if (!cancelled) useGameStore.getState().refreshActiveMap()
             // easy/debutant : crédite le remplissage d'énergie de DÉPART (idempotent — une seule fois par run).
             if (!cancelled) ensureModeStartGrant()
             // CROSS-JOUEUR : enregistre les Daemons CUSTOM (+ leurs némésis) de TOUS les joueurs → ceux créés par
@@ -1056,8 +1059,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // ÉNERGIE en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps) — sert au FLAVOR de
             // l'offre run 3 (« X⚡ en réserve »), PAS au classement.
             const ngplusScore = getPlayer().reps
-            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 de PERFORMANCE (3 facteurs : % victoire ×500,
-            //   Pokédex ×400, Σ niveaux ×100 — énergie & pas RETIRÉS) — surtout PAS l'énergie brute (grind poker).
+            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 de PERFORMANCE (3 facteurs : Pokédex ×500,
+            //   % victoire ×300, Σ niveaux ×200 — énergie & pas RETIRÉS) — surtout PAS l'énergie brute (grind poker).
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
             // La clôture est un dernier échantillon : on grave le PIC du run avant de figer le recap.
             recordStatMax("run2BestGrade", computeRunScores().grade)
@@ -1898,29 +1901,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* HUB PALMARÈS — regroupe réputation / stats / trophées / HoF / scores concours.
                Affichage PROGRESSIF : un joueur run 1 ne voit ni « run 2/3 » ni les HoF non débloqués. */}
             {menu === "palmares" && (() => {
-                // ⚠️ NE PAS gater sur run2Snap : c'est une clé localStorage GLOBALE (non scopée par compte, jamais
-                //   effacée au reset) → sur un navigateur partagé ou après « recommencer », elle ferait FUITER l'existence
-                //   du run 2/3 à un joueur run 1 (règle anti-spoiler). ngplusUsed (posé au DÉBUT du run 2) suffit et couvre
-                //   100% des cas légitimes de CE compte. run2Snap ne sert plus qu'au CONTENU du panneau run2scores.
-                const hasRun2 = activeWorld === "ngplus" || player.ngplusUsed
-                const hasRun3 = activeWorld === "run3" || player.run3Used
+                // Affichage PROGRESSIF (anti-spoiler) : un joueur run 1 ne voit ni HoF non débloquées ni suffixe « RUN 1 ».
+                //   Le CLASSEMENT est visible dès le run 1 (le panneau masque lui-même les onglets run 2/3 non atteints,
+                //   cf. props hasRun2/hasRun3 au montage). On ne gate JAMAIS sur run2Snap (clé localStorage globale non
+                //   scopée par compte → fuiterait l'existence des runs suivants sur un navigateur partagé).
                 // badges = monde ACTIF (remis à [] au début d'un run 2/3) → un joueur avancé aurait la HoF Arènes cachée
                 //   en début de run. On élargit à tout état prouvant une conquête d'arène passée (le panneau lit le serveur).
                 const hasArenaHof = (player.badges?.length ?? 0) > 0 || player.isChampion || player.ngplusUsed || player.run3Used
                 const hasLeagueHof = player.isChampion || player.ngplusUsed || player.run3Used
+                // Run 1 « fini » = a battu la Ligue au moins une fois (sacre, ou déjà passé en run 2/3). Les hauts faits
+                //   sont intrinsèquement run-1 → on suffixe « RUN 1 » une fois le run 1 bouclé.
+                const run1Done = player.isChampion || player.ngplusUsed || player.run3Used
                 return (
                     <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>🏆 PALMARÈS</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "2px 0 6px" }}>
-                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES (hauts faits)</button>
-                                <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
-                                <button style={menuBtnStyle} onClick={() => setMenu("reput")}>⚔️ RÉPUTATION PvP</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{run1Done ? " — RUN 1" : ""}</button>
                                 {hasArenaHof && <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>🏟️ HALL OF FAME (ARÈNES)</button>}
                                 {hasLeagueHof && <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>}
-                                {hasRun2 && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
-                                {hasRun3 && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
-                                {(hasRun2 || hasRun3) && <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS</button>}
+                                {/* Classement visible DÈS le run 1 (onglet RUN 1 + Duels) ; les onglets run 2/3 sont masqués côté panneau tant qu'ils ne sont pas atteints. */}
+                                <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
                             </div>
                             <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
                         </div>
@@ -2374,7 +2376,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
             {menu === "hof" && <HallOfFameViewer close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
             {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
-            {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("palmares")} />}
+            {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("palmares")} hasRun2={activeWorld === "ngplus" || player.ngplusUsed} hasRun3={activeWorld === "run3" || player.run3Used} />}
             {menu === "badges" && <RunBadgesPanel close={() => setMenu("palmares")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
@@ -2939,8 +2941,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",
                                     `Ton score final : ${score}. Il rejoint le grand registre du Nexus — sauras-tu le battre un jour ?`,
-                                    "En cet instant, tes TROIS destins fusionnent : run 1, run 2 et run 3 n'en font plus qu'un.",
-                                    "Ton équipe du concours règne désormais sur le Nexus unifié, et tous tes anciens Daemons t'attendent au PC. Le cycle est bouclé, Maître. 🍝",
+                                    "En cet instant, tes TROIS vies FUSIONNENT : run 1, run 2 et run 3 n'en font plus qu'un seul monde unifié.",
+                                    "➡️ TOUT ce que tu as entraîné t'attend : file au PC d'un Centre Daemon — tes anciennes équipes, tes captures et tes fusions des TROIS runs y sont TOUTES réunies. Tes objets et tes CT aussi, dans ton sac.",
+                                    "🧬 À toi de composer ton ÉQUIPE IDÉALE : pioche le meilleur de chacune de tes vies pour bâtir la team ultime.",
+                                    "⚔️ Puis reprends l'aventure là où tu l'avais laissée — va défier SYLVEBARBE et les dresseurs les plus aguerris du Nexus. La suite du monde t'attend, Maître ! 🍝",
                                 ])
                             })
                         }}>🌀 MÉGA-FUSION</button>

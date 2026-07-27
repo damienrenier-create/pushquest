@@ -14,7 +14,7 @@ import { tryMove } from "../engine/movement"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
+import { YELLOW_MAPS, RUN3_ARENA_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
 import { currentGymBadge } from "../data/arenaInfos"
 import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
@@ -56,6 +56,26 @@ import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, U
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+
+// RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
+// 15×10 unifiée + fond glace/combat/spectre) UNIQUEMENT si on joue en run 3. Hors run 3 (et pour toute autre carte),
+// renvoie la carte de base → run 1/2 STRICTEMENT inchangés. Appelé à CHAQUE pose de carte (warp/setMap/hydrate)
+// pour couvrir aussi le reload direct dans l'arène.
+function resolveActiveMap(mapId: string): YellowMapData | undefined {
+    if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[mapId]) return RUN3_ARENA_MAPS[mapId]
+    return YELLOW_MAPS[mapId]
+}
+
+// RUN 3 — dresseurs d'arène repositionnés : YELLOW_NPCS avec la hitbox alternative (run3X/run3Y) appliquée quand on
+// joue en run 3, pour que l'interaction (pressA / interception) ET le rendu (MapView) tombent sur la position
+// DESSINÉE dans le nouveau fond. On VIDE aussi l'emoji : en run 3 les gardes/boss sont peints dans l'image d'arène
+// (comme l'arène Plante en run 1) → pas de sprite parasite par-dessus. Hors run 3 : liste inchangée (réf. stable).
+export function activeNpcs() {
+    if (effectiveRunWorld() !== "run3") return YELLOW_NPCS
+    return YELLOW_NPCS.map((n) => (n.run3X != null
+        ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
+        : n))
+}
 
 export interface ActiveDialogue {
     npcId: string
@@ -188,6 +208,9 @@ interface GameStore {
     /** Lance directement le REMATCH d'un dresseur (boss à 2 phases : enchaîne phase 2 après phase 1). */
     launchRematch: (trainerId: string) => void
     hydrate: (loaded: PlayerState) => void
+    /** RUN 3 : re-résout la carte ACTIVE si le monde run-3 a été établi APRÈS la pose de la carte (course de montage
+     *  hydrate vs loadYellowSave) → bascule vers la variante d'arène re-thémée si applicable. No-op sinon. */
+    refreshActiveMap: () => void
     closeShop: () => void
     closePc: () => void
     closeGuide: () => void
@@ -693,7 +716,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Les PNJ ne sont JAMAIS traversables : si la case cible est occupée par un
         // PNJ, on tourne sur place (comme un mur). tryMove ne connaît pas les PNJ.
         if ((next.posX !== player.posX || next.posY !== player.posY)
-            && findNpcAt(YELLOW_NPCS, next.posX, next.posY, player.mapId)) {
+            && findNpcAt(activeNpcs(), next.posX, next.posY, player.mapId)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
             return
@@ -933,11 +956,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             //   autel_visited (débloque le FUSIODEX dans le menu + lève la gate anti-spoiler). One-time.
             const firstDomeArrival = targetMapId === "yellow_combat_autel" && !isTrainerDefeated(AUTEL_VISITED_MARKER)
             if (firstDomeArrival) markTrainerDefeated(AUTEL_VISITED_MARKER)
-            const newMap = YELLOW_MAPS[targetMapId]
+            const newMap = resolveActiveMap(targetMapId) // RUN 3 : variante re-thémée (grille 15×10 unifiée) si applicable
             if (newMap) {
-                // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
-                // pas au spawn générique du gym (7,8) calé sur les arènes 15×10.
+                // Spawns SPÉCIFIQUES aux cartes de base : l'arène Feu (16×16) entre en (8,14). En RUN 3, TOUTES les
+                //   variantes d'arène sont 15×10 à entrée générique (7,8) → on force ce spawn (sinon les spawns de base
+                //   — feu 8,14, eau 7,14 depuis Cendreville — sortiraient de la grille 15×10 unifiée).
                 if (targetMapId === "yellow_arena_feu") { spawnX = 8; spawnY = 14 }
+                if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[targetMapId]) { spawnX = 7; spawnY = 8 }
                 const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
                 // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
                 // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.
@@ -1256,14 +1281,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         // Sinon : chercher un NPC devant le joueur et déclencher son dialogue.
-        let npc = getNpcInFrontOfPlayer(player, YELLOW_NPCS)
+        let npc = getNpcInFrontOfPlayer(player, activeNpcs())
         // Parler PAR-DESSUS un comptoir : si la case devant est un comptoir et
         // qu'un PNJ se tient juste derrière (2 cases devant), on l'interpelle.
         if (!npc) {
             const front = getFacingTile(player)
             if (map.tiles[front.y]?.[front.x] === "shopCounter") {
                 const beyond = getTileInFront(player, 2)
-                npc = findNpcAt(YELLOW_NPCS, beyond.x, beyond.y, player.mapId)
+                npc = findNpcAt(activeNpcs(), beyond.x, beyond.y, player.mapId)
             }
         }
 
@@ -1889,7 +1914,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     showDialogue: (npcId, npcName, lines) => set({ dialogue: { npcId, npcName, lines, lineIndex: 0 } }),
 
     setMap: (mapId, spawnX, spawnY) => {
-        const map = YELLOW_MAPS[mapId]
+        const map = resolveActiveMap(mapId) // RUN 3 : variante d'arène re-thémée si applicable
         if (!map) {
             console.warn(`[gameStore] Map inconnue : ${mapId}`)
             return
@@ -1936,8 +1961,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const safe = loaded.mapId === UKOGNOFY_CHAMBER_MAP
             ? { ...loaded, mapId: "yellow_grotte_nexus", posX: 18, posY: 39 }
             : loaded
-        const map = YELLOW_MAPS[safe.mapId] ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+        const map = resolveActiveMap(safe.mapId) ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID] // RUN 3 : variante d'arène si reload direct dedans
         set({ player: safe, map, hydrated: true })
+    },
+
+    // RUN 3 — reload en pleine arène : au montage, hydrate() peut poser la carte AVANT que loadYellowSave n'ait
+    //   fait setActiveWorld("run3") (2 effets concurrents) → la carte de BASE serait affichée au lieu de la variante.
+    //   Appelée APRÈS loadYellowSave, cette action re-résout la carte active (bascule base ↔ variante) sans bouger
+    //   le joueur. No-op hors arène run-3 ou si la carte est déjà correcte (comparaison de référence).
+    refreshActiveMap: () => {
+        const cur = get().map
+        if (!cur) return
+        const resolved = resolveActiveMap(cur.id)
+        if (resolved && resolved.id === cur.id && resolved !== cur) set({ map: resolved })
     },
 
     closeShop: () => set({ shopOpen: false }),

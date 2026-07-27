@@ -5,9 +5,9 @@
 //
 //   Stats brutes affichées (hors note) : temps de jeu (playtimeMs), énergie consommée, pas.
 //   ★ SCORE GLOBAL /1000 = note de synthèse (↑ mieux) = Σ de 3 facteurs normalisés [0,1] × poids :
-//        🏆 % de victoire   = victoires / (victoires + défaites)          × 500
-//        📖 Pokédex         = espèces capturées / total dex (run 2)        × 400
-//        💪 Σ niveaux équipe = Σniveaux / 600                              × 100
+//        📖 Pokédex         = espèces capturées / total dex (run 2)        × 500
+//        🏆 % de victoire   = victoires / (victoires + défaites)          × 300
+//        💪 Σ niveaux équipe = Σniveaux / 600                              × 200
 //      → total = 1000 (chaque facteur borné [0,1] AVANT pondération). PERFORMANCE pure : la frugalité (énergie)
 //        et le nombre de pas ont été RETIRÉS de la note (ils restent affichés en info brute). « Temps réel » abandonné.
 

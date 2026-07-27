@@ -31,6 +31,10 @@ export interface NpcDefinition {
     // Position initiale (ou centre de patrouille pour wanderers)
     initialX: number
     initialY: number
+    // RUN 3 (Nexus Jaune) : position ALTERNATIVE quand la carte est jouée en run 3 (arènes re-thémées → grille
+    // 15×10 unifiée, dresseurs repositionnés). Résolue par le store (activeNpcs) ; ignorée hors run 3. Défaut = initialX/Y.
+    run3X?: number
+    run3Y?: number
     // Pour les wanderers : rayon de patrouille autour de la position initiale
     wanderRadius?: number
     // Dialogues

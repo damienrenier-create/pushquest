@@ -7,7 +7,7 @@
 //     pour que le classement soit peuplé sans attendre qu'un joueur déclenche un POST.
 //
 // La note RUN 2 = Σ de 3 facteurs normalisés [0,1] × poids (somme 1000) :
-//   🏆 % victoire ×500 · 📖 Pokédex ×400 · 💪 Σ niveaux ×100.
+//   🏆 % victoire ×300 · 📖 Pokédex ×500 · 💪 Σ niveaux ×200.
 //   L'ÉNERGIE (frugalité) et le « nombre de pas » ont été RETIRÉS du run 2 : il récompense la PERFORMANCE pure
 //   (gagner + capturer + monter en niveau), pas la gestion de ressources. Le RUN 1 utilise désormais les BADGES
 //   (hauts faits, cf. data/run1Badges) et n'appelle plus ce module — la branche `run1` ci-dessous est conservée
@@ -21,10 +21,10 @@ export const LEVEL_MAX = 600        // Σ niveaux « plein » = 6 × 100
 export const STEP_MAX = 30000       // au-delà → 0 pt sur le facteur « peu de pas »
 
 // Poids des 3 facteurs de la note /1000 du RUN 2 (somme = 1000). Le run 2 récompense la PERFORMANCE :
-// gagner (×500) prime, puis compléter le Pokédex (×400), puis monter son équipe (×100). Frugalité & pas RETIRÉS.
-const W_WINRATE = 500
-const W_SPECIES = 400
-const W_LEVELS = 100
+// compléter le Pokédex (×500) prime, puis gagner (×300), puis monter son équipe (×200). Frugalité & pas RETIRÉS.
+const W_WINRATE = 300
+const W_SPECIES = 500
+const W_LEVELS = 200
 
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x))
 

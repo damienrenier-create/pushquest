@@ -133,9 +133,9 @@ export const RUN3_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     y_elecarena_g3: [{ speciesId: "cryotyran", level: 35 }, { speciesId: "wyverion", level: 20 }, { speciesId: "carlembre", level: 28 }, { speciesId: "glacirex", level: 30 }],
     y_elecarena_g4: [{ speciesId: "wyverion", level: 30 }, { speciesId: "carlembre", level: 32 }, { speciesId: "glacirex", level: 34 }],
     // ── ARÈNE 5 → MULTI (mélange de FINALS variés, façon gauntlet) ──
-    y_eauarena_g1: [{ speciesId: "maitrezenc", level: 43 }, { speciesId: "mycedruide", level: 43 }, { speciesId: "dracarlin", level: 43 }, { speciesId: "necrocorbe", level: 42 }],
-    y_eauarena_g2: [{ speciesId: "hebulmin", level: 44 }, { speciesId: "cryotyran", level: 45 }, { speciesId: "regnantaur", level: 47 }],
-    y_eauarena_g3: [{ speciesId: "druidours", level: 47 }, { speciesId: "necrolopendre", level: 48 }, { speciesId: "archibouh", level: 49 }],
+    y_eauarena_g1: [{ speciesId: "maitrezenc", level: 43 }, { speciesId: "mycedruide", level: 43 }, { speciesId: "dracarlin", level: 43 }, { speciesId: "gekosmic", level: 43 }], // run 3 : Nécrocorbe → GÉKOSMIC (Centrale Psy)
+    y_eauarena_g2: [{ speciesId: "hebulmin", level: 44 }, { speciesId: "omnhippo", level: 46 }, { speciesId: "regnantaur", level: 47 }],                                          // run 3 : Cryotyran → OMNHIPPO (Centrale Psy)
+    y_eauarena_g3: [{ speciesId: "druidours", level: 47 }, { speciesId: "necrolopendre", level: 48 }, { speciesId: "uzumaro", level: 48 }],                                        // run 3 : Archibouh → UZUMARO (Maison Combat)
     y_eauarena_g4: [{ speciesId: "enclumind", level: 50 }],
 }
 

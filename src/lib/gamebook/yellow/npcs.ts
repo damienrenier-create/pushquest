@@ -51,6 +51,8 @@ const TRAINER_NPCS: NpcDefinition[] = TRAINERS.map((t) => ({
     sprite: t.sprite,
     initialX: t.x,
     initialY: t.y,
+    // RUN 3 : hitbox alternative pour les arènes re-thémées (résolue par gameStore.activeNpcs quand run3).
+    ...(t.run3X != null ? { run3X: t.run3X, run3Y: t.run3Y } : {}),
     dialoguesAfter: t.intro,
 }))
 
