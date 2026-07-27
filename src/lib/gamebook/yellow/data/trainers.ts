@@ -177,11 +177,11 @@ export const TRAINERS: TrainerData[] = [
         ],
     },
 
-    // === ROUTE DU NORD — GUETTEUR RAOUL (12,18) : 3e rival de route, à EMBUSCADE ===
+    // === ROUTE DU NORD — GUETTEUR RAOUL (12,14) : 3e rival de route, à EMBUSCADE ===
     // Même mécanique de niveaux que Léo/Mia (scaleWithBadges → niveau du garde le plus fort
     // de la dernière arène battue + évolution au stade naturel), mais Daemons différents
     // (Couperin COMBAT / Ruffiant INSECTE, absents des 2 autres équipes de route).
-    // Posté 15 cases sous l'entrée de la grotte, il regarde vers le SUD et interpelle
+    // Posté 11 cases sous l'entrée de la grotte, il regarde vers le SUD et interpelle
     // quiconque entre dans sa ligne de mire — cf. data/trainerSight.ts (pas besoin de lui
     // parler ; on peut aussi l'aborder au A comme n'importe quel dresseur).
     {
@@ -192,7 +192,7 @@ export const TRAINERS: TrainerData[] = [
         scaleWithBadges: true,
         mapId: "yellow_route_nord",
         x: 12,
-        y: 18,
+        y: 14,
         team: [
             { speciesId: "couperin", level: 8 },
             { speciesId: "ruffiant", level: 9 },

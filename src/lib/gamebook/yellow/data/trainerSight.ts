@@ -30,9 +30,9 @@ export interface TrainerSightSpec {
 export const TRAINER_ALERT_MS = 650
 
 export const TRAINER_SIGHTS: readonly TrainerSightSpec[] = [
-    // GUETTEUR RAOUL — planté 15 cases sous l'entrée de la grotte (12,3), il surveille
-    // la colonne x=12 vers le SUD (couloir walkable de (12,19) à (12,27)).
-    { trainerId: "y_trainer_raoul", mapId: "yellow_route_nord", x: 12, y: 18, facing: "down", range: 8 },
+    // GUETTEUR RAOUL — planté 11 cases sous l'entrée de la grotte (12,3), il surveille
+    // la colonne x=12 vers le SUD (couloir walkable de (12,15) à (12,18)).
+    { trainerId: "y_trainer_raoul", mapId: "yellow_route_nord", x: 12, y: 14, facing: "down", range: 4 },
 
     // === CENTRALE (électrique) — 5 embuscades. La position DOIT être identique à celle de la fiche
     //     TrainerData (data/trainers.ts) : le test générique le vérifie. ===

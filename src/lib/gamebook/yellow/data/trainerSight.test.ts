@@ -27,38 +27,38 @@ describe("champ de vision des dresseurs", () => {
         }
     })
 
-    it("RAOUL surveille les 8 cases sous lui, toutes praticables", () => {
+    it("RAOUL surveille les 4 cases sous lui, toutes praticables", () => {
         const spec = TRAINER_SIGHTS.find((s) => s.trainerId === RAOUL)!
         const tiles = sightTiles(spec, mapBlocker(spec.mapId))
-        expect(tiles.length).toBe(8)                                  // aucun obstacle ne tronque le couloir
-        expect(tiles.map((t) => t.y)).toEqual([19, 20, 21, 22, 23, 24, 25, 26])
+        expect(tiles.length).toBe(4)                                  // aucun obstacle ne tronque le couloir
+        expect(tiles.map((t) => t.y)).toEqual([15, 16, 17, 18])
         expect(tiles.every((t) => t.x === 12)).toBe(true)
     })
 
-    it("il est bien à une quinzaine de cases sous l'entrée de la grotte", () => {
+    it("il est bien à une dizaine de cases sous l'entrée de la grotte", () => {
         const spec = TRAINER_SIGHTS.find((s) => s.trainerId === RAOUL)!
         const caveExit = YELLOW_MAPS[spec.mapId].exits!.find((e) => e.targetMapId === "yellow_grotte")!
         expect(spec.x).toBe(caveExit.x)                                // même colonne
-        expect(spec.y - caveExit.y).toBe(15)                           // 15 cases plus bas
+        expect(spec.y - caveExit.y).toBe(11)                           // 11 cases plus bas
     })
 
-    it("repère le joueur de 1 à 8 cases devant, mais pas au-delà ni derrière", () => {
+    it("repère le joueur de 1 à 4 cases devant, mais pas au-delà ni derrière", () => {
         const spec = TRAINER_SIGHTS.find((s) => s.trainerId === RAOUL)!
         const blocked = mapBlocker(spec.mapId)
         const spot = (x: number, y: number) => trainerSpotting(spec.mapId, x, y, blocked, never)?.trainerId ?? null
-        expect(spot(12, 19)).toBe(RAOUL)      // juste devant
-        expect(spot(12, 26)).toBe(RAOUL)      // limite de portée
-        expect(spot(12, 27)).toBeNull()       // 9 cases → hors de vue
-        expect(spot(12, 17)).toBeNull()       // derrière lui
-        expect(spot(11, 22)).toBeNull()       // colonne voisine
-        expect(spot(13, 22)).toBeNull()
-        expect(spot(12, 18)).toBeNull()       // sa propre case
+        expect(spot(12, 15)).toBe(RAOUL)      // juste devant
+        expect(spot(12, 18)).toBe(RAOUL)      // limite de portée
+        expect(spot(12, 19)).toBeNull()       // 5 cases → hors de vue
+        expect(spot(12, 13)).toBeNull()       // derrière lui
+        expect(spot(11, 16)).toBeNull()       // colonne voisine
+        expect(spot(13, 16)).toBeNull()
+        expect(spot(12, 14)).toBeNull()       // sa propre case
     })
 
     it("ne repère plus rien une fois battu", () => {
         const spec = TRAINER_SIGHTS.find((s) => s.trainerId === RAOUL)!
         const blocked = mapBlocker(spec.mapId)
-        expect(trainerSpotting(spec.mapId, 12, 22, blocked, (id) => id === RAOUL)).toBeNull()
+        expect(trainerSpotting(spec.mapId, 12, 16, blocked, (id) => id === RAOUL)).toBeNull()
     })
 
     it("ignore les autres cartes", () => {
