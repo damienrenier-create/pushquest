@@ -2,10 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Home, Trophy, Users, Star, User, MessageSquare, Zap } from "lucide-react"
 
 export default function MobileNav() {
     const pathname = usePathname()
+    const { data: session } = useSession()
+
+    // Invité : pas de menu principal PushQuest — son aventure se joue dans le Nexus.
+    if ((session?.user as any)?.isGuest === true) return null
 
     // v4.0 — Sur /gamebook (Nexus), on masque la nav mobile : elle écrasait les
     // contrôles flèches/A du jeu et créait du scroll inutile. Le joueur peut

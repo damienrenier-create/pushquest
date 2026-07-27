@@ -12,6 +12,11 @@ export default async function Home() {
     redirect("/login")
   }
 
+  // Invité : pas de dashboard PushQuest — son aventure se joue dans le Nexus Jaune.
+  if ((session.user as any)?.isGuest === true) {
+    redirect("/gamebook/yellow")
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 pb-24">
       <ChallengeDashboard />

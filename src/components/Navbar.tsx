@@ -9,6 +9,7 @@ import { useState } from "react"
 
 export default function Navbar() {
     const { data: session } = useSession()
+    const isGuest = (session?.user as any)?.isGuest === true
     const pathname = usePathname()
     const [hasNewOnWall, setHasNewOnWall] = useState(false)
 
@@ -68,7 +69,7 @@ export default function Navbar() {
                             </span>
                         </Link>
 
-                        {session && (
+                        {session && !isGuest && (
                             <div className="hidden lg:flex items-center gap-1">
                                 <Link
                                     href="/pantheon"
