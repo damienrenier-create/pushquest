@@ -1049,6 +1049,14 @@ function hashHue(s: string): number {
     return h % 360
 }
 
+// Avatars PERSO de certains joueurs (planches Gen3 19×4) : remplacent le sprite de base
+// « Red » partout où on les VOIT (et à terme où on les AFFRONTE). Clé = pseudo en minuscules.
+const PLAYER_GEN3_SPRITE: Record<string, string> = {
+    task1: "/yellow/sprites/npc_task1_gen3.png",
+    franss: "/yellow/sprites/npc_franss_gen3.png",
+    embi: "/yellow/sprites/npc_embi_gen3.png",
+}
+
 function RemotePlayerSprite({
     rp,
     screenPos,
@@ -1065,30 +1073,29 @@ function RemotePlayerSprite({
     // chaque déplacement (couplée au glissement CSS).
     const cell = cells[(rp.posX + rp.posY) % 2]
     const topOffset = SPRITE_ASPECT_RATIO - 1
+    // Pote avec avatar perso → sa planche Gen3 (rendue comme un PNJ) ; sinon sprite Red + halo.
+    const customSheet = PLAYER_GEN3_SPRITE[(rp.nickname ?? "").toLowerCase()]
+    const dirRow = rp.direction === "up" ? NPC40_ROW_UP : rp.direction === "left" ? NPC40_ROW_LEFT : rp.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
+    const containerStyle: React.CSSProperties = customSheet
+        ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
+        : { position: "absolute", ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
+    const spriteStyle: React.CSSProperties = customSheet
+        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_IDLE_COL, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
+        : {
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+            backgroundPosition: sheetBgPosition(cell),
+            imageRendering: "pixelated",
+            filter: `drop-shadow(0 0 1.5px hsl(${hue} 95% 45%)) drop-shadow(0 0 1.5px hsl(${hue} 95% 45%))`,
+        }
 
     return (
-        <div
-            style={{
-                position: "absolute",
-                ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO),
-                zIndex: 3,
-                transition: "left 0.12s linear, top 0.12s linear",
-                pointerEvents: "none",
-            }}
-        >
-            {/* Sprite Red teinté par un halo coloré (distinction d'un coup d'œil). */}
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
-                    backgroundPosition: sheetBgPosition(cell),
-                    imageRendering: "pixelated",
-                    filter: `drop-shadow(0 0 1.5px hsl(${hue} 95% 45%)) drop-shadow(0 0 1.5px hsl(${hue} 95% 45%))`,
-                }}
-            />
+        <div style={containerStyle}>
+            {/* Sprite : planche perso (Gen3) si pote connu, sinon Red teinté par un halo coloré. */}
+            <div style={spriteStyle} />
             {/* Au-dessus de la tête : bulle de chat (si message récent) PUIS le pseudo. */}
             <div
                 style={{
