@@ -33,6 +33,20 @@ export const TRAINER_SIGHTS: readonly TrainerSightSpec[] = [
     // GUETTEUR RAOUL — planté 15 cases sous l'entrée de la grotte (12,3), il surveille
     // la colonne x=12 vers le SUD (couloir walkable de (12,19) à (12,27)).
     { trainerId: "y_trainer_raoul", mapId: "yellow_route_nord", x: 12, y: 18, facing: "down", range: 8 },
+
+    // === CENTRALE (électrique) — 5 embuscades. La position DOIT être identique à celle de la fiche
+    //     TrainerData (data/trainers.ts) : le test générique le vérifie. ===
+    { trainerId: "y_leo_centrale", mapId: "yellow_centrale", x: 5, y: 14, facing: "down", range: 5 },
+    { trainerId: "y_mia_centrale", mapId: "yellow_centrale", x: 23, y: 34, facing: "left", range: 6 },
+    { trainerId: "y_selene_centrale", mapId: "yellow_centrale", x: 38, y: 14, facing: "down", range: 6 },
+    { trainerId: "y_noe_centrale", mapId: "yellow_centrale", x: 3, y: 28, facing: "down", range: 5 },
+    { trainerId: "y_igor_centrale", mapId: "yellow_centrale", x: 1, y: 1, facing: "down", range: 4 },
+
+    // === GROTTE DU NEXUS B2F (sombre) — 4 embuscades (Léo & Mia récurrents + Ora & Kael). ===
+    { trainerId: "y_leo_b2f", mapId: "yellow_grotte_nexus_b2f", x: 16, y: 29, facing: "right", range: 5 },
+    { trainerId: "y_mia_b2f", mapId: "yellow_grotte_nexus_b2f", x: 14, y: 23, facing: "right", range: 6 },
+    { trainerId: "y_ora_b2f", mapId: "yellow_grotte_nexus_b2f", x: 45, y: 16, facing: "down", range: 5 },
+    { trainerId: "y_kael_b2f", mapId: "yellow_grotte_nexus_b2f", x: 19, y: 15, facing: "up", range: 4 },
 ]
 
 const STEP: Record<SightFacing, { dx: number; dy: number }> = {

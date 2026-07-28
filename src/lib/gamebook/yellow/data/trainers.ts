@@ -217,6 +217,188 @@ export const TRAINERS: TrainerData[] = [
         ],
     },
 
+    // ================================================================================================
+    // === EMBUSCADES À VUE (mécanique GUETTEUR) — CENTRALE (5) + GROTTE DU NEXUS B2F (4) ==============
+    // Niveaux FIXES par run (PAS de scaleWithBadges) : run 1 = ce champ `team`, run 2/3 = SIGHT_RUN_TEAMS
+    // (data/sightRunTeams.ts). Champ de vision déclaré dans data/trainerSight.ts. Sprites : NPC_GEN3_IDLE.
+    // Léo & Mia sont les RIVAUX RÉCURRENTS de la Route Nord : leurs Daemons de départ réapparaissent ici
+    // à leur forme évoluée (Plumiot→Aquilothan, Cailloutchi→Roctaur/Rochison, Cornaissant→Nécrocorbe,
+    // Trolystrik→Hébulmin), l'équipe grossissant de la Centrale (niv 40-56) à la B2F (niv 80-88).
+    // ================================================================================================
+
+    // --- CENTRALE (électrique) : niv 40 / 50 / 56 · IA "trainer", tier guard ---
+    {
+        id: "y_leo_centrale",
+        name: "GAMIN LÉO",
+        title: "Gamin",
+        sprite: { emoji: "🧒", color: "#4a90d9" }, // fallback ; planche npc_leo_gen3 (row Sud) via NPC_GEN3_IDLE
+        mapId: "yellow_centrale",
+        x: 5,
+        y: 14,
+        team: [
+            { speciesId: "aquilothan", level: 40 }, { speciesId: "roctaur", level: 40 }, { speciesId: "diamantine", level: 40 },
+        ],
+        reward: 320,
+        aiLevel: "trainer",
+        intro: ["Hé, encore TOI ?! On s'est déjà tapés sur la Route Nord…", "Sauf que là, mon Plumiot est devenu un AQUILOTHAN. En garde !"],
+        victory: ["Rooh, tu m'as encore battu…", "La prochaine fois je serai au FOND de la grotte, tu verras !"],
+        defeat: ["OUAIS ! Je t'ai eu ! T'as vu comme j'ai grandi ?!"],
+    },
+    {
+        id: "y_mia_centrale",
+        name: "EXPLORATRICE MIA",
+        title: "Exploratrice",
+        sprite: { emoji: "🧭", color: "#d96a4a" }, // fallback ; planche npc_mia_gen3 (row Ouest) via NPC_GEN3_IDLE
+        mapId: "yellow_centrale",
+        x: 23,
+        y: 34,
+        team: [
+            { speciesId: "necrocorbe", level: 40 }, { speciesId: "hebulmin", level: 40 }, { speciesId: "oragron", level: 40 },
+        ],
+        reward: 340,
+        aiLevel: "trainer",
+        intro: ["Tiens, le petit prodige de la Route Nord ! Ça faisait un bail.", "Mon Cornaissant a mué en Nécrocorbe depuis. On remet ça ?"],
+        victory: ["Toujours aussi coriace… Bravo.", "On se recroisera plus loin, c'est certain."],
+        defeat: ["Ha ! L'exploratrice garde une longueur d'avance !"],
+    },
+    // Les 3 LOCAUX de la Centrale (Solène / Noé / Igor) reflètent le THÈME TOURNANT de la zone :
+    // run 1 = ÉLECTRIQUE · run 2 = FEU · run 3 = PSY (comme les rencontres sauvages). Le champ `team`
+    // ci-dessous = équipe RUN 1 (Élec) ; run 2/3 via SIGHT_RUN_TEAMS. Noms/titres volontairement
+    // NEUTRES (pas type-marqués) puisque leur équipe change de type à chaque run.
+    {
+        id: "y_selene_centrale",
+        name: "SOLÈNE",
+        title: "Opératrice",
+        sprite: { emoji: "🔧", color: "#9b59b6" }, // fallback ; planche npc_selene_gen3 (row Sud)
+        mapId: "yellow_centrale",
+        x: 38,
+        y: 14,
+        team: [
+            { speciesId: "thundah", level: 40 }, { speciesId: "namizeus", level: 40 }, { speciesId: "jerbiwat", level: 40 },
+        ],
+        reward: 360,
+        aiLevel: "trainer",
+        intro: ["*Elle surveille les cadrans de la Centrale.*", "On ne franchit pas mon poste sans un petit duel !"],
+        victory: ["Bien joué. L'énergie est de ton côté aujourd'hui.", "La voie est libre, file."],
+        defeat: ["Ha ! Mon secteur reste imprenable !"],
+    },
+    {
+        id: "y_noe_centrale",
+        name: "NOÉ",
+        title: "Technicien",
+        sprite: { emoji: "👷", color: "#f1c40f" }, // fallback ; planche npc_noe_gen3 (row Sud)
+        mapId: "yellow_centrale",
+        x: 3,
+        y: 28,
+        team: [
+            { speciesId: "zappeureal", level: 40 }, { speciesId: "voltapanthe", level: 40 }, { speciesId: "fulguror", level: 40 },
+        ],
+        reward: 380,
+        aiLevel: "trainer",
+        intro: ["Tiens, un curieux dans la Centrale…", "Voyons si tu tiens la charge — en garde !"],
+        victory: ["Beau combat. Tu as du répondant.", "Allez, poursuis ta route."],
+        defeat: ["Personne ne me débranche ici !"],
+    },
+    {
+        id: "y_igor_centrale",
+        name: "IGOR",
+        title: "Mécano",
+        sprite: { emoji: "🔩", color: "#d9542a" }, // fallback ; planche npc_igor_gen3 (row Sud)
+        mapId: "yellow_centrale",
+        x: 1,
+        y: 1,
+        team: [
+            { speciesId: "hebulmin", level: 40 }, { speciesId: "supabatchu", level: 40 }, { speciesId: "oragron", level: 40 },
+        ],
+        reward: 400,
+        aiLevel: "trainer",
+        intro: ["*Il repose sa clé à molette.*", "On ne traîne pas dans MA Centrale sans se battre !"],
+        victory: ["Pfff… bien joué, gamin.", "Reviens pour la revanche quand tu veux."],
+        defeat: ["Ha ha ! Trop costaud pour toi !"],
+    },
+
+    // --- GROTTE DU NEXUS B2F (endgame, sombre) : ÉQUIPE UNIQUE niv 88 · IA "ace", tier elite ---
+    //     (accès surtout post-run 3 → pas de variation par run ici ; team = l'équipe finale).
+    {
+        id: "y_leo_b2f",
+        name: "GAMIN LÉO",
+        title: "Gamin",
+        sprite: { emoji: "🧒", color: "#4a90d9" }, // planche npc_leo_gen3 (row Est) via NPC_GEN3_IDLE
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 16,
+        y: 29,
+        team: [
+            { speciesId: "aquilord", level: 88 }, { speciesId: "rochison", level: 88 }, { speciesId: "megalithe", level: 88 },
+            { speciesId: "chronorex", level: 88 }, { speciesId: "alirocaillus", level: 88 }, { speciesId: "gekraise", level: 88 },
+        ],
+        reward: 1000,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["Alors comme ça tu es descendu JUSQU'ICI ?", "J'ai plus rien d'un gamin — Aquilord et Rochison sont au SOMMET de leur forme.", "Cette fois je gagne. C'est décidé !"],
+        victory: ["Encore toi… depuis la Route Nord tu me colles aux basques.", "OK. T'es le meilleur. Vraiment."],
+        defeat: ["ENFIN ! Le petit de la Route Nord t'a rattrapé !"],
+    },
+    {
+        id: "y_mia_b2f",
+        name: "EXPLORATRICE MIA",
+        title: "Exploratrice",
+        // NB position : la case demandée (20,23) est un COULOIR 1-large (pont entre 2 zones) → un PNJ
+        // solide y softlockerait le joueur. Repositionnée dans la chambre-ouest (14,23), face à l'EST,
+        // d'où elle surveille tout le couloir (15→20,23) — même embuscade, case sûre (non-goulot).
+        sprite: { emoji: "🧭", color: "#d96a4a" }, // planche npc_mia_gen3 (row Est)
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 14,
+        y: 23,
+        team: [
+            { speciesId: "necrocorbe", level: 88 }, { speciesId: "hebulmin", level: 88 }, { speciesId: "oragron", level: 88 },
+            { speciesId: "draconarque", level: 88 }, { speciesId: "condombre", level: 88 }, { speciesId: "wyvortal", level: 88 },
+        ],
+        reward: 1050,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["La grotte du Nexus… je savais qu'on finirait par se croiser ici.", "Nécrocorbe et Hébulmin ont atteint leur forme ultime. Montre-moi la tienne."],
+        victory: ["Du premier combat de la Route Nord à ce gouffre… quel chemin.", "Tu m'impressionneras toujours."],
+        defeat: ["L'exploratrice a toujours le dernier mot !"],
+    },
+    {
+        id: "y_ora_b2f",
+        name: "MYSTIQUE ORA",
+        title: "Mystique",
+        sprite: { emoji: "👁️", color: "#7c4fc0" }, // planche npc_ora_gen3 (row Sud)
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 45,
+        y: 16,
+        team: [
+            { speciesId: "omnhippo", level: 88 }, { speciesId: "karmaki", level: 88 }, { speciesId: "regnantaur", level: 88 },
+            { speciesId: "archibouh", level: 88 }, { speciesId: "morrow", level: 88 }, { speciesId: "enclumind", level: 88 },
+        ],
+        reward: 1100,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["*Une silhouette flotte dans la pénombre.*", "Les voyants de la surface ne sont que des apprentis. Moi, je PLIE les esprits."],
+        victory: ["Mon esprit vacille… tu es d'une rare trempe.", "Va. Le légendaire t'attend peut-être."],
+        defeat: ["Ton mental s'est brisé avant mes Daemons."],
+    },
+    {
+        id: "y_kael_b2f",
+        name: "ILLUMINÉ KAEL",
+        title: "Illuminé",
+        sprite: { emoji: "🕯️", color: "#b0387a" }, // planche npc_kael_gen3 (row Nord)
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 19,
+        y: 15,
+        team: [
+            { speciesId: "vipember", level: 88 }, { speciesId: "pyropanthe", level: 88 }, { speciesId: "tenebrir", level: 88 },
+            { speciesId: "archibouh", level: 88 }, { speciesId: "divinpate", level: 88 }, { speciesId: "dracosidhe", level: 88 },
+        ],
+        reward: 1200,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["*Ses yeux brillent d'une flamme mauve.*", "Feu et psychisme ne font qu'UN en moi ! Vipember, embrase son âme !"],
+        victory: ["Ma flamme intérieure… éteinte. Impossible.", "Tu portes une lumière plus vive encore."],
+        defeat: ["L'ILLUMINATION est à moi seul !"],
+    },
+
     // === GROTTE DU NEXUS B2F — le spéléologue égaré (35,7) : teaser du légendaire nocturne à la défaite ===
     {
         id: "y_pnj1_grotte_b2f",

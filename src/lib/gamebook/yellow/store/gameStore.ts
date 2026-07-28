@@ -38,6 +38,7 @@ import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
@@ -375,6 +376,15 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
         // speciesAtLevel : force chaque gardien à son STADE NATUREL pour son niveau (jamais un stade-1 à un niveau
         //   où il devrait avoir évolué — règle « jamais de Daemon à un niveau non naturel »).
         specs = RUN3_ARENA_TEAMS[trainerId].map((s) => ({ ...s, speciesId: speciesAtLevel(s.speciesId, s.level) }))
+    }
+    // EMBUSCADES (Centrale + Grotte B2F) : équipes FIXES PAR RUN. run 1 = trainer.team (déjà sélectionné) ; run 2/3
+    //   le REMPLACENT. Espèces déjà données à leur stade final voulu → PAS de speciesAtLevel (contrairement aux arènes).
+    //   Clés disjointes des arènes → aucun conflit avec les blocs ci-dessus. Jamais en rematch (ces dresseurs n'en ont pas).
+    if (ngplus && !isRematch && SIGHT_RUN_TEAMS.ngplus[trainerId]) {
+        specs = SIGHT_RUN_TEAMS.ngplus[trainerId]
+    }
+    if (run3 && !isRematch && SIGHT_RUN_TEAMS.run3[trainerId]) {
+        specs = SIGHT_RUN_TEAMS.run3[trainerId]
     }
     // RUN 3 : LE MAÎTRE de la Ligue (= ACE en Champion) sort une équipe revisitée (écho de son rival run 3) :
     //   Gékraise + Orcaline + némésis(contre-starter) + Aquilord + Divinpâte + Mégalithe. Mêmes niveaux → score

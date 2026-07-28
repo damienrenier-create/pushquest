@@ -700,7 +700,10 @@ const NPC40_ROWS = 4
 const NPC40_CELL_TILES = 2.5          // cellule 40 px / 16 px par tuile
 const NPC40_FOOT_OFFSET_TILES = 0.25  // 4 px de vide sous les pieds dans la cellule
 const NPC40_IDLE_COL = 1              // pose neutre (les 2 pieds au sol)
-const NPC40_ROW_DOWN = 0              // face au joueur
+const NPC40_ROW_DOWN = 0              // face au joueur (Sud)
+const NPC40_ROW_UP = 1                // de dos (Nord)
+const NPC40_ROW_LEFT = 2              // profil gauche (Ouest)
+const NPC40_ROW_RIGHT = 3             // profil droit (Est)
 // Cache-buster COMMUN à toutes les planches Gen 3 : à incrémenter dès qu'un PNG est
 // réexporté sous le même nom, sinon les navigateurs gardent l'ancienne version.
 const NPC40_ASSET_VERSION = 2
@@ -834,6 +837,19 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
     // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
     y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },
+
+    // === EMBUSCADES CENTRALE + GROTTE B2F (cf. data/trainerSight.ts) — chaque sprite regarde
+    //     dans la direction de son champ de vision (row = direction). Léo & Mia réutilisent leurs
+    //     planches de la Route Nord ; les 5 nouveaux ont leur propre planche. ===
+    y_leo_centrale: { url: "/yellow/sprites/npc_leo_gen3.png" }, // Sud
+    y_leo_b2f: { url: "/yellow/sprites/npc_leo_gen3.png", row: NPC40_ROW_RIGHT }, // Est
+    y_mia_centrale: { url: "/yellow/sprites/npc_mia_gen3.png", row: NPC40_ROW_LEFT }, // Ouest
+    y_mia_b2f: { url: "/yellow/sprites/npc_mia_gen3.png", row: NPC40_ROW_RIGHT }, // Est (repositionnée en 14,23)
+    y_selene_centrale: { url: "/yellow/sprites/npc_selene_gen3.png" }, // Sud
+    y_noe_centrale: { url: "/yellow/sprites/npc_noe_gen3.png" }, // Sud
+    y_igor_centrale: { url: "/yellow/sprites/npc_igor_gen3.png" }, // Sud
+    y_ora_b2f: { url: "/yellow/sprites/npc_ora_gen3.png" }, // Sud
+    y_kael_b2f: { url: "/yellow/sprites/npc_kael_gen3.png", row: NPC40_ROW_UP }, // Nord
 }
 
 // === Bulle « ! » du dresseur qui vient de repérer le joueur ==============
