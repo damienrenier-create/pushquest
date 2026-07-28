@@ -57,6 +57,7 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
     const [symbols, setSymbols] = useState<string[]>([])
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
+    const [confirmGrotte, setConfirmGrotte] = useState(false) // ⚠️ confirmation avant l'entrée grotte (téléport IMMÉDIAT)
 
     useEffect(() => { fetchFrontierProfile().then((p) => { setJc(p.jc); setSymbols(p.symbols) }) }, [])
 
@@ -90,7 +91,7 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         <Section title="🕳️ Grotte du Nexus">
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Je suis le SEUL passage vers la Grotte du Nexus — et donc vers l'ultime épreuve : la LIGUE ULTIME. Le casse-tête souterrain (Mt. Moon) se paie en Jetons de Combat.</div>
                             <Row label="⛏️ Entrer dans la Grotte" price={grotteEntryCost()} disabled={busy || (jc ?? 0) < grotteEntryCost()}
-                                onBuy={() => spend(grotteEntryCost(), { grant: () => onEnterGrotte(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" })} />
+                                onBuy={() => setConfirmGrotte(true)} />
                             {/* OUTILS DE GROTTE (juste sous l'entrée) : torches (JC — la Grotte est dans le noir) + repousse (énergie). */}
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, margin: "10px 0 4px", lineHeight: 1.3 }}>🔦 Lampes torches — la Grotte est plongée dans le noir (à allumer depuis le sac) :</div>
                             {TORCHES.map(({ id, jc: cost }) => {
@@ -153,6 +154,23 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                 </div>
                 <button onClick={onClose} style={closeBtn}>QUITTER</button>
             </div>
+
+            {/* ⚠️ CONFIRMATION avant l'entrée grotte : le paiement TÉLÉPORTE aussitôt → laisser le temps de soigner/préparer. */}
+            {confirmGrotte && (
+                <div onClick={(e) => { e.stopPropagation(); setConfirmGrotte(false) }} style={confirmOverlay}>
+                    <div onClick={(e) => e.stopPropagation()} style={confirmBox}>
+                        <div style={{ fontWeight: 800, fontSize: 14, color: INK, marginBottom: 8 }}>⚠️ Entrée immédiate dans la Grotte</div>
+                        <div style={{ fontSize: 12, color: INK, lineHeight: 1.45, marginBottom: 14 }}>
+                            Payer <b>{grotteEntryCost()} 💠</b> te <b>téléporte AUSSITÔT</b> dans la Grotte du Nexus.<br />
+                            Pense à <b>soigner ton équipe</b> et à préparer ton sac (🔦 torches, objets) <b>AVANT</b> d'entrer — tu ne pourras pas ressortir facilement.
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => setConfirmGrotte(false)} style={cancelBtn}>Annuler</button>
+                            <button disabled={busy} onClick={() => { setConfirmGrotte(false); spend(grotteEntryCost(), { grant: () => onEnterGrotte?.(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Entrer ({grotteEntryCost()} 💠)</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -184,3 +202,6 @@ const buyBtn: React.CSSProperties = { background: INK, color: CREAM, border: "no
 const buyOff: React.CSSProperties = { background: DARK, cursor: "not-allowed" }
 const msgBox: React.CSSProperties = { marginTop: 8, padding: 8, background: "#fff8e8", border: `1px solid ${DARK}`, borderRadius: 6, fontSize: 12, color: INK }
 const closeBtn: React.CSSProperties = { margin: 10, marginTop: 0, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }
+const confirmOverlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, padding: 16 }
+const confirmBox: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 340, padding: 14, boxShadow: "0 6px 24px rgba(0,0,0,0.6)", fontFamily: "system-ui, sans-serif" }
+const cancelBtn: React.CSSProperties = { background: DARK, color: INK, border: `1px solid ${INK}`, borderRadius: 6, fontWeight: 700, fontSize: 12, padding: "8px 14px", cursor: "pointer" }
