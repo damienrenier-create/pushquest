@@ -399,6 +399,118 @@ export const TRAINERS: TrainerData[] = [
         defeat: ["L'ILLUMINATION est à moi seul !"],
     },
 
+    // ================================================================================================
+    // === AQUA ARENA (bateau) — arène secrète : 4 dresseurs à vue + 2 BOSS (déclenchés par une PLAQUE) ===
+    // Thème par run : run1 PSY/SPECTRE/TÉNÈBRES · run2 FÉE/INSECTE (métal indispo hors gated) · run3 PLANTE/FEU/ÉLEC.
+    // Niveaux ~35-40 (calés sur l'arène Élec run 1). run 2/3 via SIGHT_RUN_TEAMS. L'ACE de chaque boss porte
+    // une SIGNATURE exclusive (run1 = Chant Naufrageur · run2 = Marée d'Acier). Battre un boss OUVRE la Maison
+    // Hantée (gate côté Cendreville). Boss câblés par PLAQUE dans gameStore (AQUA_BOSS_PLATES), pas par la vue.
+    // ================================================================================================
+    {
+        id: "y_aqua_n1",
+        name: "MATELOT",
+        title: "Matelot",
+        sprite: { emoji: "⚓", color: "#3a6ea5" },
+        mapId: "yellow_aqua_arena",
+        x: 4,
+        y: 18,
+        team: [
+            { speciesId: "mycedruide", level: 36 }, { speciesId: "namizeus", level: 36 },
+        ],
+        reward: 280,
+        aiLevel: "trainer",
+        intro: ["Halte, moussaillon ! On ne traverse pas le pont avant sans se battre !"],
+        victory: ["Rah, tu tiens la mer.", "File."],
+        defeat: ["Retourne d'où tu viens !"],
+    },
+    {
+        id: "y_aqua_n2",
+        name: "VIGIE",
+        title: "Vigie",
+        sprite: { emoji: "🔭", color: "#5a7d9a" },
+        mapId: "yellow_aqua_arena",
+        x: 22,
+        y: 20,
+        team: [
+            { speciesId: "chouhante", level: 36 }, { speciesId: "brookhante", level: 36 }, { speciesId: "divinpate", level: 36 },
+        ],
+        reward: 290,
+        aiLevel: "trainer",
+        intro: ["*Une vigie bondit du gréement.*", "Je t'ai repéré de loin — en garde !"],
+        victory: ["Bien vu… et bien joué.", "Le pont est à toi."],
+        defeat: ["Rien n'échappe à la vigie !"],
+    },
+    {
+        id: "y_aqua_n3",
+        name: "MACHINISTE",
+        title: "Machiniste",
+        sprite: { emoji: "🔧", color: "#8a6d3b" },
+        mapId: "yellow_aqua_arena",
+        x: 15,
+        y: 36,
+        team: [
+            { speciesId: "necarabee", level: 37 }, { speciesId: "shade", level: 37 },
+        ],
+        reward: 300,
+        aiLevel: "trainer",
+        intro: ["On ne descend pas à la salle des machines comme ça !", "Défends-toi !"],
+        victory: ["Pff… les machines s'arrêtent.", "Passe."],
+        defeat: ["Ici, c'est MOI qui règle la vapeur !"],
+    },
+    {
+        id: "y_aqua_n4",
+        name: "SECOND",
+        title: "Second",
+        sprite: { emoji: "🧭", color: "#7a5ac0" },
+        mapId: "yellow_aqua_arena",
+        x: 6,
+        y: 37,
+        team: [
+            { speciesId: "bouhbou", level: 37 }, { speciesId: "omnhippo", level: 37 }, { speciesId: "phoechaudii", level: 37 },
+        ],
+        reward: 340,
+        aiLevel: "trainer",
+        intro: ["*Le second te barre la route de la dunette.*", "Nul n'approche des CAPITAINES sans me vaincre. En garde !"],
+        victory: ["Tu es digne d'affronter nos maîtres.", "Monte sur la passerelle… et choisis ton adversaire."],
+        defeat: ["La passerelle reste gardée !"],
+    },
+    {
+        id: "y_aqua_boss_a",
+        name: "CAPITAINE VAGUE",
+        title: "Capitaine",
+        sprite: { emoji: "🧑‍✈️", color: "#1f5faa" },
+        mapId: "yellow_aqua_arena",
+        x: 11,
+        y: 12,
+        team: [
+            { speciesId: "brookhante", level: 38 }, { speciesId: "regnantaur", level: 38 }, { speciesId: "namizeus", level: 38 }, { speciesId: "shade", level: 39 }, { speciesId: "leviabysse", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] },
+        ],
+        reward: 900,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["*Le Capitaine tient la barre, impassible.*", "Cette Aqua Arena est MON navire. Peu de dresseurs se présentent sur la plaque… encore moins en repartent.", "Montre-moi ta valeur !"],
+        victory: ["*Le Capitaine s'incline devant les flots.*", "Tu as dompté l'Aqua Arena. Le MANOIR HANTÉ, jadis scellé, t'est désormais ouvert.", "Bon vent, dresseur."],
+        defeat: ["Reviens quand la mer t'aura endurci."],
+    },
+    {
+        id: "y_aqua_boss_b",
+        name: "MAÎTRE D'ÉQUIPAGE",
+        title: "Maître d'équipage",
+        sprite: { emoji: "⚓", color: "#a5442a" },
+        mapId: "yellow_aqua_arena",
+        x: 12,
+        y: 12,
+        team: [
+            { speciesId: "shade", level: 38 }, { speciesId: "wistree", level: 38 }, { speciesId: "phoechaudii", level: 39 }, { speciesId: "namizeus", level: 39 }, { speciesId: "archibouh", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] },
+        ],
+        reward: 900,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["*Le Maître d'équipage surgit de la soute royale.*", "Tu t'es posté sur MA plaque ? Courageux. Ou inconscient.", "Que la marée décide !"],
+        victory: ["*Il rend les armes dans un fracas d'acier.*", "Bien combattu. L'Aqua Arena reconnaît ta force — le MANOIR HANTÉ t'ouvre ses portes.", "Va, et ne te noie pas."],
+        defeat: ["La soute ne se rend pas si vite !"],
+    },
+
     // === GROTTE DU NEXUS B2F — le spéléologue égaré (35,7) : teaser du légendaire nocturne à la défaite ===
     {
         id: "y_pnj1_grotte_b2f",

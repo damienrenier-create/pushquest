@@ -783,6 +783,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 return
             }
         }
+        // AQUA ARENA (bateau) — PLAQUES DE DÉFI : les 2 boss trônent sur leur estrade (11,12)/(12,12) et
+        //   n'affrontent QUE le joueur qui vient se poster sur la plaque en vis-à-vis, à l'autre bout du pont.
+        //   (11,27) → CAPITAINE VAGUE (y_aqua_boss_a) ; (12,27) → MAÎTRE D'ÉQUIPAGE (y_aqua_boss_b).
+        //   Marcher sur la plaque = flux dresseur standard (intro → combat via pendingTrainerId) ; une fois VAINCU
+        //   (defeatedTrainers permanent) la plaque devient inerte et on la traverse librement.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === "yellow_aqua_arena" && next.posY === 27 && (next.posX === 11 || next.posX === 12)) {
+            const bossId = next.posX === 11 ? "y_aqua_boss_a" : "y_aqua_boss_b"
+            if (!isTrainerDefeated(bossId)) {
+                const tr = getTrainer(bossId)
+                if (tr) {
+                    set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: tr.intro, lineIndex: 0 }, pendingTrainerId: tr.id, pendingRematch: false })
+                    return
+                }
+            }
+        }
 
         // Le joueur vient-il d'atterrir sur une case warp ? (porte de bâtiment
         // ou doorMat de sortie). Si oui : transition de map immédiate.

@@ -45,6 +45,13 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
             { speciesId: "calderont", level: 50 }, { speciesId: "pyropanthe", level: 50 },
         ],
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team, cf. ci-dessous.)
+        // AQUA ARENA (bateau) — RUN 2 : thème FÉE/INSECTE (métal indispo hors gated). ACE des boss = signature Marée d'Acier.
+        y_aqua_n1: [{ speciesId: "regnantaur", level: 36 }, { speciesId: "wyvortal", level: 36 }],
+        y_aqua_n2: [{ speciesId: "necarabee", level: 36 }, { speciesId: "dracosidhe", level: 36 }, { speciesId: "pterosidhe", level: 36 }],
+        y_aqua_n3: [{ speciesId: "necrolopendre", level: 40 }, { speciesId: "pterosidhe", level: 37 }],
+        y_aqua_n4: [{ speciesId: "regnantaur", level: 37 }, { speciesId: "wyvortal", level: 37 }, { speciesId: "dracosidhe", level: 37 }],
+        y_aqua_boss_a: [{ speciesId: "regnantaur", level: 38 }, { speciesId: "necarabee", level: 38 }, { speciesId: "wyvortal", level: 38 }, { speciesId: "dracosidhe", level: 39 }, { speciesId: "necrolopendre", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
+        y_aqua_boss_b: [{ speciesId: "dracosidhe", level: 38 }, { speciesId: "pterosidhe", level: 38 }, { speciesId: "regnantaur", level: 39 }, { speciesId: "necrolopendre", level: 40 }, { speciesId: "wyvortal", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
     },
     // ── RUN 3 ──
     run3: {
@@ -76,5 +83,12 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
             { speciesId: "karmaki", level: 56 },
         ],
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team.)
+        // AQUA ARENA (bateau) — RUN 3 : thème PLANTE/FEU/ÉLEC. Pas de signature imposée (ACE = finale pure).
+        y_aqua_n1: [{ speciesId: "leviathonn", level: 36 }, { speciesId: "flamkure", level: 35 }],
+        y_aqua_n2: [{ speciesId: "zappeureal", level: 36 }, { speciesId: "cerfeuillu", level: 36 }, { speciesId: "calderont", level: 36 }],
+        y_aqua_n3: [{ speciesId: "thundah", level: 37 }, { speciesId: "druidours", level: 37 }],
+        y_aqua_n4: [{ speciesId: "toucanyon", level: 37 }, { speciesId: "gloutanoir", level: 37 }, { speciesId: "brutetrik", level: 37 }],
+        y_aqua_boss_a: [{ speciesId: "zappeureal", level: 38 }, { speciesId: "leviathonn", level: 38 }, { speciesId: "thundah", level: 38 }, { speciesId: "oragron", level: 39 }, { speciesId: "fulguror", level: 40 }],
+        y_aqua_boss_b: [{ speciesId: "calderont", level: 38 }, { speciesId: "loupyre", level: 38 }, { speciesId: "druidours", level: 38 }, { speciesId: "gloutanoir", level: 39 }, { speciesId: "pyropanthe", level: 40 }],
     },
 }

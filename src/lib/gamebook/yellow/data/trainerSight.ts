@@ -47,6 +47,14 @@ export const TRAINER_SIGHTS: readonly TrainerSightSpec[] = [
     { trainerId: "y_mia_b2f", mapId: "yellow_grotte_nexus_b2f", x: 14, y: 23, facing: "right", range: 6 },
     { trainerId: "y_ora_b2f", mapId: "yellow_grotte_nexus_b2f", x: 45, y: 16, facing: "down", range: 5 },
     { trainerId: "y_kael_b2f", mapId: "yellow_grotte_nexus_b2f", x: 19, y: 15, facing: "up", range: 4 },
+
+    // === AQUA ARENA (bateau) — 4 embuscades d'équipage. Les 2 BOSS ne sont PAS ici : ils s'affrontent
+    //     via une plaque de défi (cf. gameStore.move → yellow_aqua_arena, y=27). Facings validés sur la grille
+    //     walkable annotée : left/right ajustés là où le regard "voulu" butait sur une paroi. ===
+    { trainerId: "y_aqua_n1", mapId: "yellow_aqua_arena", x: 4, y: 18, facing: "down", range: 5 },
+    { trainerId: "y_aqua_n2", mapId: "yellow_aqua_arena", x: 22, y: 20, facing: "left", range: 4 },
+    { trainerId: "y_aqua_n3", mapId: "yellow_aqua_arena", x: 15, y: 36, facing: "right", range: 2 },
+    { trainerId: "y_aqua_n4", mapId: "yellow_aqua_arena", x: 6, y: 37, facing: "right", range: 6 },
 ]
 
 const STEP: Record<SightFacing, { dx: number; dy: number }> = {
