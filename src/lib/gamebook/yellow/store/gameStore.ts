@@ -868,6 +868,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // on recommence au début ») et même après une tentative K.O. (entrée par Cendreville).
                 resetLigueProgress()
             }
+            // GATE MAISON HANTÉE (« le manoir ») : scellée tant que l'AQUA ARENA (bateau de la plage) n'a pas
+            // été domptée — il faut avoir vaincu AU MOINS UN des deux capitaines (boss_a OU boss_b). Une fois
+            // l'un des deux battu (defeatedTrainers, permanent), la porte s'ouvre définitivement, tous runs confondus.
+            if (targetMapId === "yellow_maison_hantee" && player.mapId === "yellow_cendreville"
+                && !isTrainerDefeated("y_aqua_boss_a") && !isTrainerDefeated("y_aqua_boss_b")) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "manoir_gate", npcName: "MANOIR HANTÉ", lineIndex: 0,
+                        lines: [
+                            "*Une brume glaciale scelle la porte du manoir. Une voix d'outre-tombe murmure…*",
+                            "« Nul n'entre ici sans avoir dompté les flots. Va vaincre les capitaines de l'AQUA ARENA — le vieux bateau échoué sur la plage, au-delà de la grotte gelée. »",
+                            "« Prouve ta valeur sur les vagues… alors seulement les spectres t'ouvriront leurs portes. »",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
             // ENTRÉE LIGUE DE FUSION (depuis l'Autel) : roster de fusions REQUIS, puis rescelle le gauntlet
             //   (l'échelle de paliers `fusleague_*` est préservée) + repart sur un registre d'espèces propre.
             if (targetMapId === "yellow_fusion_glace" && player.mapId === "yellow_combat_autel") {
