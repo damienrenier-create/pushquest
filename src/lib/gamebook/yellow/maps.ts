@@ -487,7 +487,10 @@ const GROTTE_MASK = [
     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 ]
 function buildGrotte(): TileType[][] {
-    return GROTTE_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
+    const m = GROTTE_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
+    // PORTE SUD percée dans le mur (9,22)+(10,22) → mène à la GROTTE GELÉE (nouvelle chaîne).
+    m[22][9] = "grass"; m[22][10] = "grass"
+    return m
 }
 
 // Arène Roche "Caverne Minière" : 15×10, calée sur arena_roche.png. Zone walkable
@@ -1107,6 +1110,56 @@ function buildGrotteNexusFloor(floor: "1F" | "B1F" | "B2F"): TileType[][] {
     return GROTTE_NEXUS_ART[floor].map((row) => [...row].map((c) => (c === "#" ? "caveWall" : c === "~" ? "water" : "caveFloor") as TileType))
 }
 
+// ===================================================================================================
+// NOUVELLE CHAÎNE : GROTTE GELÉE → PLAGE → AQUA ARENA (bateau). Masques relevés depuis les grilles
+// annotées par Sartay (debug-maps/*-annotee.png). Fonds alignés pile sur la grille (img = grille×tileSize).
+// ===================================================================================================
+// GROTTE GELÉE 30×31 — '.' = sol (grass, walkable) · '#' = mur (tree)
+const GELEE_MASK = [
+    "....##########################", "##############################", "##############################",
+    "##############################", "############....##############", "############....##############",
+    "####...######......###########", "####...###.#.......###########", "####....##........############",
+    "####.......#......############", "############......############", "#############....###########..",
+    "################.#############", "#########..#####.#############", "################.###...#######",
+    "################.###...#######", "#######.######....##....######", "########.#####...........#####",
+    "########.......###############", "#####.........################", "####........##################",
+    "###........###################", "###........#..#####..#########", "####...##........##..#########",
+    "####...###............########", "####..................########", "#####........########..#######",
+    "######.....##########....#####", "######....############...#####", "#######################..#####",
+    "##############################",
+]
+function buildGelee(): TileType[][] { return GELEE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "grass") as TileType)) }
+
+// PLAGE 24×40 — 'H' = hautes herbes (grassTall, POP) · '.' = sable/chemin (path, walkable SANS pop) · '#' = mur (tree)
+const PLAGE_MASK = [
+    ".######..##############.", "########################", "########################", "########################",
+    "########################", "########################", "########################", "########################",
+    "########################", "########################", "########################", "########HHHHH.##########",
+    "######HHHH.##.##########", "######HHHH.##..#########", "######HHHH..#..#########", "######HHHH......########",
+    "#######HHH......########", "########HH.....#########", "########.......#########", "###..###........########",
+    "###..###........########", "###...........##########", "###.........#..#########", "###........HHH..########",
+    "###.......HHHHHH########", "###.......HHHHHH########", "######....HHHHHH########", "#######...HHHHHH########",
+    "########..HHHHH.########", "########..HHHH.....#####", "######....HHH...#.######", "######HHHHHHHH##########",
+    "######HH.###############", "######H.################", "######H.################", "########################",
+    "########################", "########################", "########################", "########################",
+]
+function buildPlage(): TileType[][] { return PLAGE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : ch === "H" ? "grassTall" : "path") as TileType)) }
+
+// AQUA ARENA (pont du bateau) 24×40 — '.' = deck (path, walkable) · '#' = mur/bassin (tree). Pas de rencontres.
+const AQUA_MASK = [
+    ".######################.", "########################", "########################", "########################",
+    "########################", "########################", "########################", "########################",
+    "####................####", "###..................###", "###...................##", "##......#.......#.....##",
+    "##....####....####....##", "##....####....####....##", "##....############.....#", "####..##........##..####",
+    "####..##........##..####", "####..##........##..####", "####..##........##...###", "......##........##....##",
+    "......##........##......", "......##........##..####", "......##........##..####", "####..##........##..####",
+    "####..##........##..####", "##....##.....##.##....##", "##....############....##", "##....####....####....##",
+    "##....####....####....##", "##....####....####....##", "##....................##", "##....................##",
+    "##..###...........######", "#######..##...##########", "###########...##########", "###########...##########",
+    "######..##........######", "..####............######", "..######################", "..######################",
+]
+function buildAquaArena(): TileType[][] { return AQUA_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "path") as TileType)) }
+
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
@@ -1523,11 +1576,62 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: 30,
         height: 31,
         // Sortie = le « trou noir » haut-droite (~25,5, à recaler) → retour Route Nord (12,5).
-        exits: [{ x: 25, y: 5, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 4 }],
+        exits: [
+            { x: 25, y: 5, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 4 },
+            // PORTE SUD (9,22)+(10,22) → GROTTE GELÉE (nouvelle chaîne Gelée→Plage→Bateau).
+            ...([[9, 22], [10, 22]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_gelee", targetSpawnX: 4, targetSpawnY: 21 })),
+        ],
         backgroundImage: "/yellow/sprites/grotte.png",
         backgroundImageWidth: 720,
         backgroundImageHeight: 744,
         backgroundImageTileSize: 24,
+    },
+    // ===== GROTTE GELÉE (après la porte Sud de la Rocheuse) =====
+    yellow_grotte_gelee: {
+        id: "yellow_grotte_gelee",
+        name: "GROTTE GELÉE",
+        tiles: buildGelee(),
+        width: 30,
+        height: 31,
+        exits: [
+            { x: 3, y: 21, targetMapId: "yellow_grotte", targetSpawnX: 9, targetSpawnY: 23 },                                                         // → Rocheuse (retour)
+            ...([[19, 22], [20, 22]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_plage", targetSpawnX: 4, targetSpawnY: 20 })),           // → Plage
+        ],
+        backgroundImage: "/yellow/sprites/gelee.png",
+        backgroundImageWidth: 1920,
+        backgroundImageHeight: 1984,
+        backgroundImageTileSize: 64,
+    },
+    // ===== PLAGE « Emerald Eastern Path » (herbes hautes 'H' = pop ; quai → bateau) =====
+    yellow_plage: {
+        id: "yellow_plage",
+        name: "PLAGE",
+        tiles: buildPlage(),
+        width: 24,
+        height: 40,
+        exits: [
+            ...([[3, 19], [4, 19]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_gelee", targetSpawnX: 19, targetSpawnY: 23 })),     // → Gelée (arche)
+            ...([[15, 19], [15, 20]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_aqua_arena", targetSpawnX: 1, targetSpawnY: 19 })),      // → Bateau (Aqua Arena)
+        ],
+        backgroundImage: "/yellow/sprites/plage.png",
+        backgroundImageWidth: 960,
+        backgroundImageHeight: 1600,
+        backgroundImageTileSize: 40,
+    },
+    // ===== AQUA ARENA (intérieur/pont du bateau) — arène secrète =====
+    yellow_aqua_arena: {
+        id: "yellow_aqua_arena",
+        name: "AQUA ARENA",
+        tiles: buildAquaArena(),
+        width: 24,
+        height: 40,
+        exits: [
+            ...([[0, 19], [0, 20]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_plage", targetSpawnX: 14, targetSpawnY: 19 })),            // → Plage (quitter le bateau)
+        ],
+        backgroundImage: "/yellow/sprites/aqua_arena.png",
+        backgroundImageWidth: 1536,
+        backgroundImageHeight: 2560,
+        backgroundImageTileSize: 64,
     },
     // GROTTE DU NEXUS (casse-tête endgame, Mt. Moon 3 étages) — SÉPARÉE de la GROTTE ROCHEUSE. Accès PAYANT (50 JC)
     // via le MARCHAND (Zone de Combat). SORTIES : porte 1F (18,39) → hub · échelle du Dôme (B1F 45,5) · KO d'équipe
