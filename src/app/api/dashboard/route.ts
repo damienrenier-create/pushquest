@@ -22,7 +22,7 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 import { calculateAllUsersXP } from "@/lib/xp";
 import { getXPForReward } from "@/lib/rewards";
 import { getCompetitiveDangerList } from "@/lib/competitive-danger";
-import { GIFT_RECIPIENT_ID } from "@/lib/gift";
+import { GIFT_RECIPIENT_ID, GIFT_ACTIVE } from "@/lib/gift";
 import { quotaTotalWithGifts, setEffort } from "@/lib/quota";
 import { CANONIZED_CUSTOM_SPRITES } from "@/lib/gamebook/yellow/create/customSpecies";
 
@@ -362,7 +362,8 @@ export async function GET(req: Request) {
             { id: "year", filter: (s: any) => s.date.startsWith(today.substring(0, 4)) },
         ];
         const generosity: any = {};
-        for (const p of genPeriods) {
+        // Cadeau de naissance terminé (GIFT_ACTIVE=false) → generosity vide → l'encart "Générosité" se masque.
+        if (GIFT_ACTIVE) for (const p of genPeriods) {
             const totals = new Map<string, number>();
             for (const s of giftsToMilka) {
                 if (!p.filter(s)) continue;
