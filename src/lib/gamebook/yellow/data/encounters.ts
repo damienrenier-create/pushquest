@@ -266,7 +266,8 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "lavapetit", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Feu
             { speciesId: "limaroche", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Psy
             { speciesId: "quadroc", base: UNCOMMON, repulsion: ["water"] },                   // lignée diamant
-            // (Eau/Glace — marmoterre, loutrille, têtardoc, braisécaille — déplacés à la GROTTE GELÉE.)
+            { speciesId: "braisecaille", base: VERY_RARE, affinity: ["water"] },              // tortue FEU/EAU : RESTE dans la Rocheuse (au lac)
+            // (Eau/Glace — marmoterre, loutrille, têtardoc — déplacés à la GROTTE GELÉE ; braisécaille conservée ici.)
             // 🍄👻🐉 LE FOND (champignons-fantômes + dragon caché)
             { speciesId: "sporbeo", base: UNCOMMON },                                         // champignon-spectre (→ Lampignon → Mycédruide)
             { speciesId: "revemante", base: UNCOMMON },                                       // insecte-fantôme des cavernes
@@ -286,7 +287,6 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "marmoterre", base: UNCOMMON },
             { speciesId: "tetardoc", base: UNCOMMON },
             { speciesId: "sporbeo", base: RARE, player: "rare", rare: true },
-            { speciesId: "braisecaille", base: VERY_RARE },
         ],
     },
     // GROTTE DU NEXUS 1F : biotope unique (pour l'instant ; zones/biotopes → pools suivants). Bases niv 5-30
@@ -649,7 +649,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "sporbeo", base: 25 },
             { speciesId: "cailloutchi", base: 10 }, { speciesId: "cornaissant", base: 10 },
             { speciesId: "mottoche", base: 5, noEvolve: true, levelFixed: 5 }, // niveau 5 FIXE (fodder)
-            { speciesId: "brook", base: 5 }, // Forgeotin (Combat) déplacé → Maison Combat run 3 ; Braisécaille → GROTTE GELÉE
+            { speciesId: "braisecaille", base: 5 }, { speciesId: "brook", base: 5 }, // Braisécaille RESTE dans la Rocheuse ; Forgeotin (Combat) → Maison Combat run 3
             // les 3 starters du run 1 (nostalgie, rares)
             { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
             { speciesId: "draclet", base: 1, rare: true },
@@ -664,7 +664,6 @@ const RUN3_ZONES: Record<string, Zone> = {
         rate: 0.16, minLevel: 5,
         pool: [
             { speciesId: "tetardoc", base: 18 },
-            { speciesId: "braisecaille", base: 5 },
             { speciesId: "piouflot", base: 3 }, { speciesId: "auroruff", base: 3 },
             { speciesId: "gouttiny", base: 2, rare: true },
             { speciesId: "belunode", base: 1 }, { speciesId: "glacirex", base: 1, rare: true },
