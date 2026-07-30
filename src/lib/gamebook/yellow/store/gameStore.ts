@@ -842,6 +842,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(newPlayer)
                 return
             }
+            // GATE GROTTE GELÉE : réservée au 2e badge (ROCHE). Le dieu Spaghetti barre la route mais
+            // laisse le joueur sur place (pas de renvoi brutal en pleine grotte, cf. gates Hautes Herbes/Eau).
+            if (targetMapId === "yellow_grotte_gelee" && !getPlayerSave().badges.includes("roche")) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                        lines: [
+                            "HOLÀ ! Ces cavernes gelées sont bien trop traîtresses pour toi pour l'instant…",
+                            "Reviens quand tu auras dompté la pierre — décroche d'abord le Badge Roche !",
+                            "*Le dieu Spaghetti te repousse gentiment dans une volute de semoule.*",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
+            // GATE PLAGE : réservée au 3e badge (FEU). Même principe (reste sur place).
+            if (targetMapId === "yellow_plage" && !getPlayerSave().badges.includes("feu")) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                        lines: [
+                            "HOLÀ ! On ne s'aventure pas sur cette plage sans un peu de mordant…",
+                            "Va d'abord attiser ta flamme — reviens avec le Badge Feu !",
+                            "*Le dieu Spaghetti te repousse gentiment dans une volute de semoule.*",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
             // GATE LIGUE (teaser) : la Ligue (sud de Cendreville) n'ouvre qu'avec TOUS les badges.
             // Sinon le dieu Spaghetti barre la route avec un message → l'utilisateur sait qu'il y aura
             // du contenu ici (au lieu d'un simple mur). Pas de téléportation : on reste sur place.
