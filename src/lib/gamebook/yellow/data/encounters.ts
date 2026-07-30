@@ -240,12 +240,10 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "cornaissant", base: COMMON, affinity: ["mountain", "sapin"], repulsion: ["water"] },
             // Peu communs (élémentaires, denses dans leur biome)
             { speciesId: "electroatiss", base: UNCOMMON, player: "elec" },
-            { speciesId: "loutrille", base: UNCOMMON, affinity: ["water"] },
-            { speciesId: "piouflot", base: UNCOMMON, affinity: ["water"] },
             { speciesId: "pampousse", base: UNCOMMON, affinity: ["sapin"] },
             { speciesId: "fennaise", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
             { speciesId: "lavapetit", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
-            { speciesId: "auroruff", base: UNCOMMON, affinity: ["mountain"] },
+            // (Eau/Glace — loutrille, piouflot, auroruff — déplacés à la GROTTE GELÉE.)
             { speciesId: "broussours", base: UNCOMMON, affinity: ["sapin"], player: "combat" },
             { speciesId: "trolystrik", base: UNCOMMON, affinity: ["mountain"], player: "combat" },
             { speciesId: "forgeotin", base: UNCOMMON, affinity: ["mountain", "sapin"], player: "combat" },
@@ -267,16 +265,28 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "rembodo", base: UNCOMMON, repulsion: ["water"] },                   // Roche/Vol
             { speciesId: "lavapetit", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Feu
             { speciesId: "limaroche", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Psy
-            { speciesId: "marmoterre", base: UNCOMMON, repulsion: ["water"] },                // Roche/Glace
             { speciesId: "quadroc", base: UNCOMMON, repulsion: ["water"] },                   // lignée diamant
-            // 💧 EAU (le lac, haut-gauche) — affinity water = dense au bord, fond en s'éloignant.
-            { speciesId: "loutrille", base: 40, affinity: ["water"] },                        // commun au bord, rare loin
-            { speciesId: "tetardoc", base: UNCOMMON, affinity: ["water"] },                   // le PONT eau/roche : COMMUN au lac, plus rare loin
-            { speciesId: "braisecaille", base: VERY_RARE, affinity: ["water"] },              // tortue FEU/EAU : TRÈS RARE au lac (même zone que les têtards)
+            // (Eau/Glace — marmoterre, loutrille, têtardoc, braisécaille — déplacés à la GROTTE GELÉE.)
             // 🍄👻🐉 LE FOND (champignons-fantômes + dragon caché)
             { speciesId: "sporbeo", base: UNCOMMON },                                         // champignon-spectre (→ Lampignon → Mycédruide)
             { speciesId: "revemante", base: UNCOMMON },                                       // insecte-fantôme des cavernes
             { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },            // la pépite (Vol/Dragon)
+        ],
+    },
+    // GROTTE GELÉE : zone Eau/Glace relocalisée depuis Route Nord + Grotte Rocheuse (mêmes poids, dédupliqués),
+    //   + cornaissant & sporbeo aux taux Route Nord (run 1). Sol praticable = donjon (toute case déclenche).
+    yellow_grotte_gelee: {
+        rate: 0.16,
+        minLevel: 5,
+        pool: [
+            { speciesId: "cornaissant", base: COMMON },
+            { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "piouflot", base: UNCOMMON },
+            { speciesId: "auroruff", base: UNCOMMON },
+            { speciesId: "marmoterre", base: UNCOMMON },
+            { speciesId: "tetardoc", base: UNCOMMON },
+            { speciesId: "sporbeo", base: RARE, player: "rare", rare: true },
+            { speciesId: "braisecaille", base: VERY_RARE },
         ],
     },
     // GROTTE DU NEXUS 1F : biotope unique (pour l'instant ; zones/biotopes → pools suivants). Bases niv 5-30
@@ -518,10 +528,10 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "cailloutchi", base: COMMON }, { speciesId: "ruffiant", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
             // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt + Colibraise (Vol/Feu)
             { speciesId: "blaziper", base: UNCOMMON }, { speciesId: "jerbiwat", base: UNCOMMON },
-            { speciesId: "bouh", base: UNCOMMON }, { speciesId: "glacirex", base: UNCOMMON },
+            { speciesId: "bouh", base: UNCOMMON },
             { speciesId: "colibraise", base: UNCOMMON },
-            // Rares — les starters Eau & Plante (Braisille/Fennaise déplacés à la CENTRALE FEU run 2)
-            { speciesId: "gouttiny", base: RARE, rare: true }, { speciesId: "feuillichot", base: RARE, rare: true },
+            // Rares — le starter Plante (Gouttiny/Glacirex déplacés à la GROTTE GELÉE ; Braisille/Fennaise → CENTRALE FEU)
+            { speciesId: "feuillichot", base: RARE, rare: true },
             // Très rare — le bébé-dragon (→ Carlembre → Dracarlin en l'élevant)
             { speciesId: "carlinou", base: VERY_RARE, rare: true },
             // Giga rare — la pépite dragon + l'ancêtre panthère
@@ -533,17 +543,25 @@ const NGPLUS_ZONES: Record<string, Zone> = {
         rate: 0.16, minLevel: 5,
         pool: [
             // Communs — rocher + eau (lignée arène eau) — Lavapetit déplacé à la CENTRALE FEU run 2
-            { speciesId: "cailloutchi", base: COMMON }, { speciesId: "tetardoc", base: COMMON },
+            { speciesId: "cailloutchi", base: COMMON },
             // Peu communs
-            { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON },
-            { speciesId: "quadroc", base: UNCOMMON }, { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: UNCOMMON },
+            { speciesId: "quadroc", base: UNCOMMON },
             { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
-            // Rare — un spectre (Braisécaille déplacée à la CENTRALE FEU run 2)
+            // Rare — un spectre (Têtardoc/Marmoterre/Loutrille/Orcaline déplacés à la GROTTE GELÉE)
             { speciesId: "namicha", base: RARE, noEvolve: true },
             // Super rare — Mottoche rétrogradé. TOUJOURS stade 1 (noEvolve) ET à un NIVEAU FIXE 5, indépendant
             // du niveau du lead (levelFixed → bypass du scaling) : jamais sa lignée évoluée, jamais scalé haut.
             { speciesId: "mottoche", base: VERY_RARE, noEvolve: true, levelFixed: 5 },
-            // Giga rare — Orcaline (Glace/Eau), UNIQUEMENT si le lead ≥ 35 (son niveau mini)
+        ],
+    },
+    // GROTTE GELÉE run 2 — Eau/Glace relocalisées (mêmes poids) + cornaissant (taux Route Nord run 2).
+    yellow_grotte_gelee: {
+        rate: 0.16, minLevel: 5,
+        pool: [
+            { speciesId: "tetardoc", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
+            { speciesId: "glacirex", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON }, { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "gouttiny", base: RARE, rare: true },
             { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
         ],
     },
@@ -614,14 +632,13 @@ const RUN3_ZONES: Record<string, Zone> = {
         pool: [
             { speciesId: "plumiot", base: 20 },
             { speciesId: "tamanpousse", base: 18 }, { speciesId: "limaroche", base: 18 },
-            { speciesId: "tetardoc", base: 18 }, { speciesId: "colibraise", base: 18 },
+            { speciesId: "colibraise", base: 18 },
             { speciesId: "hibouh", base: 8 }, { speciesId: "pyrozly", base: 7 },
             { speciesId: "jerbiwat", base: 0.65, rare: true }, { speciesId: "lavapetit", base: 5 }, // Jerbiwat = PÉPITE ciblée à 0,5 % (0,65/128,65 ; trop utilisé — choix Sartay 24/07). Poids fractionnaire volontaire.
-            { speciesId: "nouillon", base: 3 }, { speciesId: "piouflot", base: 3 }, { speciesId: "ruffiant", base: 3 },
+            { speciesId: "nouillon", base: 3 }, { speciesId: "ruffiant", base: 3 },
             { speciesId: "revemante", base: 2 },
-            { speciesId: "auroruff", base: 3 }, // anti-Dragon (remonté)
+            // (Eau/Glace — tetardoc, piouflot, auroruff, glacirex — déplacés à la GROTTE GELÉE run 3.)
             // CRÉATIONS (Gavillus/Goatiny/Guizer) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
-            { speciesId: "glacirex", base: 1, rare: true }, // Dragon/Glace, pépite
             { speciesId: "pantheon", base: 1, rare: true, catchOnce: true }, // 1 capture max (+ don d'ACE)
         ],
     },
@@ -632,15 +649,26 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "sporbeo", base: 25 },
             { speciesId: "cailloutchi", base: 10 }, { speciesId: "cornaissant", base: 10 },
             { speciesId: "mottoche", base: 5, noEvolve: true, levelFixed: 5 }, // niveau 5 FIXE (fodder)
-            { speciesId: "braisecaille", base: 5 }, { speciesId: "brook", base: 5 }, // Forgeotin (Combat) déplacé → Maison Combat run 3
+            { speciesId: "brook", base: 5 }, // Forgeotin (Combat) déplacé → Maison Combat run 3 ; Braisécaille → GROTTE GELÉE
             // les 3 starters du run 1 (nostalgie, rares)
-            { speciesId: "gouttiny", base: 2, rare: true }, { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
+            { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
             { speciesId: "draclet", base: 1, rare: true },
-            { speciesId: "rembodo", base: 1 }, { speciesId: "belunode", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
-            // trophée de la grotte — Glace/Eau anti-Dragon, UNIQUEMENT si le lead ≥ 35 (son niveau mini)
-            { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
+            { speciesId: "rembodo", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
+            // (Eau/Glace — belunode, orcaline — déplacés à la GROTTE GELÉE run 3.)
             { speciesId: "wistree", base: 2, noEvolve: true, rare: true, captureMult: 0.4 }, // Spectre/Plante rare & mystérieux (voleur d'éclat)
             // CRÉATIONS (Guizer & Shady) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
+        ],
+    },
+    // GROTTE GELÉE run 3 — Eau/Glace relocalisées (mêmes poids relatifs). Pas de cornaissant/sporbeo (absents de Route Nord run 3).
+    yellow_grotte_gelee: {
+        rate: 0.16, minLevel: 5,
+        pool: [
+            { speciesId: "tetardoc", base: 18 },
+            { speciesId: "braisecaille", base: 5 },
+            { speciesId: "piouflot", base: 3 }, { speciesId: "auroruff", base: 3 },
+            { speciesId: "gouttiny", base: 2, rare: true },
+            { speciesId: "belunode", base: 1 }, { speciesId: "glacirex", base: 1, rare: true },
+            { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→

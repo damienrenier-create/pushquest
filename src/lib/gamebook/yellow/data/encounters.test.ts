@@ -28,18 +28,20 @@ describe("biomes — distance & paliers", () => {
 })
 
 describe("pondération selon le biome", () => {
-    it("près de l'eau : les types Eau dominent, les Vol/Feu se raréfient", () => {
+    // NB : les espèces EAU (loutrille/piouflot) ont été déplacées à la GROTTE GELÉE ; la Route Nord ne
+    //   conserve que des espèces répulsées par l'eau → on teste ici le versant RÉPULSION.
+    it("près de l'eau : les types répulsés par l'eau se raréfient", () => {
         const w = debugWeights(MAP, NEAR_WATER.x, NEAR_WATER.y)
-        expect(w.loutrille).toBeGreaterThan(w.plumiot)   // Eau >> Vol (répulsion eau)
-        expect(w.piouflot).toBeGreaterThan(w.plumiot)    // oiseau d'eau attiré
-        expect(w.loutrille).toBeGreaterThan(w.fennaise)  // Eau >> Feu (répulsion eau)
+        expect(w.plumiot).toBeLessThan(100)           // Vol répulsé par l'eau (repulsion water)
+        expect(w.fennaise).toBeLessThan(45)           // Feu répulsé par l'eau
+        expect(w.couperin).toBeGreaterThan(w.plumiot) // commun neutre >> répulsé, au bord de l'eau
     })
     it("poche neutre : les communs dominent, biome sans effet", () => {
         const w = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y)
         expect(w.plumiot).toBe(100)      // commun, aucun multiplicateur
-        expect(w.loutrille).toBe(45)     // peu commun, biome inactif
+        expect(w.couperin).toBe(100)     // commun neutre (pas de biome)
         expect(w.draclet).toBe(5)        // très rare
-        expect(w.plumiot).toBeGreaterThan(w.loutrille)
+        expect(w.plumiot).toBeGreaterThan(w.sporbeo)
     })
 })
 

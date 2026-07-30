@@ -37,8 +37,8 @@ describe("Rencontres RUN 3 — pool inédit (RUN3_ZONES)", () => {
         expect(sample("yellow_route_nord", { leadLevel: 15, levelCap: 30, caughtSpecies: ["pantheon"] }).has("pantheon")).toBe(false)
     })
 
-    it("Orcaline (Grotte run 3) : gate minLeadLevel 35", () => {
-        expect(sample("yellow_grotte", { leadLevel: 20, levelCap: 30 }, 12000).has("orcaline")).toBe(false)
-        expect(sample("yellow_grotte", { leadLevel: 60, levelCap: 60 }, 40000).has("orcaline")).toBe(true)
+    it("Orcaline (Grotte Gelée run 3) : gate minLeadLevel 35", () => {
+        expect(sample("yellow_grotte_gelee", { leadLevel: 20, levelCap: 30 }, 12000).has("orcaline")).toBe(false)
+        expect(sample("yellow_grotte_gelee", { leadLevel: 60, levelCap: 60 }, 40000).has("orcaline")).toBe(true)
     })
 })

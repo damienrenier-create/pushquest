@@ -33,13 +33,13 @@ describe("Rencontres RUN 2 (NG+) — bascule de pool", () => {
     })
 })
 
-describe("Orcaline (Grotte NG+) — gate minLeadLevel = 35", () => {
+describe("Orcaline (Grotte Gelée NG+) — gate minLeadLevel = 35", () => {
     it("n'apparaît JAMAIS sous le niveau 35", () => {
-        const seen = sample("yellow_grotte", { ngplus: true, leadLevel: 20, levelCap: 30 }, 12000)
+        const seen = sample("yellow_grotte_gelee", { ngplus: true, leadLevel: 20, levelCap: 30 }, 12000)
         expect(seen.has("orcaline")).toBe(false)
     })
     it("peut apparaître à partir du niveau 35", () => {
-        const seen = sample("yellow_grotte", { ngplus: true, leadLevel: 60, levelCap: 60 }, 40000)
+        const seen = sample("yellow_grotte_gelee", { ngplus: true, leadLevel: 60, levelCap: 60 }, 40000)
         expect(seen.has("orcaline")).toBe(true)
     })
 })
