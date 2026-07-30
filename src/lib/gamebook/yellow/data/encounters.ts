@@ -42,6 +42,7 @@ interface WildEntry {
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
     minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
+    hourRange?: [number, number]  // ne pop QUE dans cette fenêtre horaire [début, fin[ (0-23). fin<=début = enjambe minuit (ex. [20,8]). Sinon poids 0
     requiresFusionLeague?: boolean // ne pop QU'APRÈS la 1re victoire à la Ligue de Fusion (créatures anciennes B2F) — sinon poids 0
     catchOnce?: boolean           // UNE SEULE capture sur ce compte (ex. Pyropanthe) → ne repop plus une fois dans le Pokédex
 }
@@ -108,6 +109,7 @@ export interface EncounterCtx {
     encounterCount?: number    // nb total de sauvages déjà croisés → rampe d'accueil (5+5 premiers)
     dayKey?: string            // "YYYY-MM-DD" → rotation quotidienne des types (hautes herbes). Vide = jour fixe.
     goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
+    hour?: number               // heure locale 0-23 (new Date().getHours()) → gate les entrées `hourRange`. Absent = pas de gate horaire
     goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
     ngplus?: boolean            // NEW GAME+ : bascule sur les pools RUN 2 (NGPLUS_ZONES) pour les zones re-mixées
     run3?: boolean              // RUN 3 (concours) : bascule sur les pools RUN 3 (RUN3_ZONES) — espèces INÉDITES (chaque run différent)
@@ -287,6 +289,20 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "marmoterre", base: UNCOMMON },
             { speciesId: "tetardoc", base: UNCOMMON },
             { speciesId: "sporbeo", base: RARE, player: "rare", rare: true },
+        ],
+    },
+    // PLAGE : hautes herbes ('grassTall'). Oiseaux Vol de la Route Nord + créatures diurnes/nocturnes time-gatées.
+    //   Rate 0.14 (comme la Route Nord). hourRange = fenêtre d'apparition (heure locale).
+    yellow_plage: {
+        rate: 0.14,
+        pool: [
+            { speciesId: "plumiot", base: COMMON },                                 // l'oiseau Vol commun de la Route Nord
+            { speciesId: "draclet", base: UNCOMMON },                               // Vol/Dragon : PLUS commun ici (reste super-rare en Route Nord)
+            { speciesId: "crocavern", base: UNCOMMON },
+            { speciesId: "sepulcru", base: UNCOMMON, hourRange: [8, 20] },          // JOUR (8h→20h)
+            { speciesId: "obscurene", base: UNCOMMON, hourRange: [20, 8] },         // NUIT (20h→8h)
+            { speciesId: "karmaki", base: RARE, rare: true, hourRange: [0, 12] },   // rare, matinée (0h→12h)
+            { speciesId: "hypnoppo", base: RARE, rare: true, hourRange: [12, 24] }, // rare, après-midi/soir (12h→24h)
         ],
     },
     // GROTTE DU NEXUS 1F : biotope unique (pour l'instant ; zones/biotopes → pools suivants). Bases niv 5-30
@@ -727,6 +743,11 @@ export function hasEncounters(mapId: string): boolean {
     return mapId in ZONES
 }
 
+/** L'heure `hour` (0-23) est-elle dans la fenêtre [s, e[ ? Si e <= s, la fenêtre enjambe minuit (ex. [20,8] = 20h→8h). */
+function inHourRange(hour: number, [s, e]: [number, number]): boolean {
+    return s < e ? (hour >= s && hour < e) : (hour >= s || hour < e)
+}
+
 /** Bonus joueur (plafonné ×1.8) selon les stats PushQuest. */
 function playerMult(entry: WildEntry, p?: WildPlayerCtx): number {
     if (!p || !entry.player) return 1
@@ -775,6 +796,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
     const weights = pool.map((e) =>
         (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
+        : (e.hourRange && ctx.hour != null && !inHourRange(ctx.hour, e.hourRange)) ? 0 // gate horaire (ex. Karmaki 0-12h, Hypnoppo 12-24h)
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
         : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
