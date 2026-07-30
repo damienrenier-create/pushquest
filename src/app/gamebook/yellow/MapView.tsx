@@ -850,6 +850,12 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_igor_centrale: { url: "/yellow/sprites/npc_igor_gen3.png" }, // Sud
     y_ora_b2f: { url: "/yellow/sprites/npc_ora_gen3.png" }, // Sud
     y_kael_b2f: { url: "/yellow/sprites/npc_kael_gen3.png", row: NPC40_ROW_UP }, // Nord
+    // Les 5 frères Glaçon (Grotte Gelée) + le 6e PNJ rouquin
+    y_frere_frisquet: { url: "/yellow/sprites/npc_frisquet_gen3.png" },
+    y_frere_grelot: { url: "/yellow/sprites/npc_grelot_gen3.png" },
+    y_frere_glagla: { url: "/yellow/sprites/npc_glagla_gen3.png" },
+    y_frere_givre: { url: "/yellow/sprites/npc_givre_gen3.png" },
+    y_frere_blizzard: { url: "/yellow/sprites/npc_blizzard_gen3.png" },
 }
 
 // === Bulle « ! » du dresseur qui vient de repérer le joueur ==============

@@ -52,6 +52,12 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_aqua_n4: [{ speciesId: "regnantaur", level: 37 }, { speciesId: "wyvortal", level: 37 }, { speciesId: "dracosidhe", level: 37 }],
         y_aqua_boss_a: [{ speciesId: "regnantaur", level: 38 }, { speciesId: "necarabee", level: 38 }, { speciesId: "wyvortal", level: 38 }, { speciesId: "dracosidhe", level: 39 }, { speciesId: "necrolopendre", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
         y_aqua_boss_b: [{ speciesId: "dracosidhe", level: 38 }, { speciesId: "pterosidhe", level: 38 }, { speciesId: "regnantaur", level: 39 }, { speciesId: "necrolopendre", level: 40 }, { speciesId: "wyvortal", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
+        // FRÈRES GLAÇON (Grotte Gelée) — RUN 2 : stades intermédiaires/finaux Glace.
+        y_frere_frisquet: [{ speciesId: "glaceer", level: 46 }, { speciesId: "iorours", level: 47 }],
+        y_frere_grelot: [{ speciesId: "glacirex", level: 48 }, { speciesId: "glaceer", level: 49 }],
+        y_frere_glagla: [{ speciesId: "iorours", level: 50 }, { speciesId: "glaceer", level: 50 }],
+        y_frere_givre: [{ speciesId: "iorours", level: 51 }, { speciesId: "cryotyran", level: 51 }, { speciesId: "panthegel", level: 52 }],
+        y_frere_blizzard: [{ speciesId: "yetiroche", level: 53 }, { speciesId: "auroraur", level: 53 }, { speciesId: "cryotyran", level: 54 }, { speciesId: "orcaline", level: 55 }],
     },
     // ── RUN 3 ──
     run3: {
@@ -90,5 +96,11 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_aqua_n4: [{ speciesId: "toucanyon", level: 37 }, { speciesId: "gloutanoir", level: 37 }, { speciesId: "brutetrik", level: 37 }],
         y_aqua_boss_a: [{ speciesId: "zappeureal", level: 38 }, { speciesId: "leviathonn", level: 38 }, { speciesId: "thundah", level: 38 }, { speciesId: "oragron", level: 39 }, { speciesId: "fulguror", level: 40 }],
         y_aqua_boss_b: [{ speciesId: "calderont", level: 38 }, { speciesId: "loupyre", level: 38 }, { speciesId: "druidours", level: 38 }, { speciesId: "gloutanoir", level: 39 }, { speciesId: "pyropanthe", level: 40 }],
+        // FRÈRES GLAÇON (Grotte Gelée) — RUN 3 : stades finaux + lignée Guizer (run 3) + Givroptère (post-Ligue).
+        y_frere_frisquet: [{ speciesId: "auroraur", level: 55 }, { speciesId: "yetiroche", level: 55 }],
+        y_frere_grelot: [{ speciesId: "cryotyran", level: 56 }, { speciesId: "guizer", level: 55 }, { speciesId: "auroraur", level: 56 }],
+        y_frere_glagla: [{ speciesId: "yetiroche", level: 57 }, { speciesId: "dalugazer", level: 57 }, { speciesId: "morrow", level: 57 }],
+        y_frere_givre: [{ speciesId: "yetiroche", level: 58 }, { speciesId: "cryotyran", level: 58 }, { speciesId: "mobyd", level: 58 }, { speciesId: "morrow", level: 59 }],
+        y_frere_blizzard: [{ speciesId: "yetiroche", level: 60 }, { speciesId: "auroraur", level: 60 }, { speciesId: "cryotyran", level: 61 }, { speciesId: "givroptere", level: 61 }, { speciesId: "orcaline", level: 62 }],
     },
 }

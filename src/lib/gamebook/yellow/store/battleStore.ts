@@ -901,6 +901,14 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }
+            // 5 FRÈRES GLAÇON (Grotte Gelée) : vaincre les CINQ (peu importe l'ordre) octroie la CT61 « Voile de Givre »
+            //   UNE seule fois (grantCt idempotent → aucun doublon, aucun world-gate nécessaire). markTrainerDefeated
+            //   ci-dessus a déjà enregistré le frère courant, donc le 5e combat déclenche l'octroi.
+            const GLACON_BROTHERS = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"]
+            if (GLACON_BROTHERS.includes(storeState.trainer.trainerId) && GLACON_BROTHERS.every((id) => isTrainerDefeated(id)) && grantCt("ct61")) {
+                const mvId = getCt("ct61")?.moveId
+                giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
+            }
             // 🎁 RUN 2 (NG+) : le boss offre SA CT signature EXCLUSIVE (ct53→57, introuvable ailleurs) + son ticket
             //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
             const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined
