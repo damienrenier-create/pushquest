@@ -186,6 +186,8 @@ export const MOVES: Record<string, MoveData> = {
     // === SIGNATURES DES BOSS DE L'AQUA ARENA (bateau) — EXCLUSIVES aux boss, jamais dans un learnset ===
     sig_chant_naufrageur: { id: "sig_chant_naufrageur", name: "Chant Naufrageur", type: "PSY", power: 55, accuracy: 100, pp: 10, effect: { inflictVolatile: "CONFUSION", statChanges: [{ target: "target", stat: "spe", stages: -1 }] }, description: "Signature abyssale de l'Aqua Arena (run 1) : un chant de sirène somme la cible vers les profondeurs — dégâts moyens, la plonge dans la CONFUSION ET la RALENTIT (-1 Vitesse), à coup sûr. Le naufrage commence toujours dans l'esprit." },
     sig_maree_dacier: { id: "sig_maree_dacier", name: "Marée d'Acier", type: "METAL", power: 70, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "target", stat: "spe", stages: -1 }, { target: "self", stat: "def", stages: 1 }] }, description: "Signature run 2 de l'Aqua Arena : une lame de métal en fusion déferle comme une marée montante — dégâts corrects, RALENTIT la cible (-1 Vitesse) ET blinde le lanceur (+1 Défense), garanti. Le colosse gagne du terrain à chaque vague." },
+    // === CT61 « Voile de Givre » — récompense des 5 frères Glaçon (Grotte Gelée). Attaque Glace modérée qui aveugle. ===
+    voile_de_givre: { id: "voile_de_givre", name: "Voile de Givre", type: "GLACE", power: 50, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Un voile de cristaux de givre s'abat sur la cible et lui brouille la vue : dégâts modérés et baisse à COUP SÛR sa Précision (-1). CT61, offerte par les frères Glaçon." },
 }
 
 export function getMove(id: string): MoveData | null {

@@ -162,6 +162,7 @@ export const CTS: CtData[] = [
     // CT60 : Reflet Fatal (TÉNÈBRES, spécial 85 + 20% -Spé) — comble le SEUL type sans CT (Ténèbres). INÉDITE :
     //   drop 5% en battant le reflet d'un autre joueur (jamais en vente : gift). Apprenable Ténèbres + Spectre/Psy.
     { id: "ct60", label: "CT60", moveId: "reflet_fatal", price: 0, gift: true, alsoTypes: ["SPECTRE", "PSY"] },
+    { id: "ct61", label: "CT61", moveId: "voile_de_givre", price: 0, gift: true, alsoTypes: ["EAU"] }, // récompense des 5 frères Glaçon (Grotte Gelée) — exclusive
 ]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —
@@ -193,7 +194,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
  *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
  *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
 export function run2BlackjackCtPool(): string[] {
-    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58"]) // signatures de boss + Apothéose + Mitra-Poing (exclusif run 3, Collectionneur/Gamaruto)
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58", "ct61"]) // signatures de boss + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon)
     return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 

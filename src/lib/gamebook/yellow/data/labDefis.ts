@@ -248,6 +248,7 @@ export const QUOTA2X_MULT = 3
 const CT_DEFI_EXCLUDED = new Set([
     "ct37", "ct38", "ct52",             // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire) + Apothéose (1000 ⚡ blackjack)
     "ct58",                             // Mitra-Poing : CADEAU EXCLUSIF du Collectionneur (Maison Combat run 3, GAMARUTO requis) → jamais au défi CT
+    "ct61",                             // Voile de Givre : CADEAU EXCLUSIF des 5 frères Glaçon (Grotte Gelée) → jamais au défi CT
     ...NGPLUS_EXCLUSIVE_CT_IDS,          // signatures EXCLUSIVES au run 2 (boss d'arène NG+) → jamais gagnables au défi CT du labo
 ])
 
