@@ -875,6 +875,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             markTrainerDefeated(storeState.trainer.trainerId)
             addItem("rappel", 1)
             rematchReward = { npcId: storeState.trainer.trainerId, npcName: "🔁 RAPPEL", lines: ["Beau combat ! Cet adversaire t'a laissé un RAPPEL.", "Il ranime un Daemon K.O. — dans le sac (→ Soins) ou en plein combat."] }
+        } else if (storeState.trainer.trainerId === "y_rouquin_gelee") {
+            // 6e PNJ « rouquin » (Grotte Gelée) : dresseur à VUE ré-affrontable 1×/jour. Le cap journalier a déjà été
+            //   posé au LANCEMENT (gameStore.tryLaunchTrainer, marker « rouquin_gelee_ ») → PAS de markTrainerDefeated
+            //   permanent. On surface juste son dialogue de victoire (comme le fait la branche générique).
+            const tr = getTrainer(storeState.trainer.trainerId)
+            if (tr?.victory?.length) rematchReward = { npcId: tr.id, npcName: tr.name, lines: [...tr.victory] }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

@@ -856,6 +856,7 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_frere_glagla: { url: "/yellow/sprites/npc_glagla_gen3.png" },
     y_frere_givre: { url: "/yellow/sprites/npc_givre_gen3.png" },
     y_frere_blizzard: { url: "/yellow/sprites/npc_blizzard_gen3.png" },
+    y_rouquin_gelee: { url: "/yellow/sprites/npc_rouquin_gen3.png", row: NPC40_ROW_RIGHT }, // regarde l'Est
 }
 
 // === Bulle « ! » du dresseur qui vient de repérer le joueur ==============

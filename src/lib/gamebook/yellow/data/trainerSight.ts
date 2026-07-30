@@ -55,6 +55,10 @@ export const TRAINER_SIGHTS: readonly TrainerSightSpec[] = [
     { trainerId: "y_aqua_n2", mapId: "yellow_aqua_arena", x: 22, y: 20, facing: "left", range: 4 },
     { trainerId: "y_aqua_n3", mapId: "yellow_aqua_arena", x: 15, y: 36, facing: "right", range: 2 },
     { trainerId: "y_aqua_n4", mapId: "yellow_aqua_arena", x: 6, y: 37, facing: "right", range: 6 },
+
+    // === GROTTE GELÉE — le 6e PNJ « rouquin » (SVEN) : embuscade façon Mia/Léo, regarde l'EST (couloir ligne 23,
+    //     colonnes 10→16). Ré-affrontable 1×/jour (cf. wrapper de prédicat dans gameStore.move). ===
+    { trainerId: "y_rouquin_gelee", mapId: "yellow_grotte_gelee", x: 9, y: 23, facing: "right", range: 7 },
 ]
 
 const STEP: Record<SightFacing, { dx: number; dy: number }> = {

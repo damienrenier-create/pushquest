@@ -594,6 +594,26 @@ export const TRAINERS: TrainerData[] = [
         victory: ["*La tempête retombe.*", "Si mes quatre frères sont tombés eux aussi… alors la CT VOILE DE GIVRE est à toi, dresseur digne du froid.", "Bon vent glacé."],
         defeat: ["L'hiver ne cède JAMAIS !"],
     },
+    // === GROTTE GELÉE — le 6e PNJ « rouquin » (dresseur à VUE, regarde l'EST). Équipe [gavillus/jerbiwat/cornaïve]
+    //     dont les NIVEAUX sont greffés sur les 3 premiers Daemons du joueur (cf. gameStore.tryLaunchTrainer).
+    //     Ré-affrontable UNE FOIS PAR JOUR (marker journalier, pas de markTrainerDefeated). ===
+    {
+        id: "y_rouquin_gelee",
+        name: "SVEN",
+        title: "Rôdeur des glaces",
+        sprite: { emoji: "🧑‍🦰", color: "#d94a2a" },
+        mapId: "yellow_grotte_gelee",
+        x: 9, y: 23,
+        team: [
+            // Niveaux PLACEHOLDER : écrasés au lancement par ceux des 3 premiers Daemons du joueur (fallback si équipe < 3).
+            { speciesId: "gavillus", level: 25 }, { speciesId: "jerbiwat", level: 25 }, { speciesId: "cornaive", level: 25 },
+        ],
+        reward: 350,
+        aiLevel: "trainer",
+        intro: ["*Un rôdeur aux cheveux de feu bondit sur ton passage.*", "Un défi frais ! Mes bêtes se calquent sur les tiennes — à armes égales, on verra qui domine.", "Une fois par jour, pas plus. En garde !"],
+        victory: ["Pas mal… reviens demain, je serai encore là."],
+        defeat: ["Ha ! Reviens quand tu seras prêt — demain, peut-être."],
+    },
 
     // === GROTTE DU NEXUS B2F — le spéléologue égaré (35,7) : teaser du légendaire nocturne à la défaite ===
     {

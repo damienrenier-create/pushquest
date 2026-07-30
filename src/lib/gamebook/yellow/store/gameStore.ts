@@ -311,6 +311,10 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     return null
 }
 
+/** 6e PNJ « rouquin » de la Grotte Gelée : id + marqueur journalier (borné) pour le cap 1 combat/jour. */
+const ROUQUIN_GELEE_ID = "y_rouquin_gelee"
+const rouquinGeleeDayMarker = () => "rouquin_gelee_" + new Date().toISOString().slice(0, 10)
+
 function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue | null {
     const trainer = getTrainer(trainerId)
     if (!trainer) return null
@@ -408,6 +412,16 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
             const level = Math.min(100, s.level + boost)
             return { ...s, level, speciesId: speciesAtLevel(s.speciesId, level) }
         })
+    }
+    // 6e PNJ « rouquin » (Grotte Gelée) : équipe [gavillus/jerbiwat/cornaïve] dont les NIVEAUX sont GREFFÉS sur les
+    //   3 premiers Daemons du joueur (stade naturel via speciesAtLevel). Cap 1 combat/jour posé ICI (win OU lose).
+    if (trainerId === ROUQUIN_GELEE_ID) {
+        const pt = getPlayerSave().team
+        specs = specs.map((s, i) => {
+            const lvl = pt[i]?.level ?? s.level
+            return { ...s, level: lvl, speciesId: speciesAtLevel(s.speciesId, lvl) }
+        })
+        setDailyMarker("rouquin_gelee_", rouquinGeleeDayMarker())
     }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
@@ -1119,7 +1133,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     const t = map.tiles[y]?.[x]
                     return !t || isBlockingTile(t)
                 },
-                isTrainerDefeated,
+                // Le rouquin (Grotte Gelée) est ré-affrontable 1×/jour : son « ! » s'éteint dès qu'il a été combattu
+                //   aujourd'hui (marqueur journalier), et se rearme le lendemain (marker périmé). Autres dresseurs = permanent.
+                (id) => isTrainerDefeated(id) || (id === ROUQUIN_GELEE_ID && isTrainerDefeated(rouquinGeleeDayMarker())),
             )
             if (spotted) {
                 set({ trainerAlertId: spotted.trainerId })
