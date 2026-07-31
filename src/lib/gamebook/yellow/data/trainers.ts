@@ -615,6 +615,56 @@ export const TRAINERS: TrainerData[] = [
         defeat: ["Ha ! Reviens quand tu seras prêt — demain, peut-être."],
     },
 
+    // === PLAGE — 3 dresseurs de bord de mer À VUE (embuscade façon Mia/Léo). Équipes eau/vol, run 2/3 via SIGHT_RUN_TEAMS. ===
+    {
+        id: "y_plage_pecheur",
+        name: "PÊCHEUR",
+        title: "Pêcheur",
+        sprite: { emoji: "🎣", color: "#2f7fb8" },
+        mapId: "yellow_plage",
+        x: 10, y: 15,
+        team: [
+            { speciesId: "ondulo", level: 32 }, { speciesId: "grenarc", level: 33 },
+        ],
+        reward: 420,
+        aiLevel: "trainer",
+        intro: ["Ho ! Ça mord par ici… et toi, tu vas mordre la poussière !", "En garde, gamin des sables !"],
+        victory: ["Belle prise… tu m'as ferré."],
+        defeat: ["La marée est avec moi !"],
+    },
+    {
+        id: "y_plage_nageuse",
+        name: "NAGEUSE",
+        title: "Nageuse",
+        sprite: { emoji: "🏊", color: "#3a8ee0" },
+        mapId: "yellow_plage",
+        x: 14, y: 25,
+        team: [
+            { speciesId: "ondaloutre", level: 32 }, { speciesId: "herondee", level: 33 }, { speciesId: "sonarque", level: 34 },
+        ],
+        reward: 480,
+        aiLevel: "trainer",
+        intro: ["*Une nageuse jaillit de l'écume, ruisselante.*", "L'eau, c'est mon terrain ! On plonge ?"],
+        victory: ["Glou… tu nages mieux que moi."],
+        defeat: ["Reste sur le sable, la prochaine fois !"],
+    },
+    {
+        id: "y_plage_marin",
+        name: "MARIN",
+        title: "Vieux marin",
+        sprite: { emoji: "⛵", color: "#6a8ec0" },
+        mapId: "yellow_plage",
+        x: 8, y: 30,
+        team: [
+            { speciesId: "faukon", level: 33 }, { speciesId: "corvenin", level: 34 },
+        ],
+        reward: 500,
+        aiLevel: "trainer",
+        intro: ["*Un vieux loup de mer scrute l'horizon.*", "Mes oiseaux ont vu bien des tempêtes. Toi, tu n'as rien vu du tout. En garde !"],
+        victory: ["Har har ! Tu as le pied marin, moussaillon."],
+        defeat: ["Retourne à quai, débutant !"],
+    },
+
     // === GROTTE DU NEXUS B2F — le spéléologue égaré (35,7) : teaser du légendaire nocturne à la défaite ===
     {
         id: "y_pnj1_grotte_b2f",

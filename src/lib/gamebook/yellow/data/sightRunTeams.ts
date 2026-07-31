@@ -58,6 +58,10 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_frere_glagla: [{ speciesId: "iorours", level: 50 }, { speciesId: "glaceer", level: 50 }],
         y_frere_givre: [{ speciesId: "iorours", level: 51 }, { speciesId: "cryotyran", level: 51 }, { speciesId: "panthegel", level: 52 }],
         y_frere_blizzard: [{ speciesId: "yetiroche", level: 53 }, { speciesId: "auroraur", level: 53 }, { speciesId: "cryotyran", level: 54 }, { speciesId: "orcaline", level: 55 }],
+        // PLAGE (dresseurs à vue) — RUN 2 : stades finaux eau/vol.
+        y_plage_pecheur: [{ speciesId: "razmaree", level: 50 }, { speciesId: "crapotaure", level: 51 }],
+        y_plage_nageuse: [{ speciesId: "naiadrak", level: 50 }, { speciesId: "oragron", level: 51 }, { speciesId: "leviathonn", level: 52 }],
+        y_plage_marin: [{ speciesId: "aquilothan", level: 50 }, { speciesId: "necrocorbe", level: 51 }],
     },
     // ── RUN 3 ──
     run3: {
@@ -102,5 +106,9 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_frere_glagla: [{ speciesId: "yetiroche", level: 57 }, { speciesId: "dalugazer", level: 57 }, { speciesId: "morrow", level: 57 }],
         y_frere_givre: [{ speciesId: "yetiroche", level: 58 }, { speciesId: "cryotyran", level: 58 }, { speciesId: "mobyd", level: 58 }, { speciesId: "morrow", level: 59 }],
         y_frere_blizzard: [{ speciesId: "yetiroche", level: 60 }, { speciesId: "auroraur", level: 60 }, { speciesId: "cryotyran", level: 61 }, { speciesId: "givroptere", level: 61 }, { speciesId: "orcaline", level: 62 }],
+        // PLAGE (dresseurs à vue) — RUN 3.
+        y_plage_pecheur: [{ speciesId: "razmaree", level: 58 }, { speciesId: "crapotaure", level: 59 }],
+        y_plage_nageuse: [{ speciesId: "naiadrak", level: 58 }, { speciesId: "oragron", level: 59 }, { speciesId: "leviathonn", level: 60 }],
+        y_plage_marin: [{ speciesId: "aquilothan", level: 58 }, { speciesId: "necrocorbe", level: 59 }],
     },
 }

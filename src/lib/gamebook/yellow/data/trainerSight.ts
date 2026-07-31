@@ -59,6 +59,11 @@ export const TRAINER_SIGHTS: readonly TrainerSightSpec[] = [
     // === GROTTE GELÉE — le 6e PNJ « rouquin » (SVEN) : embuscade façon Mia/Léo, regarde l'EST (couloir ligne 23,
     //     colonnes 10→16). Ré-affrontable 1×/jour (cf. wrapper de prédicat dans gameStore.move). ===
     { trainerId: "y_rouquin_gelee", mapId: "yellow_grotte_gelee", x: 9, y: 23, facing: "right", range: 7 },
+
+    // === PLAGE — 3 dresseurs à vue (embuscade façon Mia). Facings validés sur la grille walkable (cône ≥ 6 cases). ===
+    { trainerId: "y_plage_pecheur", mapId: "yellow_plage", x: 10, y: 15, facing: "down", range: 6 },
+    { trainerId: "y_plage_nageuse", mapId: "yellow_plage", x: 14, y: 25, facing: "left", range: 6 },
+    { trainerId: "y_plage_marin", mapId: "yellow_plage", x: 8, y: 30, facing: "up", range: 6 },
 ]
 
 const STEP: Record<SightFacing, { dx: number; dy: number }> = {

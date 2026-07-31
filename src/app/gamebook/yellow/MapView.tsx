@@ -864,6 +864,10 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_pnj7_grotte: { url: "/yellow/sprites/npc_eclaireur_gen3.png" },       // ÉCLAIREUR (1F, 27,18)
     y_pnj2_grotte_b2f: { url: "/yellow/sprites/npc_ermite_gen3.png" },      // ERMITE (B2F, 30,28)
     y_pnj4_grotte_b2f: { url: "/yellow/sprites/npc_explorateur_gen3.png" }, // EXPLORATEUR (B2F, 25,8)
+    // Plage — 3 dresseurs à vue (facing = row du sprite)
+    y_plage_pecheur: { url: "/yellow/sprites/npc_plage1_gen3.png" },                       // regarde ↓ (Sud)
+    y_plage_nageuse: { url: "/yellow/sprites/npc_plage2_gen3.png", row: NPC40_ROW_LEFT },  // regarde ← (Ouest)
+    y_plage_marin: { url: "/yellow/sprites/npc_plage3_gen3.png", row: NPC40_ROW_UP },      // regarde ↑ (Nord)
 }
 
 // === Bulle « ! » du dresseur qui vient de repérer le joueur ==============
