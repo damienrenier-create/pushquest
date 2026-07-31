@@ -2812,19 +2812,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={menuTitleStyle}>💻 ATELIER DE FUSION</div>
                             {atelierAdd === null ? (
                                 <>
-                                    <div style={{ fontSize: 11, opacity: 0.7, margin: "0 0 8px" }}>Assemble jusqu&apos;à 6 fusions (2 Daemons chacune) pour la Ligue de Fusion à venir.</div>
+                                    <div style={{ fontSize: 11, opacity: 0.7, margin: "0 0 8px" }}>Assemble jusqu&apos;à 6 fusions et <b>compare leurs stats / BST</b> ici, sans combattre. (Le combat-test est optionnel, en bas.)</div>
                                     {roster.length === 0 && <div style={{ fontSize: 12, opacity: 0.6, margin: "4px 0" }}>Aucune fusion — ajoute-en une ↓</div>}
-                                    {roster.map((p, i) => (
-                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, padding: "5px 8px", border: "1px solid #7c4fc0", borderRadius: 7, margin: "3px 0", background: "rgba(124,79,192,0.07)" }}>
-                                            <b style={{ flex: 1, color: valid.includes(p) ? "#7c4fc0" : "#c83030" }}>{i + 1}. {fusionNameOf(p)}</b>
-                                            <span style={{ opacity: 0.6, fontSize: 10 }}>{nameOf(p.a)} + {nameOf(p.b)}</span>
-                                            <button onClick={() => removeAt(i)} style={{ background: "transparent", border: "1px solid #c83030", color: "#c83030", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "1px 6px" }}>✕</button>
-                                        </div>
-                                    ))}
+                                    {roster.map((p, i) => {
+                                        const a = byUid(p.a), b = byUid(p.b)
+                                        const prev = a && b ? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)) : null
+                                        const bst = prev ? prev.stats.hp + prev.stats.atk + prev.stats.def + prev.stats.spcAtk + prev.stats.spcDef + prev.stats.spe : 0
+                                        const isValid = valid.includes(p)
+                                        return (
+                                            <div key={i} style={{ padding: "6px 9px", border: "1px solid #7c4fc0", borderRadius: 8, margin: "4px 0", background: "rgba(124,79,192,0.07)" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                    <b style={{ flex: 1, minWidth: 0, color: isValid ? "#7c4fc0" : "#c83030", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i + 1}. {fusionNameOf(p)}</b>
+                                                    {prev && <span style={{ fontSize: 10, opacity: 0.9, flexShrink: 0 }}>[{prev.types.join("/")}] N.{prev.level} · <span style={{ color: bst >= 500 ? "#c9a227" : "inherit", fontWeight: 700 }}>BST {bst}</span></span>}
+                                                    <button onClick={() => removeAt(i)} style={{ background: "transparent", border: "1px solid #c83030", color: "#c83030", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "1px 6px", flexShrink: 0 }}>✕</button>
+                                                </div>
+                                                {prev && <div style={{ fontSize: 10, opacity: 0.8, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>PV{prev.stats.hp} · At{prev.stats.atk} · Df{prev.stats.def} · SpA{prev.stats.spcAtk} · SpD{prev.stats.spcDef} · Vi{prev.stats.spe}</div>}
+                                                {prev && <div style={{ fontSize: 9.5, opacity: 0.75, marginTop: 2 }}>⚔️ {prev.moves.map((id) => getMove(id)?.name ?? id).join(" · ")}</div>}
+                                                <div style={{ fontSize: 9.5, opacity: 0.5, marginTop: 2 }}>{nameOf(p.a)} + {nameOf(p.b)}</div>
+                                            </div>
+                                        )
+                                    })}
                                     {roster.length < 6 && collection.length >= 2 && <button style={{ ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" }} onClick={() => setAtelierAdd({ a: "", b: "" })}>＋ AJOUTER UNE FUSION</button>}
                                     {collection.length < 2 && <div style={{ fontSize: 11, color: "#c83030", margin: "4px 0" }}>Il te faut au moins 2 Daemons.</div>}
                                     <button style={menuBtnStyle} onClick={() => openPc()}>📦 BOÎTE / ÉQUIPE (ranger tes Daemons)</button>
-                                    <button style={valid.length ? { ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" } : menuBtnDimStyle} disabled={!valid.length} onClick={fight}>⚔️ COMBATTRE avec {valid.length} fusion{valid.length > 1 ? "s" : ""}</button>
+                                    <button style={menuBtnDimStyle} disabled={!valid.length} onClick={fight}>⚔️ Tester au combat (optionnel){valid.length ? ` — ${valid.length} fusion${valid.length > 1 ? "s" : ""}` : ""}</button>
                                     <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
                                 </>
                             ) : (
