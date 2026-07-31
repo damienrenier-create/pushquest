@@ -10,6 +10,7 @@
 import { useMemo, useState } from "react"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { CTS } from "@/lib/gamebook/yellow/data/cts"
+import { SPECIES } from "@/lib/gamebook/yellow/data/species"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
 
@@ -33,6 +34,32 @@ const VOL_FR: Record<VolatileStatus, string> = { CONFUSION: "Confusion", SEEDED:
 // moveId → libellé de CT (ex. "CT02"), pour l'affichage + le tri par n° de CT.
 const CT_BY_MOVE: Record<string, { label: string; num: number }> = {}
 CTS.forEach((c, i) => { CT_BY_MOVE[c.moveId] = { label: c.label, num: i } })
+
+// INDEX INVERSE move → Daemons qui l'apprennent PAR NIVEAU (construit une seule fois, au niveau module,
+// comme CT_BY_MOVE). Dédupliqué par espèce (niveau minimal retenu), trié par niveau puis n° de dex.
+type Learner = { id: string; name: string; dexNo: number; sprite: string; types: PokeType[]; level: number }
+const LEARNED_BY: Record<string, Learner[]> = {}
+{
+    const tmp: Record<string, Map<string, Learner>> = {}
+    for (const sp of Object.values(SPECIES)) {
+        for (const { level, moveId } of sp.learnset) {
+            const byId = (tmp[moveId] ??= new Map())
+            const prev = byId.get(sp.id)
+            if (!prev || level < prev.level) byId.set(sp.id, { id: sp.id, name: sp.name, dexNo: sp.dexNo, sprite: sp.sprite, types: sp.types, level })
+        }
+    }
+    for (const moveId in tmp) LEARNED_BY[moveId] = [...tmp[moveId].values()].sort((a, b) => a.level - b.level || a.dexNo - b.dexNo)
+}
+
+/** Icône d'un Daemon : sprite PNG, avec repli initiale-sur-pastille-de-type si l'image manque. */
+function LearnerIcon({ sp }: { sp: Learner }) {
+    return (
+        <span style={{ position: "relative", width: 30, height: 30, flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center", background: TYPE_COLOR[sp.types[0]], borderRadius: 6, color: "#fff", fontWeight: 800, fontSize: 13 }}>
+            {sp.name[0]}
+            <img src={sp.sprite} alt="" width={30} height={30} style={{ position: "absolute", inset: 0, objectFit: "contain", imageRendering: "pixelated" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} />
+        </span>
+    )
+}
 
 /** Catégorie lisible : Statut (power 0) sinon Physique/Spécial (déduit du type, Gen 1). */
 function category(m: MoveData): "Statut" | "Physique" | "Spécial" | "Adaptatif" {
@@ -78,6 +105,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 export default function MovesPanel({ close }: { close: () => void }) {
     const [sort, setSort] = useState<SortKey>("az")
     const [query, setQuery] = useState("")
+    const [selected, setSelected] = useState<MoveData | null>(null) // attaque cliquée → panneau « qui l'apprend »
 
     const list = useMemo(() => {
         const all = Object.values(MOVES)
@@ -118,13 +146,17 @@ export default function MovesPanel({ close }: { close: () => void }) {
                     {list.map((m) => {
                         const bits = effectBits(m)
                         const ct = CT_BY_MOVE[m.id]
+                        const learners = LEARNED_BY[m.id]?.length ?? 0
                         return (
-                            <div key={m.id} style={card}>
+                            <div key={m.id} style={{ ...card, cursor: "pointer" }} role="button" tabIndex={0}
+                                onClick={() => setSelected(m)}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(m) } }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                     <span style={{ fontSize: 13, fontWeight: 800, color: INK }}>{m.name}</span>
                                     <span style={{ ...typeChip, background: TYPE_COLOR[m.type] }}>{TYPE_FR[m.type]}</span>
                                     <span style={catChip}>{category(m)}</span>
                                     {ct && <span style={ctChip}>{ct.label}</span>}
+                                    <span style={learnChip}>{learners > 0 ? `📖 ${learners} Daemon${learners > 1 ? "s" : ""}` : "📖 CT/évo"}</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: INK, opacity: 0.85, marginTop: 3 }}>
                                     {m.power > 0 ? <>💥 Puiss. <b>{m.power}</b> · </> : null}
@@ -143,6 +175,37 @@ export default function MovesPanel({ close }: { close: () => void }) {
 
                 <button onClick={close} style={closeBtn}>FERMER</button>
             </div>
+
+            {selected && (() => {
+                const learners = LEARNED_BY[selected.id] ?? []
+                const ct = CT_BY_MOVE[selected.id]
+                return (
+                    <div onClick={(e) => { e.stopPropagation(); setSelected(null) }} style={detailOverlay}>
+                        <div onClick={(e) => e.stopPropagation()} style={detailBox}>
+                            <div style={header}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    {selected.name}
+                                    <span style={{ ...typeChip, background: TYPE_COLOR[selected.type] }}>{TYPE_FR[selected.type]}</span>
+                                </span>
+                                <button onClick={() => setSelected(null)} style={xBtn}>✕</button>
+                            </div>
+                            <div style={{ padding: "7px 12px 0", fontSize: 11, color: INK, opacity: 0.75 }}>Daemons qui l'apprennent en montant de niveau :</div>
+                            <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
+                                {learners.map((s) => (
+                                    <div key={s.id} style={learnerRow}>
+                                        <LearnerIcon sp={s} />
+                                        <span style={{ fontWeight: 700, color: INK, flex: 1, fontSize: 12 }}>{s.name}</span>
+                                        {s.types.map((t) => <span key={t} style={{ ...typeChip, background: TYPE_COLOR[t] }}>{TYPE_FR[t]}</span>)}
+                                        <span style={lvlBadge}>{s.level <= 1 ? "départ/évo" : `Niv ${s.level}`}</span>
+                                    </div>
+                                ))}
+                                {learners.length === 0 && <div style={muted}>Aucun Daemon ne l'apprend en montant de niveau.</div>}
+                                {ct && <div style={{ ...muted, marginTop: 8, opacity: 0.85 }}>🎓 Aussi apprenable via <b>{ct.label}</b> (tout Daemon de type compatible).</div>}
+                            </div>
+                        </div>
+                    </div>
+                )
+            })()}
         </div>
     )
 }
@@ -160,3 +223,9 @@ const catChip: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: INK,
 const ctChip: React.CSSProperties = { fontSize: 9, fontWeight: 800, color: "#1b5fa6", background: "#dcebfb", border: "1px solid #9cc4ec", padding: "2px 6px", borderRadius: 10 }
 const effChip: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: INK, background: "#efe6c8", border: `1px solid ${DARK}`, padding: "2px 7px", borderRadius: 8 }
 const closeBtn: React.CSSProperties = { margin: 10, marginTop: 0, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }
+const learnChip: React.CSSProperties = { fontSize: 9, fontWeight: 800, color: "#5a3e1b", background: "#efe0bf", border: "1px solid #d8c290", padding: "2px 6px", borderRadius: 10, marginLeft: "auto" }
+const detailOverlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, padding: 12 }
+const detailBox: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 400, height: "74%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
+const learnerRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: "#fff8e8", border: `2px solid ${DARK}`, borderRadius: 8, padding: "5px 8px", marginBottom: 6 }
+const lvlBadge: React.CSSProperties = { fontSize: 10, fontWeight: 800, color: CREAM, background: INK, padding: "2px 7px", borderRadius: 10, flex: "0 0 auto" }
+const xBtn: React.CSSProperties = { background: "transparent", border: "none", color: INK, fontSize: 16, fontWeight: 800, cursor: "pointer", lineHeight: 1, padding: 0 }
