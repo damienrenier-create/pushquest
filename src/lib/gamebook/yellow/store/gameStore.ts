@@ -156,6 +156,7 @@ interface GameStore {
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
+    moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
     domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
     fusionMenuOpen: boolean // AUTEL DE LA CHIMÈRE : choisir 2 Daemons → fusion → combat-épreuve
@@ -219,6 +220,7 @@ interface GameStore {
     closeLibrary: () => void
     closeAdvisor: () => void
     closeLab: () => void
+    closeMoveReminder: () => void
     closeCombatShop: () => void
     closeDomeMenu: () => void
     closeFusionMenu: () => void
@@ -690,6 +692,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     libraryOpen: false,
     advisorOpen: false,
     labOpen: false,
+    moveReminderOpen: false,
     combatShopOpen: false,
     domeMenuOpen: false,
     fusionMenuOpen: false,
@@ -732,7 +735,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -1521,17 +1524,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Assistant du labo (apprenti du Prof. CHEN) : aiguille vers les récompenses (CT du terminal, CT
         // UNIQUE du blackjack, œuf-soigneur Tonytony) et révèle le grand projet du chef.
         if (npc.id === "y_lab_assistant") {
-            // 🍒 Post-Ligue, si le secret des baies n'est pas connu, l'assistant le RÉVÈLE (fallback hors run 2,
+            // 🍒 Post-Ligue, si le secret des baies n'est pas connu, le MAÎTRE le RÉVÈLE d'abord (fallback hors run 2,
             //    où c'est le Druide, boss arène 1, qui s'en charge) — puis il débloque la récolte.
             if (getPlayerSave().isChampion && !isBerrySecretKnown()) {
                 setBerrySecretKnown()
                 persistYellowSave()
-                set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
+                set({ dialogue: { npcId: npc.id, npcName: "MAÎTRE DES CAPACITÉS", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
                 return
             }
-            const assistantLines = getActiveWorld() === "run3" ? LAB_ASSISTANT_LINES_RUN3
-                : getActiveWorld() === "ngplus" ? LAB_ASSISTANT_LINES_NGPLUS : LAB_ASSISTANT_LINES
-            set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: assistantLines } })
+            // MAÎTRE DES CAPACITÉS : ouvre le panneau de réapprentissage (une attaque du learnset, contre reps croissants).
+            set({ moveReminderOpen: true })
             return
         }
 
@@ -2077,6 +2079,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeLibrary: () => set({ libraryOpen: false }),
     closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),
+    closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
     closeDomeMenu: () => set({ domeMenuOpen: false }),
     closeFusionMenu: () => set({ fusionMenuOpen: false }),

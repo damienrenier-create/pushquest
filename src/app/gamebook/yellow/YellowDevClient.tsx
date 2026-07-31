@@ -38,6 +38,7 @@ import LibraryPanel from "./LibraryPanel"
 import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
+import MoveReminderPanel from "./MoveReminderPanel"
 import CombatShopModal from "./CombatShopModal"
 import DailyTicketModal from "./DailyTicketModal"
 import DiablesRougesQuiz, { diablesRougesAvailable } from "./DiablesRougesQuiz"
@@ -234,6 +235,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeAdvisor = useGameStore((s) => s.closeAdvisor)
     const labOpen = useGameStore((s) => s.labOpen)
     const closeLab = useGameStore((s) => s.closeLab)
+    const moveReminderOpen = useGameStore((s) => s.moveReminderOpen)
+    const closeMoveReminder = useGameStore((s) => s.closeMoveReminder)
     const combatShopOpen = useGameStore((s) => s.combatShopOpen)
     const closeCombatShop = useGameStore((s) => s.closeCombatShop)
     const signOpen = useGameStore((s) => s.signOpen)
@@ -1693,6 +1696,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (libraryOpen) { closeLibrary(); return true }
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
+        if (moveReminderOpen) { closeMoveReminder(); return true }
         if (pcOpen) { closePc(); return true }
         if (menu === "team" || menu === "bag" || menu === "moves" || menu === "palmares") { setMenu("pause"); return true }
         if (menu === "reput" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("palmares"); return true }
@@ -3003,6 +3007,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
+            <MoveReminderPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 39) }} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}

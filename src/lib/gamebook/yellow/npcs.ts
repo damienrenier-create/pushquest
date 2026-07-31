@@ -522,16 +522,17 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le Prof. CHEN ajuste ses lunettes et te montre le terminal d'expériences.*"], // repli si non intercepté
     },
     {
-        // Assistant du Prof. CHEN : aiguille vers les récompenses (CT terminal / CT blackjack / Tonytony) — intercepté gameStore. (7,6).
+        // MAÎTRE DES CAPACITÉS (ex-assistant du Prof. CHEN) : réapprend une attaque oubliée du learnset d'un Daemon
+        //   contre des reps (prix croissant) — intercepté dans gameStore.pressA (7,6). Garde le fallback « secret des baies » post-Ligue.
         id: "y_lab_assistant",
-        name: "ASSISTANT",
+        name: "MAÎTRE DES CAPACITÉS",
         mapId: "yellow_infirmary_2e",
         kind: "static",
         interaction: "interactive",
-        sprite: { emoji: "", color: "#d0e0ff" }, // invisible (l'assistant est dessiné dans le décor à (7,6))
+        sprite: { emoji: "🥋", color: "#c0392b" }, // repli emoji ; sprite PNG (ceinture noire) câblé via NPC_SPRITES
         initialX: 7,
         initialY: 6,
-        dialoguesAfter: ["*L'assistant trie des Capsules Techniques en sifflotant.*"], // repli si non intercepté
+        dialoguesAfter: ["*Le Maître des Capacités s'entraîne en silence.*"], // repli si non intercepté
     },
     // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===
     // Interception spéciale dans gameStore.pressA (équipe miroir/faiblesse selon
