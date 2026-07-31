@@ -871,6 +871,12 @@ function PartyScreen({ team, options, cursor, onPick }: {
                             <span style={{ opacity: i === cursor ? 1 : 0, flexShrink: 0 }}>▶</span>
                             <PartySprite mon={m} />
                             <span style={S.partyName}>{displayName(m).toUpperCase()}</span>
+                            {/* Type(s) : utile surtout pour les Daemons FUSIONNÉS, dont on ne connaît pas le typage par cœur. */}
+                            <span style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                                {speciesOf(m).types.map((t) => (
+                                    <span key={t} style={{ ...S.typeChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t] ?? t}</span>
+                                ))}
+                            </span>
                             <span style={S.partyLvl}>N.{m.level}</span>
                             <div style={S.partyHpWrap}>
                                 <div style={S.partyHpTrack}><div style={{ ...S.partyHpFill, width: `${pct}%`, background: col }} /></div>
