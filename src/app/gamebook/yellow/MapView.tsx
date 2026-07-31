@@ -1074,8 +1074,9 @@ function hashHue(s: string): number {
     return h % 360
 }
 
-// Avatars PERSO de certains joueurs (planches Gen3 19×4) : remplacent le sprite de base
-// « Red » partout où on les VOIT (et à terme où on les AFFRONTE). Clé = pseudo en minuscules.
+// Avatars PERSO de certains joueurs (planches Gen3 19×4) : remplacent le sprite de base « Red »
+// partout où on les VOIT (présence temps réel) ET où on les AFFRONTE en reflet IA (arène + PNJ-joueurs
+// RUN 2 de la Grotte). Clé = pseudo en minuscules. Pour ajouter un pote : 1 planche PNG + 1 ligne ici.
 const PLAYER_GEN3_SPRITE: Record<string, string> = {
     task1: "/yellow/sprites/npc_task1_gen3.png",
     franss: "/yellow/sprites/npc_franss_gen3.png",
@@ -1159,8 +1160,12 @@ function RemotePlayerSprite({
     )
 }
 
-// === Adversaire d'ARÈNE JOUEUR (hub / miroir) =========================
-// Même sprite Red teinté que les distants, mais STATIQUE et CLIQUABLE (→ défi). Picto ⚔️ + pseudo.
+// === Adversaire d'ARÈNE JOUEUR (hub / miroir) + PNJ-joueur RUN 2 (Grotte) ===============
+// Reflet d'un AUTRE joueur, piloté par l'IA, STATIQUE et CLIQUABLE (→ défi). Picto ⚔️ + pseudo.
+// Honore le MÊME avatar perso que la présence temps réel (PLAYER_GEN3_SPRITE, clé = pseudo) : ainsi
+// le reflet montre l'avatar du joueur, pas un « Red » générique — de sorte que les AUTRES en profitent
+// partout où ils croisent ce reflet (reflets d'arène ET PNJ-joueurs RUN 2 de la Grotte du Nexus).
+// Fallback intact = sprite Red + halo coloré (pseudo non mappé ⇒ comportement inchangé).
 function ArenaOpponentSprite({
     o,
     screenPos,
@@ -1173,24 +1178,30 @@ function ArenaOpponentSprite({
     const hue = hashHue(o.userId)
     const cell = FIRERED_PLAYER.down[0]
     const topOffset = SPRITE_ASPECT_RATIO - 1
+    const customSheet = PLAYER_GEN3_SPRITE[(o.nickname ?? "").toLowerCase()]
+    const containerStyle: React.CSSProperties = customSheet
+        ? { ...npc40ContainerStyle(screenPos, o.x, o.y), zIndex: 4, cursor: "pointer" }
+        : { position: "absolute", ...screenPos(o.x, o.y - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 4, cursor: "pointer" }
+    // Reflet statique face caméra (rangée DOWN) : l'avatar « regarde » le joueur, comme le Red d'origine.
+    const spriteStyle: React.CSSProperties = customSheet
+        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_IDLE_COL, NPC40_ROW_DOWN), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
+        : {
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+            backgroundPosition: sheetBgPosition(cell),
+            imageRendering: "pixelated",
+            filter: `drop-shadow(0 0 2px hsl(${hue} 95% 50%)) drop-shadow(0 0 2px hsl(${hue} 95% 50%))`,
+        }
     return (
         <div
-            style={{ position: "absolute", ...screenPos(o.x, o.y - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 4, cursor: "pointer" }}
+            style={containerStyle}
             onClick={onClick}
             title={`Défier ${o.nickname}`}
         >
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
-                    backgroundPosition: sheetBgPosition(cell),
-                    imageRendering: "pixelated",
-                    filter: `drop-shadow(0 0 2px hsl(${hue} 95% 50%)) drop-shadow(0 0 2px hsl(${hue} 95% 50%))`,
-                }}
-            />
+            <div style={spriteStyle} />
             <div
                 style={{
                     position: "absolute",
