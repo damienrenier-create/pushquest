@@ -839,6 +839,8 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_cave_trader: { url: "/yellow/sprites/npc_cave_trader_gen3.png" },
     // Autel de la Chimère (DÔME FUSION, 9-6) : PNJ qui lance la fusion. Face au joueur (row 0 par défaut).
     y_autel_chimere: { url: "/yellow/sprites/npc_autel_chimere_gen3.png" },
+    // DIEU SPAGHETTI — boss final de la Ligue de Fusion (yellow_fusion_miroir, 10-2). Face au joueur.
+    y_fusion_miroir: { url: "/yellow/sprites/npc_dieu_spaghetti_gen3.png" },
     // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
     // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
     y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },
