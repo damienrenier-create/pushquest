@@ -868,6 +868,13 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_plage_pecheur: { url: "/yellow/sprites/npc_plage1_gen3.png" },                       // regarde ↓ (Sud)
     y_plage_nageuse: { url: "/yellow/sprites/npc_plage2_gen3.png", row: NPC40_ROW_LEFT },  // regarde ← (Ouest)
     y_plage_marin: { url: "/yellow/sprites/npc_plage3_gen3.png", row: NPC40_ROW_UP },      // regarde ↑ (Nord)
+    // Aqua Arena (bateau) — 4 dresseurs à vue + 2 boss (row = facing ; boss sur estrade = face Sud par défaut)
+    y_aqua_n1: { url: "/yellow/sprites/npc_aqua_50_gen3.png" },                           // MATELOT ↓
+    y_aqua_n2: { url: "/yellow/sprites/npc_aqua_51_gen3.png", row: NPC40_ROW_LEFT },      // VIGIE ←
+    y_aqua_n3: { url: "/yellow/sprites/npc_aqua_52_gen3.png", row: NPC40_ROW_RIGHT },     // MACHINISTE →
+    y_aqua_n4: { url: "/yellow/sprites/npc_aqua_53_gen3.png", row: NPC40_ROW_RIGHT },     // SECOND →
+    y_aqua_boss_a: { url: "/yellow/sprites/npc_aqua_55_gen3.png" },                       // CAPITAINE VAGUE (le « vieux » cheveux gris)
+    y_aqua_boss_b: { url: "/yellow/sprites/npc_aqua_54_gen3.png" },                       // MAÎTRE D'ÉQUIPAGE
 }
 
 // === Bulle « ! » du dresseur qui vient de repérer le joueur ==============
