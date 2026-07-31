@@ -467,6 +467,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusioReofferShownRef = useRef(false) // Fusio-Ball : re-proposition montrée UNE fois par session (anti-nag)
     const [pnj6Modal, setPnj6Modal] = useState(false) // offre d'échange PNJ 6 (post-victoire)
     const pnj6TradingRef = useRef(false) // verrou anti-double-tap sur l'échange (IRRÉVERSIBLE) : 1 seul échange
+    // ANTI-MASH : le bouton « Oui » ne s'arme qu'après un court délai à l'ouverture de la modale → marteler A juste
+    //   après la victoire ne peut PLUS déclencher l'échange par accident (le bug de l'Uzumaro cédé sans le vouloir).
+    const [pnj6Armed, setPnj6Armed] = useState(false)
     const [buyQty, setBuyQty] = useState(1)
     const [sellMode, setSellMode] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
@@ -710,6 +713,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (got > 0) { setToast(`🎰 Tu déniches ${got} jeton${got > 1 ? "s" : ""} sous le tapis ! (ticket${got > 1 ? "s" : ""} casino)`); persistYellowSave() }
         else if (got === 0) setToast("🔎 Rien sous ce tapis…")
     }, [inCasino, userId, pressA, mapPlayer.posX, mapPlayer.posY])
+
+    // ANTI-MASH échange PNJ 6 : à l'ouverture de la modale, on DÉSARME le bouton « Oui » puis on l'arme après
+    //   1,2 s. Un joueur qui martèle A pour passer le dialogue de victoire ne peut donc plus valider l'échange
+    //   irréversible sans le vouloir (cause de la perte de l'Uzumaro).
+    useEffect(() => {
+        if (!pnj6Modal) { setPnj6Armed(false); return }
+        setPnj6Armed(false)
+        const t = setTimeout(() => setPnj6Armed(true), 1200)
+        return () => clearTimeout(t)
+    }, [pnj6Modal])
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -3445,21 +3458,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>🤝 {PNJ6_NAME}</div>
                             <div style={{ textAlign: "center", margin: "8px 0", fontSize: 13, lineHeight: 1.5 }}>
-                                Échanger <b>{displayName(lead)}</b> (ton Daemon de tête) contre un <b>CROCAVERN</b> exclusif ?
+                                Es-tu <b>SÛR</b> de vouloir échanger ton <b>{displayName(lead)}</b> contre un <b>CROCAVERN</b> ?
                             </div>
-                            <div style={{ textAlign: "center", marginBottom: 10, fontSize: 11, opacity: 0.7 }}>Irréversible — {displayName(lead)} partira avec l&apos;Échangeur.</div>
+                            <div style={{ textAlign: "center", marginBottom: 10, fontSize: 11, color: "#ff8c60", fontWeight: 700 }}>⚠️ DÉFINITIF — {displayName(lead)} partira pour toujours avec l&apos;Échangeur.</div>
+                            {/* Bouton SÛR en premier (le tap réflexe = garder son Daemon). */}
+                            <button style={menuBtnStyle} onClick={() => setPnj6Modal(false)}>❌ Non, garder {displayName(lead)}</button>
                             <button
-                                style={menuBtnStyle}
+                                style={{ ...menuBtnDimStyle, opacity: pnj6Armed ? 1 : 0.4, pointerEvents: pnj6Armed ? "auto" : "none" }}
+                                disabled={!pnj6Armed}
                                 onClick={() => {
-                                    if (pnj6TradingRef.current) return
+                                    if (!pnj6Armed || pnj6TradingRef.current) return
                                     pnj6TradingRef.current = true
                                     // Échange IRRÉVERSIBLE one-time → persistance IMMÉDIATE (comme le titre Dôme),
                                     //   pas le débounce 800 ms : sinon fermer l'app juste après annulerait le trade.
                                     if (executeTrade(lead.uid, makeCrocavernGift())) { markTrainerDefeated(PNJ6_TRADE_DONE_MARKER); void persistYellowSaveNow() }
                                     setPnj6Modal(false)
                                 }}
-                            >✅ Oui, échanger</button>
-                            <button style={menuBtnDimStyle} onClick={() => setPnj6Modal(false)}>❌ Non, garder {displayName(lead)}</button>
+                            >{pnj6Armed ? `✅ Oui, échanger définitivement ${displayName(lead)}` : "⏳ Patiente…"}</button>
                         </div>
                     </div>
                 )
