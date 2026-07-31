@@ -912,11 +912,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   ci-dessus a déjà enregistré le frère courant, donc le 5e combat déclenche l'octroi.
             const GLACON_BROTHERS = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"]
             if (GLACON_BROTHERS.includes(storeState.trainer.trainerId) && GLACON_BROTHERS.every((id) => isTrainerDefeated(id)) && grantCt("ct61")) {
-                const mvId = getCt("ct61")?.moveId
-                giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
-                // ⚠️ Le don de CT n'est notifié QUE sur un gain de badge d'arène (cf. YellowDevClient) → invisible ici.
-                //   On force donc une ANNONCE post-combat via rematchReward (quel que soit le 5e frère vaincu).
-                rematchReward = { npcId: storeState.trainer.trainerId, npcName: "FRÈRES GLAÇON", lines: ["Les CINQ frères Glaçon sont vaincus !", `🎁 Tu reçois la CT « ${giftCtMove ?? "Voile de Givre"} » — enseigne-la à un Daemon Glace (poche CT). Cadeau unique !`] }
+                // ⚠️ NE PAS écrire giftCtMove ici : cette variable n'est notifiée QUE sur un gain de badge d'arène
+                //   (cf. YellowDevClient) → elle « fuiterait » sur la prochaine arène (bug observé). L'annonce des
+                //   frères passe UNIQUEMENT par rematchReward (affiché post-combat, quel que soit le 5e frère vaincu).
+                const mvName = getMove(getCt("ct61")?.moveId ?? "")?.name ?? "Voile de Givre"
+                rematchReward = { npcId: storeState.trainer.trainerId, npcName: "FRÈRES GLAÇON", lines: ["Les CINQ frères Glaçon sont vaincus !", `🎁 Tu reçois la CT « ${mvName} » — enseigne-la à un Daemon Glace (poche CT). Cadeau unique !`] }
             }
             // 🎁 RUN 2 (NG+) : le boss offre SA CT signature EXCLUSIVE (ct53→57, introuvable ailleurs) + son ticket
             //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
