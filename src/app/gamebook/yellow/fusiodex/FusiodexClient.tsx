@@ -17,6 +17,15 @@ import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 type Tab = "rules" | "official" | "mine"
 const STAT_LABELS = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spcAtk", "SpA"], ["spcDef", "SpD"]] as const
 
+// TRI de « Mes fusions » : ordre d'ajout, alphabétique, type, BST, ou n'importe quelle stat.
+//   (Pas de « niveau » : le journal enregistre une PAIRE d'espèces — une recette — pas une instance à un niveau.)
+const STAT_KEYS = ["hp", "atk", "def", "spe", "spcAtk", "spcDef"] as const
+type SortKey = "recent" | "name" | "type" | "bst" | (typeof STAT_KEYS)[number]
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: "recent", label: "Récent" }, { key: "name", label: "A-Z" }, { key: "type", label: "Type" }, { key: "bst", label: "BST" },
+    { key: "hp", label: "PV" }, { key: "atk", label: "Atq" }, { key: "def", label: "Déf" }, { key: "spe", label: "Vit" }, { key: "spcAtk", label: "SpA" }, { key: "spcDef", label: "SpD" },
+]
+
 // Couleurs par type (chips), cohérentes avec l'identité Pokémon-like du jeu.
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -85,6 +94,26 @@ export default function FusiodexClient() {
         return { ...f, sprite: off?.sprite ?? MISSINGNO_SPRITE, displayName: off?.name ?? f.name }
     }), [player.fusionHistory])
 
+    // TRI de « Mes fusions » (défaut : plus récentes d'abord). Clic sur le tri actif = inverse le sens.
+    const [sortKey, setSortKey] = useState<SortKey>("recent")
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+    const setSort = (k: SortKey) => {
+        if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+        else { setSortKey(k); setSortDir(k === "name" || k === "type" ? "asc" : "desc") } // A-Z/type montent, le reste descend
+    }
+    const sortedCreated = useMemo(() => {
+        const arr = [...created]
+        if (sortKey !== "recent") {
+            arr.sort((a, b) => {
+                if (sortKey === "name") return a.displayName.localeCompare(b.displayName, "fr")
+                if (sortKey === "type") return (a.types[0] ?? "~~").localeCompare(b.types[0] ?? "~~", "fr") || a.displayName.localeCompare(b.displayName, "fr")
+                if (sortKey === "bst") return a.bst - b.bst
+                return (a.stats[sortKey] ?? 0) - (b.stats[sortKey] ?? 0)
+            })
+        }
+        return sortDir === "desc" ? arr.reverse() : arr
+    }, [created, sortKey, sortDir])
+
     return (
         <div style={S.root}>
             <div style={S.aurora} aria-hidden />
@@ -149,12 +178,22 @@ export default function FusiodexClient() {
                 ) : (
                     <div style={S.list}>
                         <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais, même après avoir défait la paire.</div>
+                        {created.length > 1 && (
+                            <div style={S.sortBar}>
+                                <span style={S.sortLabel}>Trier</span>
+                                {SORT_OPTIONS.map((s) => (
+                                    <button key={s.key} style={{ ...S.sortBtn, ...(sortKey === s.key ? S.sortBtnOn : {}) }} onClick={() => setSort(s.key)}>
+                                        {s.label}{sortKey === s.key ? (sortDir === "desc" ? " ▼" : " ▲") : ""}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {created.length === 0 ? (
                             <div style={S.locked}>
                                 <div style={{ fontSize: 38, marginBottom: 10 }}>🛠️</div>
                                 <div style={{ fontSize: 12.5, opacity: 0.85, lineHeight: 1.55 }}>Tu n&apos;as pas encore assemblé de fusion. Dépose deux Daemons sur l&apos;Autel de la Chimère pour créer ta première chimère de combat !</div>
                             </div>
-                        ) : created.map((f) => {
+                        ) : sortedCreated.map((f) => {
                             const ring = f.bst > 0 && f.types[0] ? typeColor(f.types[0]) : "#4a3a6a"
                             return (
                                 <div key={f.key} style={{ ...S.card, borderLeftColor: ring }}>
@@ -221,4 +260,8 @@ const S: Record<string, React.CSSProperties> = {
     statTrack: { flex: 1, height: 5, background: "#120f1c", borderRadius: 4, overflow: "hidden" },
     statFill: { display: "block", height: "100%", borderRadius: 4 },
     tag: { fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 },
+    sortBar: { display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", background: "rgba(32,26,48,0.6)", border: "1px solid #3a2e56", borderRadius: 10, padding: "7px 9px" },
+    sortLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1, opacity: 0.65, marginRight: 2, textTransform: "uppercase" },
+    sortBtn: { background: "rgba(36,29,56,0.9)", border: "1px solid #4a3a6a", borderRadius: 999, padding: "3px 9px", color: "#b8a8d8", fontFamily: "'Courier New', monospace", fontSize: 10.5, fontWeight: 700, cursor: "pointer", transition: "all .1s" },
+    sortBtnOn: { background: "linear-gradient(180deg,#8a5ae0,#6a3ac8)", borderColor: "#c79cff", color: "#fff", boxShadow: "0 2px 8px #7a4ad055" },
 }
