@@ -363,7 +363,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     const torchRadius = useGameStore((s) => s.torchRadius)
     // BROUILLARD : rayon de vision de base de la map (true = 2 legacy · nombre = rayon), élargi par une lampe torche active.
     const darkBase = map.darkness === true ? 2 : (typeof map.darkness === "number" ? map.darkness : 0)
-    const visionRadius = torchSteps > 0 ? Math.max(darkBase, torchRadius) : darkBase
+    const visionRadius = torchSteps > 0 ? Math.max(darkBase, torchRadius) + 1 : darkBase // lampe torche active → +1 case d'éclairage
 
     const cam = computeCamera(player.posX, player.posY, map)
     // RUN 3 : activeNpcs() applique les positions run-3 + rend invisibles les dresseurs d'arène (peints dans le
@@ -751,6 +751,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_pnj1_grotte_b2f: { url: "/yellow/sprites/pnj1_grotte_b2f.png", frames: 1, h: 1.9 },
     // PNJ 3 — Aventurier bloqueur de la Grotte B2F (de profil, barre le couloir jusqu'à sa défaite).
     y_pnj3_grotte_b2f: { url: "/yellow/sprites/pnj3_grotte_b2f.png", frames: 1, h: 1.9 },
+    // PNJ 6 — l'Échangeur de la Grotte du Nexus 1F (troc Crocavern) : portrait fourni (npc_echange.png).
+    y_pnj6_grotte: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 1.9 },
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     // Marchand de Jetons de Combat (hub de la Zone de Combat).
