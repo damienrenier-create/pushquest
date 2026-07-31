@@ -72,10 +72,20 @@ function resolveActiveMap(mapId: string): YellowMapData | undefined {
 // DESSINÉE dans le nouveau fond. On VIDE aussi l'emoji : en run 3 les gardes/boss sont peints dans l'image d'arène
 // (comme l'arène Plante en run 1) → pas de sprite parasite par-dessus. Hors run 3 : liste inchangée (réf. stable).
 export function activeNpcs() {
-    if (effectiveRunWorld() !== "run3") return YELLOW_NPCS
-    return YELLOW_NPCS.map((n) => (n.run3X != null
-        ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
-        : n))
+    let list = YELLOW_NPCS
+    if (effectiveRunWorld() === "run3") {
+        list = list.map((n) => (n.run3X != null
+            ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
+            : n))
+    }
+    // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE, l'assistant du labo DEVIENT le
+    // MAÎTRE DES CAPACITÉS (id y_move_tutor, ceinture noire). Côté VILLE JAUNE, il reste l'ASSISTANT (invisible/décor).
+    if (useGameStore.getState().interiorReturn?.mapId === "yellow_cendreville") {
+        list = list.map((n) => (n.id === "y_lab_assistant"
+            ? { ...n, id: "y_move_tutor", name: "MAÎTRE DES CAPACITÉS", sprite: { emoji: "🥋", color: "#c0392b" } }
+            : n))
+    }
+    return list
 }
 
 export interface ActiveDialogue {
@@ -1523,17 +1533,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         // Assistant du labo (apprenti du Prof. CHEN) : aiguille vers les récompenses (CT du terminal, CT
         // UNIQUE du blackjack, œuf-soigneur Tonytony) et révèle le grand projet du chef.
-        if (npc.id === "y_lab_assistant") {
-            // 🍒 Post-Ligue, si le secret des baies n'est pas connu, le MAÎTRE le RÉVÈLE d'abord (fallback hors run 2,
+        // ÉTAGE DU CENTRE (map partagée) : à VILLE JAUNE c'est l'ASSISTANT (y_lab_assistant), à CENDREVILLE le
+        //   MAÎTRE DES CAPACITÉS (y_move_tutor, swap fait par activeNpcs selon interiorReturn).
+        if (npc.id === "y_lab_assistant" || npc.id === "y_move_tutor") {
+            // 🍒 Post-Ligue, si le secret des baies n'est pas connu, le PNJ le RÉVÈLE d'abord (fallback hors run 2,
             //    où c'est le Druide, boss arène 1, qui s'en charge) — puis il débloque la récolte.
             if (getPlayerSave().isChampion && !isBerrySecretKnown()) {
                 setBerrySecretKnown()
                 persistYellowSave()
-                set({ dialogue: { npcId: npc.id, npcName: "MAÎTRE DES CAPACITÉS", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.id === "y_move_tutor" ? "MAÎTRE DES CAPACITÉS" : "ASSISTANT", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
                 return
             }
-            // MAÎTRE DES CAPACITÉS : ouvre le panneau de réapprentissage (une attaque du learnset, contre reps croissants).
-            set({ moveReminderOpen: true })
+            // CENDREVILLE → MAÎTRE DES CAPACITÉS (réapprentissage payant). VILLE JAUNE → l'assistant (aiguillage récompenses).
+            if (npc.id === "y_move_tutor") { set({ moveReminderOpen: true }); return }
+            const assistantLines = getActiveWorld() === "run3" ? LAB_ASSISTANT_LINES_RUN3
+                : getActiveWorld() === "ngplus" ? LAB_ASSISTANT_LINES_NGPLUS : LAB_ASSISTANT_LINES
+            set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: assistantLines } })
             return
         }
 
