@@ -220,6 +220,10 @@ interface GameStore {
     /** Lance directement le REMATCH d'un dresseur (boss à 2 phases : enchaîne phase 2 après phase 1). */
     launchRematch: (trainerId: string) => void
     hydrate: (loaded: PlayerState) => void
+    /** RELOAD dans un intérieur PARTAGÉ : interiorReturn est transient (jamais persisté en base). Le client le
+     *  restaure depuis localStorage APRÈS hydrate() pour que le côté Cendreville (Maître des Capacités, posters,
+     *  ville de sortie) survive au rechargement (sinon on retombe systématiquement « côté Ville Jaune »). */
+    setInteriorReturn: (v: { mapId: string; x: number; y: number } | null) => void
     /** RUN 3 : re-résout la carte ACTIVE si le monde run-3 a été établi APRÈS la pose de la carte (course de montage
      *  hydrate vs loadYellowSave) → bascule vers la variante d'arène re-thémée si applicable. No-op sinon. */
     refreshActiveMap: () => void
@@ -2076,6 +2080,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const map = resolveActiveMap(safe.mapId) ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID] // RUN 3 : variante d'arène si reload direct dedans
         set({ player: safe, map, hydrated: true })
     },
+
+    // RELOAD dans un intérieur PARTAGÉ (labo / boutique de Cendreville ou de Ville Jaune) : le client réinjecte ici
+    //   l'interiorReturn mémorisé en localStorage (non persisté en base) pour que le côté Cendreville survive au
+    //   rechargement (Maître des Capacités au lieu de l'assistant, posters, porte de sortie vers la bonne ville).
+    setInteriorReturn: (v) => set({ interiorReturn: v }),
 
     // RUN 3 — reload en pleine arène : au montage, hydrate() peut poser la carte AVANT que loadYellowSave n'ait
     //   fait setActiveWorld("run3") (2 effets concurrents) → la carte de BASE serait affichée au lieu de la variante.

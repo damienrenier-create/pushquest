@@ -201,6 +201,34 @@ function readFrontierSnap(): FrontierSnap | null {
     } catch { clearFrontierSnap(); return null }
 }
 
+// ── interiorReturn : survie au RELOAD ──────────────────────────────────────────────────────────────────────
+// Le labo (étage) et la boutique sont des cartes PARTAGÉES entre Ville Jaune et Cendreville : c'est interiorReturn
+// (posé à l'entrée) qui dit de QUELLE ville on vient — et donc, côté Cendreville, d'afficher le MAÎTRE DES CAPACITÉS
+// (au lieu de l'assistant), les bons posters, et une porte de sortie vers la bonne ville. Or interiorReturn est
+// TRANSIENT (jamais écrit en base : la table ne stocke que mapId/posX/posY/direction). Un rechargement le remet à
+// null → on retombe « côté Ville Jaune ». Sur mobile (PWA relancée à chaque retour d'app) c'est quasi systématique,
+// d'où « je ne vois toujours pas le Maître ». Parade : on MIROITE interiorReturn en localStorage (par joueur) et on
+// le réinjecte après hydrate() quand la save nous replace dans un intérieur partagé. Purement client, zéro migration.
+const SHARED_INTERIORS = new Set(["yellow_infirmary", "yellow_infirmary_2e", "yellow_shop"])
+function interiorReturnKey(uid: string) { return `yellow_intret_${uid}` }
+function readInteriorReturn(uid: string): { mapId: string; x: number; y: number } | null {
+    if (typeof window === "undefined" || !uid) return null
+    try {
+        const raw = window.localStorage.getItem(interiorReturnKey(uid))
+        if (!raw) return null
+        const v = JSON.parse(raw)
+        if (v && typeof v.mapId === "string" && typeof v.x === "number" && typeof v.y === "number") return v
+    } catch { /* localStorage indispo / JSON corrompu : on ignore */ }
+    return null
+}
+function writeInteriorReturn(uid: string, v: { mapId: string; x: number; y: number } | null) {
+    if (typeof window === "undefined" || !uid) return
+    try {
+        if (v) window.localStorage.setItem(interiorReturnKey(uid), JSON.stringify(v))
+        else window.localStorage.removeItem(interiorReturnKey(uid))
+    } catch { /* quota / mode privé : silencieux */ }
+}
+
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "", gameMode = "normal" }: { userId?: string; isCreator?: boolean; nickname?: string; gameMode?: string }) {
     const move = useGameStore((s) => s.move)
     const activateRepel = useGameStore((s) => s.activateRepel)
@@ -690,10 +718,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         fetch("/api/gamebook/yellow/state")
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
-                if (data?.player) hydrate(data.player)
+                if (!data?.player) return
+                // RELOAD dans un intérieur PARTAGÉ (labo/boutique) : on restaure interiorReturn depuis localStorage
+                //   AVANT hydrate (qui laisse interiorReturn à null), puis on le réinjecte → le Maître des Capacités
+                //   de Cendreville, les posters et la porte de sortie survivent au rechargement.
+                const saved = SHARED_INTERIORS.has(data.player.mapId) ? readInteriorReturn(userId) : null
+                hydrate(data.player)
+                if (saved) useGameStore.getState().setInteriorReturn(saved)
             })
             .catch((e) => console.warn("[yellow] load failed", e))
-    }, [hydrate])
+    }, [hydrate, userId])
+
+    // MIROIR interiorReturn → localStorage : à chaque changement (une fois hydraté, pour ne pas écraser la valeur
+    //   mémorisée avant qu'on l'ait relue au montage). Permet de retrouver la ville d'entrée d'un intérieur partagé
+    //   après un rechargement de page / relance de la PWA.
+    useEffect(() => {
+        if (!hydrated) return
+        writeInteriorReturn(userId, interiorReturn)
+    }, [interiorReturn, hydrated, userId])
 
     // Charge la sauvegarde de jeu (équipe / Pokédex / objets) + auto-save.
     useEffect(() => {
