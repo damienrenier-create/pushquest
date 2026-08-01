@@ -200,6 +200,17 @@ export interface ChampionMon {
 /** Run de champion : l'équipe sacrée + les meilleurs moments de la Ligue. Runtime (déclenche le Hall of Fame). */
 export interface ChampionRun { team: ChampionMon[]; highlights: LeagueHighlight[] }
 
+/** Chimère figée pour le HALL OF FAME de la Ligue de Fusion. Un fusionné n'est PAS une vraie espèce (éphémère,
+ *  speciesId non résolvable après coup) → on stocke directement son nom / sprite / types / stats pour l'affichage. */
+export interface FusionChampionMon {
+    name: string
+    sprite: string
+    types: string[]
+    level: number
+    stats: { hp: number; atk: number; def: number; spe: number; spc: number }
+    moves: string[]
+}
+
 // v2 (2026-06) : NERF ACE — migration one-time qui remet le CLIQUET d'ACE à zéro (acePeakLevel +
 // aceTeamSizePeak) pour les saves existantes, en CONSERVANT aceWins. ACE se recalibrera alors sur
 // l'équipe ACTUELLE du joueur (au lieu d'un pic figé trop haut) → enfin battable. Ne peut que l'adoucir.

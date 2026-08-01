@@ -8,9 +8,13 @@ import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
-import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
+import type { ChampionMon, FusionChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
+interface FusionChampionEntry { nickname: string; wonAt: string; team: FusionChampionMon[]; tier: string }
+const TIER_META: Record<string, { label: string; color: string }> = {
+    bronze: { label: "BRONZE", color: "#cd7f32" }, argent: { label: "ARGENT", color: "#c0c6cf" }, or: { label: "OR", color: "#ffd54a" },
+}
 
 // Runs visibles au toggle : le spectateur ne voit QUE les runs qu'il a atteints (anti-spoiler).
 const WORLD_META: { id: "live" | "ngplus" | "run3"; label: string }[] = [
@@ -25,17 +29,20 @@ const STAT_ROWS: { key: keyof ChampionMon["stats"]; label: string }[] = [
 export default function HallOfFameViewer({ close, onFight }: { close: () => void; onFight?: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [champions, setChampions] = useState<ChampionEntry[]>([])
+    const [fusionChamps, setFusionChamps] = useState<FusionChampionEntry[]>([])
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
+    const [openFusion, setOpenFusion] = useState<FusionChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
     const activeWorld = useActiveWorld()
     const player = usePlayer()
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld === "replay" ? "live" : activeWorld)
+    const fusionUnlocked = player.defeatedTrainers.includes("autel_visited") // arrivé au Dôme Fusion → onglet FUSION
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion">(activeWorld === "replay" ? "live" : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
     // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
     const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
-    const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"
+    const worldLabel = viewWorld === "fusion" ? "FUSION" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")
 
     // Affronter l'équipe figée d'un Champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
     const fight = (label: string, team: ChampionMon[]) => {
@@ -56,9 +63,17 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
             } catch {
                 if (!cancelled) setState("error")
             }
+            // Palmarès de la Ligue de Fusion (onglet FUSION, réservé aux joueurs arrivés au Dôme). Best-effort.
+            if (fusionUnlocked) {
+                try {
+                    const rf = await fetch("/api/gamebook/yellow/fusion-hall-of-fame")
+                    const jf = rf.ok ? await rf.json() : null
+                    if (!cancelled) setFusionChamps((jf?.champions ?? []) as FusionChampionEntry[])
+                } catch { /* silencieux */ }
+            }
         })()
         return () => { cancelled = true }
-    }, [])
+    }, [fusionUnlocked])
 
     const fmtDate = (iso: string) => {
         try { return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) }
@@ -70,8 +85,8 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
             <div style={box} onClick={(e) => e.stopPropagation()}>
                 <div style={titleStyle}>🏛️ HALL OF FAME · {worldLabel}</div>
 
-                {/* Toggle de RUN (uniquement les runs atteints par le spectateur) */}
-                {availWorlds.length > 1 && (
+                {/* Toggle de RUN (runs atteints) + onglet FUSION (si arrivé au Dôme de la Fusion) */}
+                {(availWorlds.length > 1 || fusionUnlocked) && (
                     <div style={runToggleRow}>
                         {availWorlds.map((w) => (
                             <button key={w.id} onClick={() => setViewWorld(w.id)}
@@ -79,42 +94,78 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                                 {w.label}
                             </button>
                         ))}
+                        {fusionUnlocked && (
+                            <button onClick={() => setViewWorld("fusion")}
+                                style={{ ...runToggleBtn, borderColor: viewWorld === "fusion" ? "#c79cff" : "rgba(255,255,255,0.15)", background: viewWorld === "fusion" ? "#8a5ae0" : "rgba(255,255,255,0.06)", color: "#fff" }}>
+                                🧬 FUSION
+                            </button>
+                        )}
                     </div>
                 )}
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Hall of Fame indisponible (hors-ligne ?).</div>}
-                {state === "ok" && shown.length === 0 && (
-                    <div style={muted}>Aucun champion {worldLabel} pour l&apos;instant.<br />Sois le premier à terrasser LE MAÎTRE ! 👑</div>
-                )}
-
-                <div style={scroll}>
-                    {shown.map((c, ci) => (
-                        <div key={ci} style={champCard}>
-                            <div style={champHead}>
-                                <span style={champName}>👑 {c.nickname}</span>
-                                <span style={champDate}>{fmtDate(c.wonAt)}</span>
-                            </div>
-                            <div style={teamRow}>
-                                {c.team.map((m, mi) => {
-                                    const sp = getSpecies(m.speciesId)
-                                    return (
-                                        <button key={mi} style={monCard} onClick={() => setOpenMon(m)} title="Voir la fiche">
-                                            {sp?.sprite
-                                                ? <img src={sp.sprite} alt={sp.name} style={monImg} />
-                                                : <div style={{ fontSize: 24 }}>❓</div>}
-                                            <div style={monName}>{m.shiny ? "✨" : ""}{m.nickname ?? sp?.name ?? m.speciesId}</div>
-                                            <div style={monLvl}>N.{m.level}</div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                            <button style={fightBtn} onClick={() => fight(`Champion · ${c.nickname}`, c.team)}>
-                                ⚔️ Affronter l&apos;équipe de {c.nickname}
-                            </button>
+                {viewWorld === "fusion" ? (
+                    <div style={scroll}>
+                        {fusionChamps.length === 0 && (
+                            <div style={muted}>Aucun sacre de fusion pour l&apos;instant.<br />Bats le Dieu Spaghetti à l&apos;Autel pour graver ton équipe ! 🧬</div>
+                        )}
+                        {fusionChamps.map((c, ci) => {
+                            const tm = TIER_META[c.tier]
+                            return (
+                                <div key={ci} style={champCard}>
+                                    <div style={champHead}>
+                                        <span style={{ ...champName, color: "#c79cff" }}>🧬 {c.nickname}</span>
+                                        {tm && <span style={{ fontSize: 9, fontWeight: 800, color: "#11121a", background: tm.color, borderRadius: 999, padding: "1px 8px" }}>{tm.label}</span>}
+                                        <span style={champDate}>{fmtDate(c.wonAt)}</span>
+                                    </div>
+                                    <div style={teamRow}>
+                                        {c.team.map((m, mi) => (
+                                            <button key={mi} style={monCard} onClick={() => setOpenFusion(m)} title="Voir la fiche">
+                                                {m.sprite ? <img src={m.sprite} alt={m.name} style={monImg} /> : <div style={{ fontSize: 24 }}>🧬</div>}
+                                                <div style={monName}>{m.name}</div>
+                                                <div style={monLvl}>N.{m.level}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <>
+                        {state === "ok" && shown.length === 0 && (
+                            <div style={muted}>Aucun champion {worldLabel} pour l&apos;instant.<br />Sois le premier à terrasser LE MAÎTRE ! 👑</div>
+                        )}
+                        <div style={scroll}>
+                            {shown.map((c, ci) => (
+                                <div key={ci} style={champCard}>
+                                    <div style={champHead}>
+                                        <span style={champName}>👑 {c.nickname}</span>
+                                        <span style={champDate}>{fmtDate(c.wonAt)}</span>
+                                    </div>
+                                    <div style={teamRow}>
+                                        {c.team.map((m, mi) => {
+                                            const sp = getSpecies(m.speciesId)
+                                            return (
+                                                <button key={mi} style={monCard} onClick={() => setOpenMon(m)} title="Voir la fiche">
+                                                    {sp?.sprite
+                                                        ? <img src={sp.sprite} alt={sp.name} style={monImg} />
+                                                        : <div style={{ fontSize: 24 }}>❓</div>}
+                                                    <div style={monName}>{m.shiny ? "✨" : ""}{m.nickname ?? sp?.name ?? m.speciesId}</div>
+                                                    <div style={monLvl}>N.{m.level}</div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <button style={fightBtn} onClick={() => fight(`Champion · ${c.nickname}`, c.team)}>
+                                        ⚔️ Affronter l&apos;équipe de {c.nickname}
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </>
+                )}
                 {notice && <div style={noticeStyle} onClick={() => setNotice("")}>{notice}</div>}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
@@ -152,6 +203,35 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                     </div>
                 )
             })()}
+
+            {/* Fiche détaillée d'une CHIMÈRE de champion (nom/sprite/stats stockés — pas de speciesId résolvable). */}
+            {openFusion && (
+                <div style={detailOverlay} onClick={(e) => { e.stopPropagation(); setOpenFusion(null) }}>
+                    <div style={detailBox} onClick={(e) => e.stopPropagation()}>
+                        <div style={detailHead}>
+                            {openFusion.sprite ? <img src={openFusion.sprite} alt={openFusion.name} style={detailImg} /> : <div style={{ fontSize: 48 }}>🧬</div>}
+                            <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+                                <div style={detailName}>{openFusion.name}</div>
+                                <div style={detailLvl}>Niveau {openFusion.level}</div>
+                                <div style={detailTypes}>{openFusion.types.join(" · ")}</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                            {STAT_ROWS.map((r) => (
+                                <div key={r.key} style={statRow}>
+                                    <span style={statLabel}>{r.label}</span>
+                                    <span style={statVal}>{openFusion.stats[r.key]}</span>
+                                    <span style={statBarBg}><span style={{ ...statBarFill, width: `${Math.min(100, (openFusion.stats[r.key] / 350) * 100)}%` }} /></span>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={movesWrap}>
+                            {openFusion.moves.map((mv, i) => <span key={i} style={moveChip}>{mv}</span>)}
+                        </div>
+                        <button style={closeBtn} onClick={() => setOpenFusion(null)}>← Retour</button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

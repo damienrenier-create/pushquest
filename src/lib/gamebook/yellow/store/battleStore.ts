@@ -51,7 +51,8 @@ import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { creditFusionParents } from "../battle/fusionXp"
-import { writeBackGauntlet } from "./fusionGauntlet"
+import { writeBackGauntlet, getGauntletTeam } from "./fusionGauntlet"
+import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
@@ -116,6 +117,7 @@ interface BattleStoreState {
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
+    fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
@@ -172,7 +174,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, fusionSacre: null, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -623,6 +625,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
     let lavapetitTeaser: "seen" | "caught" | null = null
     let fusioBallOffer = false // posé au sacre de la Ligue de Fusion (offre d'achat Fusio-Ball par le Dieu Spaghetti)
+    let fusionSacre: { tier: string; team: FusionChampionMon[] } | null = null // roster vainqueur à graver au Hall of Fame
     let pnj6TradeOffer = false // posé à la victoire sur PNJ 6 (offre d'échange Crocavern ↔ team[0])
     if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
         const pl = getPlayer()
@@ -1033,12 +1036,29 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   + décroche le titre « Maître de la Chimère ». RÉCOMPENSE = titre SEUL (aucun lot matériel). Le dialogue
     //   de défaite du reflet (trainers.ts) fait l'annonce. markTrainerDefeated est idempotent.
     if (b.outcome === "win" && lid === "y_fusion_miroir") {
-        markTrainerDefeated(FUSION_TIER_MARKER[activeFusionTier((m) => isTrainerDefeated(m))])
+        // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
+        const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
+        markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
         // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) au sacre (offre transitoire, modale côté client).
         //   On pose AUSSI le marker `fusioball_owed` (persistant) : si le joueur ne l'achète pas maintenant (souvent
         //   < 1000 reps après la Ligue), il la RE-proposera dès que le joueur atteindra 1200 reps. Retiré à l'achat.
         fusioBallOffer = true
         markTrainerDefeated(FUSIOBALL_OWED_MARKER)
+        // HALL OF FAME FUSION : fige le roster GAUNTLET vainqueur (nom/sprite/types/stats — pas un speciesId, éphémère).
+        const gt = getGauntletTeam()
+        if (gt && gt.length) {
+            fusionSacre = {
+                tier: sacredTier,
+                team: gt.map((f) => ({
+                    name: f.result.name,
+                    sprite: getSpecies(f.speciesId)?.sprite ?? "",
+                    types: [...f.result.types],
+                    level: f.result.level,
+                    stats: { ...f.result.stats },
+                    moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                })),
+            }
+        }
     }
 
     // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),
@@ -1115,7 +1135,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de l'AUTEL (fusion:TRIAL), elle, ne whiteout PAS (on y est déjà — on reste pour re-fusionner). Scopé y_fusion_*.
     const isFusionLeague = isFusionLeagueTrainer(storeState.trainer?.trainerId)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1689,6 +1709,18 @@ export function useFusionParentReward(): string | null {
 }
 export function clearFusionParentReward() {
     setStore({ fusionParentReward: null })
+}
+
+/** LIGUE DE FUSION — roster vainqueur à GRAVER au Hall of Fame (posé au sacre du Dieu Spaghetti), ou null. */
+export function useFusionSacre(): { tier: string; team: FusionChampionMon[] } | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().fusionSacre,
+        () => getSnapshot().fusionSacre,
+    )
+}
+export function clearFusionSacre() {
+    setStore({ fusionSacre: null })
 }
 
 /** PNJ 6 (Échangeur Grotte) — propose-t-il l'échange Crocavern ↔ team[0] (post-victoire, transitoire) ? */

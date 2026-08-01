@@ -53,7 +53,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -375,6 +375,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const lavapetitTeaser = useLavapetitTeaser() // RUN 3 : teaser Dieu Spag Lavapetit (post-combat)
     const fusioBallOffer = useFusioBallOffer() // LIGUE DE FUSION : offre Fusio-Ball du Dieu Spaghetti (post-sacre)
     const fusionParentReward = useFusionParentReward() // LIGUE DE FUSION : XP reversée aux parents (fin de combat)
+    const fusionSacre = useFusionSacre() // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (sacre Dieu Spaghetti)
     const pnj6TradeOffer = usePnj6TradeOffer() // PNJ 6 : offre d'échange Crocavern ↔ team[0] (post-victoire)
     const justCaught = useJustCaught()
     const [showGeneIntro, setShowGeneIntro] = useState(false) // carrousel génétique one-shot (post-capture)
@@ -1303,6 +1304,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearStoneReward()
         }
     }, [stoneReward, battle, evolutions.length, showDialogue])
+
+    // LIGUE DE FUSION — SACRE (Dieu Spaghetti) : grave le roster vainqueur au Hall of Fame partagé (POST une fois,
+    //   puis on efface le signal). Best-effort (silencieux hors-ligne). Récompense narrative, pas de blocage UI.
+    useEffect(() => {
+        if (!fusionSacre) return
+        fetch("/api/gamebook/yellow/fusion-hall-of-fame", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tier: fusionSacre.tier, team: fusionSacre.team }),
+        }).catch(() => { /* hors-ligne : silencieux */ })
+        clearFusionSacre()
+    }, [fusionSacre])
 
     // LIGUE DE FUSION : à la fin d'un combat, les fusionnés reversent la moitié de leur XP à leurs parents →
     // notification (une fois l'écran libre, sans écraser un prompt d'apprentissage / dialogue en cours).

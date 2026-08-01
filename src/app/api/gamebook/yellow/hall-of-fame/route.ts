@@ -34,10 +34,12 @@ export async function GET() {
         const lc = (prisma as any).leagueChampion // table gated (cf. duel-gift/), créée par db:push
         const rows = (await lc.findMany({
             orderBy: { wonAt: "desc" },
-            take: 150,
+            take: 200,
             select: { userId: true, nickname: true, team: true, wonAt: true, world: true },
         })) as { userId: string; nickname: string; team: string; wonAt: Date; world: string | null }[]
-        const champions = rows.map((r) => {
+        // Les sacres de FUSION vivent dans la même table (world "fusion:*") mais ont leur propre onglet
+        //   (fusion-hall-of-fame) → on les EXCLUT ici pour ne pas polluer le HoF de la Ligue classique.
+        const champions = rows.filter((r) => !(r.world ?? "").startsWith("fusion:")).slice(0, 150).map((r) => {
             let team: unknown = []
             try { team = JSON.parse(r.team) } catch { team = [] }
             return { userId: r.userId, nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live" } // world : run 1/2/3 (défaut live)
