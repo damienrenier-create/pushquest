@@ -51,6 +51,7 @@ import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { creditFusionParents } from "../battle/fusionXp"
+import { writeBackGauntlet } from "./fusionGauntlet"
 import { setTeamAndPc } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
@@ -574,6 +575,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 ? `Tes fusionnés ont entraîné leurs parents ! ${grew.join(" · ")}`
                 : `Tes fusionnés ont transmis de l'expérience à leurs parents.`
         }
+        // GAUNTLET : recopie PV/PP/K.O. finaux vers l'équipe-gauntlet persistante → la salle suivante hérite de l'usure.
+        writeBackGauntlet(b.player.team)
     }
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.

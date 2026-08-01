@@ -22,6 +22,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
@@ -135,10 +136,17 @@ const FUSION_ROOM_TRAINER: Record<string, string> = {
 }
 
 // Espèces éphémères du combat de Ligue de Fusion EN COURS (joueur + ennemi) → à détruire au lancement suivant.
+// Espèces éphémères ENNEMIES de la salle courante (le joueur = le gauntlet, disposé à part). Disposées à chaque salle.
 let pendingFusionLeagueSpecies: string[] = []
 function disposeFusionLeagueSpecies() {
     for (const id of pendingFusionLeagueSpecies) disposeFusion(id)
     pendingFusionLeagueSpecies = []
+}
+// GAUNTLET : dispose les espèces de l'équipe-gauntlet du joueur + vide l'état → prochaine entrée = build frais.
+//   Appelé à l'entrée fraîche, en revenant à l'Autel (retraite/complétion/wipe), et au reload dans une salle.
+function disposeFusionGauntlet() {
+    getGauntletTeam()?.forEach((f) => disposeFusion(f.speciesId))
+    setGauntletTeam(null)
 }
 
 // GARANTIE DE DÉCOUVERTE — Centrale Psy (run 3) : état TRANSIENT par PASSAGE (non persisté). Tant qu'Hypnoppo
@@ -301,9 +309,8 @@ function saveNow(player: PlayerState) {
  *  dresseur (buildFusionLeagueTeam au palier actif), ou le REFLET du roster (miroir). Toutes les espèces éphémères
  *  sont enregistrées ici et détruites au lancement suivant (disposeFusionLeagueSpecies). */
 function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDialogue | null {
-    // ⚠️ Détruire le batch du combat PRÉCÉDENT AVANT de rebâtir : les fusions du joueur ont un id d'espèce
-    //   DÉTERMINISTE (mêmes parents de roster → même `fusion_<uidA>_<uidB>`). Disposer APRÈS le build
-    //   désenregistrerait l'espèce fraîchement construite → speciesOf throw → combat planté (cf. bug atelier).
+    // GAUNTLET : on ne dispose QUE les espèces ENNEMIES de la salle précédente. L'équipe du joueur (le gauntlet)
+    //   est CONSERVÉE d'une salle à l'autre (mêmes instances → PV/PP/K.O. entamés) : ne PAS la disposer ici.
     disposeFusionLeagueSpecies()
     const save = getPlayerSave()
     const all = [...save.team, ...save.pc]
@@ -312,9 +319,20 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
         .filter((x): x is BuiltFusion => x !== null)
 
-    const playerFusions = buildRoster()
-    if (playerFusions.length === 0) {
-        return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
+    // Équipe joueur : construite UNE fois (1re salle), puis RÉUTILISÉE (carry PV/PP/K.O.). Reload → gauntlet null
+    //   alors qu'on est déjà dans une salle : géré en amont (bounce Autel) ; ici on (re)construit proprement.
+    let playerFusions = getGauntletTeam()
+    if (!playerFusions) {
+        playerFusions = buildRoster()
+        if (playerFusions.length === 0) {
+            return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
+        }
+        setGauntletTeam(playerFusions)
+    }
+    // Wipe défensif : si toutes les fusions sont K.O. (état incohérent post-reload), on renvoie à l'Autel.
+    if (!gauntletHasAlive()) {
+        disposeFusionGauntlet()
+        return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Ton équipe de chimères est à terre. Retourne à l'Autel pour la réassembler et recommencer la Ligue."] }
     }
 
     let enemyFusions: BuiltFusion[]
@@ -324,12 +342,13 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)))
     } else {
         const key = fusionLeagueKeyForTrainer(trainerId)
-        if (!key) { playerFusions.forEach((f) => disposeFusion(f.speciesId)); return null }
+        if (!key) { disposeFusionGauntlet(); return null }
         const tier = activeFusionTier((m) => isTrainerDefeated(m))
         enemyFusions = buildFusionLeagueTeam(key, tier)
     }
 
-    pendingFusionLeagueSpecies = [...playerFusions, ...enemyFusions].map((f) => f.speciesId)
+    // ENNEMI seulement (le gauntlet joueur est disposé à part) → disposé à la salle suivante.
+    pendingFusionLeagueSpecies = enemyFusions.map((f) => f.speciesId)
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startFusionLeagueBattle(playerFusions.map((f) => f.instance), enemyFusions.map((f) => f.instance), seed, trainerId)
     return null
@@ -976,7 +995,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
                 resetFusionLeagueProgress()
                 disposeFusionLeagueSpecies()
+                disposeFusionGauntlet() // GAUNTLET : entrée fraîche → équipe reconstruite (PV/PP pleins) à la 1re salle
             }
+            // GAUNTLET : revenir à l'Autel (retraite / complétion / après un wipe) libère l'équipe-gauntlet → la
+            //   prochaine Ligue repart d'une équipe fraîche. (No-op si aucun gauntlet en cours.)
+            if (targetMapId === "yellow_combat_autel") disposeFusionGauntlet()
             // GATE GAUNTLET LIGUE : la porte DROITE d'une salle ne s'ouvre qu'une fois SON adversaire vaincu
             // (point de non-retour : pas de retour par la gauche, aucune infirmerie — potions seulement).
             const roomTrainer = LIGUE_ROOM_TRAINER[player.mapId]

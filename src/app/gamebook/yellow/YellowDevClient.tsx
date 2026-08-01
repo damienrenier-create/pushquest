@@ -741,6 +741,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const saved = SHARED_INTERIORS.has(data.player.mapId) ? readInteriorReturn(userId) : null
                 hydrate(data.player)
                 if (saved) useGameStore.getState().setInteriorReturn(saved)
+                // RELOAD en pleine LIGUE DE FUSION (gauntlet) : l'équipe-gauntlet est transiente → perdue au reload.
+                //   On renvoie à l'Autel pour recommencer proprement (sinon on rejouerait la salle avec une équipe
+                //   fraîche = contournement du « sans soin »). La ré-entrée par la porte à dragons réinitialise tout.
+                if (typeof data.player.mapId === "string" && data.player.mapId.startsWith("yellow_fusion_")) {
+                    useGameStore.getState().setMap("yellow_combat_autel", 9, 8)
+                }
             })
             .catch((e) => console.warn("[yellow] load failed", e))
     }, [hydrate, userId])
