@@ -22,6 +22,7 @@ import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtT
 import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
 import { FusionPreviewCard } from "./FusionPreviewCard"
+import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
@@ -361,6 +362,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusionSpeciesRef = useRef<string[]>([])              // espèces éphémères des fusionnés (1 épreuve simple, jusqu'à 6 pour un roster) → dispose au prochain combat / unmount
     const [atelierAdd, setAtelierAdd] = useState<{ a: string; b: string } | null>(null) // ATELIER : brouillon d'ajout (Parent A + Parent B) ; null = vue d'ensemble
     const [atelierPicking, setAtelierPicking] = useState<"a" | "b" | null>(null)         // quel picker de parent est ouvert
+    const [fusionCompare, setFusionCompare] = useState<{ a: MonInstance; b: MonInstance } | null>(null) // vue PLEIN ÉCRAN parents vs fusionné
     // AUTEL : oublie la sélection en quittant la salle ; retire les espèces éphémères au démontage.
     useEffect(() => { if (mapPlayer.mapId !== "yellow_combat_autel" && fusionPick.length) setFusionPick([]) }, [mapPlayer.mapId, fusionPick.length])
     useEffect(() => () => { fusionSpeciesRef.current.forEach(disposeFusion) }, [])
@@ -2745,6 +2747,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: -3, marginBottom: 4 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
                                 </>
                             )}
+                            <button style={ready ? menuBtnStyle : menuBtnDimStyle} disabled={!ready} onClick={() => ready && setFusionCompare({ a: picks[0], b: picks[1] })}>🔬 Comparer plein écran (fiches des parents)</button>
                             <button style={ready ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!ready} onClick={launch}>⚔️ LANCER L&apos;ÉPREUVE</button>
                             <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
                         </div>
@@ -2857,6 +2860,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {draftPreview && (
                                         <FusionPreviewCard name={draftName} types={draftPreview.types} stats={draftPreview.stats} moves={draftPreview.moves} level={draftPreview.level} spriteSrc={draftA && draftB ? officialFusionForParents(draftA.speciesId, draftB.speciesId)?.sprite : undefined} />
                                     )}
+                                    <button style={draftPreview ? menuBtnStyle : menuBtnDimStyle} disabled={!draftPreview} onClick={() => draftA && draftB && setFusionCompare({ a: draftA, b: draftB })}>🔬 Comparer plein écran (fiches des parents)</button>
                                     <button style={draftPreview ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!draftPreview} onClick={confirmAdd}>✓ AJOUTER CETTE FUSION</button>
                                     <button style={menuBtnDimStyle} onClick={() => { setAtelierAdd(null); setAtelierPicking(null) }}>← ANNULER</button>
                                 </>
@@ -2865,6 +2869,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 )
             })()}
+            {/* APERÇU FUSION PLEIN ÉCRAN — parents vs fusionné (déclenché depuis l'Autel ou l'Atelier). */}
+            {fusionCompare && <FusionCompareView a={fusionCompare.a} b={fusionCompare.b} onClose={() => setFusionCompare(null)} />}
             {/* ZONE DE COMBAT — HUD de série pendant le run */}
             {run && run.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
