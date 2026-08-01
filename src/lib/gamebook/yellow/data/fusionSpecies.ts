@@ -31,8 +31,8 @@ export interface FusionParent {
     heldItem?: string          // objet tenu (id) — le fusionné hérite de ceux de ses parents
 }
 
-/** Bloc de stats « next-gen » du fusionné : la Spéciale unique est scindée en attaque (spcAtk) et défense (spcDef). */
-export interface FusionStats { hp: number; atk: number; def: number; spe: number; spcAtk: number; spcDef: number }
+/** Bloc de stats du fusionné : 5 stats classiques (une SEULE Spéciale, comme tout Daemon — pas de split SpA/SpD). */
+export interface FusionStats { hp: number; atk: number; def: number; spe: number; spc: number }
 
 export interface FusionResult {
     name: string
@@ -45,13 +45,13 @@ export interface FusionResult {
 }
 
 /** Le parent « rapide » puis le « lent » (par vitesse ; égalité départagée par la spc la plus haute → intrinsèque,
- *  indépendant de l'ordre). MÊME identité pour le split spé ET le moveset → cohérence. */
+ *  indépendant de l'ordre). Sert au MOVESET (2 premières du rapide + 2 dernières du lent). */
 export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, FusionParent] {
     const aFast = a.stats.spe > b.stats.spe || (a.stats.spe === b.stats.spe && a.stats.spc >= b.stats.spc)
     return aFast ? [a, b] : [b, a]
 }
 
-// Les 4 stats soumises à la génétique dom/récessif (la spc est traitée à part par le split).
+// Les 4 stats physiques soumises à la génétique dom/récessif. La Spéciale (spc) suit sa propre règle (dom/réc sur la paire).
 const STATS4: readonly StatKey[] = ["hp", "atk", "def", "spe"]
 
 /** Poids par stat pour un parent : 2 plus hautes des 4 stats = 0,6 (dominantes), 2 plus basses = 0,45 (récessives).
@@ -63,14 +63,13 @@ export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<
     return w
 }
 
-/** Génétique des 4 stats + split de la Spéciale par la vitesse (rapide → SpA, lent → SpD). Égalité de vitesse
- *  départagée par la spc la PLUS HAUTE → SpA : départage INTRINSÈQUE à la paire → fuseStats est totalement
- *  INDÉPENDANT de l'ordre des parents (important pour le futur PvP déterministe). */
+/** Génétique des 4 stats physiques (dom 0,6 / réc 0,45) + Spéciale UNIQUE = 0,6 × la meilleure Spé + 0,45 × la
+ *  moindre (même esprit dom/récessif, sur la paire). Totalement INDÉPENDANT de l'ordre des parents (PvP déterministe). */
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
     const wA = fusionWeights(a.stats), wB = fusionWeights(b.stats)
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])
-    const [fast, slow] = bySpeed(a, b)
-    return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spcAtk: fast.stats.spc, spcDef: slow.stats.spc }
+    const hiSpc = Math.max(a.stats.spc, b.stats.spc), loSpc = Math.min(a.stats.spc, b.stats.spc)
+    return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spc: Math.round(0.6 * hiSpc + 0.45 * loSpc) }
 }
 
 /** Moveset : 2 PREMIÈRES attaques du parent le plus RAPIDE + 2 DERNIÈRES du plus LENT. Dédup (pas de doublon) ;
@@ -115,10 +114,10 @@ export function typeRepStat(): Record<string, StatKey> {
     return rep
 }
 
-/** Valeur du fusionné pour la stat représentative d'un type (un type SPÉCIAL → SpA seule, décision Sartay). */
+/** Valeur du fusionné pour la stat représentative d'un type (spc = la Spéciale unique du fusionné). */
 function repValue(type: PokeType, fused: FusionStats): number {
     const r = typeRepStat()[type] ?? "atk"
-    return r === "spc" ? fused.spcAtk : fused[r]
+    return fused[r]
 }
 
 /** Type le plus fidèle aux GROSSES STATS d'un parent (repValue max sur ses propres types ; égalité → ordre du tableau reçu). */

@@ -66,7 +66,7 @@ describe("Ligue de Fusion — data", () => {
                     expect(sp!.name).toBe(tr.pairs[i].name)          // nom figé appliqué
                     expect(f.instance.level).toBe(FUSION_TIERS.bronze.level) // niveau = max(parents) = palier
                     expect(f.instance.frozenStats).toBeDefined()
-                    expect(f.instance.frozenSpd).toBeDefined()       // Déf Spé séparée présente
+                    expect(f.instance.frozenSpd).toBeUndefined()     // Spéciale unique : plus de SpD séparée
                 })
             } finally {
                 disposeFusionLeagueTeam(team)

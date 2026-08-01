@@ -15,15 +15,15 @@ import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 type Tab = "rules" | "official" | "mine"
-const STAT_LABELS = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spcAtk", "SpA"], ["spcDef", "SpD"]] as const
+const STAT_LABELS = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]] as const
 
 // TRI de « Mes fusions » : ordre d'ajout, alphabétique, type, BST, ou n'importe quelle stat.
 //   (Pas de « niveau » : le journal enregistre une PAIRE d'espèces — une recette — pas une instance à un niveau.)
-const STAT_KEYS = ["hp", "atk", "def", "spe", "spcAtk", "spcDef"] as const
+const STAT_KEYS = ["hp", "atk", "def", "spe", "spc"] as const
 type SortKey = "recent" | "name" | "type" | "bst" | (typeof STAT_KEYS)[number]
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
     { key: "recent", label: "Récent" }, { key: "name", label: "A-Z" }, { key: "type", label: "Type" }, { key: "bst", label: "BST" },
-    { key: "hp", label: "PV" }, { key: "atk", label: "Atq" }, { key: "def", label: "Déf" }, { key: "spe", label: "Vit" }, { key: "spcAtk", label: "SpA" }, { key: "spcDef", label: "SpD" },
+    { key: "hp", label: "PV" }, { key: "atk", label: "Atq" }, { key: "def", label: "Déf" }, { key: "spe", label: "Vit" }, { key: "spc", label: "Spé" },
 ]
 
 // Couleurs par type (chips), cohérentes avec l'identité Pokémon-like du jeu.

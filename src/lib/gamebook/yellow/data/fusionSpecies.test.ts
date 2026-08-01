@@ -24,24 +24,23 @@ describe("fusion — génétique des stats", () => {
     it("EX.1 Maîtrezenc × Zappeuréal → COMBAT/ELEC, stat dominante partagée DÉPASSE les parents", () => {
         const f = computeFusion(P("maitrezenc"), P("zappeureal"))
         expect(f.types).toEqual(["COMBAT", "ELEC"])
-        expect(f.stats).toEqual({ hp: 72, atk: 121, def: 61, spe: 122, spcAtk: 98, spcDef: 68 })
+        expect(f.stats).toEqual({ hp: 72, atk: 121, def: 61, spe: 122, spc: 89 })
         // atk & vit dominantes des DEUX côtés → compounding : au-dessus des deux parents
         expect(f.stats.atk).toBeGreaterThan(Math.max(118, 84))
         expect(f.stats.spe).toBeGreaterThan(Math.max(88, 115))
     })
 
-    it("EX.2 Divinpâte × Razmarée → PSY/EAU, split net (rapide→SpA, lent→SpD), profil rond", () => {
+    it("EX.2 Divinpâte × Razmarée → PSY/EAU, Spéciale unique (0,6×meilleure + 0,45×moindre), profil rond", () => {
         const f = computeFusion(P("divinpate"), P("razmaree"))
         expect(f.types).toEqual(["PSY", "EAU"])
-        expect(f.stats).toEqual({ hp: 91, atk: 67, def: 96, spe: 79, spcAtk: 120, spcDef: 86 })
-        // Divinpâte (vit 82) est le plus rapide → sa spc (120) devient la SpA ; Razmarée (vit 66) → SpD (86)
-        expect(f.stats.spcAtk).toBe(SPECIES["divinpate"].baseStats.spc)
-        expect(f.stats.spcDef).toBe(SPECIES["razmaree"].baseStats.spc)
+        expect(f.stats).toEqual({ hp: 91, atk: 67, def: 96, spe: 79, spc: 111 })
+        // Spéciale UNIQUE = 0,6 × la meilleure (Divinpâte 120) + 0,45 × la moindre (Razmarée 86) = 111
+        expect(f.stats.spc).toBe(Math.round(0.6 * SPECIES["divinpate"].baseStats.spc + 0.45 * SPECIES["razmaree"].baseStats.spc))
     })
 
     it("EX.3 Coccimpératrice × Rochison → COMBAT/ROCHE (1 type de CHAQUE parent, pas 2 du même)", () => {
         const f = computeFusion(P("coccimperatrice"), P("rochison"))
-        expect(f.stats).toEqual({ hp: 68, atk: 146, def: 113, spe: 92, spcAtk: 56, spcDef: 52 })
+        expect(f.stats).toEqual({ hp: 68, atk: 146, def: 113, spe: 92, spc: 57 })
         // RÈGLE 1-par-parent : Coccimpératrice[COMBAT/INSECTE] apporte son type le + stat-fidèle (COMBAT),
         //   Rochison[ROCHE/SOL] apporte le sien (ROCHE). Jamais 2 types du même parent (donc pas COMBAT/INSECTE).
         expect(f.types).toEqual(["COMBAT", "ROCHE"])
@@ -94,13 +93,12 @@ describe("fusion — types & divers", () => {
         expect(ab).toEqual(ba)
     })
 
-    it("split à VITESSE ÉGALE : spc la plus haute → SpA, indépendant de l'ordre (PvP déterministe)", () => {
+    it("Spéciale unique : 0,6 × la meilleure + 0,45 × la moindre, indépendant de l'ordre (PvP déterministe)", () => {
         const A: FusionParent = { name: "Alpha", types: ["FEU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 50 }, level: 50, moves: [] }
         const B: FusionParent = { name: "Beta", types: ["EAU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 90 }, level: 50, moves: [] }
         const ab = fuseStats(A, B), ba = fuseStats(B, A)
-        expect(ab).toEqual(ba)          // même vitesse (80) → l'ordre ne change PLUS rien
-        expect(ab.spcAtk).toBe(90)      // spc la plus haute (B) → SpA
-        expect(ab.spcDef).toBe(50)
+        expect(ab).toEqual(ba)                              // spc via max/min → l'ordre ne change rien
+        expect(ab.spc).toBe(Math.round(0.6 * 90 + 0.45 * 50)) // = 77
     })
 
     it("niveau = max(parents)", () => {

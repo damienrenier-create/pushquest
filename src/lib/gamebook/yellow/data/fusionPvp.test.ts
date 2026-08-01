@@ -9,16 +9,16 @@ import type { MonInstance, SpeciesData } from "../battle/types"
 // est un compteur LOCAL (donc l'id de fusion peut coïncider avec un des siens). Ces tests verrouillent les 3
 // invariants dont dépend le déterminisme du combat en réseau.
 describe("fusionPvp — round-trip réseau de l'équipe de fusion", () => {
-    it("frozenStats.spc (SpA) ET frozenSpd (SpD) survivent au JSON du hello (pas de whitelist réseau)", () => {
-        const a = createMonInstance("divinpate", 60) // rapide → SpA
-        const b = createMonInstance("razmaree", 60)  // lent → SpD
+    it("frozenStats (Spéciale unique) survit au JSON du hello (pas de whitelist réseau)", () => {
+        const a = createMonInstance("divinpate", 60)
+        const b = createMonInstance("razmaree", 60)
         const { instance, speciesId } = buildFusion(a, b)
 
         // Le payload Pusher = JSON.stringify(instance) relayé tel quel (aucun filtre de sous-champs côté route).
         const wire = JSON.parse(JSON.stringify(instance)) as MonInstance
-        expect(wire.frozenStats?.spc).toBe(instance.frozenStats?.spc) // offense (SpA) préservée
-        expect(wire.frozenSpd).toBe(instance.frozenSpd)               // défense spé (SpD) préservée
-        expect(wire.frozenSpd).toBeGreaterThan(0)
+        expect(wire.frozenStats?.spc).toBe(instance.frozenStats?.spc) // Spéciale unique préservée
+        expect(wire.frozenStats?.spc).toBeGreaterThan(0)
+        expect(wire.frozenSpd).toBeUndefined()                        // les fusions n'ont plus de SpD séparée
 
         disposeFusion(speciesId)
     })
@@ -40,7 +40,7 @@ describe("fusionPvp — round-trip réseau de l'équipe de fusion", () => {
 
         expect(getSpecies(recv.speciesId)).not.toBeNull()                 // sinon speciesOf throw → crash de l'écran de combat
         expect(getSpecies(recv.speciesId)!.types).toEqual(originalTypes)  // types intacts → STAB/efficacité identiques → déterministe
-        expect(recv.frozenSpd).toBe(opp.instance.frozenSpd)              // SpD intacte sur l'instance reçue
+        expect(recv.frozenStats?.spc).toBe(opp.instance.frozenStats?.spc) // Spéciale intacte sur l'instance reçue
 
         unregisterCustomSpecies(prefixed.map((s) => s.id))
     })

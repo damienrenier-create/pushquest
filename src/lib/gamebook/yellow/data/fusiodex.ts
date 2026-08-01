@@ -73,11 +73,11 @@ export interface HistoryFusionEntry {
     name: string
     types: string[]
     parents: [string, string]
-    stats: FusionStats // la Spéciale du fusionné est scindée (spcAtk/spcDef)
+    stats: FusionStats // 5 stats (Spéciale unique)
     bst: number
 }
 
-const EMPTY_FUSION_STATS: FusionStats = { hp: 0, atk: 0, def: 0, spe: 0, spcAtk: 0, spcDef: 0 }
+const EMPTY_FUSION_STATS: FusionStats = { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
 
 /** Reconstruit l'affichage de chaque fusion de l'historique (paires {a,b} = speciesId, a=tête). Dédup par paire.
  *  Une paire dont une espèce n'est plus résoluble (ex. lignée custom évincée) est CONSERVÉE avec un libellé neutre

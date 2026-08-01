@@ -33,8 +33,8 @@ describe("Ligue de Fusion — câblage combat (Inc.B)", () => {
             expect(snap.battle).not.toBeNull()
             expect(snap.battle!.player.team.length).toBe(1)
             expect(snap.battle!.enemy.team.length).toBe(4)     // les 4 fusions de Lorelei
-            // l'ennemi porte bien une Déf Spé séparée (frozenSpd) → l'IA hof la lira
-            expect(snap.battle!.enemy.team[0].frozenSpd).toBeDefined()
+            // l'ennemi fusionné porte bien ses stats figées (Spéciale unique) → l'IA hof les lira
+            expect(snap.battle!.enemy.team[0].frozenStats?.spc).toBeGreaterThan(0)
         } finally {
             endBattle()
             player.forEach((f) => disposeFusion(f.speciesId))

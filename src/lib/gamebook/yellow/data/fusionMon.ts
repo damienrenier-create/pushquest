@@ -2,10 +2,7 @@
 //
 // FUSION — construction du BattleMon FUSIONNÉ (construct de combat éphémère) à partir de 2 Daemons.
 // Branche le module PUR (fusionSpecies : la génétique) sur le moteur : espèce custom éphémère + instance figée
-// (frozenStats.spc = SpA, frozenSpd = SpD, moveset, objet tenu). JAMAIS persisté, JAMAIS au dex.
-//
-// INVARIANT (revue Inc.1) : frozenStats.spc (SpA) et frozenSpd (SpD) viennent EN PAIRE de computeFusion et sont
-// posés ENSEMBLE par applyFusionStats — ne JAMAIS poser l'un sans l'autre (sinon profil de combat incohérent).
+// (frozenStats à 5 stats — UNE seule Spéciale, comme tout Daemon —, moveset, objet tenu). JAMAIS persisté, JAMAIS au dex.
 //
 // Cycle de vie : buildFusion() enregistre l'espèce → à la fin du combat, unregisterCustomSpecies([speciesId]).
 // Les 2 Daemons parents ne sont PAS mutés (l'instance fusionnée est neuve).
@@ -37,24 +34,23 @@ export function fusionSpeciesId(a: MonInstance, b: MonInstance): string {
     return `fusion_${a.uid}_${b.uid}`
 }
 
-/** INVARIANT : pose frozenStats (dont spc = SpA, lue en OFFENSE) ET frozenSpd (= SpD, lue en DÉFENSE) ENSEMBLE.
- *  Point d'entrée UNIQUE pour figer les stats d'un fusionné → impossible d'oublier l'un des deux. */
+/** Fige les stats du fusionné : une SEULE Spéciale (spc), comme tout Daemon Gen-1 (offense ET défense spé).
+ *  On ne pose PAS frozenSpd → le moteur retombe sur spc en défense spé (frozenSpd reste réservé à Ukognofy). */
 export function applyFusionStats(inst: MonInstance, f: FusionResult): void {
-    inst.frozenStats = { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spcAtk }
-    inst.frozenSpd = f.stats.spcDef
+    inst.frozenStats = { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spc }
     inst.currentHp = f.stats.hp
 }
 
-/** SpeciesData ÉPHÉMÈRE d'une fusion. baseStats.spc = SpA (fallback d'affichage ; le COMBAT lit frozenStats/frozenSpd,
- *  pas ceci). Masquée du dex. `nameOverride` = nom figé (ex. les 21 noms de la Ligue de Fusion) sinon le portmanteau auto. */
+/** SpeciesData ÉPHÉMÈRE d'une fusion. baseStats.spc = la Spéciale unique (le COMBAT lit frozenStats).
+ *  Masquée du dex. `nameOverride` = nom figé (ex. les 21 noms de la Ligue de Fusion) sinon le portmanteau auto. */
 function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOverride?: string, movesOverride?: string[]): SpeciesData {
     // TAUX DE CAPTURE ∝ 1/BST : la Fusio-Ball (non garantie) est redoutable sur une fusion FAIBLE (BST bas → catchRate
-    //   haut), ardue sur une fusion très PUISSANTE (BST énorme → catchRate ~3, ex. Ukognofy ~1710 → 3). Clamp 3..60.
-    const bst = f.stats.hp + f.stats.atk + f.stats.def + f.stats.spe + f.stats.spcAtk + f.stats.spcDef
-    const catchRate = Math.max(3, Math.min(60, Math.round((1900 - bst) / 40)))
+    //   haut), ardue sur une fusion très PUISSANTE (BST énorme → catchRate ~3). Clamp 3..60. (BST sur 5 stats.)
+    const bst = f.stats.hp + f.stats.atk + f.stats.def + f.stats.spe + f.stats.spc
+    const catchRate = Math.max(3, Math.min(60, Math.round((1500 - bst) / 30)))
     return {
         id, dexNo: -1, name: nameOverride ?? f.name, types: f.types,
-        baseStats: { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spcAtk },
+        baseStats: { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spc },
         learnset: (movesOverride ?? f.moves).map((moveId) => ({ level: 1, moveId })),
         // baseExp ∝ BST, PLAFONNÉ à 250 (≈ un final costaud) : sert au REVERSEMENT d'XP aux parents en Ligue de Fusion
         //   (rawXp dans awardExp). Le cap évite qu'une fusion-boss (BST énorme, ex. Ukognofy 1710) ne donne une XP
@@ -68,7 +64,7 @@ function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOve
 export interface BuiltFusion { instance: MonInstance; speciesId: string; result: FusionResult }
 
 /** Construit le Daemon FUSIONNÉ de A (tête/dominant) et B : enregistre l'espèce éphémère + fabrique l'instance de
- *  combat figée (frozenStats = SpA, frozenSpd = SpD, moveset, objet tenu). À DÉTRUIRE après le combat via
+ *  combat figée (frozenStats à 5 stats — Spéciale unique —, moveset, objet tenu). À DÉTRUIRE après le combat via
  *  disposeFusion(speciesId). Les 2 parents ne sont pas touchés. */
 export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string; moves?: string[]; sprite?: string }): BuiltFusion {
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))

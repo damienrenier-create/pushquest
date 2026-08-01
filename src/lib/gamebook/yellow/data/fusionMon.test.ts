@@ -6,18 +6,17 @@ import { fullStats } from "../battle/stats"
 import { createBattle, resolveTurn } from "../battle/engine"
 
 describe("fusionMon — builder du BattleMon fusionné", () => {
-    it("buildFusion : frozenStats.spc = SpA ET frozenSpd = SpD posés ENSEMBLE (invariant) + moveset/niveau/PV", () => {
-        const a = createMonInstance("divinpate", 50) // rapide (spé) → donne la SpA
-        const b = createMonInstance("razmaree", 50)  // lent (tank) → donne la SpD
+    it("buildFusion : frozenStats à 5 stats (Spéciale unique), PAS de frozenSpd + moveset/niveau/PV", () => {
+        const a = createMonInstance("divinpate", 50)
+        const b = createMonInstance("razmaree", 50)
         const { instance, speciesId, result } = buildFusion(a, b)
 
         expect(instance.frozenStats).toBeDefined()
-        expect(instance.frozenSpd).toBeDefined()
-        expect(instance.frozenStats!.spc).toBe(result.stats.spcAtk) // SpA lue nativement en OFFENSE
-        expect(instance.frozenSpd).toBe(result.stats.spcDef)         // SpD lue en DÉFENSE (hook)
-        // le split par vitesse : divinpâte plus rapide → sa spé finale devient la SpA
-        expect(result.stats.spcAtk).toBe(fullStats(a, getSpecies("divinpate")!).spc)
-        expect(result.stats.spcDef).toBe(fullStats(b, getSpecies("razmaree")!).spc)
+        expect(instance.frozenSpd).toBeUndefined()                   // plus de split SpA/SpD sur les fusions
+        expect(instance.frozenStats!.spc).toBe(result.stats.spc)     // Spéciale unique, lue en offense ET défense
+        // Spéciale unique = 0,6 × la meilleure Spé des 2 parents + 0,45 × la moindre
+        const spcA = fullStats(a, getSpecies("divinpate")!).spc, spcB = fullStats(b, getSpecies("razmaree")!).spc
+        expect(result.stats.spc).toBe(Math.round(0.6 * Math.max(spcA, spcB) + 0.45 * Math.min(spcA, spcB)))
 
         expect(getSpecies(speciesId)).not.toBeNull()               // espèce éphémère enregistrée
         expect(getSpecies(speciesId)!.types).toEqual(result.types) // typage stat-fidèle

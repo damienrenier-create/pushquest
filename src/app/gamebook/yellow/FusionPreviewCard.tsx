@@ -14,7 +14,7 @@ const TYPE_COLOR: Record<string, string> = {
     ROCHE: "#c7b78b", SPECTRE: "#6f7bc5", DRAGON: "#3b7fd0", FEE: "#ec8fe6", METAL: "#79a0b2", TENEBRES: "#6a6376",
 }
 const typeColor = (t: string) => TYPE_COLOR[t] ?? "#8a7fb0"
-const STAT_LABELS: [keyof FusionStats, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spcAtk", "SpA"], ["spcDef", "SpD"]]
+const STAT_LABELS: [keyof FusionStats, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
 
 function Sprite({ src, ring, size = 62 }: { src?: string; ring: string; size?: number }) {
     const [err, setErr] = useState(false)
