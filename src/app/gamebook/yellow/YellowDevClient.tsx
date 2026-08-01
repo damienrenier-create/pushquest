@@ -21,6 +21,7 @@ import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade
 import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtTrade"
 import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
+import { FusionPreviewCard } from "./FusionPreviewCard"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
@@ -2694,7 +2695,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const st = sp ? fullStats(m, sp) : null
                     return { m, st, sum: st ? st.hp + st.atk + st.def + st.spc + st.spe : 0 }
                 })
-                const fusionBst = preview ? preview.stats.hp + preview.stats.atk + preview.stats.def + preview.stats.spcAtk + preview.stats.spcDef + preview.stats.spe : 0
                 const closeIt = () => { setFusionPick([]); closeFusionMenu() }
                 const launch = () => {
                     if (!ready) return
@@ -2709,9 +2709,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     setFusionPick([])
                     closeFusionMenu()
                 }
-                const row = (label: string, val: React.ReactNode) => (
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}><span>{label}</span><b>{val}</b></div>
-                )
                 return (
                     <div style={menuOverlayStyle} onClick={closeIt}>
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
@@ -2743,16 +2740,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )}
                             {preview && (
-                                <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, padding: "8px 10px", margin: "8px 0", background: "rgba(124,79,192,0.08)" }}>
-                                    <div style={{ fontWeight: 800, color: "#7c4fc0" }}>{preview.name} <span style={{ fontSize: 11, opacity: 0.8 }}>[{preview.types.join("/")}] · N.{preview.level} · <span style={{ color: fusionBst >= 500 ? "#c9a227" : "inherit" }}>BST {fusionBst}</span></span></div>
-                                    <div style={{ margin: "5px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px 12px" }}>
-                                        {row("PV", preview.stats.hp)}{row("Vitesse", preview.stats.spe)}
-                                        {row("Attaque", preview.stats.atk)}{row("Défense", preview.stats.def)}
-                                        {row("Atq. Spé", preview.stats.spcAtk)}{row("Déf. Spé", preview.stats.spcDef)}
-                                    </div>
-                                    <div style={{ fontSize: 10.5, opacity: 0.85 }}>⚔️ {preview.moves.map((id) => getMove(id)?.name ?? id).join(" · ")}</div>
-                                    {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
-                                </div>
+                                <>
+                                    <FusionPreviewCard name={preview.name} types={preview.types} stats={preview.stats} moves={preview.moves} level={preview.level} spriteSrc={officialFusionForParents(picks[0].speciesId, picks[1].speciesId)?.sprite} />
+                                    {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: -3, marginBottom: 4 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
+                                </>
                             )}
                             <button style={ready ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!ready} onClick={launch}>⚔️ LANCER L&apos;ÉPREUVE</button>
                             <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
@@ -2864,10 +2855,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         </div>
                                     )}
                                     {draftPreview && (
-                                        <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, padding: "7px 10px", margin: "6px 0", background: "rgba(124,79,192,0.08)" }}>
-                                            <div style={{ fontWeight: 800, color: "#7c4fc0" }}>→ {draftName} <span style={{ fontSize: 11, opacity: 0.8 }}>[{draftPreview.types.join("/")}] N.{draftPreview.level} · BST {draftPreview.stats.hp + draftPreview.stats.atk + draftPreview.stats.def + draftPreview.stats.spcAtk + draftPreview.stats.spcDef + draftPreview.stats.spe}</span></div>
-                                            <div style={{ fontSize: 10.5, opacity: 0.85, marginTop: 2 }}>PV{draftPreview.stats.hp} · Atk{draftPreview.stats.atk} · Déf{draftPreview.stats.def} · SpA{draftPreview.stats.spcAtk} · SpD{draftPreview.stats.spcDef} · Vit{draftPreview.stats.spe}</div>
-                                        </div>
+                                        <FusionPreviewCard name={draftName} types={draftPreview.types} stats={draftPreview.stats} moves={draftPreview.moves} level={draftPreview.level} spriteSrc={draftA && draftB ? officialFusionForParents(draftA.speciesId, draftB.speciesId)?.sprite : undefined} />
                                     )}
                                     <button style={draftPreview ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!draftPreview} onClick={confirmAdd}>✓ AJOUTER CETTE FUSION</button>
                                     <button style={menuBtnDimStyle} onClick={() => { setAtelierAdd(null); setAtelierPicking(null) }}>← ANNULER</button>
