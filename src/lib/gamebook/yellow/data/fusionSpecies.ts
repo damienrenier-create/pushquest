@@ -7,8 +7,8 @@
 //
 // Règles FIGÉES (décisions Sartay, cf. spec) :
 //   • Stats hp/atk/déf/vit : sur chaque parent, classer ses 4 stats (spc EXCLUE) → 2 hautes DOMINANTES (×0,6),
-//     2 basses RÉCESSIVES (×0,4). fusion[s] = poidsA·A[s] + poidsB·B[s]. Dom+dom = 120 % (peut DÉPASSER les
-//     parents), dom+réc = 100 %, réc+réc = 80 %. Départage déterministe (ordre hp>atk>déf>vit).
+//     2 basses RÉCESSIVES (×0,45). fusion[s] = poidsA·A[s] + poidsB·B[s]. Dom+dom = 120 % (peut DÉPASSER les
+//     parents), dom+réc = 105 %, réc+réc = 90 %. Départage déterministe (ordre hp>atk>déf>vit).
 //   • Spéciale : SpA = spc du parent le plus RAPIDE, SpD = spc du plus LENT (valeurs pleines ; à vitesse égale,
 //     la spc la plus haute → SpA, départage intrinsèque → indépendant de l'ordre).
 //   • Niveau = max(parents). Les stats reçues sont les stats FINALES réelles (le module est agnostique base/finale).
@@ -54,12 +54,12 @@ export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, Fusion
 // Les 4 stats soumises à la génétique dom/récessif (la spc est traitée à part par le split).
 const STATS4: readonly StatKey[] = ["hp", "atk", "def", "spe"]
 
-/** Poids par stat pour un parent : 2 plus hautes des 4 stats = 0,6 (dominantes), 2 plus basses = 0,4 (récessives).
+/** Poids par stat pour un parent : 2 plus hautes des 4 stats = 0,6 (dominantes), 2 plus basses = 0,45 (récessives).
  *  Égalité de valeur départagée par l'ordre fixe hp > atk > déf > vit (déterministe). */
 export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<string, number> {
     const order = [...STATS4].sort((a, b) => stats[b] - stats[a] || STATS4.indexOf(a) - STATS4.indexOf(b))
     const w: Record<string, number> = {}
-    order.forEach((k, i) => (w[k] = i < 2 ? 0.6 : 0.4))
+    order.forEach((k, i) => (w[k] = i < 2 ? 0.6 : 0.45))
     return w
 }
 

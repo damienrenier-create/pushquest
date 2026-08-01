@@ -13,18 +13,18 @@ const mk = (over: Partial<FusionParent> & Pick<FusionParent, "moves">): FusionPa
     ({ name: "X", types: ["NORMAL"], stats: { hp: 50, atk: 50, def: 50, spe: 50, spc: 50 }, level: 50, ...over })
 
 describe("fusion — génétique des stats", () => {
-    it("poids : 2 hautes = 0,6 (dominantes), 2 basses = 0,4 (récessives), spc exclue", () => {
+    it("poids : 2 hautes = 0,6 (dominantes), 2 basses = 0,45 (récessives), spc exclue", () => {
         // Maîtrezenc {hp80, atk118, def68, spe88} → dom atk/spe, réc hp/def
         const w = fusionWeights(SPECIES["maitrezenc"].baseStats)
         expect(w.atk).toBe(0.6); expect(w.spe).toBe(0.6)
-        expect(w.hp).toBe(0.4); expect(w.def).toBe(0.4)
+        expect(w.hp).toBe(0.45); expect(w.def).toBe(0.45)
         expect(w).not.toHaveProperty("spc") // la spc n'est jamais pondérée (elle est splittée)
     })
 
     it("EX.1 Maîtrezenc × Zappeuréal → COMBAT/ELEC, stat dominante partagée DÉPASSE les parents", () => {
         const f = computeFusion(P("maitrezenc"), P("zappeureal"))
         expect(f.types).toEqual(["COMBAT", "ELEC"])
-        expect(f.stats).toEqual({ hp: 64, atk: 121, def: 54, spe: 122, spcAtk: 98, spcDef: 68 })
+        expect(f.stats).toEqual({ hp: 72, atk: 121, def: 61, spe: 122, spcAtk: 98, spcDef: 68 })
         // atk & vit dominantes des DEUX côtés → compounding : au-dessus des deux parents
         expect(f.stats.atk).toBeGreaterThan(Math.max(118, 84))
         expect(f.stats.spe).toBeGreaterThan(Math.max(88, 115))
@@ -33,7 +33,7 @@ describe("fusion — génétique des stats", () => {
     it("EX.2 Divinpâte × Razmarée → PSY/EAU, split net (rapide→SpA, lent→SpD), profil rond", () => {
         const f = computeFusion(P("divinpate"), P("razmaree"))
         expect(f.types).toEqual(["PSY", "EAU"])
-        expect(f.stats).toEqual({ hp: 91, atk: 59, def: 93, spe: 76, spcAtk: 120, spcDef: 86 })
+        expect(f.stats).toEqual({ hp: 91, atk: 67, def: 96, spe: 79, spcAtk: 120, spcDef: 86 })
         // Divinpâte (vit 82) est le plus rapide → sa spc (120) devient la SpA ; Razmarée (vit 66) → SpD (86)
         expect(f.stats.spcAtk).toBe(SPECIES["divinpate"].baseStats.spc)
         expect(f.stats.spcDef).toBe(SPECIES["razmaree"].baseStats.spc)
@@ -41,7 +41,7 @@ describe("fusion — génétique des stats", () => {
 
     it("EX.3 Coccimpératrice × Rochison → COMBAT/ROCHE (1 type de CHAQUE parent, pas 2 du même)", () => {
         const f = computeFusion(P("coccimperatrice"), P("rochison"))
-        expect(f.stats).toEqual({ hp: 61, atk: 146, def: 109, spe: 90, spcAtk: 56, spcDef: 52 })
+        expect(f.stats).toEqual({ hp: 68, atk: 146, def: 113, spe: 92, spcAtk: 56, spcDef: 52 })
         // RÈGLE 1-par-parent : Coccimpératrice[COMBAT/INSECTE] apporte son type le + stat-fidèle (COMBAT),
         //   Rochison[ROCHE/SOL] apporte le sien (ROCHE). Jamais 2 types du même parent (donc pas COMBAT/INSECTE).
         expect(f.types).toEqual(["COMBAT", "ROCHE"])

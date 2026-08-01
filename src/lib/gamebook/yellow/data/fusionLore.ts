@@ -7,7 +7,7 @@
 export const FUSION_RULES: string[] = [
     "🧬 LA FUSION DES DAEMONS",
     "Sur l'Autel de la Chimère, pose 2 Daemons : ils fusionnent en UN seul construct de combat, le temps d'un affrontement. Les 2 parents restent intacts (aucune perte).",
-    "① STATS PHYSIQUES (PV · Attaque · Défense · Vitesse). Pour chaque parent, ses 2 plus HAUTES de ces 4 stats sont DOMINANTES (×0,6), les 2 plus basses RÉCESSIVES (×0,4). La stat du fusionné = la somme pondérée des deux. Une stat dominante des DEUX côtés peut atteindre ~120 % et DÉPASSER les deux parents.",
+    "① STATS PHYSIQUES (PV · Attaque · Défense · Vitesse). Pour chaque parent, ses 2 plus HAUTES de ces 4 stats sont DOMINANTES (×0,6), les 2 plus basses RÉCESSIVES (×0,45). La stat du fusionné = la somme pondérée des deux. Une stat dominante des DEUX côtés peut atteindre ~120 % et DÉPASSER les deux parents.",
     "② STAT SPÉCIALE — elle se SCINDE par la VITESSE. L'Attaque Spéciale vient du parent le plus RAPIDE ; la Défense Spéciale, du plus LENT (valeurs pleines). Le fusionné cumule donc la meilleure offensive ET la meilleure défensive spéciales — ce qu'aucun parent ne pouvait faire seul.",
     "③ NIVEAU = celui du plus haut des 2 parents. Les stats sont ensuite GELÉES pour tout le combat.",
     "④ TYPES — le fusionné conserve les 2 types les plus FIDÈLES à ses plus grosses stats (2 mono-types → un bi-type ; mêmes types → mono-type).",
