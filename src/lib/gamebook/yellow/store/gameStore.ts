@@ -78,12 +78,20 @@ export function activeNpcs() {
             ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
             : n))
     }
-    // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE, l'assistant du labo DEVIENT le
-    // MAÎTRE DES CAPACITÉS (id y_move_tutor, ceinture noire). Côté VILLE JAUNE, il reste l'ASSISTANT (invisible/décor).
+    // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE UNIQUEMENT, on AJOUTE le MAÎTRE
+    // DES CAPACITÉS (PNJ dédié en (9,3), regarde le nord). L'assistant reste en place (invisible/décor) des deux côtés.
     if (useGameStore.getState().interiorReturn?.mapId === "yellow_cendreville") {
-        list = list.map((n) => (n.id === "y_lab_assistant"
-            ? { ...n, id: "y_move_tutor", name: "MAÎTRE DES CAPACITÉS", sprite: { emoji: "🥋", color: "#c0392b" } }
-            : n))
+        list = [...list, {
+            id: "y_move_tutor",
+            name: "MAÎTRE DES CAPACITÉS",
+            mapId: "yellow_infirmary_2e",
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "🥋", color: "#c0392b" }, // repli si le sprite Gen3 manque
+            initialX: 9,
+            initialY: 3,
+            dialoguesAfter: ["« Un Daemon a oublié une capacité de sa lignée ? Je peux la lui réapprendre… contre quelques reps. »"],
+        }]
     }
     return list
 }
@@ -1538,7 +1546,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Assistant du labo (apprenti du Prof. CHEN) : aiguille vers les récompenses (CT du terminal, CT
         // UNIQUE du blackjack, œuf-soigneur Tonytony) et révèle le grand projet du chef.
         // ÉTAGE DU CENTRE (map partagée) : à VILLE JAUNE c'est l'ASSISTANT (y_lab_assistant), à CENDREVILLE le
-        //   MAÎTRE DES CAPACITÉS (y_move_tutor, swap fait par activeNpcs selon interiorReturn).
+        //   MAÎTRE DES CAPACITÉS (y_move_tutor, PNJ dédié ajouté par activeNpcs côté Cendreville).
         if (npc.id === "y_lab_assistant" || npc.id === "y_move_tutor") {
             // 🍒 Post-Ligue, si le secret des baies n'est pas connu, le PNJ le RÉVÈLE d'abord (fallback hors run 2,
             //    où c'est le Druide, boss arène 1, qui s'en charge) — puis il débloque la récolte.

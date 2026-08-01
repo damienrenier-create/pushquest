@@ -523,8 +523,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
     },
     {
         // Assistant du Prof. CHEN (VILLE JAUNE) : aiguille vers les récompenses — intercepté gameStore (7,6).
-        //   ⚠️ Map d'étage PARTAGÉE : côté CENDREVILLE, activeNpcs() remplace ce PNJ par le MAÎTRE DES CAPACITÉS
-        //   (id y_move_tutor, sprite ceinture noire). Ici = version Ville Jaune (assistant, invisible/décor).
+        //   ⚠️ Map d'étage PARTAGÉE : côté CENDREVILLE, activeNpcs() AJOUTE en plus le MAÎTRE DES CAPACITÉS
+        //   (PNJ dédié y_move_tutor en (9,3)). L'assistant reste ici des deux côtés (invisible/décor).
         id: "y_lab_assistant",
         name: "ASSISTANT",
         mapId: "yellow_infirmary_2e",

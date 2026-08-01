@@ -753,7 +753,6 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_pnj3_grotte_b2f: { url: "/yellow/sprites/pnj3_grotte_b2f.png", frames: 1, h: 1.9 },
     // PNJ 6 — l'Échangeur de la Grotte du Nexus 1F (troc Crocavern) : portrait fourni (npc_echange.png).
     y_pnj6_grotte: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 1.9 },
-    y_move_tutor: { url: "/yellow/sprites/npc_black_belt_color.png", frames: 6 }, // MAÎTRE DES CAPACITÉS (Cendreville uniquement, ceinture noire 16x96 comme kris)
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     // Marchand de Jetons de Combat (hub de la Zone de Combat).
@@ -841,6 +840,9 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_autel_chimere: { url: "/yellow/sprites/npc_autel_chimere_gen3.png" },
     // DIEU SPAGHETTI — boss final de la Ligue de Fusion (yellow_fusion_miroir, 10-2). Face au joueur.
     y_fusion_miroir: { url: "/yellow/sprites/npc_dieu_spaghetti_gen3.png" },
+    // MAÎTRE DES CAPACITÉS — étage du Centre de Cendreville uniquement (labo, 9-3), regarde le NORD (row up).
+    //   PNJ dédié injecté par activeNpcs() côté Cendreville (cf. gameStore).
+    y_move_tutor: { url: "/yellow/sprites/npc_move_tutor_gen3.png", row: NPC40_ROW_UP },
     // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
     // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
     y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },
