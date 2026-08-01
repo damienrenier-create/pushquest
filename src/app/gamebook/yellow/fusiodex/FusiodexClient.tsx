@@ -12,6 +12,8 @@ import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { officialFusions, officialFusionProgress, historyFusions, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 type Tab = "rules" | "official" | "mine"
@@ -91,7 +93,8 @@ export default function FusiodexClient() {
     const created = useMemo(() => historyFusions(player.fusionHistory).map((f) => {
         const [aId, bId] = f.key.split("|")
         const off = officialFusionForParents(aId, bId)
-        return { ...f, sprite: off?.sprite ?? MISSINGNO_SPRITE, displayName: off?.name ?? f.name }
+        // Sprites parents → placeholder Chimère quand la paire n'a pas de sprite officiel dédié.
+        return { ...f, sprite: off?.sprite ?? MISSINGNO_SPRITE, official: !!off?.sprite, aSprite: getSpecies(aId)?.sprite, bSprite: getSpecies(bId)?.sprite, displayName: off?.name ?? f.name }
     }), [player.fusionHistory])
 
     // TRI de « Mes fusions » (défaut : plus récentes d'abord). Clic sur le tri actif = inverse le sens.
@@ -197,7 +200,9 @@ export default function FusiodexClient() {
                             const ring = f.bst > 0 && f.types[0] ? typeColor(f.types[0]) : "#4a3a6a"
                             return (
                                 <div key={f.key} style={{ ...S.card, borderLeftColor: ring }}>
-                                    <FusionSprite src={f.sprite} ring={ring} />
+                                    {f.official || f.bst === 0
+                                        ? <FusionSprite src={f.sprite} ring={ring} />
+                                        : <ChimeraPlaceholder aSprite={f.aSprite} bSprite={f.bSprite} types={f.types} size={66} />}
                                     <div style={S.body}>
                                         <div style={S.name}>{f.displayName.toUpperCase()}</div>
                                         {f.bst > 0 ? (

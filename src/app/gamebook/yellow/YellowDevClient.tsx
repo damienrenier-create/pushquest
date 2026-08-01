@@ -2761,7 +2761,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )}
                             {preview && (
                                 <>
-                                    <FusionPreviewCard name={preview.name} types={preview.types} stats={preview.stats} moves={preview.moves} level={preview.level} spriteSrc={officialFusionForParents(picks[0].speciesId, picks[1].speciesId)?.sprite} />
+                                    <FusionPreviewCard name={preview.name} types={preview.types} stats={preview.stats} moves={preview.moves} level={preview.level} spriteSrc={officialFusionForParents(picks[0].speciesId, picks[1].speciesId)?.sprite} aSprite={getSpecies(picks[0].speciesId)?.sprite} bSprite={getSpecies(picks[1].speciesId)?.sprite} />
                                     {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: -3, marginBottom: 4 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
                                 </>
                             )}
@@ -2876,7 +2876,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         </div>
                                     )}
                                     {draftPreview && (
-                                        <FusionPreviewCard name={draftName} types={draftPreview.types} stats={draftPreview.stats} moves={draftPreview.moves} level={draftPreview.level} spriteSrc={draftA && draftB ? officialFusionForParents(draftA.speciesId, draftB.speciesId)?.sprite : undefined} />
+                                        <FusionPreviewCard name={draftName} types={draftPreview.types} stats={draftPreview.stats} moves={draftPreview.moves} level={draftPreview.level} spriteSrc={draftA && draftB ? officialFusionForParents(draftA.speciesId, draftB.speciesId)?.sprite : undefined} aSprite={draftA ? getSpecies(draftA.speciesId)?.sprite : undefined} bSprite={draftB ? getSpecies(draftB.speciesId)?.sprite : undefined} />
                                     )}
                                     <button style={draftPreview ? menuBtnStyle : menuBtnDimStyle} disabled={!draftPreview} onClick={() => draftA && draftB && setFusionCompare({ a: draftA, b: draftB })}>🔬 Comparer plein écran (fiches des parents)</button>
                                     <button style={draftPreview ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!draftPreview} onClick={confirmAdd}>✓ AJOUTER CETTE FUSION</button>

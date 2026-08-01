@@ -12,6 +12,7 @@ import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
+import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -79,7 +80,9 @@ export function FusionCompareView({ a, b, onClose }: { a: MonInstance; b: MonIns
 
                 {/* FUSIONNÉ */}
                 <div style={S.fusionCard}>
-                    <Sprite src={fusSprite} ring={tc(result.types[0])} size={84} />
+                    {fusSprite
+                        ? <Sprite src={fusSprite} ring={tc(result.types[0])} size={84} />
+                        : <ChimeraPlaceholder aSprite={spA.sprite} bSprite={spB.sprite} types={result.types} size={84} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={S.fusionName}>{result.name}</div>
                         <TypeChips types={result.types} />

@@ -7,6 +7,7 @@
 import { useState } from "react"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -27,14 +28,17 @@ function Sprite({ src, ring, size = 62 }: { src?: string; ring: string; size?: n
     )
 }
 
-export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc }: {
+export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc, aSprite, bSprite }: {
     name: string
     types: string[]
     stats: FusionStats
     moves: string[]
     level: number
-    /** Sprite de la fusion OFFICIELLE (si la paire en est une) ; sinon placeholder 🧬. */
+    /** Sprite de la fusion OFFICIELLE (si la paire en est une) ; sinon placeholder Chimère (parents) puis 🧬. */
     spriteSrc?: string
+    /** Sprites des 2 parents → placeholder Chimère quand il n'y a pas de sprite dédié. */
+    aSprite?: string
+    bSprite?: string
 }) {
     const bst = STAT_LABELS.reduce((s, [k]) => s + (stats[k] ?? 0), 0)
     const ring = types[0] ? typeColor(types[0]) : "#6a5a8a"
@@ -42,7 +46,11 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc 
     return (
         <div style={{ border: `1px solid ${ring}88`, borderRadius: 12, padding: "11px 12px", margin: "8px 0", background: "rgba(124,79,192,0.09)", display: "flex", flexDirection: "column", gap: 9 }}>
             <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
-                <Sprite src={spriteSrc} ring={ring} />
+                {spriteSrc
+                    ? <Sprite src={spriteSrc} ring={ring} />
+                    : (aSprite || bSprite)
+                        ? <ChimeraPlaceholder aSprite={aSprite} bSprite={bSprite} types={types} size={62} />
+                        : <Sprite src={undefined} ring={ring} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: 0.5, color: "#f6efff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
