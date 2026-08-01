@@ -401,7 +401,9 @@ export function startFusionTrialBattle(fusionTeam: MonInstance[], enemyTeam: Mon
  *  enregistre/détruit les espèces éphémères (buildFusion/disposeFusion) des DEUX camps. */
 export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, trainerId: string): boolean {
     if (fusionTeam.length === 0 || enemyTeam.length === 0 || !trainerId.startsWith("y_fusion_")) return false
-    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
+    // expMult:1 → les fusionnés gagnent de l'XP → creditFusionParents en reverse la moitié aux 2 VRAIS parents
+    //   (XP différé). Sans effet sur le fusionné lui-même (frozenStats figées, learnset à 1 niveau, pas d'évo).
+    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 1, playerBadgeCount: getPlayer().badges.length })
     setStore({ battle, evolutions: [], trainer: { trainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
