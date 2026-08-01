@@ -8,6 +8,7 @@ import { useState } from "react"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
+import { useFusionSprite } from "./useFusionSprite"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -28,26 +29,32 @@ function Sprite({ src, ring, size = 62 }: { src?: string; ring: string; size?: n
     )
 }
 
-export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc, aSprite, bSprite }: {
+export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc, aSprite, bSprite, aId, bId }: {
     name: string
     types: string[]
     stats: FusionStats
     moves: string[]
     level: number
-    /** Sprite de la fusion OFFICIELLE (si la paire en est une) ; sinon placeholder Chimère (parents) puis 🧬. */
+    /** Sprite de la fusion OFFICIELLE (si la paire en est une) ; prioritaire sur le sprite généré. */
     spriteSrc?: string
-    /** Sprites des 2 parents → placeholder Chimère quand il n'y a pas de sprite dédié. */
+    /** Sprites des 2 parents → placeholder Chimère quand il n'y a ni sprite officiel ni généré. */
     aSprite?: string
     bSprite?: string
+    /** speciesId des 2 parents → résout/déclenche le sprite GÉNÉRÉ (point de découverte). */
+    aId?: string
+    bId?: string
 }) {
     const bst = STAT_LABELS.reduce((s, [k]) => s + (stats[k] ?? 0), 0)
     const ring = types[0] ? typeColor(types[0]) : "#6a5a8a"
     const CAP = 180
+    // Sprite généré (cache serveur) — déclenché ici (aperçu = découverte) SEULEMENT si pas de sprite officiel.
+    const { url: genUrl } = useFusionSprite(aId, bId, { name, types, trigger: !spriteSrc })
+    const resolved = spriteSrc ?? genUrl ?? undefined
     return (
         <div style={{ border: `1px solid ${ring}88`, borderRadius: 12, padding: "11px 12px", margin: "8px 0", background: "rgba(124,79,192,0.09)", display: "flex", flexDirection: "column", gap: 9 }}>
             <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
-                {spriteSrc
-                    ? <Sprite src={spriteSrc} ring={ring} />
+                {resolved
+                    ? <Sprite src={resolved} ring={ring} />
                     : (aSprite || bSprite)
                         ? <ChimeraPlaceholder aSprite={aSprite} bSprite={bSprite} types={types} size={62} />
                         : <Sprite src={undefined} ring={ring} />}

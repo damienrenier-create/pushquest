@@ -13,6 +13,7 @@ import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
+import { useFusionSprite } from "./useFusionSprite"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -45,7 +46,10 @@ export function FusionCompareView({ a, b, onClose }: { a: MonInstance; b: MonIns
     if (!spA || !spB) return null
     const statsA = fullStats(a, spA), statsB = fullStats(b, spB)
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
-    const fusSprite = officialFusionForParents(a.speciesId, b.speciesId)?.sprite
+    const officialSprite = officialFusionForParents(a.speciesId, b.speciesId)?.sprite
+    // Sprite généré (cache serveur) — la vue de comparaison est un point de découverte → déclenche si pas d'officiel.
+    const { url: genSprite } = useFusionSprite(a.speciesId, b.speciesId, { name: result.name, types: result.types, trigger: !officialSprite })
+    const fusSprite = officialSprite ?? genSprite ?? undefined
     const nameA = a.nickname || spA.name, nameB = b.nickname || spB.name
     const bstA = STAT_ROWS.reduce((s, [k]) => s + statsA[k], 0)
     const bstB = STAT_ROWS.reduce((s, [k]) => s + statsB[k], 0)

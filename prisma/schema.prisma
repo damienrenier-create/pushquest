@@ -388,6 +388,28 @@ model ArenaChampion {
   @@index([userId, badgeId])
 }
 
+// FUSION — cache PERMANENT des sprites de fusion GÉNÉRÉS (Gemini). Une PAIRE (pairKey canonique, ordre-indépendant)
+// = UN sprite, pour toujours. Partagé entre TOUS les joueurs (un sprite généré une fois sert à tout le monde).
+// `attempts` = nb d'appels API RÉELLEMENT facturés (retries inclus) → sert au plafond TOTAL de budget (SUM(attempts)).
+// 100% ADDITIF (db:push). Gaté côté code (prisma as any) → compile + neutre tant que la table n'existe pas.
+model FusionSprite {
+  id            String   @id @default(cuid())
+  pairKey       String   @unique   // "<idA>__<idB>" trié (canonique, A+B == B+A)
+  parentAId     String
+  parentBId     String
+  fusionName    String
+  status        String              // PENDING | READY | FAILED
+  blobUrl       String?             // URL Vercel Blob du PNG généré (si READY)
+  model         String?             // ex. "gemini-3.1-flash-image"
+  promptVersion Int      @default(1)
+  attempts      Int      @default(0) // appels API facturés (budget)
+  error         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
 // LIGUE — RÉCOMPENSE CROISÉE : à chaque sacre, TOUS les autres joueurs gagnent 1/3 de leur quota
 // énergétique. Une ligne par bénéficiaire ; le montant (1/3 du repsCap) est calculé CÔTÉ CLIENT au
 // moment de réclamer (le serveur ne connaît pas le cap de chacun). Pas de @relation.
