@@ -254,6 +254,9 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "nouillon", base: RARE, player: "rare", rare: true },
             // Très rare
             { speciesId: "draclet", base: VERY_RARE, affinity: ["mountain"], repulsion: ["water"], player: "rare", rare: true },
+            // TIME-GATED : 2 visiteurs spéciaux selon l'heure locale (fenêtres disjointes → 1 seul actif à la fois).
+            { speciesId: "colibraise", base: RARE, rare: true, hourRange: [5, 12] },  // MATIN (5h→12h) : le colibri de l'aube (Vol/Feu)
+            { speciesId: "carlinou", base: RARE, rare: true, hourRange: [12, 20] },   // APRÈS-MIDI (12h→20h) : le carlin qui lézarde au soleil (Feu/Dragon)
         ],
     },
     // GROTTE ROCHEUSE : habitat des Daemons Roche (+ une rareté spectrale).
