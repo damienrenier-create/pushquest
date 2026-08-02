@@ -60,7 +60,8 @@ import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, U
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
-import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor } from "../data/genieLamp"
+import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate } from "../data/genieLamp"
+import { antiNemesisFor } from "../data/genieAmbush"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
@@ -514,9 +515,15 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // ARC LAMPE & GÉNIE : le colporteur-embuscade est calibré NETTEMENT sous le lead du joueur (facile),
     //   avec évolution au stade naturel du niveau (jamais une souche à un niveau non naturel). Cf. genieTrainerLevel.
     if (trainerId === GENIE_TRAINER_ID) {
+        // ANTI-NÉMÉSIS : pour chaque Daemon du joueur, une PROIE d'un type qu'il CONTRE (avantage de type au joueur),
+        //   au niveau = moyenne d'équipe − écart échelonné (speciesAtLevel = stade naturel). Repli cailloutchi.
         const genieAvg = team.length ? team.reduce((s, m) => s + m.level, 0) / team.length : 5
-        const glvl = genieTrainerLevel(genieAvg) // moyenne d'équipe − delta (auto-nivelé, pas trop faible)
-        specs = specs.map((s) => ({ ...s, level: glvl, speciesId: speciesAtLevel(s.speciesId, glvl) }))
+        const glvl = genieTrainerLevel(genieAvg)
+        const built = team.slice(0, 5).map((m) => {
+            const prey = antiNemesisFor(getSpecies(m.speciesId)?.types ?? [], Math.random) ?? "cailloutchi"
+            return { speciesId: speciesAtLevel(prey, glvl), level: glvl }
+        })
+        if (built.length) specs = built
     }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
@@ -1318,10 +1325,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
                     //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
                     if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID)) {
-                        if (genieAmbushCountdown < 0) genieAmbushCountdown = rollLampCountdown()
+                        const genieNow = genieArcImmediate() // phase de test (allowlist) → pop dès la 1re rencontre, sans garde PV
+                        if (genieAmbushCountdown < 0) genieAmbushCountdown = genieNow ? 0 : rollLampCountdown()
                         const genieTeamHp = team.map((m) => { const gsp = getSpecies(m.speciesId); return { hp: m.currentHp, maxHp: gsp ? fullStats(m, gsp).hp : m.currentHp } })
-                        if (genieAmbushCountdown <= 0 && teamFreshEnough(genieTeamHp)) {
-                            genieAmbushCountdown = rollLampCountdown() // ré-arme pour une éventuelle défaite (ignoré une fois gagné)
+                        if (genieAmbushCountdown <= 0 && (genieNow || teamFreshEnough(genieTeamHp))) {
+                            genieAmbushCountdown = genieNow ? 0 : rollLampCountdown() // ré-arme (défaite → re-tente ; en test = immédiat)
                             const gt = getTrainer(GENIE_TRAINER_ID)
                             if (gt) {
                                 set({ encounterCooldown: 1, dialogue: { npcId: gt.id, npcName: gt.name, lines: gt.intro, lineIndex: 0 }, pendingTrainerId: gt.id, pendingRematch: false })

@@ -17,10 +17,14 @@ export const LAMP_CD_MIN = 3
 export const LAMP_CD_MAX = 10
 /** L'embuscade ne se déclenche que si l'équipe est au-dessus de ce ratio de PV (fraîche → combat facile & juste). */
 export const LAMP_HP_MIN_RATIO = 0.9
-/** Le dresseur-embuscade est calibré ce nombre de niveaux SOUS la MOYENNE d'équipe du joueur : « auto-nivelé mais
- *  pas trop faible » (delta modeste + plancher). 5 Daemons à moyenne−3 (tier garde, pas élite) = gagnable sans être trivial. */
-export const GENIE_TRAINER_LEVEL_DELTA = 3
-export const GENIE_TRAINER_LEVEL_MIN = 5
+/** Plancher absolu du niveau du colporteur. */
+export const GENIE_TRAINER_LEVEL_MIN = 3
+/** Écart de niveau (cap) du colporteur SOUS la moyenne d'équipe, ÉCHELONNÉ : l'écart se creuse quand le joueur monte
+ *  → reste « pas trop faible » tôt, « gagnable » tard. −2 (<20) · −3 (<40) · −4 (<60) · −5 (<80) · −6 (80+). */
+export function genieTrainerDelta(refLevel: number): number {
+    const l = Math.round(refLevel)
+    return l < 20 ? 2 : l < 40 ? 3 : l < 60 ? 4 : l < 80 ? 5 : 6
+}
 
 /** Déploiement progressif de l'arc : GENIE_ARC_ALL=false → réservé à la liste blanche (test) ; true → TOUS les joueurs.
  *  L'embuscade (seul point d'amorçage) est gatée là-dessus → tout l'arc suit (lampe/génie/onglet n'existent qu'après). */
@@ -48,7 +52,13 @@ export function teamFreshEnough(mons: ReadonlyArray<{ hp: number; maxHp: number 
     return teamHpRatio(mons) > LAMP_HP_MIN_RATIO
 }
 
-/** Niveau du dresseur-embuscade = référence du joueur (idéalement la MOYENNE d'équipe) − delta, avec plancher. */
+/** Niveau du colporteur = MOYENNE d'équipe du joueur − écart échelonné (genieTrainerDelta), avec plancher. */
 export function genieTrainerLevel(playerRefLevel: number): number {
-    return Math.max(GENIE_TRAINER_LEVEL_MIN, Math.round(playerRefLevel) - GENIE_TRAINER_LEVEL_DELTA)
+    return Math.max(GENIE_TRAINER_LEVEL_MIN, Math.round(playerRefLevel) - genieTrainerDelta(playerRefLevel))
+}
+
+/** Phase de test (allowlist, GENIE_ARC_ALL=false) → l'embuscade pop dès la 1re rencontre sauvage (pas d'attente
+ *  ni de garde PV). Une fois ouvert à tous (GENIE_ARC_ALL=true), on repasse au compteur N∈[3,10] + équipe fraîche. */
+export function genieArcImmediate(): boolean {
+    return !GENIE_ARC_ALL
 }

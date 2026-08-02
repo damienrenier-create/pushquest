@@ -18,6 +18,7 @@ const INK = "#2a1c10"           // texte / contour
 // entrée affiche le dialogue sans portrait (comportement historique).
 const DIALOGUE_PORTRAITS: Record<string, string> = {
     y_sbire: "/yellow/sprites/npc/noodle_nymph.png", // la Nymphe Nouille
+    y_genie_ambush: "/yellow/sprites/npc/colporteur.png", // COLPORTEUR ZALIM (arc Lampe & Génie) — intro + victoire
     y_ace: "/yellow/sprites/npc_ace.png", // ACE (rival), intro/outro de combat
     // Arène Plante : portraits d'intro/outro de combat.
     y_arena_druide: "/yellow/sprites/npc_druide.png",
