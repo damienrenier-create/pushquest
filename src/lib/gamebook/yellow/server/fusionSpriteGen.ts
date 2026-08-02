@@ -18,7 +18,8 @@ import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
 const MODEL = process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image" // Nano Banana 2 ; 0,5K ≈ 0,045 $/image
-export const PROMPT_VERSION = 2 // v2 = STYLE_BIBLE « pixel art détaillé » + ancres = chimères faites main
+export const PROMPT_VERSION = 3 // v3 = fond MAGENTA demandé au modèle + détourage flood-fill (Nano Banana ne rend pas de transparent)
+const CHROMA_TOL = 96 // tolérance de détourage (somme des écarts RGB au fond estimé)
 const RES = 512
 
 /** La génération est-elle ARMÉE ? (coupe-circuit env + présence de la clé). false → aucun appel, coût 0. */
@@ -52,6 +53,26 @@ function nearlyEmpty(data: Buffer): boolean {
     return visible / (data.length / 4) < 0.03
 }
 
+/** DÉTOURAGE : rend TRANSPARENT le fond UNI qui touche les bords (flood-fill depuis les bordures, couleur ≈ celle des
+ *  coins). Préserve l'intérieur du sujet (pixels non connectés au bord, même s'ils sont de couleur proche). Mute
+ *  `data` (RGBA) en place. Nano Banana rend un fond opaque (souvent uni) → on le découpe ici. */
+function floodRemoveBackground(data: Buffer, w: number, h: number, tol = CHROMA_TOL): void {
+    const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => (y * w + x) * 4)
+    let br = 0, bg = 0, bb = 0
+    for (const i of corners) { br += data[i]; bg += data[i + 1]; bb += data[i + 2] }
+    br /= 4; bg /= 4; bb /= 4
+    const close = (i: number) => data[i + 3] !== 0 && Math.abs(data[i] - br) + Math.abs(data[i + 1] - bg) + Math.abs(data[i + 2] - bb) <= tol
+    const stack: number[] = []
+    const visit = (x: number, y: number) => {
+        if (x < 0 || y < 0 || x >= w || y >= h) return
+        const i = (y * w + x) * 4
+        if (close(i)) { data[i + 3] = 0; stack.push(x, y) }
+    }
+    for (let x = 0; x < w; x++) { visit(x, 0); visit(x, h - 1) }
+    for (let y = 0; y < h; y++) { visit(0, y); visit(w - 1, y) }
+    while (stack.length) { const y = stack.pop()!, x = stack.pop()!; visit(x + 1, y); visit(x - 1, y); visit(x, y + 1); visit(x, y - 1) }
+}
+
 /** Génère + poste le sprite. Renvoie l'URL Blob (succès) ou une erreur. NE LÈVE JAMAIS (défensif). */
 export async function generateFusionSprite(opts: {
     origin: string
@@ -83,7 +104,7 @@ export async function generateFusionSprite(opts: {
         spB.description ? `Réf ${spB.name} : ${spB.description}` : "",
         `Images fournies : les 2 PREMIÈRES = les parents (1 = ${spA.name} base/gabarit ; 2 = ${spB.name} couleurs & attributs).`
             + (anchorRefs.length ? ` Les ${anchorRefs.length} suivantes = RÉFÉRENCES DE STYLE : imite leur RENDU (grain de pixel, détail), NE COPIE PAS leur contenu.` : ""),
-        `Une SEULE créature cohérente (pas un collage). Fond 100% TRANSPARENT, sujet centré, aucun texte/décor/bordure/ombre.`,
+        `Une SEULE créature cohérente (pas un collage), sujet ENTIER et CENTRÉ. FOND : une couleur UNIE et VIVE, MAGENTA pur (#FF00FF), remplissant TOUT l'arrière-plan — AUCUN autre élément, dégradé, décor, texte, bordure ni ombre au sol (ce fond sera détouré automatiquement). Le sujet lui-même ne doit PAS contenir de magenta pur.`,
     ].filter(Boolean).join("\n")
 
     try {
@@ -97,10 +118,15 @@ export async function generateFusionSprite(opts: {
         const b64 = parts.find((p) => p.inlineData?.data)?.inlineData?.data
         if (!b64) return { ok: false, error: "no-image" }
 
-        // Post-traitement : trim alpha → recentre 512 transparent → PNG.
-        const png = await sharp(Buffer.from(b64, "base64")).ensureAlpha().trim().resize(RES, RES, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()
+        // Post-traitement : décode → DÉTOURE le fond uni (magenta) → trim → recentre sur 512 transparent → PNG.
+        const { data: raw, info } = await sharp(Buffer.from(b64, "base64")).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+        floodRemoveBackground(raw, info.width, info.height)
+        const png = await sharp(raw, { raw: { width: info.width, height: info.height, channels: 4 } })
+            .png().trim().resize(RES, RES, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()
         const { data } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-        if (!bordersMostlyTransparent(data, RES, RES) || nearlyEmpty(data)) return { ok: false, error: "bad-output" }
+        // Erreurs GRANULAIRES (pour diagnostiquer vite) : vide, ou détourage raté (fond non uni → bords encore opaques).
+        if (nearlyEmpty(data)) return { ok: false, error: "bad-output-empty" }
+        if (!bordersMostlyTransparent(data, RES, RES)) return { ok: false, error: "bad-output-bg" }
 
         const blob = await put(`yellow/fusion/${fusionPairKey(aId, bId)}.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false })
         return { ok: true, url: blob.url, model: MODEL }

@@ -20,7 +20,7 @@ pixels assumés, AUCUN lissage / flou / anti-aliasing sur les bords. Rendu riche
 marqué, reflets et effets élémentaires (lueur, lave, givre, éclairs, écume…) cohérents avec les types.
 Palette colorée mais MAÎTRISÉE et lisible, dominée par les couleurs des types.
 CADRAGE : créature ENTIÈRE, centrée, vue de 3/4, occupant ~85% du cadre, posture dynamique.
-FOND : 100% TRANSPARENT. Aucun texte, watermark visible, cadre, bordure, décor, ni ombre portée au sol.
+FOND : une seule couleur UNIE et VIVE, MAGENTA pur (#FF00FF), remplissant tout l'arrière-plan (il sera détouré automatiquement). Aucun texte, watermark, cadre, bordure, décor, ni ombre portée au sol. Le sujet ne contient PAS de magenta pur.
 FUSION : UNE seule créature cohérente (JAMAIS un collage ni un split-screen). Gabarit/silhouette DOMINÉS par le
 parent A ; couleurs et éléments distinctifs du parent B intégrés naturellement dans cette silhouette.
 RÉFÉRENCES : imite le NIVEAU DE DÉTAIL, le grain de pixel et la finition des images d'ancrage de style fournies —
