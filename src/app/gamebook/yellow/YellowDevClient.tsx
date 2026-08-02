@@ -71,7 +71,7 @@ import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/ct
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
-import { prefetchFusionSprites } from "./useFusionSprite"
+import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"

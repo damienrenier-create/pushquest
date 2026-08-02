@@ -64,7 +64,7 @@ function FusionSprite({ src, ring = "#6a5a8a", size = 66 }: { src?: string; ring
 function FusionThumb({ aId, bId, types, aSprite, bSprite, ring, size = 66 }: {
     aId: string; bId: string; types: string[]; aSprite?: string; bSprite?: string; ring?: string; size?: number
 }) {
-    const { url } = useFusionSprite(aId, bId, { types, trigger: false })
+    const { url } = useFusionSprite(aId, bId)
     if (url) return <FusionSprite src={url} ring={ring} size={size} />
     return <ChimeraPlaceholder aSprite={aSprite} bSprite={bSprite} types={types} size={size} />
 }

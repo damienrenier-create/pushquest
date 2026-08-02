@@ -22,6 +22,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
+import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
@@ -328,6 +329,16 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
+        // GÉNÉRATION DES SPRITES : UNIQUEMENT ICI (engagement — le joueur valide son équipe et ENTRE dans la Ligue).
+        //   Jamais à l'aperçu/au test au comptoir → on ne brûle pas de budget sur des fusions jamais jouées.
+        //   Fire-and-forget, gaté + plafonné côté serveur (neutre si génération désactivée).
+        const spriteItems = playerFusions.map((f) => {
+            const [ua, ub] = f.instance.fusionParents ?? []
+            const pa = ua ? byU(ua) : undefined, pb = ub ? byU(ub) : undefined
+            if (!pa || !pb) return null
+            return { aId: pa.speciesId, bId: pb.speciesId, name: f.result.name, types: [...f.result.types] as string[] }
+        }).filter((x): x is { aId: string; bId: string; name: string; types: string[] } => x !== null)
+        if (spriteItems.length) void requestFusionSprites(spriteItems)
     }
     // Wipe défensif : si toutes les fusions sont K.O. (état incohérent post-reload), on renvoie à l'Autel.
     if (!gauntletHasAlive()) {

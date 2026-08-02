@@ -47,8 +47,9 @@ export function FusionCompareView({ a, b, onClose }: { a: MonInstance; b: MonIns
     const statsA = fullStats(a, spA), statsB = fullStats(b, spB)
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
     const officialSprite = officialFusionForParents(a.speciesId, b.speciesId)?.sprite
-    // Sprite généré (cache serveur) — la vue de comparaison est un point de découverte → déclenche si pas d'officiel.
-    const { url: genSprite } = useFusionSprite(a.speciesId, b.speciesId, { name: result.name, types: result.types, trigger: !officialSprite })
+    // Sprite généré (cache serveur) — LECTURE SEULE : affiché s'il existe déjà, aucune génération à la comparaison
+    //   (la génération se fait à l'entrée de la Ligue de Fusion). Sinon → placeholder Chimère.
+    const { url: genSprite } = useFusionSprite(a.speciesId, b.speciesId)
     const fusSprite = officialSprite ?? genSprite ?? undefined
     const nameA = a.nickname || spA.name, nameB = b.nickname || spB.name
     const bstA = STAT_ROWS.reduce((s, [k]) => s + statsA[k], 0)

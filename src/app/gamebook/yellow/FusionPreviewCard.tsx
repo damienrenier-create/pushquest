@@ -47,8 +47,9 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
     const bst = STAT_LABELS.reduce((s, [k]) => s + (stats[k] ?? 0), 0)
     const ring = types[0] ? typeColor(types[0]) : "#6a5a8a"
     const CAP = 180
-    // Sprite généré (cache serveur) — déclenché ici (aperçu = découverte) SEULEMENT si pas de sprite officiel.
-    const { url: genUrl } = useFusionSprite(aId, bId, { name, types, trigger: !spriteSrc })
+    // Sprite généré (cache serveur) — LECTURE SEULE : on affiche s'il existe déjà, sans jamais lancer de génération
+    //   (celle-ci se fait à l'entrée de la Ligue de Fusion). Sinon → placeholder Chimère.
+    const { url: genUrl } = useFusionSprite(aId, bId)
     const resolved = spriteSrc ?? genUrl ?? undefined
     return (
         <div style={{ border: `1px solid ${ring}88`, borderRadius: 12, padding: "11px 12px", margin: "8px 0", background: "rgba(124,79,192,0.09)", display: "flex", flexDirection: "column", gap: 9 }}>
