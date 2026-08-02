@@ -9,11 +9,11 @@ import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { BADGES, TIER_EMOJI, TIER_POINTS, evaluateBadges, badgeInputFromSave, type BadgeTier } from "@/lib/gamebook/yellow/data/run1Badges"
 
 const CAT_LABEL: Record<string, string> = {
-    progression: "⚔️ Progression", collection: "📖 Collection", social: "🤝 Social & échanges",
-    special: "✨ Rencontres & secrets", shiny: "🌟 Shiny", dome: "🏛️ Dôme",
+    progression: "⚔️ Progression", collection: "📖 Collection", exploration: "🗺️ Exploration", fusion: "🧬 Fusion",
+    social: "🤝 Social & échanges", special: "✨ Rencontres & secrets", shiny: "🌟 Shiny", dome: "🏛️ Dôme",
 }
 const TIER_COLOR: Record<BadgeTier, string> = { bronze: "#cd8a4a", silver: "#c3cbdc", gold: "#ffd24a", diamond: "#4fd6d0", legend: "#b78bff" }
-const CAT_ORDER = ["progression", "collection", "social", "special", "shiny", "dome"]
+const CAT_ORDER = ["progression", "collection", "exploration", "fusion", "social", "special", "shiny", "dome"]
 
 export default function RunBadgesPanel({ close }: { close: () => void }) {
     // Assemble le BadgeInput depuis les stores client (pokédex GLOBAL = captures cumulées).

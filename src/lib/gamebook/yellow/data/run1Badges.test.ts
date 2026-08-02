@@ -110,6 +110,45 @@ describe("Badges run 1 — socle", () => {
         expect(new Set(ids).size).toBe(ids.length)
     })
 
+    it("Zones run 1 — hauts faits d'exploration via defeatedTrainers + pnj5Wins", () => {
+        const save = {
+            defeatedTrainers: ["y_combat_merchant_intro", "y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard", "y_aqua_boss_a"],
+            pnj5Wins: 2,
+        } as unknown as Parameters<typeof badgeInputFromSave>[0]
+        const i = badgeInputFromSave(save)
+        expect(i.markers).toContain("y_aqua_boss_a")
+        expect(i.pnj5Wins).toBe(2)
+        const r = evaluateBadges(i)
+        expect(state(r, "grotte_nexus").earned).toBe(true)   // passeur rencontré
+        expect(state(r, "nexus_guardian").earned).toBe(true) // pnj5Wins >= 1
+        expect(state(r, "ice_cave").earned).toBe(true)       // les 5 Frères Glaçon
+        expect(state(r, "aqua_arena").earned).toBe(true)     // un boss aqua
+        expect(state(r, "beach").earned).toBe(false)         // 0 dresseur de plage
+        expect(state(r, "nexus_deep").earned).toBe(false)    // B2F non atteint
+    })
+
+    it("Fusion run 1 — 1re fusion + Ligue via fusionHistory & marqueurs fusleague_*", () => {
+        const save = {
+            fusionHistory: [{ a: "nouillon", b: "gouttiny" }],
+            defeatedTrainers: ["fusion_unlocked", "fusleague_bronze"],
+        } as unknown as Parameters<typeof badgeInputFromSave>[0]
+        const i = badgeInputFromSave(save)
+        expect(i.fusionsCreated).toBe(1)
+        const r = evaluateBadges(i)
+        expect(state(r, "fusion_first").earned).toBe(true)     // fusionHistory.length >= 1
+        expect(state(r, "fusion_league").earned).toBe(true)    // marqueur fusion_unlocked
+        expect(state(r, "fusion_champion").earned).toBe(true)  // palier bronze = champion
+        expect(state(r, "fusion_gold").earned).toBe(false)     // pas le palier OR
+    })
+
+    it("Zones/Fusion : secrets cachés (non révélés) tant que le contenu n'est pas rencontré", () => {
+        const r = evaluateBadges(empty)
+        for (const id of ["grotte_nexus", "nexus_guardian", "ice_cave", "beach", "aqua_arena", "fusion_first", "fusion_champion", "fusion_gold"]) {
+            expect(state(r, id).revealed, id).toBe(false)
+            expect(state(r, id).earned, id).toBe(false)
+        }
+    })
+
     it("badgeInputFromSave : mappe une save réelle → badges cohérents", () => {
         const save = {
             team: [{ level: 100, shiny: true, speciesId: "nouillon" }, { level: 40, speciesId: "gouttiny" }],

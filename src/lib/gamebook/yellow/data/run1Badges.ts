@@ -63,6 +63,10 @@ export interface BadgeInput {
     casinoWins?: number
     leagueSixShiny?: boolean
     ctLearned?: boolean
+    // ── zones & systèmes RUN 1 (dérivés directs de la save : defeatedTrainers / pnj5Wins / fusionHistory) ──
+    markers?: readonly string[]   // save.defeatedTrainers (marqueurs d'événement + ids de dresseurs battus)
+    pnj5Wins?: number             // victoires sur le Gardien du Nexus (descente de la Grotte)
+    fusionsCreated?: number       // fusionHistory.length (fusions créées à l'Autel)
 }
 
 const shinyCount = (i: BadgeInput) => i.mons.filter((m) => m.shiny).length
@@ -70,12 +74,30 @@ const distinctTypes = (i: BadgeInput) => new Set(i.caught.flatMap((id) => getSpe
 const has = (i: BadgeInput, id: string) => i.caught.includes(id)
 const sawAny = (i: BadgeInput, ...ids: string[]) => ids.some((id) => i.seen.includes(id) || i.caught.includes(id))
 
+// Marqueurs de save.defeatedTrainers, inlinés en LITTÉRAUX pour garder ce module PUR (pas d'import de stores/data
+// lourds). Sources : gameStore (MERCHANT/B2F), fusiodex.ts (AUTEL_VISITED_MARKER), fusionLeague.ts (FUSION_UNLOCK/
+// FUSION_TIER), trainers.ts + battleStore.GLACON_BROTHERS, trainers.ts (plage y_plage_*, aqua y_aqua_*).
+const MK_MERCHANT = "y_combat_merchant_intro"
+const MK_NEXUS_B2F = "y_pnj3_grotte_b2f"
+const MK_AUTEL = "autel_visited"
+const MK_FUSION_UNLOCK = "fusion_unlocked"
+const MK_FUSION_OR = "fusleague_or"
+const MK_FUSION_TIERS: readonly string[] = ["fusleague_bronze", "fusleague_argent", "fusleague_or"]
+const FRERES_GLACON: readonly string[] = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"]
+const PLAGE_TRAINERS: readonly string[] = ["y_plage_pecheur", "y_plage_nageuse", "y_plage_marin"]
+const AQUA_MOBS: readonly string[] = ["y_aqua_n1", "y_aqua_n2", "y_aqua_n3", "y_aqua_n4"]
+const AQUA_BOSSES: readonly string[] = ["y_aqua_boss_a", "y_aqua_boss_b"]
+const mk = (i: BadgeInput) => i.markers ?? []
+const hasMk = (i: BadgeInput, id: string) => mk(i).includes(id)
+const hasAllMk = (i: BadgeInput, ids: readonly string[]) => ids.every((id) => mk(i).includes(id))
+const hasAnyMk = (i: BadgeInput, ids: readonly string[]) => ids.some((id) => mk(i).includes(id))
+
 export interface BadgeDef {
     id: string
     label: string
     tier: BadgeTier
     secret: boolean
-    cat: "progression" | "collection" | "social" | "special" | "shiny" | "dome"
+    cat: "progression" | "collection" | "exploration" | "fusion" | "social" | "special" | "shiny" | "dome"
     earned: (i: BadgeInput) => boolean
     /** SECRET uniquement : révélé (grisé apparaît) quand vrai. Défaut = earned() (apparaît en même temps qu'obtenu). */
     reveal?: (i: BadgeInput) => boolean
@@ -133,6 +155,20 @@ export const BADGES: readonly BadgeDef[] = [
     // ── ⑥ DÔME (🔒 se greffe à la découverte du Dôme) ──
     { id: "dome_bronze", label: "Gagner ta 1ʳᵉ couronne au Dôme", tier: "silver", secret: true, cat: "dome", earned: (i) => i.domeChampionships >= 1, reveal: (i) => i.domeChampionships >= 1 },
     { id: "dome_gold", label: "Décrocher le titre OR au Dôme", tier: "diamond", secret: true, cat: "dome", earned: (i) => i.domeChampionships >= 3, reveal: (i) => i.domeChampionships >= 1 },
+
+    // ── ⑦ EXPLORATION — zones du run 1 (🔒 révélées à la découverte de la zone) ──
+    { id: "grotte_nexus", label: "Découvrir la Grotte du Nexus", tier: "bronze", secret: true, cat: "exploration", earned: (i) => hasMk(i, MK_MERCHANT), reveal: (i) => hasMk(i, MK_MERCHANT) },
+    { id: "nexus_guardian", label: "Vaincre le Gardien du Nexus", tier: "silver", secret: true, cat: "exploration", earned: (i) => (i.pnj5Wins ?? 0) >= 1, reveal: (i) => hasMk(i, MK_MERCHANT) || (i.pnj5Wins ?? 0) >= 1 },
+    { id: "nexus_deep", label: "Atteindre le fond de la Grotte (B2F)", tier: "gold", secret: true, cat: "exploration", earned: (i) => hasMk(i, MK_NEXUS_B2F), reveal: (i) => (i.pnj5Wins ?? 0) >= 1 || hasMk(i, MK_NEXUS_B2F) },
+    { id: "ice_cave", label: "Franchir la Grotte Gelée (5 Frères Glaçon)", tier: "gold", secret: true, cat: "exploration", earned: (i) => hasAllMk(i, FRERES_GLACON), reveal: (i) => hasAnyMk(i, FRERES_GLACON) },
+    { id: "beach", label: "Dompter la Plage", tier: "silver", secret: true, cat: "exploration", earned: (i) => hasAllMk(i, PLAGE_TRAINERS), reveal: (i) => hasAnyMk(i, PLAGE_TRAINERS) },
+    { id: "aqua_arena", label: "Vaincre le boss de l'Aqua Arena", tier: "gold", secret: true, cat: "exploration", earned: (i) => hasAnyMk(i, AQUA_BOSSES), reveal: (i) => hasAnyMk(i, AQUA_MOBS) || hasAnyMk(i, AQUA_BOSSES) },
+
+    // ── ⑧ FUSION — Autel de la Chimère (🔒 se greffe à la 1ʳᵉ visite de l'Autel) ──
+    { id: "fusion_first", label: "Créer ta 1ʳᵉ fusion", tier: "silver", secret: true, cat: "fusion", earned: (i) => (i.fusionsCreated ?? 0) >= 1, reveal: (i) => hasMk(i, MK_AUTEL) || (i.fusionsCreated ?? 0) >= 1 },
+    { id: "fusion_league", label: "Débloquer la Ligue de Fusion", tier: "gold", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_UNLOCK), reveal: (i) => (i.fusionsCreated ?? 0) >= 1 || hasMk(i, MK_AUTEL) || hasMk(i, MK_FUSION_UNLOCK) },
+    { id: "fusion_champion", label: "Maître de la Chimère (Ligue de Fusion vaincue)", tier: "diamond", secret: true, cat: "fusion", earned: (i) => hasAnyMk(i, MK_FUSION_TIERS), reveal: (i) => hasMk(i, MK_FUSION_UNLOCK) || hasAnyMk(i, MK_FUSION_TIERS) },
+    { id: "fusion_gold", label: "Champion OR de la Ligue de Fusion", tier: "legend", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_OR), reveal: (i) => hasAnyMk(i, MK_FUSION_TIERS) },
 ]
 
 export interface BadgeState { id: string; tier: BadgeTier; points: number; earned: boolean; revealed: boolean }
@@ -189,5 +225,9 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         // Ligue 6-shiny & reflet niveau-sup : ÉVÉNEMENTS non reconstituables → champs save posés au moment T.
         leagueSixShiny: s.leagueSixShiny === true,
         mirrorWinHigherLevel: s.mirrorWinHigherLevel === true,
+        // ── zones & systèmes RUN 1 : dérivés DIRECTS de la save (rétroactifs + additifs, aucun nouveau champ) ──
+        markers: s.defeatedTrainers ?? [],
+        pnj5Wins: s.pnj5Wins ?? 0,
+        fusionsCreated: (s.fusionHistory ?? []).length,
     }
 }
