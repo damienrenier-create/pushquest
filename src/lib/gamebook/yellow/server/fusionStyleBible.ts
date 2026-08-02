@@ -6,7 +6,7 @@
 // pense à bumper PROMPT_VERSION dans fusionSpriteGen.ts pour distinguer les générations.
 
 /** Ancres de style : CHEMINS (relatifs à public/yellow/sprites/dex/) de sprites existants au rendu représentatif.
- *  Le générateur enverra leur version NORMALISÉE (_norm/<chemin>) comme références de RENDU (pas de contenu).
+ *  Le générateur FETCH le sprite ORIGINAL et le normalise à la volée pour servir de référence de RENDU (pas de contenu).
  *  Ici = 3 chimères faites main, silhouettes + palettes variées (dragon / félin feu-glace / oiseau élec). */
 export const STYLE_ANCHORS: string[] = [
     "fusion/dracorex.png",   // dragon quadrupède ailé — terreux/feu

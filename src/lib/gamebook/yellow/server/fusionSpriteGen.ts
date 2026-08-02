@@ -4,7 +4,9 @@ import "server-only"
 // GÉNÉRATEUR de sprite de fusion (Gemini "Nano Banana 2" = gemini-3.1-flash-image). SERVER-ONLY (clé jamais côté
 // client). Gaté par FUSION_GEN_ENABLED : renvoie {ok:false} immédiatement si désactivé → COÛT 0 tant qu'on n'active pas.
 // Résolution 512 (le tier le moins cher), qui matche le rendu détaillé des sprites maison (cf. STYLE_BIBLE v2).
-// Post-traitement sharp (trim alpha + recentrage + rejet fond opaque/vide).
+// Les RÉFÉRENCES envoyées au modèle (2 parents + ancres) = les sprites ORIGINAUX (déjà déployés dans public/),
+// normalisés À LA VOLÉE par sharp (trim + 512 transparent) → AUCUN dossier _norm dérivé à committer.
+// Post-traitement sharp de la sortie (trim alpha + recentrage + rejet fond opaque/vide).
 // ⚠️ La surface exacte du SDK @google/genai pour la sortie image évolue — À VÉRIFIER par Sartay au 1er test réel.
 //    Le code est DÉFENSIF (tout échec → {ok:false}) et PLAFONNÉ en amont (route API : plafond TOTAL + journalier).
 
@@ -24,18 +26,15 @@ export function fusionGenEnabled(): boolean {
     return process.env.FUSION_GEN_ENABLED === "true" && !!process.env.GEMINI_API_KEY
 }
 
-async function fetchB64(url: string): Promise<string | null> {
+/** Fetch un sprite ORIGINAL (public/) et le NORMALISE à la volée (trim alpha + recentrage 512 transparent) → base64.
+ *  Renvoie null en cas d'échec. Évite de committer un dossier _norm de fichiers dérivés (~54 Mo). */
+async function fetchNormalizedB64(url: string): Promise<string | null> {
     try {
         const r = await fetch(url)
         if (!r.ok) return null
-        return Buffer.from(await r.arrayBuffer()).toString("base64")
+        const png = await sharp(Buffer.from(await r.arrayBuffer())).ensureAlpha().trim().resize(RES, RES, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()
+        return png.toString("base64")
     } catch { return null }
-}
-
-/** Chemin de sprite d'une espèce → nom de fichier relatif au dossier dex (pour trouver sa version _norm). */
-function dexRelPath(spritePath: string | undefined): string | null {
-    if (!spritePath) return null
-    return spritePath.replace(/^\/yellow\/sprites\/dex\//, "")
 }
 
 // Les bords sont-ils MAJORITAIREMENT transparents ? (sinon = fond non découpé → on rejette)
@@ -65,16 +64,15 @@ export async function generateFusionSprite(opts: {
     const [aId, bId] = canonicalPair(opts.aId, opts.bId)
     const spA = getSpecies(aId), spB = getSpecies(bId)
     if (!spA || !spB) return { ok: false, error: "unknown-species" }
+    if (!spA.sprite || !spB.sprite) return { ok: false, error: "no-parent-sprite" }
 
-    // Références NORMALISÉES : d'abord les 2 PARENTS (dérivés de leur vrai chemin de sprite → _norm/<fichier>),
-    //   puis les ANCRES de style (chemins de STYLE_ANCHORS → _norm/<chemin>, ex. _norm/fusion/dracorex.png).
-    const aRel = dexRelPath(spA.sprite), bRel = dexRelPath(spB.sprite)
-    if (!aRel || !bRel) return { ok: false, error: "no-parent-sprite" }
-    const parentUrls = [aRel, bRel].map((rel) => `${opts.origin}/yellow/sprites/dex/_norm/${rel}`)
-    const anchorUrls = STYLE_ANCHORS.map((p) => `${opts.origin}/yellow/sprites/dex/_norm/${p}`)
-    const parentRefs = (await Promise.all(parentUrls.map(fetchB64))).filter((x): x is string => !!x)
-    if (parentRefs.length < 2) return { ok: false, error: "no-refs" } // il FAUT les 2 parents normalisés (lance normalize-dex-sprites.mjs)
-    const anchorRefs = (await Promise.all(anchorUrls.map(fetchB64))).filter((x): x is string => !!x)
+    // Références : sprites ORIGINAUX des 2 PARENTS puis ANCRES de style (STYLE_ANCHORS = chemins sous dex/),
+    //   normalisés à la volée. Ordre : parent A, parent B, puis ancres.
+    const parentUrls = [spA.sprite, spB.sprite].map((s) => `${opts.origin}${s}`)
+    const anchorUrls = STYLE_ANCHORS.map((p) => `${opts.origin}/yellow/sprites/dex/${p}`)
+    const parentRefs = (await Promise.all(parentUrls.map(fetchNormalizedB64))).filter((x): x is string => !!x)
+    if (parentRefs.length < 2) return { ok: false, error: "no-refs" } // il FAUT les 2 parents (sprites originaux introuvables ?)
+    const anchorRefs = (await Promise.all(anchorUrls.map(fetchNormalizedB64))).filter((x): x is string => !!x)
     const refs = [...parentRefs, ...anchorRefs]
 
     const prompt = [

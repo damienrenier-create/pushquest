@@ -28,20 +28,15 @@ Il y a **trois ceintures de sécurité**, du plus fort au plus souple :
 
 ---
 
-## Étape 1 — Préparer les références (local, gratuit)
+## Étape 1 — Style (rien à générer)
 
-Le générateur s'appuie sur les sprites **normalisés** des parents comme références visuelles.
+Aucun script à lancer : le générateur **normalise les sprites de référence à la volée** (il fetch les
+sprites originaux déjà déployés dans `public/` et les recadre en mémoire). Pas de dossier `_norm` à committer.
 
-```bash
-node scripts/normalize-dex-sprites.mjs
-```
-
-→ crée `public/yellow/sprites/dex/_norm/*.png` (512×512, fond transparent, sujet recentré).
-**Coût 0 €, aucun réseau.** À relancer si tu ajoutes des sprites au Pokédex.
-
-*(Optionnel mais recommandé)* Ouvre `src/lib/gamebook/yellow/server/fusionStyleBible.ts` et remplis
-`STYLE_ANCHORS` avec 2-3 `speciesId` de Daemons **finaux** au rendu représentatif de ton style maison
-(ex. un dragon, un colosse, un élémentaire). Affine `STYLE_BIBLE` si besoin.
+Il reste juste, si tu veux ajuster le rendu, à éditer `src/lib/gamebook/yellow/server/fusionStyleBible.ts` :
+- `STYLE_ANCHORS` = 2-3 **chemins** de sprites représentatifs du style (défaut : les 3 chimères faites main
+  `fusion/dracorex.png`, `fusion/pyromaree.png`, `fusion/aquilwatt.png`) ;
+- `STYLE_BIBLE` = la consigne de style (déjà calée sur ton pixel art détaillé).
 
 ---
 
