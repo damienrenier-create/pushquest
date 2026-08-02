@@ -5,9 +5,9 @@
 //
 // GARANTIE BUDGET :
 //   • FUSION_GEN_ENABLED != "true" → aucune génération, jamais (coût 0).
-//   • Plafond TOTAL à vie (FUSION_GEN_TOTAL_CAP, défaut 250 ≈ ~12 €) = SUM(attempts) sur toutes les paires.
-//   • Plafond JOURNALIER (FUSION_GEN_DAILY_CAP, défaut 15) = nb de paires créées sur 24 h.
-//   • ⚠️ Le VRAI coupe-circuit absolu reste le budget Google Cloud (à poser côté console). Cf. SETUP.
+//   • Plafond TOTAL à vie (FUSION_GEN_TOTAL_CAP, défaut 500 ≈ ~22 $) = SUM(attempts) sur toutes les paires.
+//   • Plafond JOURNALIER (FUSION_GEN_DAILY_CAP, défaut 50) = nb de paires créées sur 24 h.
+//   • ⚠️ Le VRAI coupe-circuit absolu reste le budget Google Cloud (à poser à ~15 € côté console). Cf. SETUP.
 // Table gated (prisma as any).fusionSprite → compile + neutre tant que db:push n'a pas créé la table.
 
 import { NextRequest, NextResponse } from "next/server"
@@ -21,8 +21,8 @@ import { generateFusionSprite, fusionGenEnabled, PROMPT_VERSION } from "@/lib/ga
 export const dynamic = "force-dynamic"
 export const maxDuration = 60 // la génération image peut prendre quelques secondes
 
-const TOTAL_CAP = Number(process.env.FUSION_GEN_TOTAL_CAP ?? 250)
-const DAILY_CAP = Number(process.env.FUSION_GEN_DAILY_CAP ?? 15)
+const TOTAL_CAP = Number(process.env.FUSION_GEN_TOTAL_CAP ?? 500)
+const DAILY_CAP = Number(process.env.FUSION_GEN_DAILY_CAP ?? 50)
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)

@@ -14,6 +14,7 @@ import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFus
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
+import { useFusionSprite } from "../useFusionSprite"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 type Tab = "rules" | "official" | "mine"
@@ -57,6 +58,17 @@ function FusionSprite({ src, ring = "#6a5a8a", size = 66 }: { src?: string; ring
     )
 }
 
+// Vignette d'une fusion CRÉÉE sans sprite officiel : affiche le sprite GÉNÉRÉ (cache serveur) s'il est prêt,
+// sinon le placeholder Chimère. Lecture seule (trigger:false) : la Fusiodex ne DÉCLENCHE pas de génération
+// (anti-spoiler) — le sprite a été généré à l'Autel au moment de la création.
+function FusionThumb({ aId, bId, types, aSprite, bSprite, ring, size = 66 }: {
+    aId: string; bId: string; types: string[]; aSprite?: string; bSprite?: string; ring?: string; size?: number
+}) {
+    const { url } = useFusionSprite(aId, bId, { types, trigger: false })
+    if (url) return <FusionSprite src={url} ring={ring} size={size} />
+    return <ChimeraPlaceholder aSprite={aSprite} bSprite={bSprite} types={types} size={size} />
+}
+
 function StatBars({ stats }: { stats: FusionStats }) {
     const CAP = 180
     return (
@@ -93,8 +105,8 @@ export default function FusiodexClient() {
     const created = useMemo(() => historyFusions(player.fusionHistory).map((f) => {
         const [aId, bId] = f.key.split("|")
         const off = officialFusionForParents(aId, bId)
-        // Sprites parents → placeholder Chimère quand la paire n'a pas de sprite officiel dédié.
-        return { ...f, sprite: off?.sprite ?? MISSINGNO_SPRITE, official: !!off?.sprite, aSprite: getSpecies(aId)?.sprite, bSprite: getSpecies(bId)?.sprite, displayName: off?.name ?? f.name }
+        // Sprites parents → placeholder Chimère (ou sprite généré) quand la paire n'a pas de sprite officiel dédié.
+        return { ...f, aId, bId, sprite: off?.sprite ?? MISSINGNO_SPRITE, official: !!off?.sprite, aSprite: getSpecies(aId)?.sprite, bSprite: getSpecies(bId)?.sprite, displayName: off?.name ?? f.name }
     }), [player.fusionHistory])
 
     // TRI de « Mes fusions » (défaut : plus récentes d'abord). Clic sur le tri actif = inverse le sens.
@@ -202,7 +214,7 @@ export default function FusiodexClient() {
                                 <div key={f.key} style={{ ...S.card, borderLeftColor: ring }}>
                                     {f.official || f.bst === 0
                                         ? <FusionSprite src={f.sprite} ring={ring} />
-                                        : <ChimeraPlaceholder aSprite={f.aSprite} bSprite={f.bSprite} types={f.types} size={66} />}
+                                        : <FusionThumb aId={f.aId} bId={f.bId} types={f.types} aSprite={f.aSprite} bSprite={f.bSprite} ring={ring} size={66} />}
                                     <div style={S.body}>
                                         <div style={S.name}>{f.displayName.toUpperCase()}</div>
                                         {f.bst > 0 ? (

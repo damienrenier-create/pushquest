@@ -16,15 +16,15 @@ Il y a **trois ceintures de sécurité**, du plus fort au plus souple :
 | # | Ceinture | Où | Ce qu'elle garantit |
 |---|----------|-----|---------------------|
 | **1** | **Budget Google Cloud** | Console Google Cloud → Billing | **LA vraie garantie.** Coupe/alerte la facturation au seuil que TU fixes. |
-| **2** | **Plafond TOTAL applicatif** | `FUSION_GEN_TOTAL_CAP` (défaut **250**) | Au plus ~250 images à vie ≈ **~12 €**. Au-delà : plus aucune génération. |
-| **3** | **Plafond journalier** | `FUSION_GEN_DAILY_CAP` (défaut **15**) | Au plus 15 nouvelles paires / 24 h (anti-emballement). |
+| **2** | **Plafond TOTAL applicatif** | `FUSION_GEN_TOTAL_CAP` (défaut **500**) | Au plus ~500 images à vie ≈ **~22 $**. Au-delà : plus aucune génération. |
+| **3** | **Plafond journalier** | `FUSION_GEN_DAILY_CAP` (défaut **50**) | Au plus 50 nouvelles paires / 24 h (anti-emballement). |
 
 > ⚠️ **Seule la ceinture 1 (budget Google Cloud) est une garantie *matérielle*.** Les ceintures 2 et 3
 > vivent dans le code : elles suffisent en usage normal, mais **le budget Cloud est ce qui t'empêche
 > *absolument* de dépasser.** **Ne saute pas l'étape 2.**
 
 **Ordre de grandeur** : modèle image Gemini « Nano Banana » en **0,5K (512 px)** ≈ **0,045 $ / image**.
-250 images ≈ **11–12 €**. Pour 7 potes et ~200 espèces, tu généreras au fil de l'eau — très loin des 20 €.
+500 images ≈ **~22 $ (~21 €)** : ce plafond applicatif **effleure** la limite des 20 €, donc **le budget Google Cloud (≈15 €) reste le vrai garde-fou** — tu l'atteins bien avant les 500. Pour 7 potes et ~200 espèces, tu généreras au fil de l'eau.
 
 ---
 
@@ -58,7 +58,7 @@ node scripts/normalize-dex-sprites.mjs
    « *Disable billing to stop usage* »). C'est ce qui **arrête** réellement les dépenses.
 
 > Sans coupe dure, le budget **alerte** mais ne bloque pas instantanément. Pour un plafond
-> *matériel*, garde AUSSI `FUSION_GEN_TOTAL_CAP` bas (250 = ~12 €) : les deux ensemble te bordent.
+> *matériel*, le budget Cloud (~15 €) coupe AVANT le plafond applicatif (500 ≈ ~22 $) : les deux ensemble te bordent.
 
 ---
 
@@ -72,8 +72,8 @@ node scripts/normalize-dex-sprites.mjs
    FUSION_GEN_ENABLED=true
    GEMINI_API_KEY=...
    BLOB_READ_WRITE_TOKEN=...
-   FUSION_GEN_TOTAL_CAP=250
-   FUSION_GEN_DAILY_CAP=15
+   FUSION_GEN_TOTAL_CAP=500
+   FUSION_GEN_DAILY_CAP=50
    ```
 
 4. **Migration additive** de la table de cache (une seule fois) :

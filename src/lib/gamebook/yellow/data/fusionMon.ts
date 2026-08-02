@@ -11,6 +11,7 @@ import { computeFusion, type FusionParent, type FusionResult } from "./fusionSpe
 import { getSpecies, registerCustomSpecies, unregisterCustomSpecies } from "./species"
 import { officialFusionForParents } from "./officialFusions"
 import { MISSINGNO_SPRITE } from "./fusionSprite"
+import { getFusionSpriteFromMemory } from "./fusionSpriteRegistry"
 import { createMonInstance } from "../battle/factory"
 import { fullStats } from "../battle/stats"
 import type { MonInstance, SpeciesData } from "../battle/types"
@@ -74,7 +75,9 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     //   (Ligue/boss/épreuve) passent leurs opts → la reconnaissance est court-circuitée.
     const official = opts?.name ? null : officialFusionForParents(a.speciesId, b.speciesId)
     const name = opts?.name ?? official?.name
-    const sprite = opts?.sprite ?? official?.sprite ?? MISSINGNO_SPRITE
+    // Ordre de résolution (invariant) : opts curé → officiel → sprite GÉNÉRÉ en cache mémoire (repli SYNCHRONE,
+    //   aucun réseau : le combat ne bloque jamais) → MissingNo. Le registre est chauffé par le hook/prefetch client.
+    const sprite = opts?.sprite ?? official?.sprite ?? getFusionSpriteFromMemory(a.speciesId, b.speciesId) ?? MISSINGNO_SPRITE
     // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les fusions de la Ligue).
     const moves = opts?.moves ?? result.moves
     registerCustomSpecies([buildFusionSpecies(id, result, sprite, name, opts?.moves)])

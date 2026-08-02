@@ -71,6 +71,7 @@ import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/ct
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
+import { prefetchFusionSprites } from "./useFusionSprite"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
@@ -549,6 +550,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusionHooks: FusionPvpHooks = { buildTeam: buildMyFusionTeam, dispose: (ids) => ids.forEach(disposeFusion) }
     // Nombre de fusions valides prêtes au combat (roster ↔ Daemons présents, déduplié par uid) → gate des défis.
     const myFusionCount = dedupFusions(player.fusionRoster).length
+    // Prefetch (GET-only, aucune génération, aucun coût) des sprites générés du roster de fusion → chauffe le
+    //   registre mémoire pour que le COMBAT de fusion affiche les sprites déjà en cache (repli sync dans buildFusion).
+    useEffect(() => {
+        const all = [...player.team, ...player.pc]
+        const byU = (uid: string) => all.find((m) => m.uid === uid)
+        const pairs = dedupFusions(player.fusionRoster)
+            .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b ? [a.speciesId, b.speciesId] as [string, string] : null })
+            .filter((x): x is [string, string] => !!x)
+        if (pairs.length) void prefetchFusionSprites(pairs)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [player.fusionRoster, player.team, player.pc])
     const challenge = useCasinoChallenge({
         // Borne Kart ouverte → on ne REÇOIT plus de défi (sinon combat PvP invisible sous la course,
         // forfait fantôme au démontage). Réciproque : on bloque l'ouverture de la borne si un défi/combat
