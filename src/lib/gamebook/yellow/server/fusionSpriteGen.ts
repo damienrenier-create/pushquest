@@ -3,7 +3,8 @@ import "server-only"
 //
 // GÉNÉRATEUR de sprite de fusion (Gemini "Nano Banana 2" = gemini-3.1-flash-image). SERVER-ONLY (clé jamais côté
 // client). Gaté par FUSION_GEN_ENABLED : renvoie {ok:false} immédiatement si désactivé → COÛT 0 tant qu'on n'active pas.
-// Résolution 0,5K (512) = tier le moins cher. Post-traitement sharp (trim alpha + recentrage + rejet fond opaque/vide).
+// Résolution 512 (le tier le moins cher), qui matche le rendu détaillé des sprites maison (cf. STYLE_BIBLE v2).
+// Post-traitement sharp (trim alpha + recentrage + rejet fond opaque/vide).
 // ⚠️ La surface exacte du SDK @google/genai pour la sortie image évolue — À VÉRIFIER par Sartay au 1er test réel.
 //    Le code est DÉFENSIF (tout échec → {ok:false}) et PLAFONNÉ en amont (route API : plafond TOTAL + journalier).
 
@@ -15,7 +16,7 @@ import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
 const MODEL = process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image" // Nano Banana 2 ; 0,5K ≈ 0,045 $/image
-export const PROMPT_VERSION = 1
+export const PROMPT_VERSION = 2 // v2 = STYLE_BIBLE « pixel art détaillé » + ancres = chimères faites main
 const RES = 512
 
 /** La génération est-elle ARMÉE ? (coupe-circuit env + présence de la clé). false → aucun appel, coût 0. */
@@ -29,6 +30,12 @@ async function fetchB64(url: string): Promise<string | null> {
         if (!r.ok) return null
         return Buffer.from(await r.arrayBuffer()).toString("base64")
     } catch { return null }
+}
+
+/** Chemin de sprite d'une espèce → nom de fichier relatif au dossier dex (pour trouver sa version _norm). */
+function dexRelPath(spritePath: string | undefined): string | null {
+    if (!spritePath) return null
+    return spritePath.replace(/^\/yellow\/sprites\/dex\//, "")
 }
 
 // Les bords sont-ils MAJORITAIREMENT transparents ? (sinon = fond non découpé → on rejette)
@@ -59,17 +66,25 @@ export async function generateFusionSprite(opts: {
     const spA = getSpecies(aId), spB = getSpecies(bId)
     if (!spA || !spB) return { ok: false, error: "unknown-species" }
 
-    // Références : sprites NORMALISÉS des 2 parents + ancres de style (dossier _norm produit par le script Lot 1).
-    const refIds = [aId, bId, ...STYLE_ANCHORS]
-    const refs = (await Promise.all(refIds.map((id) => fetchB64(`${opts.origin}/yellow/sprites/dex/_norm/${id}.png`)))).filter((x): x is string => !!x)
-    if (refs.length < 2) return { ok: false, error: "no-refs" } // au moins les 2 parents
+    // Références NORMALISÉES : d'abord les 2 PARENTS (dérivés de leur vrai chemin de sprite → _norm/<fichier>),
+    //   puis les ANCRES de style (chemins de STYLE_ANCHORS → _norm/<chemin>, ex. _norm/fusion/dracorex.png).
+    const aRel = dexRelPath(spA.sprite), bRel = dexRelPath(spB.sprite)
+    if (!aRel || !bRel) return { ok: false, error: "no-parent-sprite" }
+    const parentUrls = [aRel, bRel].map((rel) => `${opts.origin}/yellow/sprites/dex/_norm/${rel}`)
+    const anchorUrls = STYLE_ANCHORS.map((p) => `${opts.origin}/yellow/sprites/dex/_norm/${p}`)
+    const parentRefs = (await Promise.all(parentUrls.map(fetchB64))).filter((x): x is string => !!x)
+    if (parentRefs.length < 2) return { ok: false, error: "no-refs" } // il FAUT les 2 parents normalisés (lance normalize-dex-sprites.mjs)
+    const anchorRefs = (await Promise.all(anchorUrls.map(fetchB64))).filter((x): x is string => !!x)
+    const refs = [...parentRefs, ...anchorRefs]
 
     const prompt = [
         STYLE_BIBLE,
-        `\nCrée UNE créature unique = la FUSION de ${spA.name} (DOMINANT : silhouette de base) et ${spB.name} (éléments signature intégrés).`,
+        `\nCrée UNE créature unique = la FUSION de ${spA.name} (DOMINANT : silhouette/gabarit de base) et ${spB.name} (couleurs & éléments signature intégrés).`,
         `Nom : ${opts.fusionName}. Types : ${opts.types.join("/")} → palette dérivée de ces types.`,
         spA.description ? `Réf ${spA.name} : ${spA.description}` : "",
         spB.description ? `Réf ${spB.name} : ${spB.description}` : "",
+        `Images fournies : les 2 PREMIÈRES = les parents (1 = ${spA.name} base/gabarit ; 2 = ${spB.name} couleurs & attributs).`
+            + (anchorRefs.length ? ` Les ${anchorRefs.length} suivantes = RÉFÉRENCES DE STYLE : imite leur RENDU (grain de pixel, détail), NE COPIE PAS leur contenu.` : ""),
         `Une SEULE créature cohérente (pas un collage). Fond 100% TRANSPARENT, sujet centré, aucun texte/décor/bordure/ombre.`,
     ].filter(Boolean).join("\n")
 

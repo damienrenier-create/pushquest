@@ -1,44 +1,46 @@
 // scripts/normalize-dex-sprites.mjs
 //
-// LOT 1 — Normalise les sprites du Pokédex pour servir de RÉFÉRENCES au générateur de fusions.
-// Pour chaque public/yellow/sprites/dex/*.png : trim de l'alpha (retire le vide autour), recentre sur un canevas
-// carré 512×512 100% TRANSPARENT (le sujet occupe ~86% du cadre), écrit dans public/yellow/sprites/dex/_norm/.
-// Idempotent : re-passable sans dommage (réécrit _norm/). N'ALTÈRE JAMAIS les sprites d'origine.
+// LOT 1 — Normalise les sprites qui servent de RÉFÉRENCES au générateur de fusions. Pour chaque PNG : trim de
+// l'alpha (retire le vide autour), recentrage sur un canevas carré 512×512 100% TRANSPARENT (sujet ~86% du cadre).
+// Deux passes :
+//   • base   : public/yellow/sprites/dex/*.png            → public/yellow/sprites/dex/_norm/*.png        (les 2 parents)
+//   • ancres : public/yellow/sprites/dex/fusion/*.png      → public/yellow/sprites/dex/_norm/fusion/*.png  (STYLE_ANCHORS)
+// Idempotent, N'ALTÈRE JAMAIS les originaux. Coût 0 € (local, aucun réseau).
 //
 //   Lancer :  node scripts/normalize-dex-sprites.mjs
-//   Coût : 0 € (local, aucun réseau). Prérequis du générateur : les refs _norm doivent exister avant d'activer.
 
 import sharp from "sharp"
 import { readdirSync, mkdirSync, existsSync } from "fs"
 import path from "path"
 
-const SRC = "public/yellow/sprites/dex"
-const OUT = path.join(SRC, "_norm")
+const ROOT = "public/yellow/sprites/dex"
+const OUT = path.join(ROOT, "_norm")
 const SIZE = 512
 const CONTENT = Math.round(SIZE * 0.86) // le sujet tient dans ~86% du cadre, marge transparente autour
 
-if (!existsSync(SRC)) { console.error(`✗ dossier introuvable : ${SRC}`); process.exit(1) }
-mkdirSync(OUT, { recursive: true })
-
-const files = readdirSync(SRC).filter((f) => f.toLowerCase().endsWith(".png") && !f.startsWith("_"))
-let ok = 0, skipped = 0, failed = 0
-
-for (const f of files) {
-    const src = path.join(SRC, f)
-    const dst = path.join(OUT, f)
-    try {
-        // 1) trim de l'alpha → 2) recadrage "contain" dans un carré CONTENT → 3) centrage sur canevas SIZE transparent.
-        const trimmed = await sharp(src).ensureAlpha().trim().resize(CONTENT, CONTENT, { fit: "inside", withoutEnlargement: false }).png().toBuffer()
-        await sharp({ create: { width: SIZE, height: SIZE, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-            .composite([{ input: trimmed, gravity: "center" }])
-            .png()
-            .toFile(dst)
-        ok++
-    } catch (e) {
-        // certains PNG (ex. Image1.png non-sprite) peuvent échouer au trim → on saute sans casser le lot.
-        failed++
-        console.warn(`  ⚠ ${f} : ${String(e?.message ?? e).slice(0, 80)}`)
+async function normalizeDir(srcDir, outDir, label) {
+    if (!existsSync(srcDir)) { console.warn(`  (dossier absent, ignoré : ${srcDir})`); return }
+    mkdirSync(outDir, { recursive: true })
+    const files = readdirSync(srcDir).filter((f) => f.toLowerCase().endsWith(".png") && !f.startsWith("_"))
+    let ok = 0, failed = 0
+    for (const f of files) {
+        try {
+            // trim de l'alpha → recadrage "contain" dans un carré CONTENT → centrage sur canevas SIZE transparent.
+            const trimmed = await sharp(path.join(srcDir, f)).ensureAlpha().trim().resize(CONTENT, CONTENT, { fit: "inside", withoutEnlargement: false }).png().toBuffer()
+            await sharp({ create: { width: SIZE, height: SIZE, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+                .composite([{ input: trimmed, gravity: "center" }])
+                .png()
+                .toFile(path.join(outDir, f))
+            ok++
+        } catch (e) {
+            failed++
+            console.warn(`  ⚠ ${label}/${f} : ${String(e?.message ?? e).slice(0, 80)}`)
+        }
     }
+    console.log(`✓ ${label} : ${ok} normalisés · ${failed} échoués → ${outDir}`)
 }
 
-console.log(`✓ normalisés : ${ok} · ignorés : ${skipped} · échoués : ${failed} → ${OUT}`)
+if (!existsSync(ROOT)) { console.error(`✗ dossier introuvable : ${ROOT}`); process.exit(1) }
+await normalizeDir(ROOT, OUT, "base (parents)")
+await normalizeDir(path.join(ROOT, "fusion"), path.join(OUT, "fusion"), "fusion (ancres de style)")
+console.log("Terminé.")
