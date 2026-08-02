@@ -79,11 +79,12 @@ export async function POST(req: NextRequest) {
     if (!toUserId || toUserId === auth.userId) return NextResponse.json({ error: "Bad target" }, { status: 400 })
     // Énergie reversée au joueur mirouté = énergie dépensée par le vainqueur (bornée anti-triche). Fallback = ancien
     //   montant fixe si le client ne l'envoie pas (rétro-compat). Plancher GIFT_ENERGY pour que ça reste un vrai cadeau.
-    const GIFT_ENERGY_CAP = 3000
-    // BOOST « rattrapage » (Sartay 02/08) : le joueur dont le miroir IA est battu touche un peu PLUS que l'énergie
-    //   dépensée par le vainqueur (×1.4, plancher relevé à 60) → coup de pouce aux joueurs à la traîne.
-    const energy = typeof body.energy === "number" && isFinite(body.energy)
-        ? Math.max(60, Math.min(GIFT_ENERGY_CAP, Math.floor(body.energy * 1.4)))
+    // BOOST « rattrapage » (Sartay 02/08) : le joueur dont le miroir IA est battu touche ×2 l'énergie dépensée par
+    //   le vainqueur, SANS plafond de gameplay (plancher 60). Le garde-fou ci-dessous est purement ANTI-TRICHE
+    //   (valeur absurde, jamais atteinte en jeu légitime) pour bloquer une énergie injectée par un client falsifié.
+    const ANTI_CHEAT_MAX = 50000
+    const energy = typeof body.energy === "number" && isFinite(body.energy) && body.energy > 0
+        ? Math.max(60, Math.min(ANTI_CHEAT_MAX, Math.floor(body.energy * 2)))
         : Math.max(60, GIFT_ENERGY)
 
     try {
