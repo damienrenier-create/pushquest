@@ -32,6 +32,8 @@ import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import RunScoreboardPanel from "./RunScoreboardPanel"
 import RunBadgesPanel from "./RunBadgesPanel"
+import RustyLampModal from "./RustyLampModal"
+import GeniePanel from "./GeniePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import Run3IntroCinematic from "./Run3IntroCinematic"
@@ -76,6 +78,7 @@ import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteCl
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
@@ -429,7 +432,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard" | "badges" | "palmares">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard" | "badges" | "palmares" | "genie">("none")
     const [run2Snap, setRun2Snap] = useState<RunScores | null>(null)
     useEffect(() => { setRun2Snap(readRun2Snapshot()) }, [])
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
@@ -451,6 +454,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pcSort, setPcSort] = useState<"recent" | "lvl" | "hp" | "spc" | "atk" | "def" | "spe" | "alpha">("recent")
     const [pcSortDir, setPcSortDir] = useState(-1) // -1 = décroissant · 1 = croissant
     const [ctShop, setCtShop] = useState(false)
+    const [lampOpen, setLampOpen] = useState(false) // ARC LAMPE & GÉNIE : modal de la lampe rouillée (clic depuis le sac)
     const [ctPick, setCtPick] = useState<string | null>(null)
     // RESET « Recommencer le Nexus » — TRIPLE confirmation : 0 idle · 1 avertissement · 2 « c'est définitif » · 3 maintien 1,5 s.
     const [resetStep, setResetStep] = useState(0)
@@ -927,6 +931,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         }
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
+            }
+            // 🧞 ARC LAMPE & GÉNIE : le génie « revient » quand le créateur a fixé les contreparties (status PROPOSED).
+            //   Pop-up une seule fois (?claim=1 marque proposedSeen). Détail + accept/refus dans le menu → 🧞 Vœux.
+            if (!cancelled && getActiveWorld() !== "run3") {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/genie-wish?claim=1")
+                    const j = r.ok ? await r.json() : null
+                    if (!cancelled && j?.justReturned && j?.wish) {
+                        showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
+                            "*Une fumée dorée jaillit de ta lampe… le Génie est de retour !*",
+                            "« J'ai longuement pesé tes trois vœux, mortel. »",
+                            "« Chaque faveur a un prix. Ouvre le menu → 🧞 VŒUX pour découvrir mes conditions… et décider lesquelles tu acceptes. »",
+                        ])
+                    }
+                } catch { /* neutre */ }
             }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
@@ -1787,7 +1806,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (labOpen) { closeLab(); return true }
         if (moveReminderOpen) { closeMoveReminder(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "moves" || menu === "palmares") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "moves" || menu === "palmares" || menu === "genie") { setMenu("pause"); return true }
         if (menu === "reput" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("palmares"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
@@ -1911,6 +1930,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             invisible tant que le joueur n'a pas atteint l'Autel. */}
                         {player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
                             <button style={{ ...menuBtnStyle, borderColor: "#b98aff", color: "#d9b8ff" }} onClick={() => router.push("/gamebook/yellow/fusiodex")}>🧬 FUSIODEX</button>
+                        )}
+                        {/* ARC LAMPE & GÉNIE : onglet Vœux, débloqué une fois la lampe frottée (marker LAMP_RUBBED_MARKER). */}
+                        {player.defeatedTrainers.includes(LAMP_RUBBED_MARKER) && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => setMenu("genie")}>🧞 VŒUX</button>
                         )}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("palmares")}>🏆 PALMARÈS</button>
@@ -2252,14 +2275,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
-                                                {keys.map((it) => (
-                                                    <button key={it.id} style={{ ...menuBtnDimStyle, display: "block", textAlign: "left", height: "auto" }} disabled>
-                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                            <span>{it.name}</span><span>×{player.items[it.id]}</span>
-                                                        </span>
-                                                        {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
-                                                    </button>
-                                                ))}
+                                                {keys.map((it) => {
+                                                    // ARC LAMPE & GÉNIE : la « lampe rouillée » est le SEUL objet clé cliquable → ouvre son modal
+                                                    //   (frottement → génie), SANS être consommée. Les autres restent en lecture seule.
+                                                    const isLamp = it.id === LAMP_ITEM_ID
+                                                    return (
+                                                        <button
+                                                            key={it.id}
+                                                            style={{ ...(isLamp ? menuBtnStyle : menuBtnDimStyle), display: "block", textAlign: "left", height: "auto", ...(isLamp ? { borderColor: "#c9a227", color: "#ffd76a" } : {}) }}
+                                                            disabled={!isLamp}
+                                                            onClick={isLamp ? () => { setMenu("none"); setLampOpen(true) } : undefined}
+                                                        >
+                                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                                <span>{it.name}{isLamp ? " ✨" : ""}</span><span>×{player.items[it.id]}</span>
+                                                            </span>
+                                                            {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
+                                                        </button>
+                                                    )
+                                                })}
                                             </div>
                                         )
                                     })()}
@@ -2472,6 +2505,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
             {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("palmares")} hasRun2={activeWorld === "ngplus" || player.ngplusUsed} hasRun3={activeWorld === "run3" || player.run3Used} />}
             {menu === "badges" && <RunBadgesPanel close={() => setMenu("palmares")} />}
+            {menu === "genie" && <GeniePanel close={() => setMenu("pause")} />}
+            {lampOpen && <RustyLampModal onClose={() => setLampOpen(false)} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (

@@ -50,6 +50,7 @@ import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
+import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
@@ -889,6 +890,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   permanent. On surface juste son dialogue de victoire (comme le fait la branche générique).
             const tr = getTrainer(storeState.trainer.trainerId)
             if (tr?.victory?.length) rematchReward = { npcId: tr.id, npcName: tr.name, lines: [...tr.victory] }
+        } else if (storeState.trainer.trainerId === GENIE_TRAINER_ID) {
+            // ARC LAMPE & GÉNIE : le colporteur-embuscade vaincu → marque vaincu (embuscade one-shot, ne revient
+            //   plus jamais) + remet la « vieille lampe rouillée » dans le sac. Annonce en dialogue post-combat.
+            markTrainerDefeated(storeState.trainer.trainerId)
+            addItem(LAMP_ITEM_ID, 1)
+            rematchReward = { npcId: storeState.trainer.trainerId, npcName: getTrainer(GENIE_TRAINER_ID)?.name ?? "COLPORTEUR", lines: [
+                "Tu m'as battu à la loyale, voyageur.",
+                "Prends ceci : une vieille lampe rouillée trouvée dans les dunes… je n'en ai jamais rien tiré.",
+                "🪔 Tu obtiens la LAMPE ROUILLÉE ! (sac → Objets clés)",
+            ] }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

@@ -59,6 +59,8 @@ import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_L
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
+import { fullStats } from "../battle/stats"
+import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough } from "../data/genieLamp"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
@@ -167,6 +169,9 @@ let grotteFusionPop: { prev1: string; prev2: string; primed: string; zone: strin
 //   sauvage (⇒ il faut un Repousse de la fusion jusqu'à l'échelle). Réinitialisée par tout `setMap` hors chambre
 //   (entrée Grotte, QUITTER, warp dev) ET par toute transition marchée hors Grotte/chambre.
 let ukognofyChainArmed = false
+// ARC LAMPE & GÉNIE — compteur d'embuscade (transient : re-tiré au chargement dans [3,10]). Le DÉSARMEMENT
+//   définitif (colporteur battu) est PERSISTÉ via le marker GENIE_TRAINER_ID (defeatedTrainers). -1 = pas encore tiré.
+let genieAmbushCountdown = -1
 // UKOGNOFY — « déjà affronté CETTE visite » (transient, remis à false à chaque arrivée dans la chambre). Garantit
 //   UNE SEULE rencontre par venue : après le combat, ré-approcher le PNJ ne relance rien (il faut ressortir et
 //   refaire la chaîne). Empêche de brûler les 3 tentatives en une seule visite.
@@ -505,6 +510,13 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
             return { ...s, level: lvl, speciesId: speciesAtLevel(s.speciesId, lvl) }
         })
         setDailyMarker("rouquin_gelee_", rouquinGeleeDayMarker())
+    }
+    // ARC LAMPE & GÉNIE : le colporteur-embuscade est calibré NETTEMENT sous le lead du joueur (facile),
+    //   avec évolution au stade naturel du niveau (jamais une souche à un niveau non naturel). Cf. genieTrainerLevel.
+    if (trainerId === GENIE_TRAINER_ID) {
+        const genieLead = team.find((m) => m.currentHp > 0)
+        const glvl = genieTrainerLevel(genieLead?.level ?? 5)
+        specs = specs.map((s) => ({ ...s, level: glvl, speciesId: speciesAtLevel(s.speciesId, glvl) }))
     }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
@@ -1301,6 +1313,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
                 })
                 if (wild) {
+                    // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
+                    //   décompte N∈[3,10] (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
+                    //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
+                    //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
+                    if (!isTrainerDefeated(GENIE_TRAINER_ID)) {
+                        if (genieAmbushCountdown < 0) genieAmbushCountdown = rollLampCountdown()
+                        const genieTeamHp = team.map((m) => { const gsp = getSpecies(m.speciesId); return { hp: m.currentHp, maxHp: gsp ? fullStats(m, gsp).hp : m.currentHp } })
+                        if (genieAmbushCountdown <= 0 && teamFreshEnough(genieTeamHp)) {
+                            genieAmbushCountdown = rollLampCountdown() // ré-arme pour une éventuelle défaite (ignoré une fois gagné)
+                            const gt = getTrainer(GENIE_TRAINER_ID)
+                            if (gt) {
+                                set({ encounterCooldown: 1, dialogue: { npcId: gt.id, npcName: gt.name, lines: gt.intro, lineIndex: 0 }, pendingTrainerId: gt.id, pendingRematch: false })
+                                return
+                            }
+                        } else if (genieAmbushCountdown > 0) {
+                            genieAmbushCountdown--
+                        }
+                    }
                     // MIMIMOY roaming (post-quête du brocanteur) : peut REMPLACER cette rencontre. Rôde dans le monde
                     //   où l'échange l'a armé — l'échange est proposé en LIVE et en RUN 3, donc le pop suit les deux
                     //   (pas le run 2). Chance décroissante par apparition (25→20→15→10→5 %, plancher 5 %), MAX 10

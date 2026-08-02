@@ -151,6 +151,36 @@ export const TRAINERS: TrainerData[] = [
             "Je vais m'entraîner sur la Route Nord !",
         ],
     },
+    // ARC LAMPE & GÉNIE — colporteur-embuscade (id = GENIE_TRAINER_ID de data/genieLamp.ts). Lancé PAR CODE
+    //   (swap depuis une rencontre sauvage, cf. gameStore), placé HORS-CARTE pour n'avoir aucun hitbox overworld.
+    //   Son équipe est re-nivelée nettement SOUS le lead au lancement (tryLaunchTrainer) → facile. Vaincu → il
+    //   remet la « vieille lampe rouillée » (reward hook battleStore).
+    {
+        id: "y_genie_ambush",
+        name: "COLPORTEUR ZALIM",
+        title: "Marchand des dunes",
+        sprite: { emoji: "🧞", color: "#c9a227" },
+        mapId: "__genie_ambush__", // carte fictive : aucune tuile joueur ne l'atteint (pas de double-hitbox overworld)
+        x: -1,
+        y: -1,
+        team: [
+            { speciesId: "plumiot", level: 5 },
+            { speciesId: "carlinou", level: 5 },
+            { speciesId: "cailloutchi", level: 5 },
+            { speciesId: "cornaissant", level: 5 },
+            { speciesId: "trolystrik", level: 5 },
+        ],
+        reward: 0,
+        aiLevel: "trainer",
+        intro: [
+            "*Une caravane poussiéreuse surgit des hautes herbes. Un marchand encapuchonné te barre la route.*",
+            "Halte, voyageur ! Nul ne croise ma route sans un petit duel amical…",
+            "Bats mes cinq Daemons, et je te confierai un trésor que personne n'a jamais su faire parler !",
+        ],
+        defeat: [
+            "Ha ! Marché conclu — le trésor est à toi.",
+        ],
+    },
     {
         id: "y_trainer_mia",
         name: "EXPLORATRICE MIA",
