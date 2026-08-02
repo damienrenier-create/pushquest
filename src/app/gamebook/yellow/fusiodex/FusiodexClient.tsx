@@ -6,9 +6,9 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, setFusionRoster } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { officialFusions, officialFusionProgress, historyFusions, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
@@ -129,6 +129,29 @@ export default function FusiodexClient() {
         return sortDir === "desc" ? arr.reverse() : arr
     }, [created, sortKey, sortDir])
 
+    // ÉQUIPER une fusion pour la Ligue : l'historique ne mémorise que les ESPÈCES → on retrouve 2 Daemons possédés
+    //   de ces espèces (le + haut niveau dispo, non déjà engagés, instances distinctes) et on les ajoute au roster.
+    const [equipMsg, setEquipMsg] = useState<{ ok: boolean; text: string } | null>(null)
+    const equipForLeague = (aId: string, bId: string, name: string) => {
+        const roster = player.fusionRoster
+        if (roster.length >= 6) { setEquipMsg({ ok: false, text: "Équipe de fusion pleine (6 max) — retire-en une à l'Atelier." }); return }
+        const box = [...player.team, ...player.pc]
+        const byUid = (uid: string) => box.find((m) => m.uid === uid)
+        const committed = new Set(roster.flatMap((p) => [p.a, p.b]))
+        if (roster.some((p) => byUid(p.a)?.speciesId === aId && byUid(p.b)?.speciesId === bId)) {
+            setEquipMsg({ ok: false, text: `${name} est déjà dans ton équipe de Ligue.` }); return
+        }
+        const pick = (spId: string, exclude?: string) => box
+            .filter((m) => m.speciesId === spId && !committed.has(m.uid) && m.uid !== exclude)
+            .sort((x, y) => y.level - x.level)[0] // le + haut niveau dispo
+        const a = pick(aId)
+        const b = pick(bId, a?.uid)
+        if (!a || !b) { setEquipMsg({ ok: false, text: "Pas assez de Daemons dispo de ces espèces (déjà engagés ou relâchés ?)." }); return }
+        setFusionRoster([...roster, { a: a.uid, b: b.uid }])
+        persistYellowSave()
+        setEquipMsg({ ok: true, text: `✓ ${name} équipée pour la Ligue ! (${roster.length + 1}/6)` })
+    }
+
     return (
         <div style={S.root}>
             <div style={S.aurora} aria-hidden />
@@ -192,7 +215,8 @@ export default function FusiodexClient() {
                     </div>
                 ) : (
                     <div style={S.list}>
-                        <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais, même après avoir défait la paire.</div>
+                        <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais. Le bouton <b>⚔️ Équiper</b> la charge dans ton équipe de Ligue (retrouve 2 Daemons possédés de ces espèces).</div>
+                        {equipMsg && <div style={{ ...S.equipMsg, background: equipMsg.ok ? "rgba(46,160,90,0.16)" : "rgba(200,60,60,0.14)", borderColor: equipMsg.ok ? "#2ea05a" : "#c83c3c", color: equipMsg.ok ? "#8ff0b5" : "#ffb0b0" }}>{equipMsg.text}</div>}
                         {created.length > 1 && (
                             <div style={S.sortBar}>
                                 <span style={S.sortLabel}>Trier</span>
@@ -222,6 +246,7 @@ export default function FusiodexClient() {
                                                 <div style={S.parentLine}>{f.parents[0]} <span style={{ opacity: 0.5 }}>✦</span> {f.parents[1]} · <b style={{ color: "#d9b8ff" }}>Total {f.bst}</b></div>
                                                 <TypeChips types={f.types} />
                                                 <StatBars stats={f.stats} />
+                                                <button style={S.equipBtn} onClick={() => equipForLeague(f.aId, f.bId, f.displayName)}>⚔️ Équiper pour la Ligue</button>
                                             </>
                                         ) : (
                                             <div style={S.descMuted}>{f.parents[0]} × {f.parents[1]} — chimère archivée</div>
@@ -281,4 +306,6 @@ const S: Record<string, React.CSSProperties> = {
     sortLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1, opacity: 0.65, marginRight: 2, textTransform: "uppercase" },
     sortBtn: { background: "rgba(36,29,56,0.9)", border: "1px solid #4a3a6a", borderRadius: 999, padding: "3px 9px", color: "#b8a8d8", fontFamily: "'Courier New', monospace", fontSize: 10.5, fontWeight: 700, cursor: "pointer", transition: "all .1s" },
     sortBtnOn: { background: "linear-gradient(180deg,#8a5ae0,#6a3ac8)", borderColor: "#c79cff", color: "#fff", boxShadow: "0 2px 8px #7a4ad055" },
+    equipBtn: { marginTop: 7, width: "100%", background: "linear-gradient(180deg,#8a5ae0,#6a3ac8)", border: "1px solid #c79cff", borderRadius: 8, color: "#fff", fontFamily: "'Courier New', monospace", fontSize: 11.5, fontWeight: 800, letterSpacing: 0.5, padding: "6px", cursor: "pointer" },
+    equipMsg: { border: "1px solid", borderRadius: 8, padding: "7px 11px", fontSize: 11.5, fontWeight: 700, lineHeight: 1.4, margin: "2px 0 4px" },
 }
