@@ -22,6 +22,7 @@ import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtT
 import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
 import { FusionPreviewCard } from "./FusionPreviewCard"
+import { FusionPickerView } from "./FusionPickerView"
 import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
@@ -2874,18 +2875,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         )
                                     })}
                                     {atelierPicking && (
-                                        <div style={{ maxHeight: 176, overflowY: "auto", border: "1px solid rgba(120,120,120,0.35)", borderRadius: 6, margin: "4px 0", padding: 3 }}>
-                                            {collection.map((m) => {
-                                                const committed = rosterUids.has(m.uid) // déjà engagé dans une autre fusion → indispo
-                                                const used = committed || atelierAdd[atelierPicking === "a" ? "b" : "a"] === m.uid
-                                                return (
-                                                    <button key={m.uid} disabled={used} style={{ ...(used ? menuBtnDimStyle : menuBtnStyle), textAlign: "left", margin: "2px 0" }}
-                                                        onClick={() => { setAtelierAdd((d) => d ? { ...d, [atelierPicking]: m.uid } : d); setAtelierPicking(null) }}>
-                                                        {displayName(m)} <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")} · N.{m.level}{committed ? " · déjà en fusion" : ""}</span>
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
+                                        <FusionPickerView
+                                            slot={atelierPicking}
+                                            daemons={collection}
+                                            disabledUids={new Set([...rosterUids, atelierAdd[atelierPicking === "a" ? "b" : "a"]].filter(Boolean))}
+                                            onPick={(uid) => { setAtelierAdd((d) => d ? { ...d, [atelierPicking]: uid } : d); setAtelierPicking(null) }}
+                                            onClose={() => setAtelierPicking(null)}
+                                        />
                                     )}
                                     {draftPreview && (
                                         <FusionPreviewCard name={draftName} types={draftPreview.types} stats={draftPreview.stats} moves={draftPreview.moves} level={draftPreview.level} spriteSrc={draftA && draftB ? officialFusionForParents(draftA.speciesId, draftB.speciesId)?.sprite : undefined} aSprite={draftA ? getSpecies(draftA.speciesId)?.sprite : undefined} bSprite={draftB ? getSpecies(draftB.speciesId)?.sprite : undefined} aId={draftA?.speciesId} bId={draftB?.speciesId} />
