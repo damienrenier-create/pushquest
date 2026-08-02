@@ -153,6 +153,9 @@ export interface SpeciesData {
     rarity: Rarity
     description: string
     sprite: string
+    /** FUSION (espèce éphémère) : speciesId des 2 parents → permet d'afficher le placeholder Chimère (moitié-moitié)
+     *  en COMBAT quand aucun sprite dédié/généré n'est disponible (repli bien plus joli que MissingNo). */
+    fusionParents?: [string, string]
     /** Courbe d'XP (cf. game design). Défaut implicite : "medium_fast" (= L³). */
     growthRate?: "medium_fast" | "fast" | "slow" | "medium_slow"
     /** Rôle de game-design (lisibilité éditoriale, non utilisé par le moteur). */

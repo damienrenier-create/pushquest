@@ -44,7 +44,7 @@ export function applyFusionStats(inst: MonInstance, f: FusionResult): void {
 
 /** SpeciesData ÉPHÉMÈRE d'une fusion. baseStats.spc = la Spéciale unique (le COMBAT lit frozenStats).
  *  Masquée du dex. `nameOverride` = nom figé (ex. les 21 noms de la Ligue de Fusion) sinon le portmanteau auto. */
-function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOverride?: string, movesOverride?: string[]): SpeciesData {
+function buildFusionSpecies(id: string, f: FusionResult, sprite: string, parentSpeciesIds: [string, string], nameOverride?: string, movesOverride?: string[]): SpeciesData {
     // TAUX DE CAPTURE ∝ 1/BST : la Fusio-Ball (non garantie) est redoutable sur une fusion FAIBLE (BST bas → catchRate
     //   haut), ardue sur une fusion très PUISSANTE (BST énorme → catchRate ~3). Clamp 3..60. (BST sur 5 stats.)
     const bst = f.stats.hp + f.stats.atk + f.stats.def + f.stats.spe + f.stats.spc
@@ -58,7 +58,7 @@ function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOve
         //   délirante. N'affecte pas le fusionné éphémère lui-même (expMult=0 en combat de fusion → 0 level-up réel).
         catchRate, baseExp: Math.min(250, Math.max(1, Math.round(bst * 0.4))), rarity: "RARE",
         description: `Fusion éphémère de ${f.parents[0]} et ${f.parents[1]}.`,
-        sprite, hiddenUntilCaught: true,
+        sprite, fusionParents: parentSpeciesIds, hiddenUntilCaught: true,
     }
 }
 
@@ -80,7 +80,7 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     const sprite = opts?.sprite ?? official?.sprite ?? getFusionSpriteFromMemory(a.speciesId, b.speciesId) ?? MISSINGNO_SPRITE
     // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les fusions de la Ligue).
     const moves = opts?.moves ?? result.moves
-    registerCustomSpecies([buildFusionSpecies(id, result, sprite, name, opts?.moves)])
+    registerCustomSpecies([buildFusionSpecies(id, result, sprite, [a.speciesId, b.speciesId], name, opts?.moves)])
     const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
     instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
