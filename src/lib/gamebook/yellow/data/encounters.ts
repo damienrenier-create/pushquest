@@ -235,16 +235,16 @@ const ZONES: Record<string, Zone> = {
         rate: 0.14,
         pool: [
             // Communs (passe-partout / habitats larges)
-            { speciesId: "plumiot", base: COMMON, affinity: ["mountain", "sapin"], repulsion: ["water"] },
+            { speciesId: "plumiot", base: 60, affinity: ["mountain", "sapin"], repulsion: ["water"] }, // un peu plus rare qu'avant (il est COMMUN sur la Plage)
             { speciesId: "couperin", base: COMMON, player: "combat" },
-            { speciesId: "cailloutchi", base: COMMON, affinity: ["mountain"], player: "rocheSol" },
+            { speciesId: "cailloutchi", base: VERY_RARE, affinity: ["mountain"], player: "rocheSol" }, // super rare LOIN des montagnes ; ×4 tout près (affinité). Commun dans la Grotte Rocheuse.
             { speciesId: "ruffiant", base: COMMON, affinity: ["sapin"] },
             { speciesId: "cornaissant", base: COMMON, affinity: ["mountain", "sapin"], repulsion: ["water"] },
             // Peu communs (élémentaires, denses dans leur biome)
             { speciesId: "electroatiss", base: UNCOMMON, player: "elec" },
             { speciesId: "pampousse", base: UNCOMMON, affinity: ["sapin"] },
             { speciesId: "fennaise", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
-            { speciesId: "lavapetit", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
+            { speciesId: "lavapetit", base: VERY_RARE, affinity: ["mountain"], repulsion: ["water"] }, // super rare loin des montagnes ; ×4 tout près. Plus commun dans la Grotte Rocheuse.
             // (Eau/Glace — loutrille, piouflot, auroruff — déplacés à la GROTTE GELÉE.)
             { speciesId: "broussours", base: UNCOMMON, affinity: ["sapin"], player: "combat" },
             { speciesId: "trolystrik", base: UNCOMMON, affinity: ["mountain"], player: "combat" },
@@ -263,9 +263,9 @@ const ZONES: Record<string, Zone> = {
         pool: [
             // 🪨 ROCHE (la grotte) — repulsion water pour laisser le LAC à l'eau (2 biomes).
             { speciesId: "mottoche", base: 180, repulsion: ["water"] },                       // « Magicarpe » rocheux : COMMUN ++
-            { speciesId: "cailloutchi", base: 60, repulsion: ["water"], player: "rocheSol" }, // déjà commun dehors → moins ici
+            { speciesId: "cailloutchi", base: COMMON, repulsion: ["water"], player: "rocheSol" }, // rare dehors (loin des montagnes) → COMMUN ici, son vrai habitat rocheux
             { speciesId: "rembodo", base: UNCOMMON, repulsion: ["water"] },                   // Roche/Vol
-            { speciesId: "lavapetit", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Feu
+            { speciesId: "lavapetit", base: 70, repulsion: ["water"] },                       // Roche/Feu — un peu plus commun ici (rare en Route Nord)
             { speciesId: "limaroche", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Psy
             { speciesId: "quadroc", base: UNCOMMON, repulsion: ["water"] },                   // lignée diamant
             { speciesId: "braisecaille", base: VERY_RARE, affinity: ["water"] },              // tortue FEU/EAU : RESTE dans la Rocheuse (au lac)

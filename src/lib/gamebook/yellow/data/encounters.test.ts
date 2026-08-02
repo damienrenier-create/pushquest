@@ -38,10 +38,12 @@ describe("pondération selon le biome", () => {
     })
     it("poche neutre : les communs dominent, biome sans effet", () => {
         const w = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y)
-        expect(w.plumiot).toBe(100)      // commun, aucun multiplicateur
         expect(w.couperin).toBe(100)     // commun neutre (pas de biome)
+        expect(w.plumiot).toBe(60)       // un peu plus rare que les communs (il est COMMUN sur la Plage)
+        expect(w.cailloutchi).toBe(5)    // super rare LOIN des montagnes (×4 tout près ; commun dans la Grotte Rocheuse)
+        expect(w.lavapetit).toBe(5)      // idem : super rare loin des montagnes
         expect(w.draclet).toBe(5)        // très rare
-        expect(w.plumiot).toBeGreaterThan(w.sporbeo)
+        expect(w.couperin).toBeGreaterThan(w.sporbeo)
     })
 })
 
