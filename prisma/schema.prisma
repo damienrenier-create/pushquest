@@ -463,6 +463,31 @@ model SponsorGift {
   @@index([toUserId, claimed])
 }
 
+// GÉNIE — les 3 VŒUX d'un joueur (arc de la Lampe rouillée). Cycle :
+//   SUBMITTED (soumis via le génie) → PROPOSED (le créateur a fixé une contrepartie/réponse par vœu)
+//   → RESOLVED (le joueur a accepté/refusé chaque vœu). `userId @unique` = one-shot par joueur.
+// Pas de @relation (userId String) → User intact. Additif (db:push). Pattern gaté côté code (prisma as any + try/catch).
+model GenieWish {
+  id           String   @id @default(cuid())
+  userId       String   @unique  // un seul jeu de vœux par joueur (arc one-shot)
+  nickname     String            // pseudo trusté serveur (annonce du génie)
+  wish1        String
+  wish2        String
+  wish3        String
+  status       String   @default("SUBMITTED") // SUBMITTED | PROPOSED | RESOLVED
+  condition1   String?  // contrepartie/réponse fixée par le créateur, par vœu
+  condition2   String?
+  condition3   String?
+  accepted1    Boolean? // choix du joueur (accepte/refuse) après le retour du génie, par vœu
+  accepted2    Boolean?
+  accepted3    Boolean?
+  proposedSeen Boolean  @default(false) // le pop-up « le génie revient » a-t-il déjà été montré au login
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.

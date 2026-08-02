@@ -179,6 +179,13 @@ export const ITEMS: Record<string, ItemData> = {
         id: "noyau_metal", name: "Noyau de Métal", category: "MISC",
         description: "Alliage expérimental du Prof. Chen. Son cœur métallique transmute la roche de Magmator en un métal vivant — le fait évoluer en Magnetor.", price: 0,
     },
+    // Arc « La Lampe & le Génie » : remise par le dresseur-embuscade vaincu. Objet CLÉ (MISC pur, aucun
+    // repelSteps/torchRadius/reviveFrac) → apparaît dans la poche « Objets clés » ; un clic ouvre le modal
+    // de frottement (RustyLampModal), SANS consommer l'objet. Cf. data/genieLamp.ts (LAMP_ITEM_ID).
+    lampe_rouillee: {
+        id: "lampe_rouillee", name: "Lampe rouillée", category: "MISC",
+        description: "Une vieille lampe sale et poussiéreuse. On dirait qu'un bon frottage ne lui ferait pas de mal…", price: 0,
+    },
 }
 
 /** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
