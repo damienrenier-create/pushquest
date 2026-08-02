@@ -25,6 +25,7 @@ import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/atta
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
+import { useFusionSprite } from "../useFusionSprite"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
@@ -735,13 +736,19 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
     // Sprite PNG (public/) avec repli sur l'initiale si le fichier manque.
     // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
-    const [err, setErr] = useState(false)
-    const broken = err || !sp.sprite // sprite vide (Daemon custom « mystère ») → silhouette, sans dépendre d'onError
-    // FUSION sans sprite dédié/généré (repli MissingNo) → on affiche le placeholder Chimère (moitié-moitié des 2
-    //   parents) : bien plus joli que MissingNo, le temps que la génération se termine (ou à vie si désactivée).
-    const chimera = sp.fusionParents && (sp.sprite === MISSINGNO_SPRITE || broken)
+    const [realErr, setRealErr] = useState(false)
+    const [genErr, setGenErr] = useState(false)
+    // FUSION : résout le sprite GÉNÉRÉ À L'AFFICHAGE (même si buildFusion a figé MissingNo car la génération
+    //   n'était pas prête au moment de bâtir l'équipe). Pour un non-fusion, fusionParents=undefined → hook inerte.
+    const fusionGen = useFusionSprite(sp.fusionParents?.[0], sp.fusionParents?.[1])
+    const realSrc = sp.sprite && sp.sprite !== MISSINGNO_SPRITE && !realErr ? sp.sprite : null
+    const genSrc = !realSrc && sp.fusionParents && fusionGen.url && !genErr ? fusionGen.url : null
+    const imgSrc = realSrc ?? genSrc
+    // Repli : placeholder Chimère (moitié-moitié des 2 parents) si aucune image ; sinon glyphe (custom « mystère »).
+    const chimera = !imgSrc && sp.fusionParents
         ? { a: getSpecies(sp.fusionParents[0])?.sprite, b: getSpecies(sp.fusionParents[1])?.sprite }
         : null
+    const glyph = !imgSrc && !chimera
     return (
         // Wrapper keyé sur l'uid : remonte à chaque ENTRÉE de Daemon (combat/switch)
         // → joue l'anim "monEnter" (chute + rebond). Le shake reste sur le div interne.
@@ -749,7 +756,7 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
             <div
                 key={hitKey}
                 style={{
-                    ...((broken && !chimera) ? S.sprite : S.spriteBox),
+                    ...(glyph ? S.sprite : S.spriteBox),
                     position: "relative",
                     opacity: alive ? 1 : 0.25,
                     transform: facing === "back" ? "scaleX(-1)" : "none",
@@ -757,14 +764,14 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
                     animation: victory ? "victoryPulse 1.2s ease-in-out infinite" : hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
                 }}
             >
-                {chimera
-                    ? <ChimeraPlaceholder aSprite={chimera.a} bSprite={chimera.b} types={sp.types} size={76} />
-                    : broken
-                        ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
-                        : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
-                            style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : {}) }} />}
+                {imgSrc
+                    ? <img src={imgSrc} alt={sp.name} onError={() => (realSrc ? setRealErr(true) : setGenErr(true))}
+                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : {}) }} />
+                    : chimera
+                        ? <ChimeraPlaceholder aSprite={chimera.a} bSprite={chimera.b} types={sp.types} size={76} />
+                        : <span style={S.spriteGlyph}>{sp.name[0]}</span>}
                 {/* CHROMATIQUE (shiny) : ✨ scintillantes par-dessus le sprite (le filtre recolore l'image). */}
-                {mon.shiny && !broken && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
+                {mon.shiny && imgSrc && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
             </div>
         </div>
     )
