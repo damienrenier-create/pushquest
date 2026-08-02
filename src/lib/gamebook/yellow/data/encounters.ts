@@ -151,6 +151,89 @@ export function speciesZones(speciesId: string): string[] {
     })
 }
 
+// ── DAEMOMANIAQUE (guide de capture post-run-3) : « OÙ / QUAND / COMMENT » trouver/capturer un Daemon,
+//    dérivé des tables de rencontre (ZONES run1 + NGPLUS_ZONES run2 + RUN3_ZONES run3). Module PUR.
+//    Noms de cartes inlinés (pas d'import de maps.ts → aucun risque de cycle). ──
+const GUIDE_MAP_NAMES: Record<string, string> = {
+    yellow_route_nord: "Route Nord", yellow_grotte: "Grotte Rocheuse", yellow_grotte_gelee: "Grotte Gelée",
+    yellow_plage: "Plage", yellow_centrale: "Centrale", yellow_maison_hantee: "Maison Hantée",
+    yellow_hautes_herbes: "Hautes Herbes", yellow_cendreville: "Cendreville",
+    yellow_grotte_nexus: "Grotte du Nexus (1F)", yellow_grotte_nexus_b1f: "Grotte du Nexus (B1F)", yellow_grotte_nexus_b2f: "Grotte du Nexus (B2F)",
+}
+const guideMapName = (mapId: string) => GUIDE_MAP_NAMES[mapId] ?? mapId
+const rarityBand = (base: number) => base >= 100 ? "très commun" : base >= UNCOMMON ? "assez commun" : base >= RARE ? "rare" : base >= VERY_RARE ? "très rare" : "extrêmement rare"
+const GUIDE_EVO_PROBES = [8, 16, 24, 32, 42, 55, 68]
+const hourText = (hr: readonly [number, number]) => {
+    const [s, e] = hr
+    if (e <= s) return `la nuit (${s}h→${e}h)`
+    if (s >= 5 && e <= 12) return `le matin (${s}h→${e}h)`
+    if (s >= 12 && e <= 20) return `l'après-midi (${s}h→${e}h)`
+    return `entre ${s}h et ${e}h`
+}
+/** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
+function entryYields(e: WildEntry, target: string): boolean {
+    if (e.speciesId === target) return true
+    if (e.noEvolve) return false
+    const levels = e.levelFixed != null ? [e.levelFixed]
+        : e.levelRange ? [e.levelRange[0], Math.round((e.levelRange[0] + e.levelRange[1]) / 2), e.levelRange[1]]
+        : GUIDE_EVO_PROBES
+    return levels.some((L) => { try { return speciesAtLevel(e.speciesId, L) === target } catch { return false } })
+}
+interface GuideMatch { mapId: string; run: number; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean }
+function guideMatches(target: string): GuideMatch[] {
+    const out: GuideMatch[] = []
+    const tables: [number, Record<string, Zone>][] = [[1, ZONES], [2, NGPLUS_ZONES], [3, RUN3_ZONES]]
+    for (const [run, table] of tables) for (const mapId of Object.keys(table)) {
+        const z = table[mapId]
+        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, run, e })
+        if (z.rects) for (const r of z.rects) for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, run, e })
+        const tg = z.trainingGrid
+        if (tg) {
+            for (const [t, pool] of Object.entries(tg.typePools)) for (const e of pool) if (entryYields(e, target)) out.push({ mapId, run, e, gridType: t })
+            if (tg.legendary && entryYields(tg.legendary, target)) out.push({ mapId, run, e: tg.legendary, legend: true })
+            if (tg.dragonRare) for (const b of tg.dragonRare.bases) if (entryYields({ speciesId: b, base: VERY_RARE }, target)) out.push({ mapId, run, e: { speciesId: b, base: VERY_RARE }, dragon: true })
+        }
+    }
+    return out
+}
+export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
+/** Guide « où / quand / comment » capturer/trouver un Daemon (le Daemomaniaque). Dérivé des tables de rencontre. */
+export function captureGuide(speciesId: string): CaptureGuide {
+    const sp = getSpecies(speciesId)
+    if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
+    const runLabel = (r: number) => (r === 1 ? "" : r === 2 ? " · run 2 (NG+)" : " · run 3")
+    const matches = guideMatches(speciesId)
+    const where: string[] = []
+    const how = new Set<string>()
+    for (const m of matches) {
+        const parts: string[] = [m.gridType ? `📍 Hautes Herbes — carré ${m.gridType}${runLabel(m.run)}` : `📍 ${guideMapName(m.mapId)}${runLabel(m.run)}`, rarityBand(m.e.base)]
+        if (m.legend) parts.push("légendaire rôdant")
+        if (m.dragon) parts.push("dragon rare (plus rare en altitude)")
+        if (m.e.levelFixed != null) parts.push(`niv ${m.e.levelFixed}`)
+        else if (m.e.levelRange) parts.push(`niv ${m.e.levelRange[0]}-${m.e.levelRange[1]}`)
+        if (m.e.hourRange) parts.push(hourText(m.e.hourRange))
+        if (m.e.rare) parts.push("pop un peu au-dessus de ton niveau")
+        if (m.e.minLeadLevel) parts.push(`lead niv ${m.e.minLeadLevel}+`)
+        if (m.e.requiresFusionLeague) parts.push("après la Ligue de Fusion")
+        if (m.e.catchOnce) parts.push("1 seule capture possible")
+        where.push(parts.join(" · "))
+        if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
+        if (m.e.captureMinBallBonus) how.add(`Exige une Ball puissante (ballBonus ≥ ${m.e.captureMinBallBonus}).`)
+        if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
+        if (m.gridType) how.add(`Aux Hautes Herbes, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
+    }
+    if (where.length === 0) {
+        const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
+        if (preEvo) {
+            const base = captureGuide(preEvo.id)
+            return { where: base.where, how: base.how, note: `${sp.name} ne se trouve pas à l'état sauvage : capture ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
+        }
+        return { where: [], how: [], note: `${sp.name} ne se croise pas dans les hautes herbes — c'est un cadeau, un boss ou une créature spéciale (via un PNJ).` }
+    }
+    how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
+    return { where, how: [...how], note: null }
+}
+
 // HAUTES HERBES — 11 types en ROTATION quotidienne. Exclus : Spectre/Élec (réservés aux bâtiments) ;
 // Normal (trop peu d'espèces → plumiot rejoint Vol) ; Dragon (pas de carré, draclet pop rare Route Nord).
 // PSY ajouté (jour PSY = lignée Nouillon) → sert aussi de porte au rattrapage live d'Hypnoppo/Karmaki (run 3).

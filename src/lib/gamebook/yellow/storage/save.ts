@@ -53,6 +53,8 @@ export interface YellowSave {
     introSeen: boolean
     /** Nb de victoires sur le sbire AUJOURD'HUI (reset quotidien ; plafond 2/jour). */
     sbireDefeatsToday: number
+    /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
+    consultsToday?: number
     /** Nb total de victoires sur le sbire (cumulatif → cycle des explications). */
     sbireWinsTotal: number
     /** Réputation PvP : matchs + usages (Daemon fétiche / attaque favorite) + dégâts infligés par Daemon (top-5 duels). */
@@ -530,6 +532,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         badges: strArr(o.badges),
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
+        consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),
         domeStats: parseDomeStats(o.domeStats),

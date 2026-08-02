@@ -80,6 +80,8 @@ interface PlayerState {
     introSeen: boolean
     /** Victoires sur le sbire AUJOURD'HUI (reset au tick quotidien ; plafond 2). */
     sbireDefeatsToday: number
+    /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
+    consultsToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
     sbireWinsTotal: number
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
@@ -399,6 +401,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         defeatedTrainers: p.defeatedTrainers ?? [], rematchedTrainers: p.rematchedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
+        consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
         domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(),
@@ -981,6 +984,7 @@ export function creditDailyReps(today: string) {
         pastaBoughtToday: 0,
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
+        consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
     }
     emit()
 }
@@ -1119,6 +1123,28 @@ export function recordSbireWin(): number {
     st = { ...st, sbireDefeatsToday: st.sbireDefeatsToday + 1, sbireWinsTotal: winsTotal }
     emit()
     return winsTotal
+}
+
+// ── DAEMOMANIAQUE (guide de capture post-run-3) : 5 consultations GRATUITES/jour, puis payant en énergie. ──
+export const FREE_CONSULTS_PER_DAY = 5
+export const CONSULT_COST = 50 // énergie par consultation au-delà des 5 gratuites du jour
+/** Une consultation : gratuite si < 5 aujourd'hui, sinon débite CONSULT_COST reps. { ok:false, reason:"reps" } si solde
+ *  insuffisant. spendReps garde le solde + emit. consultsToday se reset au tick quotidien (creditDailyReps). */
+export function consultDaemomaniaque(): { ok: boolean; paid: boolean; reason?: "reps" } {
+    const used = st.consultsToday ?? 0
+    if (used < FREE_CONSULTS_PER_DAY) {
+        st = { ...st, consultsToday: used + 1 }
+        emit()
+        return { ok: true, paid: false }
+    }
+    if (!spendReps(CONSULT_COST)) return { ok: false, paid: false, reason: "reps" }
+    st = { ...st, consultsToday: used + 1 }
+    emit()
+    return { ok: true, paid: true }
+}
+/** Consultations restantes GRATUITES aujourd'hui (0-5), pour l'UI. */
+export function freeConsultsLeft(): number {
+    return Math.max(0, FREE_CONSULTS_PER_DAY - (st.consultsToday ?? 0))
 }
 
 // === RÉPUTATION PvP ===
