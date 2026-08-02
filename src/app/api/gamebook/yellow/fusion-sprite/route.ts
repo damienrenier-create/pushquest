@@ -36,6 +36,28 @@ async function requireYellow() {
 export async function GET(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
+
+    // DIAG (aucun secret : uniquement des booléens/compteurs) — pour savoir si la génération est bien ARMÉE en prod.
+    //   Ouvre /api/gamebook/yellow/fusion-sprite?diag=1 (connecté). enabled=false → env manquante/non redéployée.
+    if (req.nextUrl.searchParams.get("diag")) {
+        let rowsTotal = 0, rowsToday = 0
+        try {
+            const fs = (prisma as any).fusionSprite
+            rowsTotal = await fs.count()
+            rowsToday = await fs.count({ where: { createdAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) } } })
+        } catch { /* table absente */ }
+        return NextResponse.json({
+            ok: true,
+            enabled: fusionGenEnabled(),
+            flagIsTrue: process.env.FUSION_GEN_ENABLED === "true",
+            hasGeminiKey: !!process.env.GEMINI_API_KEY,
+            hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+            model: process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image",
+            promptVersion: PROMPT_VERSION, totalCap: TOTAL_CAP, dailyCap: DAILY_CAP,
+            rowsTotal, rowsToday,
+        })
+    }
+
     const a = req.nextUrl.searchParams.get("a"), b = req.nextUrl.searchParams.get("b")
     if (!a || !b) return NextResponse.json({ error: "Missing a/b" }, { status: 400 })
     try {
