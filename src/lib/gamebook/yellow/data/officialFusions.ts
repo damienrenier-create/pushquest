@@ -15,6 +15,13 @@ import { fusionSpritePath } from "./fusionSprite"
 
 export interface OfficialFusion { name: string; sprite: string }
 
+/** Fusions PERSO curées à la main (hors Ligue/base) : paire de parents (ordre indifférent) → nom + sprite dédié.
+ *  PRIORITAIRES sur le générateur (buildFusion lit officialFusionForParents AVANT le blob généré). Ajoutées ici
+ *  quand Sartay dessine un sprite maison pour une combinaison libre → permanent, sans coût de génération. */
+const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string }[] = [
+    { a: "alirocaillus", b: "sylvebarbe", name: "Sylvaroc", sprite: fusionSpritePath("Sylvaroc") },
+]
+
 /** Clé de paire indépendante de l'ordre des parents. */
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
 
@@ -26,6 +33,7 @@ function registry(): Map<string, OfficialFusion> {
         const k = pairKey(a, b)
         if (!m.has(k)) m.set(k, { name, sprite }) // 1re occurrence gagne (les paires curées sont uniques de toute façon)
     }
+    for (const p of FUSION_CUSTOM_PAIRS) add(p.a, p.b, p.name, p.sprite) // perso d'abord → priorité sur tout le reste
     for (const tr of FUSION_LEAGUE) for (const p of tr.pairs) add(p.a, p.b, p.name, p.sprite ?? fusionSpritePath(p.name))
     for (const p of FUSION_BOSS_PAIRS) add(p.a, p.b, p.name, p.sprite ?? fusionSpritePath(p.name))
     for (const p of FUSION_TRIAL_PAIRS) add(p.a, p.b, p.name, fusionSpritePath(p.name))
