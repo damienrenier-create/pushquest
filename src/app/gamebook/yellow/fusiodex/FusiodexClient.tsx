@@ -15,6 +15,7 @@ import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import { useFusionSprite } from "../useFusionSprite"
+import { FusionDetailView } from "../FusionDetailView"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 type Tab = "rules" | "official" | "mine"
@@ -132,6 +133,7 @@ export default function FusiodexClient() {
     // ÉQUIPER une fusion pour la Ligue : l'historique ne mémorise que les ESPÈCES → on retrouve 2 Daemons possédés
     //   de ces espèces (le + haut niveau dispo, non déjà engagés, instances distinctes) et on les ajoute au roster.
     const [equipMsg, setEquipMsg] = useState<{ ok: boolean; text: string } | null>(null)
+    const [detail, setDetail] = useState<{ aId: string; bId: string } | null>(null) // fiche détail plein écran (clic sur une fusion)
     const equipForLeague = (aId: string, bId: string, name: string) => {
         const roster = player.fusionRoster
         if (roster.length >= 6) { setEquipMsg({ ok: false, text: "Équipe de fusion pleine (6 max) — retire-en une à l'Atelier." }); return }
@@ -235,7 +237,7 @@ export default function FusiodexClient() {
                         ) : sortedCreated.map((f) => {
                             const ring = f.bst > 0 && f.types[0] ? typeColor(f.types[0]) : "#4a3a6a"
                             return (
-                                <div key={f.key} style={{ ...S.card, borderLeftColor: ring }}>
+                                <div key={f.key} onClick={() => f.bst > 0 && setDetail({ aId: f.aId, bId: f.bId })} title={f.bst > 0 ? "Voir la fiche" : undefined} style={{ ...S.card, borderLeftColor: ring, cursor: f.bst > 0 ? "pointer" : "default" }}>
                                     {f.official || f.bst === 0
                                         ? <FusionSprite src={f.sprite} ring={ring} />
                                         : <FusionThumb aId={f.aId} bId={f.bId} types={f.types} aSprite={f.aSprite} bSprite={f.bSprite} ring={ring} size={66} />}
@@ -246,7 +248,7 @@ export default function FusiodexClient() {
                                                 <div style={S.parentLine}>{f.parents[0]} <span style={{ opacity: 0.5 }}>✦</span> {f.parents[1]} · <b style={{ color: "#d9b8ff" }}>Total {f.bst}</b></div>
                                                 <TypeChips types={f.types} />
                                                 <StatBars stats={f.stats} />
-                                                <button style={S.equipBtn} onClick={() => equipForLeague(f.aId, f.bId, f.displayName)}>⚔️ Équiper pour la Ligue</button>
+                                                <button style={S.equipBtn} onClick={(e) => { e.stopPropagation(); equipForLeague(f.aId, f.bId, f.displayName) }}>⚔️ Équiper pour la Ligue</button>
                                             </>
                                         ) : (
                                             <div style={S.descMuted}>{f.parents[0]} × {f.parents[1]} — chimère archivée</div>
@@ -258,6 +260,7 @@ export default function FusiodexClient() {
                     </div>
                 )}
             </div>
+            {detail && <FusionDetailView aId={detail.aId} bId={detail.bId} onClose={() => setDetail(null)} />}
         </div>
     )
 }
