@@ -951,9 +951,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const j = r.ok ? await r.json() : null
                     if (!cancelled && j?.justReturned && j?.wish) {
                         showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
-                            "*Une fumée dorée jaillit de ta lampe… le Génie est de retour !*",
-                            "« J'ai longuement pesé tes trois vœux, mortel. »",
-                            "« Chaque faveur a un prix. Ouvre le menu → 🧞 VŒUX pour découvrir mes conditions… et décider lesquelles tu acceptes. »",
+                            "*Ta lampe rougeoie soudain au fond de ton sac…*",
+                            "« J'ai médité sur ta demande, mortel. Reviens me voir — frotte ta lampe. »",
                         ])
                     }
                 } catch { /* neutre */ }
