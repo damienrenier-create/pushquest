@@ -7,7 +7,7 @@
 // motion → simple fondu ; tap = skip. Zéro changement au moteur.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, getSnapshot as getBattleSnapshot, isFusionLeagueTrainer } from "@/lib/gamebook/yellow/store/battleStore"
 import { setEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { pickTransition, ETX_VARIANTS, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
@@ -29,11 +29,15 @@ export default function EncounterTransition() {
             const enemy = battle.enemy.team[battle.enemy.activeIndex] ?? battle.enemy.team[0]
             const player = battle.player.team[battle.player.activeIndex] ?? battle.player.team[0]
             const sp = enemy ? getSpecies(enemy.speciesId) : null
+            // trainerId lu de façon synchrone (posé en même temps que `battle` par le même setStore) → intro
+            //   SPÉCIALE + plus longue pour la Ligue de Fusion (y_fusion_*), qui sert aussi de marge de génération.
+            const fusionLeague = isFusionLeagueTrainer(getBattleSnapshot().trainer?.trainerId)
             const { profile, variant, danger } = pickTransition({
                 type: sp?.types[0],
                 rarity: sp?.rarity,
                 levelDiff: (enemy?.level ?? 0) - (player?.level ?? 0),
                 isSpecial: !battle.isWild || (battle as { aiLevel?: string }).aiLevel === "ace",
+                fusionLeague,
             })
             const v = ETX_VARIANTS[variant]
             keyRef.current += 1

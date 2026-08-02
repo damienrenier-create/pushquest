@@ -64,6 +64,14 @@ export const ETX_PROFILES: Record<string, EtxProfile> = {
         particle: { emoji: "✨", count: 14, motion: "scatter" }, easing: "cubic-bezier(.83,0,.17,1)",
         sfx: "grondement + sting cuivré", bloom: true, shake: true, rays: true, zoom: true, flash: true,
     },
+    // Intro SPÉCIALE Ligue de Fusion : nettement plus LONGUE (≈ durationMs×epic+450 ≈ 3,8 s) — solennelle, thème
+    //   chimère mauve/or. Sert aussi de marge de sécurité pendant que les sprites de fusion finissent de se générer.
+    //   Reste SKIPPABLE (B/Échap) et respecte prefers-reduced-motion (cf. EncounterTransition).
+    fusion_league: {
+        id: "fusion_league", kind: "fold", durationMs: 2600, palette: ["#2A1C50", "#C79CFF"],
+        particle: { emoji: "🧬", count: 16, motion: "drift" }, easing: "cubic-bezier(.83,0,.17,1)",
+        sfx: "montée épique + double battement de cœur + chœur", bloom: true, shake: true, rays: true, zoom: true, flash: true,
+    },
     // ── Profils type-cohérents (corrigent les incohérences : COMBAT/NORMAL n'ont plus de cailloux, etc.) ──
     combat_strike: {
         id: "combat_strike", kind: "circle", durationMs: 750, palette: ["#FF8A4A", "#B02000"],
@@ -107,14 +115,16 @@ export const ETX_VARIANTS: Record<EtxVariant, { durationScale: number; particleS
     epic: { durationScale: 1.3, particleScale: 2.0, bloom: true, shake: true, sparkle: true },
 }
 
-export interface EncounterData { type?: string; rarity?: string; levelDiff?: number; isSpecial?: boolean }
+export interface EncounterData { type?: string; rarity?: string; levelDiff?: number; isSpecial?: boolean; fusionLeague?: boolean }
 
 /** Choisit profil + variante + flag "danger" selon les flags de la rencontre. */
 export function pickTransition(d: EncounterData): { profile: EtxProfile; variant: EtxVariant; danger: boolean } {
     const lvlDiff = d.levelDiff ?? 0
     let profileId: string
     let variant: EtxVariant
-    if (d.isSpecial || d.rarity === "BOSS" || d.rarity === "LEGENDARY") {
+    if (d.fusionLeague) {
+        profileId = "fusion_league"; variant = "epic" // intro solennelle + plus longue, prioritaire
+    } else if (d.isSpecial || d.rarity === "BOSS" || d.rarity === "LEGENDARY") {
         profileId = "nemesis_iris"; variant = "epic"
     } else {
         profileId = (d.type && TYPE_PROFILE[d.type]) || "stone_shatter"

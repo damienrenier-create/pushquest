@@ -21,7 +21,8 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
-import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
+import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
+import { computeFusion } from "../data/fusionSpecies"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
@@ -306,6 +307,33 @@ function saveNow(player: PlayerState) {
 
 // Lance un combat de dresseur. Renvoie un dialogue à afficher (équipe K.O.) ou null
 // si le combat a bien démarré. L'équipe ennemie est fabriquée à partir du registre.
+// PROLOGUE LIGUE DE FUSION : sur le dôme (yellow_combat_autel), une rangée de tuiles (y=3, colonnes 7→10) JUSTE
+//   sous la porte à dragons (8-9,1). Au 1er pas sur l'une d'elles, le Dieu Spaghetti interrompt la marche
+//   (félicitations + conseils tactiques) ET on lance la génération des sprites de l'équipe engagée — le temps de
+//   lecture + la marche + le dialogue de LORELEI masquent la latence. Message one-time ; génération à chaque passage.
+const FUSION_PROLOGUE_TILES: ReadonlyArray<{ x: number; y: number }> = [{ x: 7, y: 3 }, { x: 8, y: 3 }, { x: 9, y: 3 }, { x: 10, y: 3 }]
+const FUSION_PROLOGUE_MARKER = "fusion_prologue_seen"
+const FUSION_PROLOGUE_LINES = [
+    "*Une vapeur de sauce s'enroule autour de toi.* Halte, challenger ! Avant la porte à dragons, laisse le Dieu Spaghetti te saluer. 🍝",
+    "Tu as remonté la Grotte, dompté l'Autel, assemblé tes premières chimères… ton parcours force le respect.",
+    "Un conseil de maître : une bonne fusion COMPLÈTE ses parents — marie une grosse attaque à une belle défense, couvre tes faiblesses de type, et n'oublie pas l'objet tenu.",
+    "Le Conseil des Chimères t'attend derrière cette porte. Franchis-la quand tu es prêt… et que la meilleure fusion l'emporte !",
+]
+
+/** Paires (aId,bId,nom,types) du roster de fusion du joueur, pour requestFusionSprites (génération des sprites).
+ *  PUR côté données : computeFusion ne mute rien et n'enregistre aucune espèce → sûr à appeler hors combat. */
+function fusionSpriteItemsFromRoster(): Array<{ aId: string; bId: string; name: string; types: string[] }> {
+    const save = getPlayerSave()
+    const all = [...save.team, ...save.pc]
+    const byU = (uid: string) => all.find((m) => m.uid === uid)
+    return save.fusionRoster.map((p) => {
+        const a = byU(p.a), b = byU(p.b)
+        if (!a || !b || a.uid === b.uid) return null
+        const res = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
+        return { aId: a.speciesId, bId: b.speciesId, name: res.name, types: [...res.types] as string[] }
+    }).filter((x): x is { aId: string; bId: string; name: string; types: string[] } => x !== null)
+}
+
 /** LIGUE DE FUSION — lance un combat : le joueur PILOTE son roster de fusions ; l'ennemi = équipe fusionnée du
  *  dresseur (buildFusionLeagueTeam au palier actif), ou le REFLET du roster (miroir). Toutes les espèces éphémères
  *  sont enregistrées ici et détruites au lancement suivant (disposeFusionLeagueSpecies). */
@@ -329,15 +357,10 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
-        // GÉNÉRATION DES SPRITES : UNIQUEMENT ICI (engagement — le joueur valide son équipe et ENTRE dans la Ligue).
-        //   Jamais à l'aperçu/au test au comptoir → on ne brûle pas de budget sur des fusions jamais jouées.
-        //   Fire-and-forget, gaté + plafonné côté serveur (neutre si génération désactivée).
-        const spriteItems = playerFusions.map((f) => {
-            const [ua, ub] = f.instance.fusionParents ?? []
-            const pa = ua ? byU(ua) : undefined, pb = ub ? byU(ub) : undefined
-            if (!pa || !pb) return null
-            return { aId: pa.speciesId, bId: pb.speciesId, name: f.result.name, types: [...f.result.types] as string[] }
-        }).filter((x): x is { aId: string; bId: string; name: string; types: string[] } => x !== null)
+        // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
+        //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
+        //   Dé-doublonné côté client + serveur (paires déjà READY/en mémoire ignorées) → aucun coût en double.
+        const spriteItems = fusionSpriteItemsFromRoster()
         if (spriteItems.length) void requestFusionSprites(spriteItems)
     }
     // Wipe défensif : si toutes les fusions sont K.O. (état incohérent post-reload), on renvoie à l'Autel.
@@ -1349,6 +1372,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     // ✨ FÊTE SHINY : croiser un shiny offre +50 énergie à TOUS les joueurs (annonce Dieu Spaghetti).
                     if (spawn.shiny) reportShiny("encounter", spawn.uid, spawn.speciesId)
                 }
+            }
+        }
+
+        // PROLOGUE LIGUE DE FUSION (dôme) : en montant vers la porte à dragons, le Dieu Spaghetti félicite le joueur
+        //   et donne des conseils — ET on LANCE la génération des sprites de l'équipe (masquée par le dialogue + la
+        //   marche jusqu'à LORELEI). Message une seule fois ; génération à chaque passage (dé-doublonnée, gratuite si
+        //   déjà en cache / désactivée côté serveur). Ne se déclenche qu'avec une équipe de fusion assemblée.
+        if (moved && next.mapId === "yellow_combat_autel"
+            && FUSION_PROLOGUE_TILES.some((t) => t.x === next.posX && t.y === next.posY)
+            && getPlayerSave().fusionRoster.length > 0) {
+            const items = fusionSpriteItemsFromRoster()
+            if (items.length) void requestFusionSprites(items)
+            if (!isTrainerDefeated(FUSION_PROLOGUE_MARKER)) {
+                markTrainerDefeated(FUSION_PROLOGUE_MARKER)
+                set({ player: next, dialogue: { npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: FUSION_PROLOGUE_LINES } })
+                scheduleSave(next)
+                return
             }
         }
 

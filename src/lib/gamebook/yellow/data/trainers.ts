@@ -1413,7 +1413,9 @@ export const TRAINERS: TrainerData[] = [
         reward: 0, aiLevel: "hof",
         intro: [
             "*L'air se cristallise.* Bienvenue à la Ligue de Fusion, challenger. Je suis LORELEI, gardienne des chimères de GLACE.",
-            "Deux âmes fondues en une seule… mes chimères te figeront avant que tu ne comprennes. Montre-moi les tiennes !",
+            "Le Dieu Spaghetti t'a laissé franchir la porte à dragons ? Alors tu as déjà prouvé quelque chose… jusqu'ici.",
+            "Sache-le : quatre gardiens du Conseil des Chimères se dressent avant le Maître. Je suis la première — et la plus froide. Beaucoup se figent rien qu'à me voir.",
+            "Deux âmes fondues en une seule… mes chimères te glaceront avant même que tu ne comprennes. Assez parlé — montre-moi les tiennes !",
         ],
         defeat: ["Mes chimères de givre… fondues. Passe. Le Conseil t'attend, et l'on ne recule pas ici."],
     },
