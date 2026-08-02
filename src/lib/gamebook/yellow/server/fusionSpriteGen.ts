@@ -18,7 +18,7 @@ import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
 const MODEL = process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image" // Nano Banana 2 ; 0,5K ≈ 0,045 $/image
-export const PROMPT_VERSION = 3 // v3 = fond MAGENTA demandé au modèle + détourage flood-fill (Nano Banana ne rend pas de transparent)
+export const PROMPT_VERSION = 4 // v4 = fond MAGENTA + détourage flood-fill BORDS puis key GLOBAL par dominance magenta (enclavé + anti-frange)
 const CHROMA_TOL = 96 // tolérance de détourage (somme des écarts RGB au fond estimé)
 const RES = 512
 
@@ -71,11 +71,16 @@ function floodRemoveBackground(data: Buffer, w: number, h: number, tol = CHROMA_
     for (let x = 0; x < w; x++) { visit(x, 0); visit(x, h - 1) }
     for (let y = 0; y < h; y++) { visit(0, y); visit(w - 1, y) }
     while (stack.length) { const y = stack.pop()!, x = stack.pop()!; visit(x + 1, y); visit(x - 1, y); visit(x, y + 1); visit(x, y - 1) }
-    // ZONES ENCLAVÉES (arcs, boucles, trous non connectés au bord) : passe GLOBALE à tolérance SERRÉE — retire le
-    //   fond uni resté à l'intérieur, sans manger le sujet (qui n'est pas EXACTEMENT la couleur du fond). Fix "arc".
-    const tight = Math.round(tol * 0.5)
+    // ZONES ENCLAVÉES (poches magenta dans les boucles/arcs, NON connectées au bord → invisibles au flood-fill) +
+    //   FRANGE ROSE anti-aliasée : passe GLOBALE par DOMINANCE magenta (min(R,B)-G), INDÉPENDANTE de la teinte
+    //   exacte du fond → tue TOUT magenta résiduel où qu'il soit. Sûr : le sujet ne contient pas de magenta franc
+    //   (cf. prompt, G bas requis). La frange rose PARTIELLE (liseré) est dé-rosie plutôt que supprimée.
     for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] !== 0 && Math.abs(data[i] - br) + Math.abs(data[i + 1] - bg) + Math.abs(data[i + 2] - bb) <= tight) data[i + 3] = 0
+        if (data[i + 3] === 0) continue
+        const R = data[i], G = data[i + 1], B = data[i + 2]
+        const mag = Math.min(R, B) - G
+        if (mag > 40 && G < 120 && R > 110 && B > 110) data[i + 3] = 0          // magenta FRANC (fond + enclavé + halo vif)
+        else if (mag > 18 && R > 120 && B > 120) data[i + 1] = Math.min(R, B)   // anti-frange : dé-rosit le liseré rose
     }
 }
 
@@ -110,7 +115,7 @@ export async function generateFusionSprite(opts: {
         spB.description ? `Réf ${spB.name} : ${spB.description}` : "",
         `Images fournies : les 2 PREMIÈRES = les parents (1 = ${spA.name} base/gabarit ; 2 = ${spB.name} couleurs & attributs).`
             + (anchorRefs.length ? ` Les ${anchorRefs.length} suivantes = RÉFÉRENCES DE STYLE : imite leur RENDU (grain de pixel, détail), NE COPIE PAS leur contenu.` : ""),
-        `Une SEULE créature cohérente (pas un collage), sujet ENTIER et CENTRÉ. FOND : une couleur UNIE et VIVE, MAGENTA pur (#FF00FF), remplissant TOUT l'arrière-plan — AUCUN autre élément, dégradé, décor, texte, bordure ni ombre au sol (ce fond sera détouré automatiquement). Le sujet lui-même ne doit PAS contenir de magenta pur.`,
+        `Une SEULE créature cohérente (pas un collage), sujet ENTIER et CENTRÉ. FOND : une couleur PARFAITEMENT UNIE et VIVE, MAGENTA pur (#FF00FF), remplissant TOUT l'arrière-plan — AUCUN autre élément, dégradé, décor, texte, bordure, ombre au sol, NI halo/lueur/aura magenta autour du sujet (ce fond sera détouré automatiquement ; toute bavure magenta gâche le découpage). Le sujet lui-même ne doit PAS contenir de magenta ni de rose vif.`,
     ].filter(Boolean).join("\n")
 
     try {

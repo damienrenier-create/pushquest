@@ -15,6 +15,14 @@ const RUB_TARGET = 1400 // distance de frottement cumulée (px) avant l'appariti
 
 type Stage = "lamp" | "genie" | "sent"
 
+// Sprite du génie (fourni par Sartay), avec repli emoji si l'asset est absent.
+function GenieArt() {
+    const [err, setErr] = useState(false)
+    return err
+        ? <div style={{ fontSize: 84, textAlign: "center", margin: "2px 0 6px", filter: "drop-shadow(0 0 18px #7ad0ff88)" }}>🧞</div>
+        : <img src="/yellow/sprites/genie.png" alt="Génie" draggable={false} onError={() => setErr(true)} style={{ display: "block", width: 148, height: 148, objectFit: "contain", imageRendering: "pixelated", margin: "0 auto 6px", filter: "drop-shadow(0 0 16px #7ad0ff88)" }} />
+}
+
 export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const alreadyRubbed = getPlayer().defeatedTrainers.includes(LAMP_RUBBED_MARKER)
     const [stage, setStage] = useState<Stage>(alreadyRubbed ? "genie" : "lamp")
@@ -22,6 +30,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const [wishes, setWishes] = useState<string[]>(["", "", ""])
     const [existing, setExisting] = useState<{ status: string } | null | undefined>(undefined) // undefined = pas chargé
     const [busy, setBusy] = useState(false)
+    const [lampErr, setLampErr] = useState(false)
     const rubRef = useRef(0)
     const last = useRef<{ x: number; y: number } | null>(null)
     const pressed = useRef(false)
@@ -84,7 +93,9 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
                             onPointerUp={onUp}
                             onPointerLeave={onUp}
                         >
-                            <span style={{ fontSize: 104, filter: `saturate(${1 + rub / RUB_TARGET}) drop-shadow(0 0 ${pct / 5}px #ffd76a)` }}>🪔</span>
+                            {lampErr
+                                ? <span style={{ fontSize: 104, filter: `drop-shadow(0 0 ${pct / 5}px #ffd76a)` }}>🪔</span>
+                                : <img src="/yellow/sprites/lampe_rouillee.png" alt="Lampe rouillée" draggable={false} onError={() => setLampErr(true)} style={{ width: 156, height: 156, objectFit: "contain", imageRendering: "pixelated", pointerEvents: "none", filter: `drop-shadow(0 0 ${pct / 6}px #ffd76a)` }} />}
                         </div>
                         <div style={S.rubHint}>👆 Frotte la lampe avec ton doigt !</div>
                         <div style={S.track}><span style={{ ...S.fill, width: `${pct}%` }} /></div>
@@ -96,7 +107,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
                 {stage === "genie" && existing === null && (
                     <>
-                        <div style={S.genie}>🧞</div>
+                        <GenieArt />
                         <div style={S.title}>Le Génie de la Lampe</div>
                         <div style={S.text}>« LIBRE ! Après tant de siècles enfermé… Pour ta peine, formule TROIS vœux, mortel. J&apos;examinerai chacun d&apos;eux — puis je reviendrai vers toi. »</div>
                         {[0, 1, 2].map((i) => (
@@ -119,7 +130,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
                 {stage === "genie" && existing && existing.status === "SUBMITTED" && (
                     <>
-                        <div style={S.genie}>🧞</div>
+                        <GenieArt />
                         <div style={S.text}>« Tes trois vœux sont entre mes mains, mortel. Je réfléchis encore… Je reviendrai bientôt te livrer mon verdict. »</div>
                         <button style={S.primary} onClick={onClose}>Fermer</button>
                     </>
@@ -127,7 +138,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
                 {stage === "genie" && existing && existing.status !== "SUBMITTED" && (
                     <>
-                        <div style={S.genie}>🧞</div>
+                        <GenieArt />
                         <div style={S.text}>« J&apos;ai rendu mon verdict ! Ouvre le menu → <b>🧞 VŒUX</b> pour découvrir mes conditions et décider lesquelles tu acceptes. »</div>
                         <button style={S.primary} onClick={onClose}>Fermer</button>
                     </>
@@ -135,7 +146,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
                 {stage === "sent" && (
                     <>
-                        <div style={S.genie}>🧞</div>
+                        <GenieArt />
                         <div style={S.text}>« Tes vœux sont formulés. Je vais y réfléchir longuement… et je reviendrai vers toi. »</div>
                         <div style={{ ...S.text, opacity: 0.7, fontSize: 12, marginTop: 6 }}>(Tu peux suivre tes vœux dans le menu → 🧞 Vœux.)</div>
                         <button style={S.primary} onClick={onClose}>Fermer</button>

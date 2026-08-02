@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
-    rollLampCountdown, teamHpRatio, teamFreshEnough, genieTrainerLevel,
+    rollLampCountdown, teamHpRatio, teamFreshEnough, genieTrainerLevel, genieArcEnabledFor,
     LAMP_CD_MIN, LAMP_CD_MAX, LAMP_HP_MIN_RATIO, GENIE_TRAINER_LEVEL_MIN,
 } from "./genieLamp"
 
@@ -31,9 +31,19 @@ describe("Arc Lampe & Génie — helpers purs", () => {
         expect(LAMP_HP_MIN_RATIO).toBe(0.9)
     })
 
-    it("genieTrainerLevel : plusieurs crans sous le lead, avec plancher", () => {
-        expect(genieTrainerLevel(30)).toBe(26)                     // 30 - 4
-        expect(genieTrainerLevel(5)).toBe(GENIE_TRAINER_LEVEL_MIN) // plancher (5-4=1 < 3)
+    it("genieTrainerLevel : moyenne d'équipe − delta, avec plancher (pas trop faible)", () => {
+        expect(genieTrainerLevel(30)).toBe(27)                     // 30 - 3
+        expect(genieTrainerLevel(28.4)).toBe(25)                   // arrondi(28.4)=28 - 3
+        expect(genieTrainerLevel(6)).toBe(GENIE_TRAINER_LEVEL_MIN) // plancher (6-3=3 < 5)
         expect(genieTrainerLevel(GENIE_TRAINER_LEVEL_MIN)).toBe(GENIE_TRAINER_LEVEL_MIN)
+    })
+
+    it("genieArcEnabledFor : liste blanche (Mools) tant que GENIE_ARC_ALL=false", () => {
+        expect(genieArcEnabledFor("mools")).toBe(true)
+        expect(genieArcEnabledFor("Mools")).toBe(true)   // insensible à la casse
+        expect(genieArcEnabledFor("  MOOLS ")).toBe(true) // trim
+        expect(genieArcEnabledFor("frans")).toBe(false)
+        expect(genieArcEnabledFor(undefined)).toBe(false)
+        expect(genieArcEnabledFor(null)).toBe(false)
     })
 })

@@ -17,9 +17,19 @@ export const LAMP_CD_MIN = 3
 export const LAMP_CD_MAX = 10
 /** L'embuscade ne se déclenche que si l'équipe est au-dessus de ce ratio de PV (fraîche → combat facile & juste). */
 export const LAMP_HP_MIN_RATIO = 0.9
-/** Le dresseur-embuscade est calibré ce nombre de niveaux SOUS le lead du joueur (facile), avec un plancher. */
-export const GENIE_TRAINER_LEVEL_DELTA = 4
-export const GENIE_TRAINER_LEVEL_MIN = 3
+/** Le dresseur-embuscade est calibré ce nombre de niveaux SOUS la MOYENNE d'équipe du joueur : « auto-nivelé mais
+ *  pas trop faible » (delta modeste + plancher). 5 Daemons à moyenne−3 (tier garde, pas élite) = gagnable sans être trivial. */
+export const GENIE_TRAINER_LEVEL_DELTA = 3
+export const GENIE_TRAINER_LEVEL_MIN = 5
+
+/** Déploiement progressif de l'arc : GENIE_ARC_ALL=false → réservé à la liste blanche (test) ; true → TOUS les joueurs.
+ *  L'embuscade (seul point d'amorçage) est gatée là-dessus → tout l'arc suit (lampe/génie/onglet n'existent qu'après). */
+export const GENIE_ARC_ALL = false
+export const GENIE_ARC_NICKS: readonly string[] = ["mools"]
+export function genieArcEnabledFor(nickname?: string | null): boolean {
+    if (GENIE_ARC_ALL) return true
+    return !!nickname && GENIE_ARC_NICKS.includes(nickname.trim().toLowerCase())
+}
 
 /** Tire le compteur d'embuscade N ∈ [MIN, MAX]. `rng` optionnel (défaut Math.random). */
 export function rollLampCountdown(rng: () => number = Math.random): number {
@@ -38,7 +48,7 @@ export function teamFreshEnough(mons: ReadonlyArray<{ hp: number; maxHp: number 
     return teamHpRatio(mons) > LAMP_HP_MIN_RATIO
 }
 
-/** Niveau du dresseur-embuscade en fonction du lead du joueur (plusieurs crans sous lui, plancher). */
-export function genieTrainerLevel(playerLeadLevel: number): number {
-    return Math.max(GENIE_TRAINER_LEVEL_MIN, playerLeadLevel - GENIE_TRAINER_LEVEL_DELTA)
+/** Niveau du dresseur-embuscade = référence du joueur (idéalement la MOYENNE d'équipe) − delta, avec plancher. */
+export function genieTrainerLevel(playerRefLevel: number): number {
+    return Math.max(GENIE_TRAINER_LEVEL_MIN, Math.round(playerRefLevel) - GENIE_TRAINER_LEVEL_DELTA)
 }

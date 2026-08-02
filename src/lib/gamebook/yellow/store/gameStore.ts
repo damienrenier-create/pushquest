@@ -60,7 +60,7 @@ import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, U
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
-import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough } from "../data/genieLamp"
+import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor } from "../data/genieLamp"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
@@ -514,8 +514,8 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // ARC LAMPE & GÉNIE : le colporteur-embuscade est calibré NETTEMENT sous le lead du joueur (facile),
     //   avec évolution au stade naturel du niveau (jamais une souche à un niveau non naturel). Cf. genieTrainerLevel.
     if (trainerId === GENIE_TRAINER_ID) {
-        const genieLead = team.find((m) => m.currentHp > 0)
-        const glvl = genieTrainerLevel(genieLead?.level ?? 5)
+        const genieAvg = team.length ? team.reduce((s, m) => s + m.level, 0) / team.length : 5
+        const glvl = genieTrainerLevel(genieAvg) // moyenne d'équipe − delta (auto-nivelé, pas trop faible)
         specs = specs.map((s) => ({ ...s, level: glvl, speciesId: speciesAtLevel(s.speciesId, glvl) }))
     }
     const enemyTeam = specs.map((s) => {
@@ -1317,7 +1317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   décompte N∈[3,10] (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
                     //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
-                    if (!isTrainerDefeated(GENIE_TRAINER_ID)) {
+                    if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID)) {
                         if (genieAmbushCountdown < 0) genieAmbushCountdown = rollLampCountdown()
                         const genieTeamHp = team.map((m) => { const gsp = getSpecies(m.speciesId); return { hp: m.currentHp, maxHp: gsp ? fullStats(m, gsp).hp : m.currentHp } })
                         if (genieAmbushCountdown <= 0 && teamFreshEnough(genieTeamHp)) {
