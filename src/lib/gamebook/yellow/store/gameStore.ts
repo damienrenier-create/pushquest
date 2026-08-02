@@ -319,6 +319,12 @@ const FUSION_PROLOGUE_LINES = [
     "Un conseil de maître : une bonne fusion COMPLÈTE ses parents — marie une grosse attaque à une belle défense, couvre tes faiblesses de type, et n'oublie pas l'objet tenu.",
     "Le Conseil des Chimères t'attend derrière cette porte. Franchis-la quand tu es prêt… et que la meilleure fusion l'emporte !",
 ]
+// Passages SUIVANTS : variante courte « encore toi » — plus légère, mais qui laisse quand même le temps à la
+//   génération des sprites de finir (c'est LA raison d'afficher un dialogue ici à chaque fois).
+const FUSION_PROLOGUE_LINES_REPEAT = [
+    "*La sauce frémit à nouveau.* Encore toi ?! 🍝 Décidément, le Conseil des Chimères ne te fait pas peur…",
+    "Soit. Le temps que je réchauffe l'arène, prépare tes fusions — et qu'elles donnent le meilleur d'elles-mêmes !",
+]
 
 /** Paires (aId,bId,nom,types) du roster de fusion du joueur, pour requestFusionSprites (génération des sprites).
  *  PUR côté données : computeFusion ne mute rien et n'enregistre aucune espèce → sûr à appeler hors combat. */
@@ -1384,12 +1390,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && getPlayerSave().fusionRoster.length > 0) {
             const items = fusionSpriteItemsFromRoster()
             if (items.length) void requestFusionSprites(items)
-            if (!isTrainerDefeated(FUSION_PROLOGUE_MARKER)) {
-                markTrainerDefeated(FUSION_PROLOGUE_MARKER)
-                set({ player: next, dialogue: { npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: FUSION_PROLOGUE_LINES } })
-                scheduleSave(next)
-                return
-            }
+            // Message À CHAQUE PASSAGE (plus one-time) : c'est cette pause de lecture qui laisse la génération finir
+            //   avant le 1er combat. 1re fois = félicitations complètes ; ensuite = variante courte « encore toi ».
+            const firstTime = !isTrainerDefeated(FUSION_PROLOGUE_MARKER)
+            if (firstTime) markTrainerDefeated(FUSION_PROLOGUE_MARKER)
+            set({ player: next, dialogue: { npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: firstTime ? FUSION_PROLOGUE_LINES : FUSION_PROLOGUE_LINES_REPEAT } })
+            scheduleSave(next)
+            return
         }
 
         // ACE (rival + gardien) : sa bande de déclenchement borde le passage OUEST vers
