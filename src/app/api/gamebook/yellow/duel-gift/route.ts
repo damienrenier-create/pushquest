@@ -80,9 +80,11 @@ export async function POST(req: NextRequest) {
     // Énergie reversée au joueur mirouté = énergie dépensée par le vainqueur (bornée anti-triche). Fallback = ancien
     //   montant fixe si le client ne l'envoie pas (rétro-compat). Plancher GIFT_ENERGY pour que ça reste un vrai cadeau.
     const GIFT_ENERGY_CAP = 3000
+    // BOOST « rattrapage » (Sartay 02/08) : le joueur dont le miroir IA est battu touche un peu PLUS que l'énergie
+    //   dépensée par le vainqueur (×1.4, plancher relevé à 60) → coup de pouce aux joueurs à la traîne.
     const energy = typeof body.energy === "number" && isFinite(body.energy)
-        ? Math.max(GIFT_ENERGY, Math.min(GIFT_ENERGY_CAP, Math.floor(body.energy)))
-        : GIFT_ENERGY
+        ? Math.max(60, Math.min(GIFT_ENERGY_CAP, Math.floor(body.energy * 1.4)))
+        : Math.max(60, GIFT_ENERGY)
 
     try {
         const dg = (prisma as any).duelGift // table gated (cf. advisor/), créée par db:push

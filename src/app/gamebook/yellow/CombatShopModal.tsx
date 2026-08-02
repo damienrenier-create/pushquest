@@ -26,6 +26,7 @@ const ENERGY = [{ amount: 250, price: 40 }, { amount: 600, price: 85 }]
 const TORCHES: { id: string; jc: number }[] = [{ id: "torche_1", jc: 40 }, { id: "torche_2", jc: 100 }, { id: "torche_3", jc: 250 }]
 const CT_LOT = ["ct08", "ct12", "ct14", "ct15", "ct16", "ct24", "ct20", "ct10"] // CT fortes (alternative aux badges)
 const CT_PRICE = 120
+const NOYAU_PRICE = 200 // Noyau de Métal (évo Magmator → Magnetor), vendu en JC (Sartay 02/08)
 const SYMBOLS = [
     { id: "sym_tour", emoji: "🏯", label: "Symbole de la Tour" },
     { id: "sym_usine", emoji: "🏭", label: "Symbole de l'Usine" },
@@ -118,6 +119,14 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                             return <Row key={id} label={mv?.name ?? id} price={CT_PRICE} disabled={busy || (jc ?? 0) < CT_PRICE}
                                 onBuy={() => spend(CT_PRICE, { grant: () => grantCt(id), toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
                         })}
+                    </Section>
+
+                    <Section title="🔩 Objet d'évolution">
+                        {(() => {
+                            const it = ITEMS["noyau_metal"]; const owned = player.items["noyau_metal"] ?? 0
+                            return <Row label={`${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc="Fait évoluer Magmator (niv 50+) en Magnetor — à utiliser depuis la fiche du Daemon." price={NOYAU_PRICE} disabled={busy || (jc ?? 0) < NOYAU_PRICE}
+                                onBuy={() => spend(NOYAU_PRICE, { grant: () => addItem("noyau_metal", 1), toast: `🔩 ${it.name} acheté ! (fiche Magmator → « Utiliser le Noyau »)` })} />
+                        })()}
                     </Section>
 
                     {HELD_GROUPS.map((g) => {

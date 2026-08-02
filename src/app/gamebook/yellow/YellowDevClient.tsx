@@ -69,6 +69,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
+import { evolveMagmatorWithChen } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -847,10 +848,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         const bdayTotal = bday.reduce((s, g) => s + (g.energy || 0), 0)
                         if (duelTotal > 0) grantReps(duelTotal)                  // cadeaux de duel : plafonnés (normal)
                         if (bdayTotal > 0) grantBonusEnergyUncapped(bdayTotal)   // anniv : HORS-plafond garanti
-                        if (duelTotal > 0 || bdayTotal > 0) persistYellowSave()
+                        // RATTRAPAGE (Sartay 02/08) : le joueur mirouté touche EN PLUS un bonus d'énergie hors-plafond
+                        //   d'autant plus gros qu'il est à la traîne (peu de badges) + une Super Ball par consolation.
+                        let duelBalls = 0, duelCatchup = 0
+                        if (duel.length > 0) {
+                            duelCatchup = Math.max(0, 5 - (getPlayer().badges?.length ?? 0)) * 30 // 0 (5 badges) → 150 (débutant)
+                            if (duelCatchup > 0) grantBonusEnergyUncapped(duelCatchup)
+                            duelBalls = duel.length
+                            addItem("super_ball", duelBalls)
+                        }
+                        if (duelTotal > 0 || bdayTotal > 0 || duelBalls > 0) persistYellowSave()
                         if (duel.length > 0) {
                             const nicks = [...new Set(duel.map((g) => g.fromNickname).filter(Boolean))]
-                            showDialogue(DUEL_DREAM_NPC, DUEL_DREAM_NAME, duelDreamLines(nicks, duelTotal))
+                            const bonusLine = `🎁 En prime : ${duelBalls} Super Nexus-Ball${duelBalls > 1 ? "s" : ""}${duelCatchup > 0 ? ` + ${duelCatchup} énergie (coup de pouce)` : ""} !`
+                            showDialogue(DUEL_DREAM_NPC, DUEL_DREAM_NAME, [...duelDreamLines(nicks, duelTotal), bonusLine])
                         }
                         if (bday.length > 0) {
                             showDialogue(DUEL_DREAM_NPC, "🎂 Joyeux anniversaire !", [
@@ -4038,6 +4049,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {live.speciesId === "pantheon" && (player.items["pierre_gekroc"] ?? 0) > 0 && (
                                 <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => { setPantheonEvo(live); setSelected(null) }}>
                                     🪨 Utiliser la Pierre Gékroc
+                                </button>
+                            )}
+                            {/* Noyau de Métal → Magmator (niv 50+) évolue en Magnetor. Consomme le Noyau (evolveMagmatorWithChen). */}
+                            {live.speciesId === "magmator" && (player.items["noyau_metal"] ?? 0) > 0 && (
+                                <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => {
+                                    const res = evolveMagmatorWithChen(live.uid)
+                                    if (res) { setToast("Magmator évolue en Magnetor ! 🔩"); setSelected(null); persistYellowSave() }
+                                    else setToast("Il faut un Magmator de niveau 50 minimum.")
+                                }}>
+                                    🔩 Utiliser le Noyau de Métal
                                 </button>
                             )}
                             <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={closeFiche}>← RETOUR</button>
