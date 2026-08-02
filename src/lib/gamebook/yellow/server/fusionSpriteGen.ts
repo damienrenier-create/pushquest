@@ -71,6 +71,12 @@ function floodRemoveBackground(data: Buffer, w: number, h: number, tol = CHROMA_
     for (let x = 0; x < w; x++) { visit(x, 0); visit(x, h - 1) }
     for (let y = 0; y < h; y++) { visit(0, y); visit(w - 1, y) }
     while (stack.length) { const y = stack.pop()!, x = stack.pop()!; visit(x + 1, y); visit(x - 1, y); visit(x, y + 1); visit(x, y - 1) }
+    // ZONES ENCLAVÉES (arcs, boucles, trous non connectés au bord) : passe GLOBALE à tolérance SERRÉE — retire le
+    //   fond uni resté à l'intérieur, sans manger le sujet (qui n'est pas EXACTEMENT la couleur du fond). Fix "arc".
+    const tight = Math.round(tol * 0.5)
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] !== 0 && Math.abs(data[i] - br) + Math.abs(data[i + 1] - bg) + Math.abs(data[i + 2] - bb) <= tight) data[i + 3] = 0
+    }
 }
 
 /** Génère + poste le sprite. Renvoie l'URL Blob (succès) ou une erreur. NE LÈVE JAMAIS (défensif). */
@@ -128,7 +134,7 @@ export async function generateFusionSprite(opts: {
         if (nearlyEmpty(data)) return { ok: false, error: "bad-output-empty" }
         if (!bordersMostlyTransparent(data, RES, RES)) return { ok: false, error: "bad-output-bg" }
 
-        const blob = await put(`yellow/fusion/${fusionPairKey(aId, bId)}.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false })
+        const blob = await put(`yellow/fusion/${fusionPairKey(aId, bId)}.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false, allowOverwrite: true })
         return { ok: true, url: blob.url, model: MODEL }
     } catch (e) {
         return { ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) }
