@@ -562,9 +562,9 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 36,
         dialoguesAfter: [
             "*Tu lis le panneau.*",
-            "ROUTE NORD",
-            "Bientôt : zone de Pokémon sauvages à capturer.",
-            "🚧 En construction — reviens plus tard !",
+            "ROUTE NORD — le sentier vers CENDREVILLE.",
+            "Dans les hautes herbes rôdent des Daemons sauvages. Certains visiteurs ne pointent qu'à une certaine heure : ouvre l'œil le matin ET l'après-midi.",
+            "Près des montagnes, la faune rocheuse se densifie ; au bord de l'eau, elle se raréfie.",
         ],
     },
 

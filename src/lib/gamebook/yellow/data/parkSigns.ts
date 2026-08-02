@@ -46,7 +46,7 @@ export const PARK_SIGN_TIPS: ReadonlyArray<ReadonlyArray<string>> = [
     // 7 — Attaques de statut (avec exemple)
     [
         "Certaines attaques infligent un STATUT : brûlure, poison, paralysie, sommeil…",
-        "Ex : Flammèche brûle (10%) — Braisille et Fennaise l'apprennent dès le NIVEAU 7.",
+        "Ex : Flammèche brûle (10%) — Braisille l'apprend au niveau 6, Fennaise au niveau 7.",
         "Poison et brûlure rongent l'ennemi chaque tour, le sommeil le fige : de quoi gagner sans prendre un coup.",
     ],
     // 8 — Renforcement / objets X (avec exemple)
