@@ -99,6 +99,21 @@ export function activeNpcs() {
             dialoguesAfter: ["« Un Daemon a oublié une capacité de sa lignée ? Je peux la lui réapprendre… contre quelques reps. »"],
         }]
     }
+    // DAEMOMANIAQUE (guide de capture) : apparaît à CENDREVILLE une fois le RUN 3 TERMINÉ (run3Used + de retour en live).
+    //   Placé près du spawn (42,16) → immédiatement visible. Statique (l'errance n'existe pas dans le moteur yellow).
+    if (getPlayerSave().run3Used && effectiveRunWorld() === "live") {
+        list = [...list, {
+            id: "y_daemomaniaque",
+            name: "DAEMOMANIAQUE",
+            mapId: "yellow_cendreville",
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "👒", color: "#e0a020" },
+            initialX: 41,
+            initialY: 16,
+            dialoguesAfter: ["« Tu veux savoir où dénicher un Daemon précis ? Demande-moi. »"],
+        }]
+    }
     return list
 }
 
@@ -189,6 +204,7 @@ interface GameStore {
     arenaInfoOpen: BadgeId | null // carrousel d'infos stratégiques d'une arène (panneau devant l'entrée)
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
+    daemomaniaqueOpen: boolean // DAEMOMANIAQUE (Cendreville, post run 3) : guide de capture « où/quand/comment »
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
@@ -257,6 +273,7 @@ interface GameStore {
     closeArenaInfo: () => void
     closeLibrary: () => void
     closeAdvisor: () => void
+    closeDaemomaniaque: () => void
     closeLab: () => void
     closeMoveReminder: () => void
     closeCombatShop: () => void
@@ -791,6 +808,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     arenaInfoOpen: null,
     libraryOpen: false,
     advisorOpen: false,
+    daemomaniaqueOpen: false,
     labOpen: false,
     moveReminderOpen: false,
     combatShopOpen: false,
@@ -835,7 +853,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -1622,6 +1640,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ advisorOpen: true })
             return
         }
+        if (npc.id === "y_daemomaniaque") {
+            set({ daemomaniaqueOpen: true })
+            return
+        }
 
         // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
         if (npc.id === "y_lab_computer") {
@@ -2229,6 +2251,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeArenaInfo: () => set({ arenaInfoOpen: null }),
     closeLibrary: () => set({ libraryOpen: false }),
     closeAdvisor: () => set({ advisorOpen: false }),
+    closeDaemomaniaque: () => set({ daemomaniaqueOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
