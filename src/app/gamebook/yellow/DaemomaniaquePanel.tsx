@@ -13,8 +13,8 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { captureGuide, runSpawnableSpecies, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
+import { getSpecies, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 
 const TYPE_COLOR: Record<string, string> = {
@@ -49,23 +49,30 @@ export default function DaemomaniaquePanel() {
     const rows = useMemo(() => {
         if (!open || (mode === "post" && selectedRun === null)) return [] as SpeciesData[]
         const real = (id: string) => { const sp = getSpecies(id); return sp && sp.dexNo < 500 ? sp : null } // exclut fusions (dexNo ≥ 500) et customs
-        let ids: string[]
+        const caught = [...dex.caught], seen = [...dex.seen]
+        let list: SpeciesData[]
         if (mode === "run1") {
-            ids = [...runSpawnableSpecies(1, hideEndgame)].filter((id) => real(id) && (seenSet.has(id) || id === "goshendofy"))
-            if (real("goshendofy") && !ids.includes("goshendofy")) ids.push("goshendofy") // teaser légendaire
+            // Run 1 : uniquement les Daemons DÉJÀ CROISÉS (anti-spoiler strict) + Goshendofy en teaser légendaire.
+            const ids = new Set<string>([...seenSet].filter((id) => real(id)))
+            if (real("goshendofy")) ids.add("goshendofy")
+            list = [...ids].map((id) => getSpecies(id)!).filter(Boolean)
         } else if (mode === "run2") {
-            ids = [...new Set([...runSpawnableSpecies(1), ...runSpawnableSpecies(2)])].filter((id) => real(id))
+            // Run 2 : dex tiéré run 1+2 (même masquage anti-spoiler que le Pokédex). Info gatée aux vus (infoAllowed).
+            list = visibleDexSpecies(caught, player.isChampion, true, false, false, seen)
+        } else if (mode === "run3") {
+            list = visibleDexSpecies(caught, player.isChampion, false, true, false, seen)
         } else {
-            ids = [...runSpawnableSpecies(queryRun)].filter((id) => real(id))
+            // POST run 3 : catalogue 100% débloqué (dexFullUnlock) — la grille montre TOUT le dex, l'info est scopée au run choisi.
+            list = visibleDexSpecies(caught, true, true, true, true, seen)
         }
         const uniq = new Set<string>()
-        let list = ids.map((id) => getSpecies(id)!).filter((sp) => sp && !uniq.has(sp.id) && uniq.add(sp.id))
+        list = list.filter((sp) => sp && sp.dexNo < 500 && !uniq.has(sp.id) && uniq.add(sp.id))
         list.sort((a, b) => a.dexNo - b.dexNo)
         const needle = q.trim().toLowerCase()
         if (needle) list = list.filter((sp) => sp.name.toLowerCase().includes(needle))
         if (typeFilter) list = list.filter((sp) => sp.types.includes(typeFilter as SpeciesData["types"][number]))
         return list
-    }, [open, mode, selectedRun, queryRun, hideEndgame, q, typeFilter, seenSet])
+    }, [open, mode, selectedRun, queryRun, hideEndgame, q, typeFilter, seenSet, dex.caught, dex.seen, player.isChampion])
 
     if (!open) return null
 

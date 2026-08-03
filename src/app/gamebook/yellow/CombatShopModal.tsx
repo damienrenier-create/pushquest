@@ -39,9 +39,10 @@ const HELD_GROUPS: { title: string; cat: HeldItemCategory }[] = [
     { title: "⚔️ Combat", cat: "combat" },
     { title: "⭐ Signatures (Daemon précis)", cat: "signature" },
 ]
-// DAEMONS DE LÉGENDE : les Cerveaux/gardiens uniques (trio Gék + Sylvebarbe) rachetables au marchand si
+// DAEMONS DE LÉGENDE : les Cerveaux/gardiens uniques (famille Gék + Sylvebarbe) rachetables au marchand si
 // jamais capturés — voie de rattrapage HORS-PRIX (dernier recours du complétionniste). Livrés niv 60.
-const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "sylvebarbe"]
+// Géckèbre + Geaucké ajoutés (choix Sartay 03/08) : c'est leur SEULE voie d'obtention (sinon exclus du dex).
+const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke", "sylvebarbe"]
 const LEGENDARY_PRICE = 1500
 const LEGENDARY_LEVEL = 60
 

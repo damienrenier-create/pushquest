@@ -11,6 +11,7 @@ import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes
 import { rollIvs } from "./ivConfig"
 import { speciesAtLevel } from "./ace"
 import { getSpecies, SPECIES } from "./species"
+import { SPECIAL_OBTAIN } from "./captureSpecial"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5, GIGA_RARE = 2
@@ -195,24 +196,33 @@ function entryYieldSet(e: WildEntry): string[] {
     for (const L of levels) { try { set.add(speciesAtLevel(e.speciesId, L)) } catch { /* ignore */ } }
     return [...set]
 }
-interface GuideMatch { mapId: string; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean }
+interface GuideMatch { mapId: string; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean; pct?: number }
+// Taux de pop NEUTRE d'une entrée = base / Σbase du pool où elle vit (formule vérifiée : rollWildEncounter tire
+// weight_i/Σweight, et weight = base sans biome/effort). Exact pour Centrale/Cendreville/Maison Hantée/Nexus/pools
+// Hautes Herbes ; APPROCHÉ à la Route Nord & Grotte (biomes) et sur les entrées taguées `player` (effort) → un
+// avertissement « taux indicatif » est ajouté dans le COMMENT pour ces cas.
+const sumBase = (pool: readonly WildEntry[]): number => pool.reduce((s, e) => s + e.base, 0)
+const pctOf = (base: number, sum: number): number | undefined => (sum > 0 ? (base / sum) * 100 : undefined)
 function guideMatchesRun(target: string, run: number, hideEndgame: boolean): GuideMatch[] {
     const table = guideTable(run)
     const out: GuideMatch[] = []
     for (const mapId of Object.keys(table)) {
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
-        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, e })
-        if (z.rects) for (const r of z.rects) for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, e })
+        const poolSum = sumBase(z.pool)
+        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum) })
+        if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool); for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs) }) }
         const tg = z.trainingGrid
         if (tg) {
-            for (const [t, pool] of Object.entries(tg.typePools)) for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t })
+            for (const [t, pool] of Object.entries(tg.typePools)) { const ps = sumBase(pool); for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t, pct: pctOf(e.base, ps) }) }
             if (tg.legendary && entryYields(tg.legendary, target)) out.push({ mapId, e: tg.legendary, legend: true })
             if (tg.dragonRare) for (const b of tg.dragonRare.bases) if (entryYields({ speciesId: b, base: VERY_RARE }, target)) out.push({ mapId, e: { speciesId: b, base: VERY_RARE }, dragon: true })
         }
     }
     return out
 }
+/** Formate un taux en % (une décimale sous 1 % pour les pépites ; entier au-dessus). */
+const fmtPct = (p: number): string => `≈${p >= 1 ? Math.round(p) : p.toFixed(1)}%`
 export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
 /** Guide « où/quand/comment » d'un Daemon POUR UNE RUN donnée (1/2/3). hideEndgame masque les zones post-Ligue
  *  (run 1 avant la Ligue). Ne renvoie QUE des localisations de cette run → chaque mode du Daemomaniaque reste cohérent. */
@@ -222,8 +232,11 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
     const matches = guideMatchesRun(speciesId, run, hideEndgame)
     const where: string[] = []
     const how = new Set<string>()
+    let modulated = false // biomes (Route Nord/Grotte) ou effort (tag player) → le % affiché n'est qu'indicatif
     for (const m of matches) {
-        const parts: string[] = [m.gridType ? `📍 Hautes Herbes (Cendreville) — carré ${m.gridType}` : `📍 ${guideMapName(m.mapId)}`, rarityBand(m.e.base)]
+        // Taux : % réel (base/Σbase) si connu, sinon bande qualitative (légendaire/dragon = pré-rolls, pas de %).
+        const rate = m.pct != null ? fmtPct(m.pct) : rarityBand(m.e.base)
+        const parts: string[] = [m.gridType ? `📍 Hautes Herbes (Cendreville) — carré ${m.gridType}` : `📍 ${guideMapName(m.mapId)}`, rate]
         if (m.legend) parts.push("légendaire rôdant")
         if (m.dragon) parts.push("dragon rare (plus rare en altitude)")
         if (m.e.levelFixed != null) parts.push(`niv ${m.e.levelFixed}`)
@@ -234,19 +247,27 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (m.e.requiresFusionLeague) parts.push("après la Ligue de Fusion")
         if (m.e.catchOnce) parts.push("1 seule capture possible")
         where.push(parts.join(" · "))
+        if ((m.mapId === "yellow_route_nord" || m.mapId === "yellow_grotte") || (m.e as { player?: unknown }).player) modulated = true
         if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
         if (m.e.captureMinBallBonus) how.add(`Exige une Ball puissante (ballBonus ≥ ${m.e.captureMinBallBonus}).`)
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
         if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
     }
     if (where.length === 0) {
+        // Pas sauvage dans cette run → obtention SPÉCIALE curée (pierre/objet/échange/cadeau/boss/rôdeur).
+        const special = SPECIAL_OBTAIN[speciesId]
+        if (special) return { where: special.where ?? [], how: special.how ?? [], note: special.note ?? null }
+        // Sinon : repli sur le pré-évolué (récursif — trouve la base sauvage OU sa propre obtention spéciale).
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
             const base = captureGuide(preEvo.id, run, hideEndgame)
-            if (base.where.length > 0) return { where: base.where, how: base.how, note: `${sp.name} ne se trouve pas à l'état sauvage : capture ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
+            if (base.where.length > 0 || base.how.length > 0) {
+                return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
+            }
         }
         return { where: [], how: [], note: `${sp.name} ne se croise pas dans cette run — cadeau, boss, ou pas encore accessible.` }
     }
+    if (modulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce et selon tes exercices (pompes/squats).")
     how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
     return { where, how: [...how], note: null }
 }
@@ -798,6 +819,9 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "rembodo", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
             // (Eau/Glace — belunode, orcaline — déplacés à la GROTTE GELÉE run 3.)
             { speciesId: "wistree", base: 2, noEvolve: true, rare: true, captureMult: 0.4 }, // Spectre/Plante rare & mystérieux (voleur d'éclat)
+            // PHOÉCHAUD (création Guillaume, phénix maudit FEU/SPECTRE) — capturable au STADE 1 puis évolution (22→40).
+            // Ajouté ici (choix Sartay 03/08) pour rendre la lignée complétable au dex. levelRange bas = garantit la base.
+            { speciesId: "phoechaudi", base: 3, levelRange: [12, 18], captureMult: 0.5 },
             // CRÉATIONS (Guizer & Shady) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
         ],
     },
