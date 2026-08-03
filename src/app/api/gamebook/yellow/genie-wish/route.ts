@@ -58,8 +58,12 @@ export async function GET(req: NextRequest) {
             await gw.update({ where: { userId: auth.userId }, data: { proposedSeen: true } })
         }
         return NextResponse.json({ ok: true, wish: row, justReturned })
-    } catch {
-        return NextResponse.json({ ok: true, wish: null, justReturned: false }) // table pas encore créée → neutre
+    } catch (e) {
+        const code = (e as { code?: string })?.code
+        // P2021 (table absente) / P2022 (colonne absente) = état ATTENDU avant `db:push` → neutre.
+        if (code === "P2021" || code === "P2022") return NextResponse.json({ ok: true, wish: null, justReturned: false })
+        console.error("[genie-wish] GET", code, (e as Error)?.message) // vraie erreur DB → tracer
+        return NextResponse.json({ error: "db" }, { status: 503 }) // transitoire → NE PAS faire croire « aucun vœu »
     }
 }
 
@@ -92,8 +96,10 @@ export async function POST(req: NextRequest) {
         const row = await gw.findUnique({ where: { userId: auth.userId } })
         if (!row) {
             const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
-            await gw.create({ data: { userId: auth.userId, nickname: me?.nickname ?? "?", wish1: text } })
-            return NextResponse.json({ ok: true })
+            // wish2/wish3 sont REQUIS (String non-null, pas de défaut) → il FAUT les fournir, sinon Prisma throw
+            // et le catch renvoie « neutre » : le vœu n'était jamais persisté (bug corrigé le 03/08).
+            await gw.create({ data: { userId: auth.userId, nickname: me?.nickname ?? "?", wish1: text, wish2: "", wish3: "" } })
+            return NextResponse.json({ ok: true, saved: true })
         }
         const { submitted, resolved } = derive(row)
         // Étape formulable = 1er vœu vide dont le précédent est TRANCHÉ (ou le tout premier).
@@ -101,8 +107,11 @@ export async function POST(req: NextRequest) {
         for (let n = 0; n < 3; n++) { if (!submitted[n] && (n === 0 || resolved[n - 1])) { idx = n; break } }
         if (idx < 0) return NextResponse.json({ ok: true, skipped: "no-step" }) // rien à formuler (en attente / terminé)
         await gw.update({ where: { userId: auth.userId }, data: { [`wish${idx + 1}`]: text } })
-        return NextResponse.json({ ok: true })
-    } catch {
-        return NextResponse.json({ ok: true, skipped: "no-table" }) // table pas encore créée → neutre
+        return NextResponse.json({ ok: true, saved: true })
+    } catch (e) {
+        const code = (e as { code?: string })?.code
+        if (code === "P2021" || code === "P2022") return NextResponse.json({ ok: true, skipped: "no-table" }) // avant db:push → neutre
+        console.error("[genie-wish] POST", code, (e as Error)?.message)
+        return NextResponse.json({ error: "db" }, { status: 503 })
     }
 }

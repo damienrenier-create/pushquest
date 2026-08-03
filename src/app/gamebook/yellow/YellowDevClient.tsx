@@ -950,13 +950,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             //   Pop-up une seule fois (?claim=1 marque proposedSeen). Détail + accept/refus dans le menu → 🧞 Vœux.
             if (!cancelled && getActiveWorld() !== "run3") {
                 try {
-                    const r = await fetch("/api/gamebook/yellow/genie-wish?claim=1")
+                    const r = await fetch("/api/gamebook/yellow/genie-wish") // PEEK — ne consomme PAS proposedSeen
                     const j = r.ok ? await r.json() : null
                     if (!cancelled && j?.justReturned && j?.wish) {
                         showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
                             "*Ta lampe rougeoie soudain au fond de ton sac…*",
                             "« J'ai médité sur ta demande, mortel. Reviens me voir — frotte ta lampe. »",
                         ])
+                        void fetch("/api/gamebook/yellow/genie-wish?claim=1") // consomme le pop-up SEULEMENT après l'avoir affiché
                     }
                 } catch { /* neutre */ }
             }

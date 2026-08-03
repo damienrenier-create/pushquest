@@ -52,7 +52,8 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const [draft, setDraft] = useState("")
     const [busy, setBusy] = useState(false)
     const [lampErr, setLampErr] = useState(false)
-    const [justSent, setJustSent] = useState(false) // vœu envoyé CETTE ouverture → verrouille le formulaire (anti-spam)
+    const [justSent, setJustSent] = useState(false) // vœu ENREGISTRÉ cette ouverture → verrouille le formulaire (anti-spam / anti-refaire)
+    const [sendErr, setSendErr] = useState(false)   // l'envoi du vœu a échoué côté serveur → réessayer, ne pas verrouiller
     const rubRef = useRef(0)
     const last = useRef<{ x: number; y: number } | null>(null)
     const pressed = useRef(false)
@@ -60,11 +61,17 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const load = async () => {
         try {
             const r = await fetch("/api/gamebook/yellow/genie-wish")
-            const j = r.ok ? await r.json() : null
-            setRow((j?.wish ?? null) as WishRow | null)
-        } catch { setRow(null) }
+            if (!r.ok) return // erreur DB transitoire (503) → garder l'état de chargement, NE PAS retomber sur « 1re invocation »
+            const j = await r.json()
+            const w = (j?.wish ?? null) as WishRow | null
+            setRow(w)
+            // Un vœu déjà en base ⇒ la lampe a forcément été frottée : ne JAMAIS re-demander le frottage
+            // (blindage contre une lecture stale du marker `lamp_rubbed` au montage).
+            if (w && (w.wish1?.trim() || w.wish2?.trim() || w.wish3?.trim())) setRubbed(true)
+        } catch { /* réseau → row reste undefined (chargement), pas de fausse 1re invocation */ }
     }
-    useEffect(() => { if (rubbed) void load() }, [rubbed])
+    // Charge TOUJOURS au montage (même avant frottage) → détecte un arc déjà entamé et évite un faux « 1re invocation ».
+    useEffect(() => { void load() }, [])
 
     const onDown = (x: number, y: number) => { pressed.current = true; last.current = { x, y } }
     const onUp = () => { pressed.current = false; last.current = null }
@@ -85,33 +92,37 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
     const submit = async () => {
         if (!draft.trim() || busy || justSent) return
-        setBusy(true)
-        setJustSent(true) // verrouille AUSSITÔT (anti-spam) : plus de zone de texte tant qu'on ne rouvre pas la lampe
+        setBusy(true); setSendErr(false)
         try {
-            await fetch("/api/gamebook/yellow/genie-wish", {
+            const r = await fetch("/api/gamebook/yellow/genie-wish", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action: "submit", wish: draft.trim() }),
             })
+            const j = r.ok ? await r.json() : null
+            if (!j?.saved) { setSendErr(true); return } // le serveur n'a PAS enregistré → ne pas verrouiller, on peut réessayer
+            setJustSent(true) // verrouille SEULEMENT après confirmation d'enregistrement (anti-spam + anti-refaire)
             setDraft("")
             await load()
-        } catch { /* neutre */ } finally { setBusy(false) }
+        } catch { setSendErr(true) } finally { setBusy(false) }
     }
     const respond = async (accepted: boolean) => {
         if (busy) return
-        setBusy(true)
-        setJustSent(false) // après le dilemme tranché, le vœu SUIVANT pourra être formulé
+        setBusy(true); setSendErr(false)
         try {
-            await fetch("/api/gamebook/yellow/genie-wish", {
+            const r = await fetch("/api/gamebook/yellow/genie-wish", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action: "respond", accepted }),
             })
+            if (!r.ok) { setSendErr(true); return } // réponse non enregistrée (503) → laisser le dilemme, réessayer
+            setJustSent(false) // dilemme tranché → le vœu SUIVANT pourra être formulé
             await load()
-        } catch { /* neutre */ } finally { setBusy(false) }
+        } catch { setSendErr(true) } finally { setBusy(false) }
     }
 
     const pct = Math.min(100, (rub / RUB_TARGET) * 100)
     const info = derive(row === undefined ? null : row)
-    // justSent force l'attente même si la persistance tarde/échoue → le formulaire ne réapparaît pas (anti-spam).
+    // justSent (posé UNIQUEMENT après enregistrement confirmé) force l'attente le temps que load() rafraîchisse
+    // la ligne → le formulaire ne réapparaît pas dans la foulée (anti-spam / anti-refaire).
     const phase: Phase = row === undefined ? "loading" : (justSent && info.phase === "formulate") ? "waiting" : info.phase
 
     return (
@@ -157,6 +168,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
                             <button style={{ ...S.primary, marginTop: 0, flex: 1, opacity: busy ? 0.5 : 1 }} disabled={busy} onClick={() => respond(true)}>✅ J&apos;accepte</button>
                             <button style={{ ...S.refuse, opacity: busy ? 0.5 : 1 }} disabled={busy} onClick={() => respond(false)}>❌ Je refuse</button>
                         </div>
+                        {sendErr && <div style={S.err}>La lampe crépite… ta réponse n'est pas passée. Réessaie dans un instant.</div>}
                         <button style={S.ghost} onClick={onClose}>Plus tard</button>
                     </>
                 ) : (
@@ -177,6 +189,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
                         <button style={{ ...S.primary, opacity: draft.trim() && !busy ? 1 : 0.5, cursor: draft.trim() && !busy ? "pointer" : "default" }} disabled={!draft.trim() || busy} onClick={submit}>
                             {busy ? "…" : "🧞 Formuler ce vœu"}
                         </button>
+                        {sendErr && <div style={S.err}>La lampe crépite… le génie n'a pas reçu ta demande. Réessaie dans un instant.</div>}
                         <button style={S.ghost} onClick={onClose}>Plus tard</button>
                     </>
                 )}
@@ -196,4 +209,5 @@ const S: Record<string, React.CSSProperties> = {
     primary: { width: "100%", marginTop: 14, background: "linear-gradient(180deg,#e0b84a,#c9a227)", border: "1px solid #ffe08a", borderRadius: 10, color: "#241a06", fontSize: 14, fontWeight: 900, padding: "11px", cursor: "pointer" },
     refuse: { flex: 1, background: "rgba(30,22,48,0.7)", border: "1px solid #6a5a8a", borderRadius: 10, color: "#e6c9c9", fontSize: 13.5, fontWeight: 800, padding: "11px", cursor: "pointer" },
     ghost: { width: "100%", marginTop: 8, background: "transparent", border: "1px solid #6a5a8a", borderRadius: 10, color: "#c9b8e8", fontSize: 12.5, fontWeight: 700, padding: "9px", cursor: "pointer" },
+    err: { marginTop: 8, fontSize: 12, color: "#f3bcbc", background: "rgba(232,136,136,0.12)", border: "1px solid #e88", borderRadius: 8, padding: "8px 10px", textAlign: "center" },
 }
