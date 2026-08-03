@@ -20,6 +20,8 @@ export interface OfficialFusion { name: string; sprite: string }
  *  quand Sartay dessine un sprite maison pour une combinaison libre → permanent, sans coût de génération. */
 const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string }[] = [
     { a: "alirocaillus", b: "sylvebarbe", name: "Sylvaroc", sprite: fusionSpritePath("Sylvaroc") },
+    { a: "gloutanoir", b: "naiadrak", name: "Naianoir", sprite: fusionSpritePath("Naianoir") },
+    { a: "lunarque", b: "jerbiwat", name: "Lunarwatt", sprite: fusionSpritePath("Lunarwatt") },
 ]
 
 /** Clé de paire indépendante de l'ordre des parents. */
