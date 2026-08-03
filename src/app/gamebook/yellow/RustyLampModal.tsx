@@ -52,6 +52,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const [draft, setDraft] = useState("")
     const [busy, setBusy] = useState(false)
     const [lampErr, setLampErr] = useState(false)
+    const [justSent, setJustSent] = useState(false) // vœu envoyé CETTE ouverture → verrouille le formulaire (anti-spam)
     const rubRef = useRef(0)
     const last = useRef<{ x: number; y: number } | null>(null)
     const pressed = useRef(false)
@@ -83,8 +84,9 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     }
 
     const submit = async () => {
-        if (!draft.trim() || busy) return
+        if (!draft.trim() || busy || justSent) return
         setBusy(true)
+        setJustSent(true) // verrouille AUSSITÔT (anti-spam) : plus de zone de texte tant qu'on ne rouvre pas la lampe
         try {
             await fetch("/api/gamebook/yellow/genie-wish", {
                 method: "POST", headers: { "Content-Type": "application/json" },
@@ -97,6 +99,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
     const respond = async (accepted: boolean) => {
         if (busy) return
         setBusy(true)
+        setJustSent(false) // après le dilemme tranché, le vœu SUIVANT pourra être formulé
         try {
             await fetch("/api/gamebook/yellow/genie-wish", {
                 method: "POST", headers: { "Content-Type": "application/json" },
@@ -108,7 +111,8 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
 
     const pct = Math.min(100, (rub / RUB_TARGET) * 100)
     const info = derive(row === undefined ? null : row)
-    const phase: Phase = row === undefined ? "loading" : info.phase
+    // justSent force l'attente même si la persistance tarde/échoue → le formulaire ne réapparaît pas (anti-spam).
+    const phase: Phase = row === undefined ? "loading" : (justSent && info.phase === "formulate") ? "waiting" : info.phase
 
     return (
         <div style={S.overlay} onClick={onClose}>
