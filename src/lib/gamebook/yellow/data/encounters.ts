@@ -171,9 +171,10 @@ const hourText = (hr: readonly [number, number]) => {
     if (s >= 12 && e <= 20) return `l'après-midi (${s}h→${e}h)`
     return `entre ${s}h et ${e}h`
 }
-// Cartes ENDGAME (post-Ligue) masquées en RUN 1 tant que le joueur n'est pas Champion — anti-spoiler (le run 1
-//   « se termine » à la Ligue : pas de Grotte du Nexus/puzzle ni de plaine des Hautes Herbes avant).
-const GUIDE_ENDGAME_MAPS = new Set(["yellow_grotte_nexus", "yellow_grotte_nexus_b1f", "yellow_grotte_nexus_b2f", "yellow_hautes_herbes"])
+// Cartes ENDGAME (post-Ligue) masquées en RUN 1 tant que le joueur n'est pas Champion — anti-spoiler. UNIQUEMENT
+//   la Grotte du Nexus (le casse-tête, accessible via la Zone de Combat = post-Ligue). Les Hautes Herbes de
+//   Cendreville (plaine d'entraînement) sont gatées par le badge ÉLEC (pré-Ligue) → contenu run 1 normal, PAS masquées.
+const GUIDE_ENDGAME_MAPS = new Set(["yellow_grotte_nexus", "yellow_grotte_nexus_b1f", "yellow_grotte_nexus_b2f"])
 const guideTable = (run: number): Record<string, Zone> => (run === 2 ? NGPLUS_ZONES : run === 3 ? RUN3_ZONES : ZONES)
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
 function entryYields(e: WildEntry, target: string): boolean {
