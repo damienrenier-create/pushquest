@@ -1,17 +1,20 @@
 "use client"
 
-// ARC DAEMOMANIAQUE — panneau du guide de capture (PNJ de Cendreville, post run 3). Grille de Daemons cherchable
-// (visibleDexSpecies) + filtre par type → clic sur un Daemon → captureGuide(where/how/note). Éco : 5 consultations
-// GRATUITES/jour puis 50⚡ (consultDaemomaniaque). Re-consulter un Daemon déjà révélé CE session = gratuit.
-// Plomberie calquée sur AdvisorPanel (flag store) ; grille inspirée du Pokédex/FusionPicker.
+// DAEMOMANIAQUE — guide de capture (PNJ Cendreville, dès le RUN 1). Comportement PAR RUN (anti-spoiler) :
+//  • RUN 1  : n'affiche/informe QUE les Daemons DÉJÀ VUS (+ Goshendofy) ; localisations run 1, zones endgame masquées
+//             tant que pas Champion (pas de Grotte du Nexus/plaine).
+//  • RUN 2  : affiche TOUS les Daemons run 1+2 ; info UNIQUEMENT sur les vus (+ Ukognos) ; localisations run 2.
+//  • RUN 3  : affiche/informe TOUS les Daemons du run 3 (sans filtre « vu »).
+//  • POST-3 : demande d'abord DE QUEL RUN parler (1/2/3), puis tout révèle.
+// Fusions/customs exclus (getSpecies null). Éco : 5 consultations gratuites/jour puis 50⚡ (consultDaemomaniaque).
 
 import { useEffect, useMemo, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
-import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { captureGuide, runSpawnableSpecies, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 
 const TYPE_COLOR: Record<string, string> = {
@@ -20,6 +23,7 @@ const TYPE_COLOR: Record<string, string> = {
     ROCHE: "#c7b78b", SPECTRE: "#6f7bc5", DRAGON: "#3b7fd0", FEE: "#ec8fe6", METAL: "#79a0b2", TENEBRES: "#6a6376",
 }
 const tc = (t: string) => TYPE_COLOR[t] ?? "#8a7fb0"
+type Mode = "run1" | "run2" | "run3" | "post"
 
 export default function DaemomaniaquePanel() {
     const open = useGameStore((s) => s.daemomaniaqueOpen)
@@ -32,32 +36,54 @@ export default function DaemomaniaquePanel() {
     const [sel, setSel] = useState<{ sp: SpeciesData; guide: CaptureGuide } | null>(null)
     const [revealed, setRevealed] = useState<Set<string>>(new Set())
     const [err, setErr] = useState<string | null>(null)
+    const [selectedRun, setSelectedRun] = useState<number | null>(null) // mode POST : run choisi
 
-    useEffect(() => { if (open) void loadYellowSave() }, [open]) // hydrate le pokédex si accès direct
+    useEffect(() => { if (open) { void loadYellowSave(); setSel(null); setSelectedRun(null); setErr(null); setQ("") } }, [open])
+
+    const mode: Mode = aw === "ngplus" ? "run2" : aw === "run3" ? "run3" : player.run3Used ? "post" : "run1"
+    const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "post" ? (selectedRun ?? 1) : 1
+    const hideEndgame = queryRun === 1 && !player.isChampion
+    const seenSet = useMemo(() => new Set([...dex.seen, ...dex.caught]), [dex.seen, dex.caught])
+    const infoAllowed = (id: string) => mode !== "run2" || seenSet.has(id) || id === "ukognos"
 
     const rows = useMemo(() => {
-        if (!open) return [] as SpeciesData[]
-        const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
-        let list = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen)
+        if (!open || (mode === "post" && selectedRun === null)) return [] as SpeciesData[]
+        const real = (id: string) => { const sp = getSpecies(id); return sp && sp.dexNo < 500 ? sp : null } // exclut fusions (dexNo ≥ 500) et customs
+        let ids: string[]
+        if (mode === "run1") {
+            ids = [...runSpawnableSpecies(1, hideEndgame)].filter((id) => real(id) && (seenSet.has(id) || id === "goshendofy"))
+            if (real("goshendofy") && !ids.includes("goshendofy")) ids.push("goshendofy") // teaser légendaire
+        } else if (mode === "run2") {
+            ids = [...new Set([...runSpawnableSpecies(1), ...runSpawnableSpecies(2)])].filter((id) => real(id))
+        } else {
+            ids = [...runSpawnableSpecies(queryRun)].filter((id) => real(id))
+        }
+        const uniq = new Set<string>()
+        let list = ids.map((id) => getSpecies(id)!).filter((sp) => sp && !uniq.has(sp.id) && uniq.add(sp.id))
+        list.sort((a, b) => a.dexNo - b.dexNo)
         const needle = q.trim().toLowerCase()
         if (needle) list = list.filter((sp) => sp.name.toLowerCase().includes(needle))
         if (typeFilter) list = list.filter((sp) => sp.types.includes(typeFilter as SpeciesData["types"][number]))
         return list
-    }, [open, q, typeFilter, dex.caught, dex.seen, player.isChampion, player.run3Used, aw])
+    }, [open, mode, selectedRun, queryRun, hideEndgame, q, typeFilter, seenSet])
 
     if (!open) return null
 
     const pick = (sp: SpeciesData) => {
         setErr(null)
-        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id) }); return } // déjà révélé → gratuit
+        if (!infoAllowed(sp.id)) { setErr("Le Daemomaniaque ne parle que des Daemons que tu as déjà croisés."); return }
+        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame) }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
         setRevealed((s) => new Set(s).add(sp.id))
-        setSel({ sp, guide: captureGuide(sp.id) })
+        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame) })
     }
 
     const left = freeConsultsLeft()
     const allTypes = Object.keys(TYPE_COLOR)
+    const runLabel = (r: number) => (r === 1 ? "Run 1" : r === 2 ? "Run 2" : "Run 3")
+    const modeSub = mode === "post" ? (selectedRun ? `Infos ${runLabel(selectedRun)}` : "De quel run veux-tu parler ?")
+        : mode === "run1" ? "Run 1 — Daemons déjà croisés" : mode === "run2" ? "Run 2 — run 1 + 2" : "Run 3"
 
     return (
         <div style={S.overlay} onClick={close}>
@@ -66,12 +92,20 @@ export default function DaemomaniaquePanel() {
                     <img src="/yellow/sprites/npc/daemomaniaque.png" alt="" style={S.portrait} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
                     <div style={{ flex: 1 }}>
                         <div style={S.title}>👒 Le Daemomaniaque</div>
-                        <div style={S.sub}>{left > 0 ? `${left} consultation${left > 1 ? "s" : ""} gratuite${left > 1 ? "s" : ""} aujourd'hui` : `Consultations payantes : ${CONSULT_COST}⚡`} · ⚡ {player.reps}</div>
+                        <div style={S.sub}>{modeSub} · {left > 0 ? `${left} gratuite${left > 1 ? "s" : ""}` : `${CONSULT_COST}⚡/consult`} · ⚡ {player.reps}</div>
                     </div>
                     <button style={S.close} onClick={close}>✕</button>
                 </div>
 
-                {sel ? (
+                {mode === "post" && selectedRun === null ? (
+                    // ── Sélecteur de run (post run 3) ──
+                    <div style={{ ...S.scroll, textAlign: "center" }}>
+                        <div style={{ ...S.line, fontStyle: "italic", marginBottom: 16 }}>« Tu as tout parcouru, voyageur. De quel run veux-tu que je te parle ? »</div>
+                        {[1, 2, 3].map((r) => (
+                            <button key={r} style={S.runBtn} onClick={() => { setSelectedRun(r); setErr(null) }}>🗺️ {runLabel(r)}</button>
+                        ))}
+                    </div>
+                ) : sel ? (
                     // ── Fiche « où / quand / comment » ──
                     <div style={S.scroll}>
                         <button style={S.back} onClick={() => setSel(null)}>← Autre Daemon</button>
@@ -82,23 +116,20 @@ export default function DaemomaniaquePanel() {
                                 <div style={S.chips}>{sel.sp.types.map((t) => <span key={t} style={{ ...S.chip, background: tc(t) }}>{t}</span>)}</div>
                             </div>
                         </div>
-                        {sel.guide.where.length > 0 && (
-                            <>
-                                <div style={S.section}>📍 OÙ &amp; QUAND</div>
-                                {sel.guide.where.map((w, i) => <div key={i} style={S.line}>{w}</div>)}
-                            </>
-                        )}
-                        {sel.guide.how.length > 0 && (
-                            <>
-                                <div style={S.section}>🎯 COMMENT</div>
-                                {sel.guide.how.map((h, i) => <div key={i} style={S.line}>• {h}</div>)}
-                            </>
-                        )}
+                        {sel.guide.where.length > 0 && (<>
+                            <div style={S.section}>📍 OÙ &amp; QUAND ({runLabel(queryRun)})</div>
+                            {sel.guide.where.map((w, i) => <div key={i} style={S.line}>{w}</div>)}
+                        </>)}
+                        {sel.guide.how.length > 0 && (<>
+                            <div style={S.section}>🎯 COMMENT</div>
+                            {sel.guide.how.map((h, i) => <div key={i} style={S.line}>• {h}</div>)}
+                        </>)}
                         {sel.guide.note && <div style={S.note}>{sel.guide.note}</div>}
                     </div>
                 ) : (
                     // ── Grille de sélection ──
                     <div style={S.scroll}>
+                        {mode === "post" && <button style={{ ...S.back, marginBottom: 10 }} onClick={() => setSelectedRun(null)}>← Changer de run</button>}
                         <input style={S.search} placeholder="🔎 Chercher un Daemon…" value={q} onChange={(e) => setQ(e.target.value)} />
                         <div style={S.chipsRow}>
                             <button style={{ ...S.filterChip, ...(typeFilter === null ? S.filterOn : {}) }} onClick={() => setTypeFilter(null)}>TOUS</button>
@@ -106,14 +137,17 @@ export default function DaemomaniaquePanel() {
                         </div>
                         {err && <div style={S.err}>{err}</div>}
                         <div style={S.grid}>
-                            {rows.map((sp) => (
-                                <button key={sp.id} style={S.card} onClick={() => pick(sp)}>
-                                    <img src={sp.sprite} alt={sp.name} style={S.cardSprite} onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden" }} />
-                                    <div style={S.cardName}>{sp.name}</div>
-                                    <div style={S.cardTypes}>{sp.types.map((t) => <span key={t} style={{ ...S.dot, background: tc(t) }} />)}</div>
-                                </button>
-                            ))}
-                            {rows.length === 0 && <div style={S.muted}>Aucun Daemon ne correspond.</div>}
+                            {rows.map((sp) => {
+                                const locked = !infoAllowed(sp.id)
+                                return (
+                                    <button key={sp.id} style={{ ...S.card, ...(locked ? S.cardLocked : {}) }} onClick={() => pick(sp)}>
+                                        <img src={sp.sprite} alt={sp.name} style={{ ...S.cardSprite, ...(locked ? { filter: "grayscale(1) brightness(0.6)" } : {}) }} onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden" }} />
+                                        <div style={S.cardName}>{locked ? "🔒 " : ""}{sp.name}</div>
+                                        <div style={S.cardTypes}>{sp.types.map((t) => <span key={t} style={{ ...S.dot, background: tc(t) }} />)}</div>
+                                    </button>
+                                )
+                            })}
+                            {rows.length === 0 && <div style={S.muted}>Aucun Daemon à afficher{mode === "run1" ? " — croise-en d'abord dans les hautes herbes !" : "."}</div>}
                         </div>
                     </div>
                 )}
@@ -135,13 +169,15 @@ const S: Record<string, React.CSSProperties> = {
     chipsRow: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 },
     filterChip: { background: "rgba(30,22,48,0.6)", border: "1px solid #4a4468", borderRadius: 999, color: "#c9b8e8", fontSize: 10.5, fontWeight: 800, padding: "3px 9px", cursor: "pointer" },
     filterOn: { background: "#e0a020", color: "#161018", borderColor: "#ffd76a" },
+    runBtn: { display: "block", width: "100%", maxWidth: 260, margin: "0 auto 10px", background: "linear-gradient(180deg,#e0b84a,#c9a227)", border: "1px solid #ffe08a", borderRadius: 10, color: "#241a06", fontSize: 15, fontWeight: 900, padding: "12px", cursor: "pointer" },
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(96px,1fr))", gap: 8 },
     card: { display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.04)", border: "1px solid #3a3350", borderRadius: 10, padding: "8px 4px", cursor: "pointer", color: "#efe6ff" },
+    cardLocked: { opacity: 0.55 },
     cardSprite: { width: 52, height: 52, objectFit: "contain", imageRendering: "pixelated" },
     cardName: { fontSize: 10.5, fontWeight: 700, textAlign: "center", lineHeight: 1.15 },
     cardTypes: { display: "flex", gap: 3 },
     dot: { width: 8, height: 8, borderRadius: 999, display: "block" },
-    muted: { fontSize: 12.5, color: "#b7a9cf", padding: "20px 8px", textAlign: "center", gridColumn: "1/-1" },
+    muted: { fontSize: 12.5, color: "#b7a9cf", padding: "20px 8px", textAlign: "center", gridColumn: "1/-1", lineHeight: 1.5 },
     err: { fontSize: 12.5, color: "#f3bcbc", background: "rgba(232,136,136,0.12)", border: "1px solid #e88", borderRadius: 8, padding: "8px 10px", marginBottom: 8 },
     back: { background: "transparent", border: "1px solid #6a5a8a", borderRadius: 8, color: "#c9b8e8", fontSize: 12, fontWeight: 700, padding: "6px 12px", cursor: "pointer", marginBottom: 12 },
     detailHead: { display: "flex", alignItems: "center", gap: 12, marginBottom: 8 },

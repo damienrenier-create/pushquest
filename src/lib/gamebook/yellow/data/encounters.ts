@@ -151,13 +151,14 @@ export function speciesZones(speciesId: string): string[] {
     })
 }
 
-// ── DAEMOMANIAQUE (guide de capture post-run-3) : « OÙ / QUAND / COMMENT » trouver/capturer un Daemon,
-//    dérivé des tables de rencontre (ZONES run1 + NGPLUS_ZONES run2 + RUN3_ZONES run3). Module PUR.
-//    Noms de cartes inlinés (pas d'import de maps.ts → aucun risque de cycle). ──
+// ── DAEMOMANIAQUE (guide de capture) : « OÙ / QUAND / COMMENT », SCOPÉ PAR RUN (run 1 = ZONES · run 2 =
+//    NGPLUS_ZONES · run 3 = RUN3_ZONES) → chaque run ne donne QUE ses propres localisations (fix : plus de
+//    mélange inter-runs). Module PUR (noms de cartes inlinés, pas de cycle maps.ts).
+//    Précision Sartay : « Route Nord » = hautes herbes au NORD de Ville Jaune ; « Hautes Herbes » = Cendreville. ──
 const GUIDE_MAP_NAMES: Record<string, string> = {
     yellow_route_nord: "Route Nord", yellow_grotte: "Grotte Rocheuse", yellow_grotte_gelee: "Grotte Gelée",
     yellow_plage: "Plage", yellow_centrale: "Centrale", yellow_maison_hantee: "Maison Hantée",
-    yellow_hautes_herbes: "Hautes Herbes", yellow_cendreville: "Cendreville",
+    yellow_hautes_herbes: "Hautes Herbes (Cendreville)", yellow_cendreville: "Cendreville",
     yellow_grotte_nexus: "Grotte du Nexus (1F)", yellow_grotte_nexus_b1f: "Grotte du Nexus (B1F)", yellow_grotte_nexus_b2f: "Grotte du Nexus (B2F)",
 }
 const guideMapName = (mapId: string) => GUIDE_MAP_NAMES[mapId] ?? mapId
@@ -170,6 +171,10 @@ const hourText = (hr: readonly [number, number]) => {
     if (s >= 12 && e <= 20) return `l'après-midi (${s}h→${e}h)`
     return `entre ${s}h et ${e}h`
 }
+// Cartes ENDGAME (post-Ligue) masquées en RUN 1 tant que le joueur n'est pas Champion — anti-spoiler (le run 1
+//   « se termine » à la Ligue : pas de Grotte du Nexus/puzzle ni de plaine des Hautes Herbes avant).
+const GUIDE_ENDGAME_MAPS = new Set(["yellow_grotte_nexus", "yellow_grotte_nexus_b1f", "yellow_grotte_nexus_b2f", "yellow_hautes_herbes"])
+const guideTable = (run: number): Record<string, Zone> => (run === 2 ? NGPLUS_ZONES : run === 3 ? RUN3_ZONES : ZONES)
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
 function entryYields(e: WildEntry, target: string): boolean {
     if (e.speciesId === target) return true
@@ -179,34 +184,45 @@ function entryYields(e: WildEntry, target: string): boolean {
         : GUIDE_EVO_PROBES
     return levels.some((L) => { try { return speciesAtLevel(e.speciesId, L) === target } catch { return false } })
 }
-interface GuideMatch { mapId: string; run: number; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean }
-function guideMatches(target: string): GuideMatch[] {
+/** Toutes les espèces qu'une entrée peut faire pop (base + formes évoluées in situ). */
+function entryYieldSet(e: WildEntry): string[] {
+    if (e.noEvolve) return [e.speciesId]
+    const levels = e.levelFixed != null ? [e.levelFixed]
+        : e.levelRange ? [e.levelRange[0], Math.round((e.levelRange[0] + e.levelRange[1]) / 2), e.levelRange[1]]
+        : GUIDE_EVO_PROBES
+    const set = new Set<string>([e.speciesId])
+    for (const L of levels) { try { set.add(speciesAtLevel(e.speciesId, L)) } catch { /* ignore */ } }
+    return [...set]
+}
+interface GuideMatch { mapId: string; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean }
+function guideMatchesRun(target: string, run: number, hideEndgame: boolean): GuideMatch[] {
+    const table = guideTable(run)
     const out: GuideMatch[] = []
-    const tables: [number, Record<string, Zone>][] = [[1, ZONES], [2, NGPLUS_ZONES], [3, RUN3_ZONES]]
-    for (const [run, table] of tables) for (const mapId of Object.keys(table)) {
+    for (const mapId of Object.keys(table)) {
+        if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
-        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, run, e })
-        if (z.rects) for (const r of z.rects) for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, run, e })
+        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, e })
+        if (z.rects) for (const r of z.rects) for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, e })
         const tg = z.trainingGrid
         if (tg) {
-            for (const [t, pool] of Object.entries(tg.typePools)) for (const e of pool) if (entryYields(e, target)) out.push({ mapId, run, e, gridType: t })
-            if (tg.legendary && entryYields(tg.legendary, target)) out.push({ mapId, run, e: tg.legendary, legend: true })
-            if (tg.dragonRare) for (const b of tg.dragonRare.bases) if (entryYields({ speciesId: b, base: VERY_RARE }, target)) out.push({ mapId, run, e: { speciesId: b, base: VERY_RARE }, dragon: true })
+            for (const [t, pool] of Object.entries(tg.typePools)) for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t })
+            if (tg.legendary && entryYields(tg.legendary, target)) out.push({ mapId, e: tg.legendary, legend: true })
+            if (tg.dragonRare) for (const b of tg.dragonRare.bases) if (entryYields({ speciesId: b, base: VERY_RARE }, target)) out.push({ mapId, e: { speciesId: b, base: VERY_RARE }, dragon: true })
         }
     }
     return out
 }
 export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
-/** Guide « où / quand / comment » capturer/trouver un Daemon (le Daemomaniaque). Dérivé des tables de rencontre. */
-export function captureGuide(speciesId: string): CaptureGuide {
+/** Guide « où/quand/comment » d'un Daemon POUR UNE RUN donnée (1/2/3). hideEndgame masque les zones post-Ligue
+ *  (run 1 avant la Ligue). Ne renvoie QUE des localisations de cette run → chaque mode du Daemomaniaque reste cohérent. */
+export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false): CaptureGuide {
     const sp = getSpecies(speciesId)
     if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
-    const runLabel = (r: number) => (r === 1 ? "" : r === 2 ? " · run 2 (NG+)" : " · run 3")
-    const matches = guideMatches(speciesId)
+    const matches = guideMatchesRun(speciesId, run, hideEndgame)
     const where: string[] = []
     const how = new Set<string>()
     for (const m of matches) {
-        const parts: string[] = [m.gridType ? `📍 Hautes Herbes — carré ${m.gridType}${runLabel(m.run)}` : `📍 ${guideMapName(m.mapId)}${runLabel(m.run)}`, rarityBand(m.e.base)]
+        const parts: string[] = [m.gridType ? `📍 Hautes Herbes (Cendreville) — carré ${m.gridType}` : `📍 ${guideMapName(m.mapId)}`, rarityBand(m.e.base)]
         if (m.legend) parts.push("légendaire rôdant")
         if (m.dragon) parts.push("dragon rare (plus rare en altitude)")
         if (m.e.levelFixed != null) parts.push(`niv ${m.e.levelFixed}`)
@@ -220,18 +236,41 @@ export function captureGuide(speciesId: string): CaptureGuide {
         if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
         if (m.e.captureMinBallBonus) how.add(`Exige une Ball puissante (ballBonus ≥ ${m.e.captureMinBallBonus}).`)
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
-        if (m.gridType) how.add(`Aux Hautes Herbes, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
+        if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
     }
     if (where.length === 0) {
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
-            const base = captureGuide(preEvo.id)
-            return { where: base.where, how: base.how, note: `${sp.name} ne se trouve pas à l'état sauvage : capture ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
+            const base = captureGuide(preEvo.id, run, hideEndgame)
+            if (base.where.length > 0) return { where: base.where, how: base.how, note: `${sp.name} ne se trouve pas à l'état sauvage : capture ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
         }
-        return { where: [], how: [], note: `${sp.name} ne se croise pas dans les hautes herbes — c'est un cadeau, un boss ou une créature spéciale (via un PNJ).` }
+        return { where: [], how: [], note: `${sp.name} ne se croise pas dans cette run — cadeau, boss, ou pas encore accessible.` }
     }
     how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
     return { where, how: [...how], note: null }
+}
+/** Espèces spawnables dans une run (base + formes évoluées in situ). Fusions/customs exclus par l'appelant (getSpecies null). Mémoïsé. */
+const _runSpawnCache: Record<string, Set<string>> = {}
+export function runSpawnableSpecies(run: number, hideEndgame: boolean = false): Set<string> {
+    const key = `${run}:${hideEndgame ? 1 : 0}`
+    if (_runSpawnCache[key]) return _runSpawnCache[key]
+    const table = guideTable(run)
+    const set = new Set<string>()
+    const add = (e: WildEntry) => { for (const s of entryYieldSet(e)) set.add(s) }
+    for (const mapId of Object.keys(table)) {
+        if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
+        const z = table[mapId]
+        z.pool.forEach(add)
+        z.rects?.forEach((r) => r.pool.forEach(add))
+        const tg = z.trainingGrid
+        if (tg) {
+            Object.values(tg.typePools).forEach((p) => p.forEach(add))
+            if (tg.legendary) add(tg.legendary)
+            tg.dragonRare?.bases.forEach((b) => add({ speciesId: b, base: VERY_RARE }))
+        }
+    }
+    _runSpawnCache[key] = set
+    return set
 }
 
 // HAUTES HERBES — 11 types en ROTATION quotidienne. Exclus : Spectre/Élec (réservés aux bâtiments) ;

@@ -99,9 +99,10 @@ export function activeNpcs() {
             dialoguesAfter: ["« Un Daemon a oublié une capacité de sa lignée ? Je peux la lui réapprendre… contre quelques reps. »"],
         }]
     }
-    // DAEMOMANIAQUE (guide de capture) : apparaît à CENDREVILLE une fois le RUN 3 TERMINÉ (run3Used + de retour en live).
-    //   Placé près du spawn (42,16) → immédiatement visible. Statique (l'errance n'existe pas dans le moteur yellow).
-    if (getPlayerSave().run3Used && effectiveRunWorld() === "live") {
+    // DAEMOMANIAQUE (guide de capture) : présent à CENDREVILLE DÈS LE RUN 1 (le panneau adapte ses infos selon la
+    //   run : run1 vus+gosh / run2 tous+info-gate / run3 tous / post = sélecteur de run). Spot aléatoire par session
+    //   (stable dans la partie → atteignable). Statique (le moteur yellow n'a pas d'errance case-par-case).
+    {
         if (daemoSpotIdx < 0) daemoSpotIdx = Math.floor(Math.random() * DAEMO_SPOTS.length)
         const [dmx, dmy] = DAEMO_SPOTS[daemoSpotIdx]
         list = [...list, {
