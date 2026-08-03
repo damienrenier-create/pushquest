@@ -102,15 +102,17 @@ export function activeNpcs() {
     // DAEMOMANIAQUE (guide de capture) : apparaît à CENDREVILLE une fois le RUN 3 TERMINÉ (run3Used + de retour en live).
     //   Placé près du spawn (42,16) → immédiatement visible. Statique (l'errance n'existe pas dans le moteur yellow).
     if (getPlayerSave().run3Used && effectiveRunWorld() === "live") {
+        if (daemoSpotIdx < 0) daemoSpotIdx = Math.floor(Math.random() * DAEMO_SPOTS.length)
+        const [dmx, dmy] = DAEMO_SPOTS[daemoSpotIdx]
         list = [...list, {
             id: "y_daemomaniaque",
             name: "DAEMOMANIAQUE",
             mapId: "yellow_cendreville",
             kind: "static",
             interaction: "interactive",
-            sprite: { emoji: "👒", color: "#e0a020" },
-            initialX: 41,
-            initialY: 16,
+            sprite: { emoji: "👒", color: "#e0a020" }, // repli si le sprite manque (le vrai sprite = NPC_SPRITES/MapView)
+            initialX: dmx,
+            initialY: dmy,
             dialoguesAfter: ["« Tu veux savoir où dénicher un Daemon précis ? Demande-moi. »"],
         }]
     }
@@ -188,6 +190,10 @@ let ukognofyChainArmed = false
 // ARC LAMPE & GÉNIE — compteur d'embuscade (transient : re-tiré au chargement dans [3,10]). Le DÉSARMEMENT
 //   définitif (colporteur battu) est PERSISTÉ via le marker GENIE_TRAINER_ID (defeatedTrainers). -1 = pas encore tiré.
 let genieAmbushCountdown = -1
+// DAEMOMANIAQUE : 7 emplacements possibles à Cendreville ; un est tiré au hasard PAR SESSION (stable tant que la
+//   page n'est pas rechargée → le PNJ reste atteignable), re-tiré au prochain chargement → « pop à différents endroits ».
+const DAEMO_SPOTS: ReadonlyArray<readonly [number, number]> = [[26, 15], [8, 17], [17, 29], [36, 4], [22, 2], [7, 8], [30, 29]]
+let daemoSpotIdx = -1
 // UKOGNOFY — « déjà affronté CETTE visite » (transient, remis à false à chaque arrivée dans la chambre). Garantit
 //   UNE SEULE rencontre par venue : après le combat, ré-approcher le PNJ ne relance rien (il faut ressortir et
 //   refaire la chaîne). Empêche de brûler les 3 tentatives en une seule visite.
