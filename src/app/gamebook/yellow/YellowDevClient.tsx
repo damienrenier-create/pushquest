@@ -3441,12 +3441,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "6px 0 2px" }}>{label}</div>
                                         {list.map((it) => {
                                             const owned = player.items[it.id] ?? 0
+                                            const locked = it.category === "BALL" && player.ballLockRemaining > 0 // VŒU DU GÉNIE : achat de Ball verrouillé
                                             const afford = player.reps >= it.price
                                             return (
                                                 <button
                                                     key={it.id}
-                                                    style={afford ? menuBtnStyle : menuBtnDimStyle}
-                                                    disabled={!afford}
+                                                    style={afford && !locked ? menuBtnStyle : menuBtnDimStyle}
+                                                    disabled={!afford || locked}
                                                     onClick={() => { setBuyConfirm({ id: it.id, name: it.name, price: it.price }); setBuyQty(1) }}
                                                 >
                                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
@@ -3458,6 +3459,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             )
                                         })}
                                         {cat === "BALL" && !inSecondTown && <div style={{ fontSize: 10, opacity: 0.6, padding: "3px 2px" }}>✨ Des Balls plus puissantes se vendent à Cendreville…</div>}
+                                        {cat === "BALL" && player.ballLockRemaining > 0 && <div style={{ fontSize: 10, color: "#e0b84a", padding: "3px 2px" }}>🔴 Balls verrouillées par le génie : dépense encore {player.ballLockRemaining}⚡.</div>}
                                     </div>
                                 )
                             })
@@ -3516,7 +3518,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
-                                onClick={() => { if (spendReps(total)) addItem(buyConfirm.id, buyQty); setBuyConfirm(null) }}
+                                onClick={() => { if (getItem(buyConfirm.id)?.category === "BALL" && player.ballLockRemaining > 0) { setBuyConfirm(null); return } if (spendReps(total)) addItem(buyConfirm.id, buyQty); setBuyConfirm(null) }}
                             >✅ Acheter</button>
                             <button style={menuBtnDimStyle} onClick={() => setBuyConfirm(null)}>← Annuler</button>
                         </div>
@@ -3541,7 +3543,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
-                                onClick={() => { if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) { addItem("fusio_ball", 1); clearTrainerMarker(FUSIOBALL_OWED_MARKER) } setFusioBallModal(false) }}
+                                onClick={() => { if (player.ballLockRemaining > 0) { setFusioBallModal(false); return } if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) { addItem("fusio_ball", 1); clearTrainerMarker(FUSIOBALL_OWED_MARKER) } setFusioBallModal(false) }}
                             >✅ Oui, acheter (1000 reps)</button>
                             <button style={menuBtnDimStyle} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
                         </div>

@@ -365,8 +365,10 @@ export default function BattleScreen() {
             // Rappel (revive) → choisir un Daemon K.O. à ranimer (désactivé si aucun K.O. dans l'équipe)
             Object.values(ITEMS).filter((it) => it.category === "REVIVE" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setReviveItemId(it.id); setMenu("reviveTarget") }, disabled: !battle.player.team.some((m) => m.currentHp <= 0) }))
+            // VŒU DU GÉNIE : Balls verrouillées tant que le quota d'⚡ n'est pas dépensé (grisage ; backstop autoritatif côté store).
+            const ballLocked = repsWallet.ballLockRemaining > 0
             if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && owned(it.id))
-                .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
+                .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id), disabled: ballLocked, detail: ballLocked ? `Verrouillé par le génie : dépense encore ${repsWallet.ballLockRemaining}⚡.` : undefined }))
             options.push({ label: "RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "confirmRun") {
