@@ -51,25 +51,25 @@ export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, Fusion
     return aFast ? [a, b] : [b, a]
 }
 
-// Les 4 stats physiques soumises à la génétique dom/récessif. La Spéciale (spc) suit sa propre règle (dom/réc sur la paire).
-const STATS4: readonly StatKey[] = ["hp", "atk", "def", "spe"]
+// Les 5 stats soumises à la génétique dom/récessif — Spéciale INCLUSE dans le classement (choix Sartay 04/08).
+const STATS5: readonly StatKey[] = ["hp", "atk", "def", "spe", "spc"]
 
-/** Poids par stat pour un parent : 2 plus hautes des 4 stats = 0,6 (dominantes), 2 plus basses = 0,45 (récessives).
- *  Égalité de valeur départagée par l'ordre fixe hp > atk > déf > vit (déterministe). */
+/** Poids par stat pour un parent : les 3 plus HAUTES des 5 stats = 0,6 (dominantes), les 2 plus basses = 0,45
+ *  (récessives). Égalité de valeur départagée par l'ordre fixe hp > atk > déf > vit > spé (déterministe). */
 export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<string, number> {
-    const order = [...STATS4].sort((a, b) => stats[b] - stats[a] || STATS4.indexOf(a) - STATS4.indexOf(b))
+    const order = [...STATS5].sort((a, b) => stats[b] - stats[a] || STATS5.indexOf(a) - STATS5.indexOf(b))
     const w: Record<string, number> = {}
-    order.forEach((k, i) => (w[k] = i < 2 ? 0.6 : 0.45))
+    order.forEach((k, i) => (w[k] = i < 3 ? 0.6 : 0.45))
     return w
 }
 
-/** Génétique des 4 stats physiques (dom 0,6 / réc 0,45) + Spéciale UNIQUE = 0,6 × la meilleure Spé + 0,45 × la
- *  moindre (même esprit dom/récessif, sur la paire). Totalement INDÉPENDANT de l'ordre des parents (PvP déterministe). */
+/** Génétique des 5 stats (Spéciale COMPRISE) : chaque stat du fusionné = poids_A × parentA + poids_B × parentB, où
+ *  le poids vaut 0,6 si la stat est parmi les 3 plus hautes du parent, 0,45 sinon. Une stat dominante des DEUX côtés
+ *  atteint 1,2 (peut dépasser les deux parents). Totalement INDÉPENDANT de l'ordre des parents (PvP déterministe). */
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
     const wA = fusionWeights(a.stats), wB = fusionWeights(b.stats)
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])
-    const hiSpc = Math.max(a.stats.spc, b.stats.spc), loSpc = Math.min(a.stats.spc, b.stats.spc)
-    return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spc: Math.round(0.6 * hiSpc + 0.45 * loSpc) }
+    return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spc: s("spc") }
 }
 
 /** Moveset : 2 PREMIÈRES attaques du parent le plus RAPIDE + 2 DERNIÈRES du plus LENT. Dédup (pas de doublon) ;

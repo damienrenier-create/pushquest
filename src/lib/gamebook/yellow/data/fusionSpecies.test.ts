@@ -12,40 +12,37 @@ const P = (id: string, level = 50, heldItem?: string): FusionParent => {
 const mk = (over: Partial<FusionParent> & Pick<FusionParent, "moves">): FusionParent =>
     ({ name: "X", types: ["NORMAL"], stats: { hp: 50, atk: 50, def: 50, spe: 50, spc: 50 }, level: 50, ...over })
 
-describe("fusion — génétique des stats", () => {
-    it("poids : 2 hautes = 0,6 (dominantes), 2 basses = 0,45 (récessives), spc exclue", () => {
-        // Maîtrezenc {hp80, atk118, def68, spe88} → dom atk/spe, réc hp/def
+describe("fusion — génétique des stats (3 dominantes 0,6 / 2 récessives 0,45, Spéciale incluse)", () => {
+    it("poids : 3 hautes = 0,6, 2 basses = 0,45, sur les 5 stats (Spéciale COMPRISE)", () => {
         const w = fusionWeights(SPECIES["maitrezenc"].baseStats)
-        expect(w.atk).toBe(0.6); expect(w.spe).toBe(0.6)
-        expect(w.hp).toBe(0.45); expect(w.def).toBe(0.45)
-        expect(w).not.toHaveProperty("spc") // la spc n'est jamais pondérée (elle est splittée)
+        expect(Object.values(w).filter((v) => v === 0.6).length).toBe(3)
+        expect(Object.values(w).filter((v) => v === 0.45).length).toBe(2)
+        expect(Object.keys(w).sort()).toEqual(["atk", "def", "hp", "spc", "spe"]) // les 5 stats sont pondérées
     })
 
-    it("EX.1 Maîtrezenc × Zappeuréal → COMBAT/ELEC, stat dominante partagée DÉPASSE les parents", () => {
+    it("chaque stat = wA×parentA + wB×parentB sur les 5 stats (Spéciale via la même génétique)", () => {
+        const a = SPECIES["maitrezenc"].baseStats, b = SPECIES["zappeureal"].baseStats
+        const wA = fusionWeights(a), wB = fusionWeights(b)
         const f = computeFusion(P("maitrezenc"), P("zappeureal"))
         expect(f.types).toEqual(["COMBAT", "ELEC"])
-        expect(f.stats).toEqual({ hp: 72, atk: 121, def: 61, spe: 122, spc: 89 })
-        // atk & vit dominantes des DEUX côtés → compounding : au-dessus des deux parents
-        expect(f.stats.atk).toBeGreaterThan(Math.max(118, 84))
-        expect(f.stats.spe).toBeGreaterThan(Math.max(88, 115))
+        for (const k of ["hp", "atk", "def", "spe", "spc"] as const) {
+            expect(f.stats[k], k).toBe(Math.round(wA[k] * a[k] + wB[k] * b[k]))
+        }
     })
 
-    it("EX.2 Divinpâte × Razmarée → PSY/EAU, Spéciale unique (0,6×meilleure + 0,45×moindre), profil rond", () => {
-        const f = computeFusion(P("divinpate"), P("razmaree"))
-        expect(f.types).toEqual(["PSY", "EAU"])
-        expect(f.stats).toEqual({ hp: 91, atk: 67, def: 96, spe: 79, spc: 111 })
-        // Spéciale UNIQUE = 0,6 × la meilleure (Divinpâte 120) + 0,45 × la moindre (Razmarée 86) = 111
-        expect(f.stats.spc).toBe(Math.round(0.6 * SPECIES["divinpate"].baseStats.spc + 0.45 * SPECIES["razmaree"].baseStats.spc))
+    it("une stat dominante des DEUX côtés (0,6+0,6=1,2) DÉPASSE les deux parents", () => {
+        // atk haute chez les deux → dominante des deux → 1,2 × 100 = 120 > 100
+        const A = mk({ stats: { hp: 40, atk: 100, def: 40, spe: 90, spc: 90 }, moves: [] })
+        const B = mk({ stats: { hp: 40, atk: 100, def: 40, spe: 90, spc: 90 }, moves: [] })
+        const f = fuseStats(A, B)
+        expect(f.atk).toBe(Math.round(0.6 * 100 + 0.6 * 100))
+        expect(f.atk).toBeGreaterThan(100)
     })
 
-    it("EX.3 Coccimpératrice × Rochison → COMBAT/ROCHE (1 type de CHAQUE parent, pas 2 du même)", () => {
+    it("EX. types : Coccimpératrice × Rochison → COMBAT/ROCHE (1 type de CHAQUE parent, pas 2 du même)", () => {
         const f = computeFusion(P("coccimperatrice"), P("rochison"))
-        expect(f.stats).toEqual({ hp: 68, atk: 146, def: 113, spe: 92, spc: 57 })
-        // RÈGLE 1-par-parent : Coccimpératrice[COMBAT/INSECTE] apporte son type le + stat-fidèle (COMBAT),
-        //   Rochison[ROCHE/SOL] apporte le sien (ROCHE). Jamais 2 types du même parent (donc pas COMBAT/INSECTE).
         expect(f.types).toEqual(["COMBAT", "ROCHE"])
         expect(f.types).not.toContain("INSECTE") // ce serait 2 types de Coccimpératrice, 0 de Rochison
-        expect(f.stats.atk).toBeGreaterThan(Math.max(128, 115)) // monstre physique au-dessus des parents
     })
 })
 
@@ -93,12 +90,13 @@ describe("fusion — types & divers", () => {
         expect(ab).toEqual(ba)
     })
 
-    it("Spéciale unique : 0,6 × la meilleure + 0,45 × la moindre, indépendant de l'ordre (PvP déterministe)", () => {
+    it("Spéciale INCLUSE dans la génétique 3/2, indépendante de l'ordre (PvP déterministe)", () => {
         const A: FusionParent = { name: "Alpha", types: ["FEU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 50 }, level: 50, moves: [] }
         const B: FusionParent = { name: "Beta", types: ["EAU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 90 }, level: 50, moves: [] }
         const ab = fuseStats(A, B), ba = fuseStats(B, A)
-        expect(ab).toEqual(ba)                              // spc via max/min → l'ordre ne change rien
-        expect(ab.spc).toBe(Math.round(0.6 * 90 + 0.45 * 50)) // = 77
+        expect(ab).toEqual(ba) // symétrique → l'ordre ne change rien
+        const wA = fusionWeights(A.stats), wB = fusionWeights(B.stats)
+        expect(ab.spc).toBe(Math.round(wA.spc * 50 + wB.spc * 90)) // spc suit la même règle 0,6/0,45 que les autres
     })
 
     it("niveau = max(parents)", () => {

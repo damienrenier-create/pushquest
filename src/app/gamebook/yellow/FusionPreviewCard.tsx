@@ -5,7 +5,7 @@
 // à l'Autel de la Chimère ET à l'Atelier de Fusion pour VOIR ce que donnera la fusion AVANT de la créer.
 
 import { useState } from "react"
-import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { fusionWeights, type FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 import { useFusionSprite } from "./useFusionSprite"
@@ -29,7 +29,7 @@ function Sprite({ src, ring, size = 62 }: { src?: string; ring: string; size?: n
     )
 }
 
-export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc, aSprite, bSprite, aId, bId }: {
+export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc, aSprite, bSprite, aId, bId, parents }: {
     name: string
     types: string[]
     stats: FusionStats
@@ -43,6 +43,9 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
     /** speciesId des 2 parents → résout/déclenche le sprite GÉNÉRÉ (point de découverte). */
     aId?: string
     bId?: string
+    /** Contribution par parent : {nom, stats FINALES} → affiche quelles stats de CHAQUE parent sont dominantes (★ ×0,6)
+     *  vs récessives (×0,45) → le joueur voit d'un coup si les 2 Daemons sont COMPLÉMENTAIRES. */
+    parents?: { name: string; stats: Record<string, number> }[]
 }) {
     const bst = STAT_LABELS.reduce((s, [k]) => s + (stats[k] ?? 0), 0)
     const ring = types[0] ? typeColor(types[0]) : "#6a5a8a"
@@ -83,6 +86,25 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
                     )
                 })}
             </div>
+            {parents && parents.length === 2 && (
+                <div style={{ borderTop: "1px solid rgba(124,79,192,0.3)", paddingTop: 7, fontSize: 9.5 }}>
+                    <div style={{ opacity: 0.7, marginBottom: 4 }}>Contribution des parents — <b style={{ color: "#f0c840" }}>★ = dominante ×0,6</b>, sinon ×0,45 :</div>
+                    {parents.map((p, idx) => {
+                        const w = fusionWeights(p.stats as Parameters<typeof fusionWeights>[0])
+                        return (
+                            <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+                                <span style={{ width: 76, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: 0.9 }}>{p.name}</span>
+                                <span style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                                    {STAT_LABELS.map(([k, lbl]) => {
+                                        const dom = w[k] === 0.6
+                                        return <span key={k} style={{ color: dom ? "#f0c840" : "#8a7fa8", fontWeight: dom ? 800 : 400 }}>{lbl}{dom ? "★" : ""}</span>
+                                    })}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
             {moves.length > 0 && (
                 <div style={{ fontSize: 10.5, opacity: 0.9, lineHeight: 1.5, borderTop: "1px solid rgba(124,79,192,0.3)", paddingTop: 7 }}>
                     ⚔️ {moves.map((id) => getMove(id)?.name ?? id).join(" · ")}

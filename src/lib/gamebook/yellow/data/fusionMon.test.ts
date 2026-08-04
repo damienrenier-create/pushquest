@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "./fusionMon"
+import { fusionWeights } from "./fusionSpecies"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { fullStats } from "../battle/stats"
@@ -14,9 +15,10 @@ describe("fusionMon — builder du BattleMon fusionné", () => {
         expect(instance.frozenStats).toBeDefined()
         expect(instance.frozenSpd).toBeUndefined()                   // plus de split SpA/SpD sur les fusions
         expect(instance.frozenStats!.spc).toBe(result.stats.spc)     // Spéciale unique, lue en offense ET défense
-        // Spéciale unique = 0,6 × la meilleure Spé des 2 parents + 0,45 × la moindre
-        const spcA = fullStats(a, getSpecies("divinpate")!).spc, spcB = fullStats(b, getSpecies("razmaree")!).spc
-        expect(result.stats.spc).toBe(Math.round(0.6 * Math.max(spcA, spcB) + 0.45 * Math.min(spcA, spcB)))
+        // Spéciale INCLUSE dans la génétique 3/2 : 0,6 si elle est dans les 3 plus hautes du parent, sinon 0,45
+        const sA = fullStats(a, getSpecies("divinpate")!), sB = fullStats(b, getSpecies("razmaree")!)
+        const wA = fusionWeights(sA), wB = fusionWeights(sB)
+        expect(result.stats.spc).toBe(Math.round(wA.spc * sA.spc + wB.spc * sB.spc))
 
         expect(getSpecies(speciesId)).not.toBeNull()               // espèce éphémère enregistrée
         expect(getSpecies(speciesId)!.types).toEqual(result.types) // typage stat-fidèle
