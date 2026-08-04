@@ -57,7 +57,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "bruno", name: "BRUNO", theme: "COMBAT", icon: "🥊", pairs: [
         // BRUNO (Mackogneur/Tygnon/Kicklee/Kapoera/Onix) → cogneurs physiques COMBAT + le mur Roche/Sol.
         { a: "maitrezenc", b: "enclumind", name: "Zenclumind", moves: ["crochet_maitre", "vague_mentale", "seisme", "danse_lames"], sprite: "/yellow/sprites/dex/fusion/maitreclume.png" }, // COMBAT/PSY ~Mackogneur — RÉUTILISE le sprite existant (même paire = ex-Maîtreclume)
-        { a: "frappard", b: "hebulmin", name: "Frappulmin", moves: ["crochet_maitre", "fulgurance", "seisme", "danse_lames"] },          // COMBAT/ELEC ~Tygnon
+        { a: "maitrezenc", b: "hebulmin", name: "Maîtrelmin", moves: ["crochet_maitre", "fulgurance", "seisme", "danse_lames"] },        // COMBAT/ELEC ~Tygnon — Maîtrezenc (final) au lieu de Frappard (stade 2) = paire de l'épreuve → réutilise maitrelmin.png
         { a: "maitrezenc", b: "aquilord", name: "Aquizenc", moves: ["crochet_maitre", "fonce_bec", "seisme", "danse_lames"] },           // COMBAT/VOL ~Kicklee
         { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera
         { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
