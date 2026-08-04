@@ -53,7 +53,8 @@ import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
-import { useGameStore, setCurrentNickname, DEFAULT_SPAWN, restoreFusionGauntletFromCarry } from "@/lib/gamebook/yellow/store/gameStore"
+import { useGameStore, setCurrentNickname, DEFAULT_SPAWN, restoreFusionGauntletFromCarry, reorderFusionGauntletTeam, reorderFusionGauntletMove } from "@/lib/gamebook/yellow/store/gameStore"
+import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -245,6 +246,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const activateTorch = useGameStore((s) => s.activateTorch)
     const torchSteps = useGameStore((s) => s.torchSteps) // LAMPE TORCHE : pas d'autonomie restants (HUD + sac)
     const mapPlayer = useGameStore((s) => s.player)
+    // LIGUE DE FUSION — dans une salle de fusion, l'onglet ÉQUIPE affiche les 6 FUSIONNÉS du gauntlet (au lieu de
+    //   l'équipe de base) : on peut ouvrir la fiche de chacun + réordonner l'ordre de combat et les attaques.
+    const fusionGauntletTeam = getGauntletTeam()
+    const inFusionLeague = !!fusionGauntletTeam && mapPlayer.mapId.startsWith("yellow_fusion_")
     const pressA = useGameStore((s) => s.pressA)
     const pressB = useGameStore((s) => s.pressB)
     const hydrate = useGameStore((s) => s.hydrate)
@@ -442,6 +447,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
+    const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
@@ -1799,6 +1805,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (replayMenu) { setReplayMenu(false); return true }
         if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
+        if (selectedFusionUid) { setSelectedFusionUid(null); return true } // fermer la fiche fusion
         if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
         if (fusioBallModal) { setFusioBallModal(false); return true } // offre Fusio-Ball post-sacre (décliner)
         if (pnj6Modal) { setPnj6Modal(false); return true } // offre d'échange PNJ 6 (décliner)
@@ -2067,7 +2074,45 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             })()}
 
             {/* Overlay Équipe */}
-            {!battle && menu === "team" && (
+            {/* LIGUE DE FUSION — onglet ÉQUIPE = les 6 FUSIONNÉS du gauntlet (ordre de combat via ⇅ + fiche/attaques). */}
+            {!battle && menu === "team" && inFusionLeague && (
+                <div style={menuOverlayStyle} onClick={() => { setMenu("pause"); setSwapPick(null) }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🧬 ÉQUIPE DE FUSION</div>
+                        {(fusionGauntletTeam ?? []).map((f) => {
+                            const sp = getSpecies(f.instance.speciesId)
+                            const maxHp = f.instance.frozenStats?.hp ?? f.instance.currentHp
+                            const pct = Math.max(0, Math.min(100, (f.instance.currentHp / Math.max(1, maxHp)) * 100))
+                            const picked = swapPick === f.instance.uid
+                            return (
+                                <div key={f.instance.uid} style={{ ...teamRowStyle, alignItems: "center", outline: picked ? "2px solid #b98aff" : "none", borderRadius: picked ? 4 : 0 }}>
+                                    <button
+                                        title={picked ? "Annuler le déplacement" : "Déplacer (ordre de combat)"}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (!swapPick) { setSwapPick(f.instance.uid); return }
+                                            if (swapPick === f.instance.uid) { setSwapPick(null); return }
+                                            if (reorderFusionGauntletTeam(swapPick, f.instance.uid)) setSwapPick(null)
+                                        }}
+                                        style={{ background: picked ? "#b98aff" : "transparent", border: "1px solid #8a6ac0", color: picked ? "#1a1030" : "#b98aff", borderRadius: 4, cursor: "pointer", fontSize: 13, padding: "2px 6px", marginRight: 6, lineHeight: 1 }}
+                                    >⇅</button>
+                                    <span onClick={() => setSelectedFusionUid(f.instance.uid)} title="Voir la fiche" style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}>{sp?.name ?? "Fusion"}</span>
+                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")}</span>
+                                    <span style={{ width: 38, textAlign: "right" }}>N.{f.instance.level}</span>
+                                    <span style={{ width: 78, textAlign: "right", color: pct > 50 ? "#2a8a2a" : pct > 20 ? "#b88010" : "#c83030" }}>
+                                        {f.instance.currentHp}/{maxHp}{f.instance.status !== "NONE" ? ` ${f.instance.status}` : ""}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>
+                            {swapPick ? "Touche un autre ⇅ pour échanger l'ordre de combat." : "⇅ = ordre de combat · nom = fiche (réordonner les attaques)."}
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => { setMenu("pause"); setSwapPick(null) }}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+            {!battle && menu === "team" && !inFusionLeague && (
                 <div style={menuOverlayStyle} onClick={() => { setMenu("pause"); setSwapPick(null) }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>ÉQUIPE</div>
@@ -3821,6 +3866,54 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* Fiche / résumé d'un Daemon (équipe ou PC) + actions */}
+            {/* FICHE d'un FUSIONNÉ (Ligue de Fusion) — lecture (stats GELÉES) + réordonnancement des attaques.
+                Volontairement SÉPARÉE de la fiche Daemon (pas d'EV/IV/évo/renommage : une fusion est éphémère). */}
+            {selectedFusionUid && (() => {
+                const f = (getGauntletTeam() ?? []).find((x) => x.instance.uid === selectedFusionUid)
+                if (!f) { return null }
+                const inst = f.instance
+                const sp = getSpecies(inst.speciesId)
+                const fs = inst.frozenStats
+                const closeFiche = () => setSelectedFusionUid(null)
+                return (
+                    <div style={menuOverlayStyle} onClick={closeFiche}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>{(sp?.name ?? "FUSION").toUpperCase()} · N.{inst.level}</div>
+                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={ficheSpriteStyle} />}
+                            <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>🧬 Fusion · {sp?.types.join(" / ")}</div>
+                            {fs && (
+                                <div style={{ fontSize: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", margin: "8px 0" }}>
+                                    <span>PV : {inst.currentHp}/{fs.hp}</span>
+                                    <span>Vitesse : {fs.spe}</span>
+                                    <span>Attaque : {fs.atk}</span>
+                                    <span>Défense : {fs.def}</span>
+                                    <span>Spécial : {fs.spc}</span>
+                                    <span>Statut : {inst.status === "NONE" ? "—" : inst.status}</span>
+                                </div>
+                            )}
+                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (▲▼ = ordre en combat)</div>
+                            {inst.moves.map((mv, i) => {
+                                const m = getMove(mv.moveId)
+                                const cat = !m || m.power <= 0 ? { label: "STATUT", color: "#8868c0" }
+                                    : moveCategory(m.type) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+                                        : { label: "SPÉ", color: "#3a7ae0" }
+                                const up = i > 0, down = i < inst.moves.length - 1
+                                const btn: React.CSSProperties = { width: 18, height: 18, fontSize: 9, lineHeight: 1, padding: 0, border: "1px solid #1c1408", borderRadius: 3, background: "#f8f8e8", flexShrink: 0 }
+                                return (
+                                    <div key={mv.moveId} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
+                                        <button disabled={!up} style={{ ...btn, cursor: up ? "pointer" : "default", opacity: up ? 1 : 0.25 }} onClick={() => reorderFusionGauntletMove(inst.uid, i, i - 1)} aria-label="Monter l'attaque">▲</button>
+                                        <button disabled={!down} style={{ ...btn, cursor: down ? "pointer" : "default", opacity: down ? 1 : 0.25 }} onClick={() => reorderFusionGauntletMove(inst.uid, i, i + 1)} aria-label="Descendre l'attaque">▼</button>
+                                        <span style={{ fontSize: 8, fontWeight: 900, color: "#fff", background: cat.color, padding: "1px 4px", borderRadius: 3, flexShrink: 0, letterSpacing: 0.5 }}>{cat.label}</span>
+                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
+                                    </div>
+                                )
+                            })}
+                            <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={closeFiche}>← RETOUR</button>
+                        </div>
+                    </div>
+                )
+            })()}
+
             {selected && (() => {
                 // Lit la version LIVE depuis le store (à jour après renommage/soin).
                 const live = player.team.find((m) => m.uid === selected.uid) ?? player.pc.find((m) => m.uid === selected.uid)

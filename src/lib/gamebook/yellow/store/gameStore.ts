@@ -24,13 +24,13 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
 import { computeFusion } from "../data/fusionSpecies"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
-import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, type GauntletCarryMon } from "./fusionGauntlet"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -198,9 +198,42 @@ export function restoreFusionGauntletFromCarry(): boolean {
         f.instance.status = w.status as typeof f.instance.status
         f.instance.statusCounter = w.statusCounter
         for (const mv of f.instance.moves) if (w.pp[mv.moveId] != null) mv.pp = Math.max(0, w.pp[mv.moveId])
+        // Restaure l'ORDRE des attaques choisi par le joueur (le rebuild les remet dans l'ordre dérivé).
+        if (Array.isArray(w.moves) && w.moves.length) {
+            const order = new Map(w.moves.map((id, idx) => [id, idx]))
+            f.instance.moves = [...f.instance.moves].sort((x, y) => (order.get(x.moveId) ?? 99) - (order.get(y.moveId) ?? 99))
+        }
     }
     if (!rebuilt.some((f) => f.instance.currentHp > 0)) { rebuilt.forEach((f) => disposeFusion(f.speciesId)); return false } // tous K.O. → fail-safe
     setGauntletTeam(rebuilt)
+    return true
+}
+
+/** LIGUE DE FUSION (onglet Équipe) — persiste l'usure COURANTE du gauntlet dans la save (après réordonnancement). */
+function persistGauntletCarry() {
+    const c = serializeGauntletCarry()
+    setFusionLeagueCarry(c ? JSON.stringify({ team: c }) : null)
+}
+/** Réordonne l'ÉQUIPE de fusionnés (échange 2 positions) : gauntlet + roster (pour la reprise) + carry + save. */
+export function reorderFusionGauntletTeam(uidA: string, uidB: string): boolean {
+    if (!swapGauntletTeam(uidA, uidB)) return false
+    // Aligne le roster persistant sur le nouvel ordre (clé = paire de parents) → reprise/rebuild cohérents.
+    const gt = getGauntletTeam()
+    const save = getPlayerSave()
+    if (gt) {
+        const pk = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+        const byKey = new Map(save.fusionRoster.map((p) => [pk(p.a, p.b), p]))
+        const reordered = gt.map((f) => { const par = (f.instance as { fusionParents?: [string, string] }).fusionParents; return par ? byKey.get(pk(par[0], par[1])) : undefined }).filter((p): p is { a: string; b: string } => !!p)
+        for (const p of save.fusionRoster) if (!reordered.includes(p)) reordered.push(p) // filet : garder les entrées non matchées
+        if (reordered.length === save.fusionRoster.length) setFusionRoster(reordered)
+    }
+    persistGauntletCarry(); persistYellowSave()
+    return true
+}
+/** Réordonne les ATTAQUES d'un fusionné du gauntlet + persiste (carry + save). */
+export function reorderFusionGauntletMove(fusionUid: string, from: number, to: number): boolean {
+    if (!reorderGauntletMoves(fusionUid, from, to)) return false
+    persistGauntletCarry(); persistYellowSave()
     return true
 }
 
