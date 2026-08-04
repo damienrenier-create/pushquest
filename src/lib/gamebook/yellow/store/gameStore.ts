@@ -209,6 +209,23 @@ export function restoreFusionGauntletFromCarry(): boolean {
     return true
 }
 
+/** Construit l'équipe-gauntlet depuis le roster si elle n'existe pas ENCORE (entrée dans la Ligue) + persiste le carry.
+ *  → l'onglet ÉQUIPE montre les fusionnés ET la reprise au reload marche DÈS l'entrée (avant même le 1er combat).
+ *  Idempotent (ne reconstruit pas si déjà là). Renvoie true si une équipe (≥1 fusion) est en place. */
+function ensureFusionGauntletBuilt(): boolean {
+    if (getGauntletTeam()) return true
+    const save = getPlayerSave()
+    const all = [...save.team, ...save.pc]
+    const byU = (uid: string) => all.find((m) => m.uid === uid)
+    const built = save.fusionRoster
+        .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
+        .filter((x): x is BuiltFusion => x !== null)
+    if (built.length === 0) return false
+    setGauntletTeam(built)
+    const c0 = serializeGauntletCarry(); setFusionLeagueCarry(c0 ? JSON.stringify({ team: c0 }) : null)
+    return true
+}
+
 /** LIGUE DE FUSION (onglet Équipe) — persiste l'usure COURANTE du gauntlet dans la save (après réordonnancement). */
 function persistGauntletCarry() {
     const c = serializeGauntletCarry()
@@ -1145,7 +1162,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
                 resetFusionLeagueProgress()
                 disposeFusionLeagueSpecies()
-                disposeFusionGauntlet() // GAUNTLET : entrée fraîche → équipe reconstruite (PV/PP pleins) à la 1re salle
+                disposeFusionGauntlet() // GAUNTLET : entrée fraîche → on repart d'une équipe neuve (PV/PP pleins)…
+                ensureFusionGauntletBuilt() // …et on la CONSTRUIT tout de suite → onglet Équipe = fusionnés + reprise reload dès l'entrée (avant le 1er combat)
             }
             // GAUNTLET : revenir à l'Autel (retraite / complétion / après un wipe) libère l'équipe-gauntlet → la
             //   prochaine Ligue repart d'une équipe fraîche. (No-op si aucun gauntlet en cours.)
