@@ -2878,7 +2878,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {preview && (
                                 <>
                                     <FusionPreviewCard name={preview.name} types={preview.types} stats={preview.stats} moves={preview.moves} level={preview.level} spriteSrc={officialFusionForParents(picks[0].speciesId, picks[1].speciesId)?.sprite} aSprite={getSpecies(picks[0].speciesId)?.sprite} bSprite={getSpecies(picks[1].speciesId)?.sprite} aId={picks[0].speciesId} bId={picks[1].speciesId} parents={getSpecies(picks[0].speciesId) && getSpecies(picks[1].speciesId) ? [{ name: displayName(picks[0]), stats: fullStats(picks[0], getSpecies(picks[0].speciesId)!) }, { name: displayName(picks[1]), stats: fullStats(picks[1], getSpecies(picks[1].speciesId)!) }] : undefined} />
-                                    {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: -3, marginBottom: 4 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
+                                    {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: -3, marginBottom: 4 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " (les 2 actifs en combat)" : ""}</div>}
                                 </>
                             )}
                             <button style={ready ? menuBtnStyle : menuBtnDimStyle} disabled={!ready} onClick={() => ready && setFusionCompare({ a: picks[0], b: picks[1] })}>🔬 Comparer plein écran (fiches des parents)</button>
@@ -3897,7 +3897,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )}
                             {f.result.heldItems.length > 0 && (
                                 <div style={{ fontSize: 11, marginBottom: 6 }}>
-                                    🎒 {f.result.heldItems.map((id, i) => `${getItem(id)?.name ?? id}${i === 0 ? " (actif)" : " (2ᵉ — pas encore actif en combat)"}`).join(" · ")}
+                                    🎒 {f.result.heldItems.map((id) => getItem(id)?.name ?? id).join(" · ")}{f.result.heldItems.length > 1 ? " (les 2 actifs)" : ""}
                                 </div>
                             )}
                             <div style={{ fontSize: 9.5, opacity: 0.6, marginBottom: 6 }}>Stats calculées depuis tes 2 parents — EV &amp; points Saiyan DÉJÀ inclus (via leurs stats réelles).</div>

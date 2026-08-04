@@ -186,15 +186,17 @@ export function heldIncomingDmgMult(inst: MonRef, isPhysical: boolean): number {
     return mult
 }
 
-/** Combine les EFFETS PASSIFS de 2 objets tenus (fusionné) en un item synthétique. Base = le 1er objet (garde id/nom
- *  + champs BAIE : les baies restent slot 1, consommables via mon.heldItem). Additifs : critStage sommé ; leftovers/
+/** Combine les EFFETS PASSIFS de 2 objets tenus (fusionné) en un item synthétique. Base = le 1er objet (garde id/nom).
+ *  ⚠️ Les effets CONSOMMABLES (champs BAIE + `negateStatDrop`) NE sont PAS combinés : ils restent ceux du slot 1 (via
+ *  `...a`), car le moteur les consomme via `mon.heldItem` (slot 1). Un consommable hérité en slot 2 est donc inerte
+ *  (comme une baie) — sinon il ne serait jamais consommé (immunité permanente). Additifs : critStage sommé ; leftovers/
  *  drain HARMONIQUES (soin = max/a + max/b) ; expMult/incomingAcc multipliés ; le reste (quickClaw/survie/flinch) au max. */
 function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
     const harmonic = (x?: number, y?: number) => (!x ? y : !y ? x : 1 / (1 / x + 1 / y))
     const maxOpt = (x?: number, y?: number) => (x == null ? y : y == null ? x : Math.max(x, y))
     const prodOpt = (x?: number, y?: number) => (x == null && y == null ? undefined : (x ?? 1) * (y ?? 1))
     return {
-        ...a,
+        ...a, // garde id/nom/emoji + champs CONSOMMABLES du slot 1 (baies, negateStatDrop) + typeBoost/statMult/physDmg (lus par les autres helpers)
         leftoversFrac: harmonic(a.leftoversFrac, b.leftoversFrac),
         drainDealtFrac: harmonic(a.drainDealtFrac, b.drainDealtFrac),
         critStage: ((a.critStage ?? 0) + (b.critStage ?? 0)) || undefined,
@@ -203,7 +205,6 @@ function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
         flinchPct: maxOpt(a.flinchPct, b.flinchPct),
         incomingAccMult: prodOpt(a.incomingAccMult, b.incomingAccMult),
         expMult: prodOpt(a.expMult, b.expMult),
-        negateStatDrop: a.negateStatDrop || b.negateStatDrop,
     }
 }
 

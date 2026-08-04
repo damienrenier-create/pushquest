@@ -40,6 +40,13 @@ describe("Objets tenus — fusion à 2 objets", () => {
         expect(heldEffect({ heldItem: crit.id, heldItem2: crit.id })?.critStage).toBe(crit.critStage! * 2)
     })
 
+    it("consommable (negateStatDrop / Herbe Blanche) : actif en slot 1, INERTE en slot 2 (pas d'immunité permanente)", () => {
+        const herb = all.find((i) => i.negateStatDrop && !i.species)
+        if (!herb) return
+        expect(heldEffect({ heldItem: herb.id })?.negateStatDrop).toBe(true)             // slot 1 → actif (consommé via mon.heldItem)
+        expect(heldEffect({ heldItem: lefto.id, heldItem2: herb.id })?.negateStatDrop).toBeFalsy() // slot 2 → NON combiné (sinon jamais consommé)
+    })
+
     it("dégâts entrants physiques : les 2 réducteurs se multiplient", () => {
         const shell = all.find((i) => i.physDmgTakenMult !== undefined && !i.species)
         if (!shell) return
