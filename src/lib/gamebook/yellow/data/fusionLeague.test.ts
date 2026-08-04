@@ -9,17 +9,15 @@ import { fusionParentFromInstance } from "./fusionMon"
 import { createMonInstance } from "../battle/factory"
 
 describe("Ligue de Fusion — data", () => {
-    it("42 parents, dédup contrôlée : seule la réutilisation ASSUMÉE de Glacyran est tolérée", () => {
+    it("23 fusions Johto : parents RÉUTILISABLES (éphémères, invisibles), seuls les NOMS restent uniques", () => {
         const pairs = allFusionLeaguePairs()
-        expect(pairs.length).toBe(21)
+        expect(pairs.length).toBe(23)
         const parents = pairs.flatMap((p) => [p.a, p.b])
-        expect(parents.length).toBe(42)
-        // Exception DÉLIBÉRÉE : aucun final Glace n'étant libre, Glacyran (#4) recompose 2 finals déjà pris
-        //   (Orcaline de #1 + Cryotyran de #14). Le test garde donc contre tout NOUVEAU doublon accidentel.
-        const KNOWN_REUSED = ["cryotyran", "orcaline"]
-        const seen = new Set<string>(), dupes = new Set<string>()
-        for (const p of parents) { if (seen.has(p)) dupes.add(p); seen.add(p) }
-        expect([...dupes].sort()).toEqual(KNOWN_REUSED)
+        expect(parents.length).toBe(46)
+        // Ligue Or/Argent : un parent peut nourrir plusieurs fusions/dresseurs (cf. en-tête fusionLeague.ts).
+        //   L'invariant player-facing n'est donc PLUS l'unicité des parents mais l'unicité des NOMS de fusion.
+        const names = pairs.map((p) => p.name)
+        expect(new Set(names).size).toBe(23)
     })
 
     it("INVARIANT 1-par-parent : chaque fusion curée (Ligue + boss) prend ≥1 type de CHAQUE parent", () => {
@@ -46,13 +44,13 @@ describe("Ligue de Fusion — data", () => {
         }
     })
 
-    it("toutes les espèces parents existent + 21 noms de fusion distincts", () => {
+    it("toutes les espèces parents existent + 23 noms de fusion distincts", () => {
         for (const p of allFusionLeaguePairs()) {
             expect(getSpecies(p.a), `parent ${p.a}`).not.toBeNull()
             expect(getSpecies(p.b), `parent ${p.b}`).not.toBeNull()
         }
         const names = allFusionLeaguePairs().map((p) => p.name)
-        expect(new Set(names).size).toBe(21)
+        expect(new Set(names).size).toBe(23)
     })
 
     it("chaque dresseur bâtit son équipe (bronze) : bon nombre, noms FIGÉS, niveau du palier", () => {
@@ -76,26 +74,25 @@ describe("Ligue de Fusion — data", () => {
         }
     })
 
-    it("le type LORE est respecté (Conseil 4)", () => {
-        const lore: Record<string, string> = { lorelei: "GLACE", bruno: "COMBAT", agatha: "SPECTRE", peter: "DRAGON" }
-        for (const [key, type] of Object.entries(lore)) {
-            const team = buildFusionLeagueTeam(key, "bronze")
-            try {
-                for (const f of team) {
-                    const sp = getSpecies(f.speciesId)!
-                    expect(sp.types, `${sp.name} doit garder ${type}`).toContain(type)
-                }
-            } finally { disposeFusionLeagueTeam(team) }
-        }
+    it("thème PSY de WILL respecté ; les autres dresseurs Johto ont des équipes de types MIXTES (comme en O/A)", () => {
+        // Seul WILL garde un type uniforme (PSY) : l'engine dérive les types des stats, donc Koga/Bruno/Karen/Lance
+        // sortent des équipes hétéroclites — exactement comme leurs vrais Conseils 4 d'Or/Argent (types mêlés).
+        const will = buildFusionLeagueTeam("will", "bronze")
+        try {
+            for (const f of will) expect(getSpecies(f.speciesId)!.types, `${getSpecies(f.speciesId)!.name} garde PSY`).toContain("PSY")
+        } finally { disposeFusionLeagueTeam(will) }
+        // Les 5 clés attendues existent avec leur theme lore.
+        const themes = Object.fromEntries(FUSION_LEAGUE.map((t) => [t.key, t.theme]))
+        expect(themes).toMatchObject({ will: "PSY", koga: "POISON", bruno: "COMBAT", karen: "TÉNÈBRES", lance: "DRAGON" })
     })
 
     it("scaling des paliers : Or (niv 100) > Bronze (niv 80), stats plus hautes", () => {
-        const bronze = buildFusionLeagueTeam("lorelei", "bronze")
-        const or = buildFusionLeagueTeam("lorelei", "or")
+        const bronze = buildFusionLeagueTeam("will", "bronze")
+        const or = buildFusionLeagueTeam("will", "or")
         try {
             expect(bronze[0].instance.level).toBe(80)
             expect(or[0].instance.level).toBe(100)
-            // même fusion (Morcaline), parents plus forts → PV gelés plus hauts en Or.
+            // même fusion (Divinaquil), parents plus forts → PV gelés plus hauts en Or.
             expect(or[0].instance.frozenStats!.hp).toBeGreaterThan(bronze[0].instance.frozenStats!.hp)
         } finally {
             disposeFusionLeagueTeam(bronze)

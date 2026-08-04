@@ -20,10 +20,12 @@ describe("Boss final (Dieu Spaghetti) — équipe", () => {
         }
     })
 
-    it("parents tous DISTINCTS (aucun réutilisé dans le boss NI dans la Ligue)", () => {
+    it("parents distincts DANS le boss ; NOMS du boss distincts des 23 fusions de Ligue", () => {
         const bossParents = FUSION_BOSS_PAIRS.flatMap((p) => [p.a, p.b])
-        expect(new Set(bossParents).size).toBe(bossParents.length) // pas de réutilisation interne
-        const leagueParents = new Set(FUSION_LEAGUE.flatMap((t) => t.pairs).flatMap((p) => [p.a, p.b]))
-        for (const p of bossParents) expect(leagueParents.has(p), `${p} déjà dans la Ligue`).toBe(false)
+        expect(new Set(bossParents).size).toBe(bossParents.length) // pas de réutilisation INTERNE au boss
+        // Ligue Johto : parents RÉUTILISABLES entre Ligue et boss (cf. en-tête fusionLeague.ts) — ce sont les NOMS
+        //   de fusion, player-facing, qui doivent rester uniques.
+        const leagueNames = new Set(FUSION_LEAGUE.flatMap((t) => t.pairs).map((p) => p.name))
+        for (const p of FUSION_BOSS_PAIRS) expect(leagueNames.has(p.name), `nom boss ${p.name} en collision avec la Ligue`).toBe(false)
     })
 })

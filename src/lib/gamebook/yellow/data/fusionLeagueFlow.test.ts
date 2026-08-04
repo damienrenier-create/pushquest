@@ -10,11 +10,11 @@ import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 
 describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
     it("mapping dresseur → clé FUSION_LEAGUE (miroir & inconnus = null)", () => {
-        expect(fusionLeagueKeyForTrainer("y_fusion_1")).toBe("lorelei")
-        expect(fusionLeagueKeyForTrainer("y_fusion_2")).toBe("bruno")
-        expect(fusionLeagueKeyForTrainer("y_fusion_3")).toBe("agatha")
-        expect(fusionLeagueKeyForTrainer("y_fusion_4")).toBe("peter")
-        expect(fusionLeagueKeyForTrainer("y_fusion_maitre")).toBe("ace")
+        expect(fusionLeagueKeyForTrainer("y_fusion_1")).toBe("will")
+        expect(fusionLeagueKeyForTrainer("y_fusion_2")).toBe("koga")
+        expect(fusionLeagueKeyForTrainer("y_fusion_3")).toBe("bruno")
+        expect(fusionLeagueKeyForTrainer("y_fusion_4")).toBe("karen")
+        expect(fusionLeagueKeyForTrainer("y_fusion_maitre")).toBe("lance")
         expect(fusionLeagueKeyForTrainer("y_fusion_miroir")).toBeNull() // dynamique (reflet), pas dans FUSION_LEAGUE
         expect(fusionLeagueKeyForTrainer("y_ligue_1_olga")).toBeNull()
     })

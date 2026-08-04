@@ -18,7 +18,7 @@ describe("Ligue de Fusion — câblage combat (Inc.B)", () => {
     })
 
     it("startFusionLeagueBattle : rejette équipe vide / mauvais préfixe ; sinon pose le dresseur + le combat", () => {
-        const enemy = buildFusionLeagueTeam("lorelei", "bronze")
+        const enemy = buildFusionLeagueTeam("will", "bronze")
         const player = [buildFusion(createMonInstance("maitrezenc", 60), createMonInstance("divinpate", 60))]
         const eTeam = enemy.map((f) => f.instance)
         const pTeam = player.map((f) => f.instance)
@@ -32,7 +32,7 @@ describe("Ligue de Fusion — câblage combat (Inc.B)", () => {
             expect(snap.trainer?.trainerId).toBe("y_fusion_1") // → markTrainerDefeated (gating) à la victoire
             expect(snap.battle).not.toBeNull()
             expect(snap.battle!.player.team.length).toBe(1)
-            expect(snap.battle!.enemy.team.length).toBe(4)     // les 4 fusions de Lorelei
+            expect(snap.battle!.enemy.team.length).toBe(4)     // les 4 fusions de WILL
             // l'ennemi fusionné porte bien ses stats figées (Spéciale unique) → l'IA hof les lira
             expect(snap.battle!.enemy.team[0].frozenStats?.spc).toBeGreaterThan(0)
         } finally {

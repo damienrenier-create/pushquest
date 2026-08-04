@@ -1,9 +1,13 @@
 // src/lib/gamebook/yellow/data/fusionLeague.ts
 //
-// LIGUE DE FUSION — data des 5 dresseurs (Conseil 4 + Champion), chacun avec une équipe de Daemons FUSIONNÉS.
-// Chaque fusion = 2 parents UNIQUES (aucun réutilisé dans TOUTE la Ligue) ; noms FIGÉS (les 21 portmanteaux) ;
-// types calculés par computeFusion. Le 6e « dresseur » (miroir) est DYNAMIQUE (équipe du joueur + némésis) → il
-// vit ailleurs, pas ici.
+// LIGUE DE FUSION — data des 5 dresseurs (Conseil 4 + Champion), thème POKÉMON OR/ARGENT (Johto) :
+// WILL (Psy) · KOGA (Poison) · BRUNO (Combat) · KAREN (Ténèbres) · LANCE (Dragon, Champion). Chaque équipe = des
+// Daemons FUSIONNÉS dont les 2 parents évoquent l'équipe Johto du dresseur ; noms FIGÉS (mots-valises des 2 parents) ;
+// types calculés par computeFusion. Le 6e combat (miroir) reste le BOSS DIEU SPAGHETTI (Ukognofy), il vit ailleurs.
+//
+// PARENTS RÉUTILISABLES : un même parent peut nourrir plusieurs fusions/dresseurs (ex. Aquilord). C'est INVISIBLE au
+// joueur (parents éphémères, jamais montrés — seul le fusionné compte) et sans risque de registre (uids distincts).
+// Seuls les NOMS de fusion doivent rester uniques. C'est le fusionné, pas le parent, qui porte l'identité.
 //
 // Rejouable en 3 PALIERS : bronze (parents niv 80 / 75 Saiyan), argent (90 / 85), or (100 / 95). MÊMES fusions,
 // MÊMES sprites (juste des parents plus forts). Les parents sont ÉPHÉMÈRES : construits à la volée, jamais persistés.
@@ -33,46 +37,45 @@ export interface FusionLeagueTrainer {
     pairs: FusionPairDef[]
 }
 
-/** Les 5 dresseurs (4 Conseil + Champion). 21 fusions, 42 parents tous distincts. */
+/** Les 5 dresseurs Johto (4 Conseil + Champion). 23 fusions ; noms uniques ; parents réutilisables (cf. en-tête). */
 export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
-    { key: "lorelei", name: "Lorelei", theme: "GLACE", icon: "🧊", pairs: [
-        // GLACE/EAU = spéciaux. Sweepers spéciaux (SpA) + Repos.
-        { a: "morrow", b: "orcaline", name: "Morcaline", moves: ["blizzard", "deferlante", "vague_mentale", "repos"] },
-        { a: "mobyd", b: "auroraur", name: "Aurobyd", moves: ["deferlante", "blizzard", "souffle_polaire", "repos"] }, // (ex-fulgurance ÉLEC hors-lignée → 2e STAB Glace fiable)
-        { a: "panthegel", b: "yetiroche", name: "Panthyéti", moves: ["blizzard", "lame_roche", "seisme", "repos"] }, // (ex-fulgurance → EdgeQuake avec lame_roche)
-        // #4 : AUCUN final Glace n'est libre (les 7 sont pris en #1-3/#14) → Glacyran RECOMPOSE 2 finals déjà utilisés
-        //   ailleurs (Orcaline de #1 + Cryotyran de #14). Réutilisation ASSUMÉE — parents éphémères, jamais montrés au
-        //   joueur ; les uids d'instance diffèrent → aucun conflit de registre. Cf. l'exception dans fusionLeague.test.ts.
-        { a: "orcaline", b: "cryotyran", name: "Glacyran", moves: ["blizzard", "draco_charge", "deferlante", "repos"] }, // (ex-fulgurance → couverture EAU de lignée orcaline)
+    { key: "will", name: "WILL", theme: "PSY", icon: "🔮", pairs: [
+        // WILL (Xatu/Lippoutou/Flagadoss/Noadkoko) → attaquants SPÉCIAUX. Chaque fusion garde le PSY.
+        { a: "divinpate", b: "aquilord", name: "Divinaquil", moves: ["eveil_divin", "fonce_bec", "souffle_polaire", "lance_flammes"] },   // PSY/VOL ~Xatu
+        { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["vague_mentale", "tempete_verte", "vampigraine", "repos"] },        // PSY/PLANTE ~Noadkoko (mur drain)
+        { a: "omnhippo", b: "razmaree", name: "Hippomarée", moves: ["eveil_divin", "hydrocanon", "souffle_polaire", "repos"] },          // PSY/EAU ~Flagadoss (pivot)
+        { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["souffle_polaire", "eveil_divin", "hypnose", "focalisation"] },       // GLACE/PSY ~Lippoutou (glass-cannon)
     ] },
-    { key: "bruno", name: "Bruno", theme: "COMBAT", icon: "🥊", pairs: [
-        // COMBAT physique (ATK énorme) → STAB Combat + couverture Sol/Roche/Métal + Danse-Lames. Karabouh = spécial (Psy).
-        { a: "maitrezenc", b: "enclumind", name: "Maîtreclume", moves: ["coup_de_boutoir", "tete_de_fer", "seisme", "danse_lames"] },
-        { a: "hebulmin", b: "tauricendre", name: "Hébultaure", moves: ["coup_de_boutoir", "seisme", "cage_eclair", "danse_lames"] },
-        { a: "druidours", b: "uzumaro", name: "Druidumaro", moves: ["coup_de_boutoir", "seisme", "mega_sangsue", "danse_lames"] },
-        { a: "bouhbou", b: "karatame", name: "Karabouh", moves: ["eveil_divin", "coup_de_boutoir", "ball_ombre", "repos"] }, // (ex-fulgurance → couverture SPECTRE de lignée bouhbou)
+    { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
+        // KOGA (Migalos/Aéromite/Foretress/Grotadmorv/Nostenfer) → stallers Poison-Insecte + un sweeper Élec/Vol.
+        { a: "necrolopendre", b: "merorem", name: "Mérolopendre", moves: ["dard_fatal", "bombe_beurk", "toxik", "repos"] },              // INSECTE/POISON ~Migalos
+        { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["eveil_divin", "bombe_beurk", "hypnose", "onde_folie"] },       // PSY/POISON ~Aéromite
+        { a: "formiguer", b: "colosfer", name: "Formifer", moves: ["dard_fatal", "poing_meteore", "seisme", "repos"] },                  // INSECTE/METAL ~Foretress
+        { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller)
+        { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "serres_aube", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide)
     ] },
-    { key: "agatha", name: "Agatha", theme: "SPECTRE", icon: "👻", pairs: [
-        // Shadopanthe = physique (Spectre/Normal). Nécrozeus = mixte Spectre/ÉLEC (Namizeus apporte l'Élec). Archibrook/Mycécorbe = spéciaux (Psy).
-        { a: "ombrapanthe", b: "shadow", name: "Shadopanthe", moves: ["ball_ombre", "plaquage", "seisme", "hypnose"] },
-        { a: "namizeus", b: "necrolopendre", name: "Nécrozeus", moves: ["ball_ombre", "fulgurance", "seisme", "toxik"] },
-        { a: "archibouh", b: "brookhante", name: "Archibrook", moves: ["eveil_divin", "vague_mentale", "onde_obscure", "hypnose"] },
-        { a: "mycedruide", b: "necrocorbe", name: "Mycécorbe", moves: ["vague_mentale", "eveil_divin", "toxik", "ball_ombre"] },
+    { key: "bruno", name: "BRUNO", theme: "COMBAT", icon: "🥊", pairs: [
+        // BRUNO (Mackogneur/Tygnon/Kicklee/Kapoera/Onix) → cogneurs physiques COMBAT + le mur Roche/Sol.
+        { a: "maitrezenc", b: "enclumind", name: "Zenclumind", moves: ["crochet_maitre", "vague_mentale", "seisme", "danse_lames"] },    // COMBAT/PSY ~Mackogneur
+        { a: "frappard", b: "hebulmin", name: "Frappulmin", moves: ["crochet_maitre", "fulgurance", "seisme", "danse_lames"] },          // COMBAT/ELEC ~Tygnon
+        { a: "maitrezenc", b: "aquilord", name: "Aquizenc", moves: ["crochet_maitre", "fonce_bec", "seisme", "danse_lames"] },           // COMBAT/VOL ~Kicklee
+        { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera
+        { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
     ] },
-    { key: "peter", name: "Peter", theme: "DRAGON", icon: "🐉", pairs: [
-        // Physiques (ATK dominante) → couverture physique Vol/Sol/Roche/Feu ; 1 STAB spécial thématique quand pertinent.
-        { a: "draconarque", b: "alirocaillus", name: "Draconroc", moves: ["pique_fatal", "lame_roche", "seisme", "danse_lames"] },
-        { a: "cryotyran", b: "leviathonn", name: "Cryoviathan", moves: ["deferlante", "draco_charge", "seisme", "repos"] },
-        // Dracorex = DRAGON/VOL (Dragon de Dracarlin + Vol de Chronorex) → STAB Vol physique (pique_fatal) + couverture.
-        { a: "dracarlin", b: "chronorex", name: "Dracorex", moves: ["pique_fatal", "seisme", "lame_roche", "danse_lames"] },
+    { key: "karen", name: "KAREN", theme: "TÉNÈBRES", icon: "🌙", pairs: [
+        // KAREN (Noctali/Cornèbre/Rafflesia/Ectoplasma/Démolosse) → équipe hétéroclite au parfum ténébreux.
+        { a: "ombrapanthe", b: "shadow", name: "Panthadow", moves: ["ball_ombre", "plaquage", "seisme", "danse_lames"] },               // SPECTRE/NORMAL ~Noctali
+        { a: "necrocorbe", b: "condombre", name: "Nécrombre", moves: ["pique_fatal", "bombe_beurk", "onde_obscure", "toxik"] },          // POISON/VOL ~Cornèbre
+        { a: "wistree", b: "mycedruide", name: "Wistruide", moves: ["mega_sangsue", "bombe_beurk", "spores_dodo", "repos"] },            // PLANTE/POISON ~Rafflesia (staller : 2 STAB drain/poison + poudre dodo + repos)
+        { a: "bouhbou", b: "lampignon", name: "Bouhpignon", moves: ["coup_de_boutoir", "bombe_beurk", "ball_ombre", "repos"] },          // COMBAT/POISON ~Ectoplasma
+        { a: "loupyre", b: "tenebrir", name: "Loupèbre", moves: ["lance_flammes", "ball_ombre", "devoreur_ombres", "hypnose"] },         // FEU/SPECTRE ~Démolosse
     ] },
-    { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
-        { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
-        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Vol/ÉLEC spé (STAB Élec fulgurance ; Vol = typage physique + reprise_ailes ; Psy éveil_divin/vague_mentale = couverture)
-        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "boutefeu", "hypnose"] },        // Feu/VOL spé (2 STAB Feu ; ex-fulgurance hors-lignée → boutefeu)
-        { a: "magnetor", b: "rochison", name: "Rockator", moves: ["roc_titanesque", "tete_de_fer", "seisme", "danse_lames"] },     // ex-Magmarok → MÉTAL/ROCHE (Magnetor=Métal + Rochison=Roche). Juggernaut physique : 2 STAB (Roche+Métal) + séisme couverture + danse-lames
-        { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide
-        { a: "omnhippo", b: "regnantaur", name: "Omnantaur", moves: ["eveil_divin", "vague_mentale", "dard_fatal", "repos"] },        // spécial Psy + Insecte
+    { key: "lance", name: "LANCE", theme: "DRAGON", icon: "🐉", pairs: [
+        // LANCE, Champion (Léviator/Dracaufeu/Ptéra + l'ACE Dracolosse) → sweepers physiques + le colosse dragon final.
+        { a: "leviathonn", b: "aquilord", name: "Aquilathonn", moves: ["deferlante", "fonce_bec", "souffle_polaire", "reprise_ailes"] }, // EAU/VOL ~Léviator (mur spé)
+        { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "seisme", "danse_lames"] },     // FEU/VOL ~Dracaufeu
+        { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "eclat_lunaire", "seisme", "danse_lames"] },      // VOL/FEE ~Ptéra
+        { a: "draconarque", b: "goshendofy", name: "Goshendarque", moves: ["souffle_primordial", "pique_fatal", "seisme", "repos"] },    // DRAGON/VOL ~Dracolosse (ACE)
     ] },
 ]
 
@@ -143,7 +146,7 @@ export function allFusionLeaguePairs(): FusionPairDef[] {
 // FUSION_LEAGUE (dans l'ordre) ; `y_fusion_miroir` est le combat final DYNAMIQUE (reflet du joueur, bâti ailleurs).
 export const FUSION_LEAGUE_ORDER = ["y_fusion_1", "y_fusion_2", "y_fusion_3", "y_fusion_4", "y_fusion_maitre"] as const
 
-/** Clé FUSION_LEAGUE (lorelei…) d'un dresseur `y_fusion_N`/`y_fusion_maitre`. null pour le miroir / un id inconnu. */
+/** Clé FUSION_LEAGUE (will/koga/bruno/karen/lance) d'un dresseur `y_fusion_N`/`y_fusion_maitre`. null pour le miroir / un id inconnu. */
 export function fusionLeagueKeyForTrainer(trainerId: string): string | null {
     const i = FUSION_LEAGUE_ORDER.indexOf(trainerId as (typeof FUSION_LEAGUE_ORDER)[number])
     return i >= 0 ? FUSION_LEAGUE[i].key : null
