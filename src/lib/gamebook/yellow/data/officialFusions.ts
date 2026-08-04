@@ -4,7 +4,7 @@
 // (espèces, n'importe quel ordre). Sert à reconnaître, quand un JOUEUR fabrique une fusion à l'Atelier, qu'il
 // vient de recréer une fusion connue → on lui redonne son NOM et son SPRITE officiels (les stats, elles, restent
 // calculées depuis SES Daemons). Couvre : les 23 fusions de la Ligue Johto + 4 du boss + 2 de l'épreuve + 5 fusions
-// de base + les 19 anciennes fusions Kanto RETIRÉES mais gardées en « bonus » (sprites déjà générés, cf. plus bas).
+// de base + les 20 anciennes fusions Kanto RETIRÉES mais gardées en « bonus » (sprites déjà générés, cf. plus bas).
 //
 // Règle Sartay : « dès que la paire matche et qu'elle a un sprite, on l'utilise ». Sinon → MissingNo (cf. buildFusion).
 // Registre bâti PARESSEUSEMENT (1er appel) → évite tout souci d'ordre d'import (cycle fusionMon ↔ fusionLeague).
@@ -28,10 +28,12 @@ const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string 
 /** Fusions de l'ANCIENNE Ligue Kanto, RETIRÉES de la Ligue Johto mais gardées comme fusions « bonus » : un joueur
  *  qui recompose la paire à la Grotte/Atelier retrouve l'ancien nom + son sprite DÉJÀ généré (zéro art gaspillé).
  *  Ajoutées EN DERNIER dans le registre → toute paire encore ACTIVE (Johto, boss, épreuve, base, perso) garde son nom
- *  courant. Les 2 paires reprises par la Ligue Johto — maitrezenc+enclumind → Zenclumind, ombrapanthe+shadow →
- *  Panthadow — sont donc volontairement ABSENTES d'ici (leurs anciens sprites maitreclume/shadopanthe sont orphelins). */
+ *  courant. SEULE maitrezenc+enclumind est absente d'ici : elle est reprise par la Ligue Johto (Zenclumind réutilise
+ *  déjà maitreclume.png via son champ sprite). ombrapanthe+shadow N'EST PLUS reprise (Karen refondue) → Shadopanthe
+ *  revient ici pour ne pas orpheliner shadopanthe.png. */
 const FUSION_RETIRED_PAIRS: { a: string; b: string; name: string }[] = [
     { a: "morrow", b: "orcaline", name: "Morcaline" },
+    { a: "ombrapanthe", b: "shadow", name: "Shadopanthe" },
     { a: "mobyd", b: "auroraur", name: "Aurobyd" },
     { a: "panthegel", b: "yetiroche", name: "Panthyéti" },
     { a: "orcaline", b: "cryotyran", name: "Glacyran" },

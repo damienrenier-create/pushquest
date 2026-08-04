@@ -63,12 +63,14 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
     ] },
     { key: "karen", name: "KAREN", theme: "TÉNÈBRES", icon: "🌙", pairs: [
-        // KAREN (Noctali/Cornèbre/Rafflesia/Ectoplasma/Démolosse) → équipe hétéroclite au parfum ténébreux.
-        { a: "ombrapanthe", b: "shadow", name: "Panthadow", moves: ["ball_ombre", "plaquage", "seisme", "danse_lames"] },               // SPECTRE/NORMAL ~Noctali
-        { a: "necrocorbe", b: "condombre", name: "Nécrombre", moves: ["pique_fatal", "bombe_beurk", "onde_obscure", "toxik"] },          // POISON/VOL ~Cornèbre
-        { a: "wistree", b: "mycedruide", name: "Wistruide", moves: ["mega_sangsue", "bombe_beurk", "spores_dodo", "repos"] },            // PLANTE/POISON ~Rafflesia (staller : 2 STAB drain/poison + poudre dodo + repos)
-        { a: "bouhbou", b: "lampignon", name: "Bouhpignon", moves: ["coup_de_boutoir", "bombe_beurk", "ball_ombre", "repos"] },          // COMBAT/POISON ~Ectoplasma
-        { a: "loupyre", b: "tenebrir", name: "Loupèbre", moves: ["lance_flammes", "ball_ombre", "devoreur_ombres", "hypnose"] },         // FEU/SPECTRE ~Démolosse
+        // KAREN (Conseil-4 Ténèbres) — ÉQUIPE BOSS de 6 fusions, MOVESETS 100% issus des learnsets des parents. Ordre =
+        //   lead disable → 2 murs set-up → mur colossal speed-control → 2 sweepers rapides (ACE = Ténépanthe). 3 ténèbres.
+        { a: "bouhbou", b: "mycedruide", name: "Bouhdruide", moves: ["spores_dodo", "toxik", "crochet_maitre", "bombe_beurk"] },        // COMBAT/POISON ~Ectoplasma — lead disable (sommeil+toxik)
+        { a: "geckebre", b: "condombre", name: "Géckombre", moves: ["lame_roche", "seisme", "danse_lames", "repos"] },                  // ROCHE/TÉN — mur physique set-up
+        { a: "ombrapanthe", b: "magnetor", name: "Magnépanthe", moves: ["ball_ombre", "poing_meteore", "seisme", "danse_lames"] },      // SPECTRE/METAL — pivot bulky set-up (superbe défense)
+        { a: "leviabysse", b: "leviathonn", name: "Abyssathonn", moves: ["hydrocanon", "devoreur_ombres", "surtension", "repos"] },     // EAU/TÉN — mur colossal + speed-control (surtension −2 Vit, appris par Léviathonn)
+        { a: "tenebrir", b: "thundah", name: "Thundèbre", moves: ["lance_flammes", "fulgurance", "vague_mentale", "focalisation"] },    // SPECTRE/FEU — sweeper spé le + rapide (Vit 449)
+        { a: "tenebrir", b: "ombrapanthe", name: "Ténépanthe", moves: ["devoreur_ombres", "vague_mentale", "lance_flammes", "hypnose"] }, // SPECTRE/TÉN — ACE (Vit 428) ; hypnose FIABLE car rapide
     ] },
     { key: "lance", name: "LANCE", theme: "DRAGON", icon: "🐉", pairs: [
         // LANCE, Champion (Léviator/Dracaufeu/Ptéra + l'ACE Dracolosse) → sweepers physiques + le colosse dragon final.
