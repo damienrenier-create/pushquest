@@ -28,7 +28,7 @@ export function genieTrainerDelta(refLevel: number): number {
 
 /** Déploiement progressif de l'arc : GENIE_ARC_ALL=false → réservé à la liste blanche (test) ; true → TOUS les joueurs.
  *  L'embuscade (seul point d'amorçage) est gatée là-dessus → tout l'arc suit (lampe/génie/onglet n'existent qu'après). */
-export const GENIE_ARC_ALL = false
+export const GENIE_ARC_ALL = true
 export const GENIE_ARC_NICKS: readonly string[] = ["mools"]
 export function genieArcEnabledFor(nickname?: string | null): boolean {
     if (GENIE_ARC_ALL) return true

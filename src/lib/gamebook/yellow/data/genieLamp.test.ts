@@ -48,16 +48,13 @@ describe("Arc Lampe & Génie — helpers purs", () => {
         expect(genieTrainerLevel(4)).toBe(GENIE_TRAINER_LEVEL_MIN) // 4-2=2 < plancher 3
     })
 
-    it("genieArcImmediate : true en phase de test (GENIE_ARC_ALL=false)", () => {
-        expect(genieArcImmediate()).toBe(true) // tant que l'arc n'est pas ouvert à tous
+    it("genieArcImmediate : false une fois l'arc OUVERT À TOUS (GENIE_ARC_ALL=true)", () => {
+        expect(genieArcImmediate()).toBe(false) // arc ouvert → embuscade via compteur N∈[3,10] + garde équipe fraîche
     })
 
-    it("genieArcEnabledFor : liste blanche (Mools) tant que GENIE_ARC_ALL=false", () => {
+    it("genieArcEnabledFor : ouvert à TOUS les joueurs (GENIE_ARC_ALL=true)", () => {
         expect(genieArcEnabledFor("mools")).toBe(true)
-        expect(genieArcEnabledFor("Mools")).toBe(true)   // insensible à la casse
-        expect(genieArcEnabledFor("  MOOLS ")).toBe(true) // trim
-        expect(genieArcEnabledFor("frans")).toBe(false)
-        expect(genieArcEnabledFor(undefined)).toBe(false)
-        expect(genieArcEnabledFor(null)).toBe(false)
+        expect(genieArcEnabledFor("frans")).toBe(true)   // plus de liste blanche
+        expect(genieArcEnabledFor("  N'ImporteQui ")).toBe(true)
     })
 })
