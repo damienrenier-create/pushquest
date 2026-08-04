@@ -47,10 +47,10 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["souffle_polaire", "eveil_divin", "hypnose", "focalisation"] },       // GLACE/PSY ~Lippoutou (glass-cannon)
     ] },
     { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
-        // KOGA (Migalos/Aéromite/Foretress/Grotadmorv/Nostenfer) → stallers Poison-Insecte + un sweeper Élec/Vol.
+        // KOGA (Migalos/Aéromite/impératrice de fer/Grotadmorv/Nostenfer) → stallers Poison-Insecte + 1 bruiser Combat/Métal + 1 sweeper Élec/Vol.
         { a: "necrolopendre", b: "merorem", name: "Mérolopendre", moves: ["dard_fatal", "bombe_beurk", "toxik", "repos"] },              // INSECTE/POISON ~Migalos
         { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["eveil_divin", "bombe_beurk", "hypnose", "onde_folie"] },       // PSY/POISON ~Aéromite
-        { a: "formiguer", b: "colosfer", name: "Formifer", moves: ["dard_fatal", "poing_meteore", "seisme", "repos"] },                  // INSECTE/METAL ~Foretress
+        { a: "coccimperatrice", b: "colosfer", name: "Impérafer", moves: ["crochet_maitre", "poing_meteore", "seisme", "danse_lames"] }, // COMBAT/METAL ~impératrice de fer (bruiser physique : 2 STAB + séisme + danse-lames)
         { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller)
         { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "serres_aube", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide)
     ] },
