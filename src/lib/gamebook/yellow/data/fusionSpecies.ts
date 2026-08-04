@@ -1,16 +1,15 @@
 // src/lib/gamebook/yellow/data/fusionSpecies.ts
 //
 // FUSION DE DAEMONS — « Autel de la Chimère » (Nexus Jaune). MODULE PUR : calcule le profil d'une fusion de 2
-// Daemons (génétique dominant/récessif, Spéciale scindée en SpA/SpD, typage stat-fidèle, nom mot-valise). AUCUN
-// store, AUCUNE écriture save, AUCUNE touche au moteur → 100 % testable et réutilisable. La construction du
-// BattleMon éphémère + la salle + le PvP viendront brancher CE module (Inc.1+).
+// Daemons (génétique dominant/récessif sur 5 stats — Spéciale UNIQUE incluse —, typage stat-fidèle, nom mot-valise).
+// AUCUN store, AUCUNE écriture save, AUCUNE touche au moteur → 100 % testable et réutilisable. La construction du
+// BattleMon éphémère + la salle + le PvP viennent brancher CE module.
 //
-// Règles FIGÉES (décisions Sartay, cf. spec) :
-//   • Stats hp/atk/déf/vit : sur chaque parent, classer ses 4 stats (spc EXCLUE) → 2 hautes DOMINANTES (×0,6),
-//     2 basses RÉCESSIVES (×0,45). fusion[s] = poidsA·A[s] + poidsB·B[s]. Dom+dom = 120 % (peut DÉPASSER les
-//     parents), dom+réc = 105 %, réc+réc = 90 %. Départage déterministe (ordre hp>atk>déf>vit).
-//   • Spéciale : SpA = spc du parent le plus RAPIDE, SpD = spc du plus LENT (valeurs pleines ; à vitesse égale,
-//     la spc la plus haute → SpA, départage intrinsèque → indépendant de l'ordre).
+// Règles FIGÉES (décisions Sartay, MAJ 04/08 : 3 dominantes / 2 récessives sur les 5 stats, Spéciale incluse) :
+//   • Stats (5 : hp/atk/déf/vit/spc) : sur chaque parent, classer ses 5 stats → 3 hautes DOMINANTES (×0,6), 2 basses
+//     RÉCESSIVES (×0,45). fusion[s] = poidsA·A[s] + poidsB·B[s] pour TOUTES les stats (Spéciale comprise). Dom+dom
+//     = 120 % (peut DÉPASSER les parents), dom+réc = 105 %, réc+réc = 90 %. Départage déterministe (hp>atk>déf>vit>spc).
+//   • Spéciale : UNE seule (offense = défense), soumise à la MÊME génétique 3/2 que les 4 autres (plus de split SpA/SpD).
 //   • Niveau = max(parents). Les stats reçues sont les stats FINALES réelles (le module est agnostique base/finale).
 //   • Types (RÈGLE Sartay) : UN type de CHAQUE parent = pour chaque parent, son type le plus fidèle à ses GROSSES
 //     STATS (stat-représentative du type). JAMAIS 2 types d'un parent + 0 de l'autre. Si les deux parents pointent
