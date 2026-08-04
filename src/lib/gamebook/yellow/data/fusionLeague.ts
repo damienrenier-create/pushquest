@@ -38,19 +38,19 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "lorelei", name: "Lorelei", theme: "GLACE", icon: "🧊", pairs: [
         // GLACE/EAU = spéciaux. Sweepers spéciaux (SpA) + Repos.
         { a: "morrow", b: "orcaline", name: "Morcaline", moves: ["blizzard", "deferlante", "vague_mentale", "repos"] },
-        { a: "mobyd", b: "auroraur", name: "Aurobyd", moves: ["deferlante", "blizzard", "fulgurance", "repos"] },
-        { a: "panthegel", b: "yetiroche", name: "Panthyéti", moves: ["blizzard", "lame_roche", "fulgurance", "repos"] },
+        { a: "mobyd", b: "auroraur", name: "Aurobyd", moves: ["deferlante", "blizzard", "souffle_polaire", "repos"] }, // (ex-fulgurance ÉLEC hors-lignée → 2e STAB Glace fiable)
+        { a: "panthegel", b: "yetiroche", name: "Panthyéti", moves: ["blizzard", "lame_roche", "seisme", "repos"] }, // (ex-fulgurance → EdgeQuake avec lame_roche)
         // #4 : AUCUN final Glace n'est libre (les 7 sont pris en #1-3/#14) → Glacyran RECOMPOSE 2 finals déjà utilisés
         //   ailleurs (Orcaline de #1 + Cryotyran de #14). Réutilisation ASSUMÉE — parents éphémères, jamais montrés au
         //   joueur ; les uids d'instance diffèrent → aucun conflit de registre. Cf. l'exception dans fusionLeague.test.ts.
-        { a: "orcaline", b: "cryotyran", name: "Glacyran", moves: ["blizzard", "draco_charge", "fulgurance", "repos"] },
+        { a: "orcaline", b: "cryotyran", name: "Glacyran", moves: ["blizzard", "draco_charge", "deferlante", "repos"] }, // (ex-fulgurance → couverture EAU de lignée orcaline)
     ] },
     { key: "bruno", name: "Bruno", theme: "COMBAT", icon: "🥊", pairs: [
         // COMBAT physique (ATK énorme) → STAB Combat + couverture Sol/Roche/Métal + Danse-Lames. Karabouh = spécial (Psy).
         { a: "maitrezenc", b: "enclumind", name: "Maîtreclume", moves: ["coup_de_boutoir", "tete_de_fer", "seisme", "danse_lames"] },
         { a: "hebulmin", b: "tauricendre", name: "Hébultaure", moves: ["coup_de_boutoir", "seisme", "cage_eclair", "danse_lames"] },
         { a: "druidours", b: "uzumaro", name: "Druidumaro", moves: ["coup_de_boutoir", "seisme", "mega_sangsue", "danse_lames"] },
-        { a: "bouhbou", b: "karatame", name: "Karabouh", moves: ["eveil_divin", "coup_de_boutoir", "fulgurance", "repos"] },
+        { a: "bouhbou", b: "karatame", name: "Karabouh", moves: ["eveil_divin", "coup_de_boutoir", "ball_ombre", "repos"] }, // (ex-fulgurance → couverture SPECTRE de lignée bouhbou)
     ] },
     { key: "agatha", name: "Agatha", theme: "SPECTRE", icon: "👻", pairs: [
         // Shadopanthe = physique (Spectre/Normal). Nécrozeus = mixte Spectre/ÉLEC (Namizeus apporte l'Élec). Archibrook/Mycécorbe = spéciaux (Psy).
@@ -69,7 +69,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
         { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
         { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Vol/ÉLEC spé (STAB Élec fulgurance ; Vol = typage physique + reprise_ailes ; Psy éveil_divin/vague_mentale = couverture)
-        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // Feu/VOL spé (STAB Feu ; Vol = typage physique, def only)
+        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "boutefeu", "hypnose"] },        // Feu/VOL spé (2 STAB Feu ; ex-fulgurance hors-lignée → boutefeu)
         { a: "magnetor", b: "rochison", name: "Rockator", moves: ["roc_titanesque", "tete_de_fer", "seisme", "danse_lames"] },     // ex-Magmarok → MÉTAL/ROCHE (Magnetor=Métal + Rochison=Roche). Juggernaut physique : 2 STAB (Roche+Métal) + séisme couverture + danse-lames
         { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide
         { a: "omnhippo", b: "regnantaur", name: "Omnantaur", moves: ["eveil_divin", "vague_mentale", "dard_fatal", "repos"] },        // spécial Psy + Insecte
@@ -114,10 +114,10 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
 // puis UKOGNOFY (Goshendofy + Ukognos = les 2 légendaires fusionnés, DRAGON/FÉE, BST ~1710). Scalé par palier.
 // Tous les parents sont DISTINCTS (aucun réutilisé de la Ligue). Movesets curés (spécial dominant + STAB).
 export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
-    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "lance_soleil", "fulgurance", "repos"] },       // PSY/PLANTE — sweeper psy-plante
-    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "deferlante", "fulgurance", "repos"] },            // FEU/EAU — le paradoxe primordial
+    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "lance_soleil", "vague_mentale", "repos"] },       // PSY/PLANTE — sweeper psy-plante (ex-fulgurance → 2e STAB Psy)
+    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "deferlante", "hydrocanon", "repos"] },            // FEU/EAU — le paradoxe primordial (ex-fulgurance → 2e STAB Eau)
     { a: "zappeureal", b: "naiadrak", name: "Zappadrak", moves: ["ultra_foudre", "deferlante", "blizzard", "cage_eclair"] },       // ELEC/EAU — sweeper rapide (para)
-    { a: "goshendofy", b: "ukognos", name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] }, // DRAGON/FÉE — L'ACE ultime
+    { a: "goshendofy", b: "ukognos", name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "draco_charge", "repos"] }, // DRAGON/FÉE — L'ACE ultime (ex-fulgurance → STAB Dragon fiable)
 ]
 
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat. */

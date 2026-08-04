@@ -16,7 +16,7 @@ export interface TrialFusion { a: string; b: string; name: string; moves: string
 /** Les 2 fusions de l'épreuve d'ouverture (aussi lues par le registre des fusions officielles). */
 export const FUSION_TRIAL_PAIRS: readonly TrialFusion[] = [
     // Tonyront [EAU/NORMAL] — attaquant SPÉCIAL encaisseur (spa élevé, def/spd hauts) : STAB Eau + couverture spé + Repos.
-    { a: "tonytony", b: "calderont", name: "Tonyront", moves: ["deferlante", "blizzard", "fulgurance", "repos"] },
+    { a: "tonytony", b: "calderont", name: "Tonyront", moves: ["deferlante", "blizzard", "lance_flammes", "repos"] }, // (ex-fulgurance hors-lignée → couverture FEU de lignée calderont)
     // Maîtrelmin [COMBAT/ELEC] — attaquant PHYSIQUE (atk énorme) : STAB Combat + Séisme + Cage-Éclair (para) + Danse-Lames.
     { a: "maitrezenc", b: "hebulmin", name: "Maîtrelmin", moves: ["coup_de_boutoir", "seisme", "cage_eclair", "danse_lames"] },
 ]

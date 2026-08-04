@@ -8,7 +8,7 @@ export const FUSION_RULES: string[] = [
     "🧬 LA FUSION DES DAEMONS",
     "Sur l'Autel de la Chimère, pose 2 Daemons : ils fusionnent en UN seul construct de combat, le temps d'un affrontement. Les 2 parents restent intacts (aucune perte).",
     "Tout se calcule sur les stats RÉELLES des parents (niveau, EV/IV, points Saiyan) : fais monter tes parents et la fusion monte avec eux.",
-    "① STATS PHYSIQUES (PV · Attaque · Défense · Vitesse). Pour chaque parent, ses 2 plus HAUTES de ces 4 stats sont DOMINANTES (×0,6), les 2 plus basses RÉCESSIVES (×0,45). La stat du fusionné = la somme pondérée des deux. Une stat dominante des DEUX côtés atteint ×1,2 et DÉPASSE les deux parents.",
+    "① STATS PHYSIQUES (PV · Attaque · Défense · Vitesse). Pour chaque parent, ses 2 plus HAUTES de ces 4 stats sont DOMINANTES (×0,6), les 2 plus basses RÉCESSIVES (×0,45). La stat du fusionné = la somme pondérée des deux. Une stat dominante des DEUX côtés atteint le poids combiné ×1,2 (0,6+0,6) et peut DÉPASSER les deux parents.",
     "② STAT SPÉCIALE — le fusionné a UNE seule Spéciale (offense = défense), comme tout Daemon. Elle vaut 0,6 × la meilleure Spéciale des 2 parents + 0,45 × la moindre (même esprit dominant/récessif que les stats physiques).",
     "③ NIVEAU = celui du plus haut des 2 parents. Les stats sont ensuite GELÉES pour tout le combat.",
     "④ TYPES — pour chaque parent, le fusionné garde le type le plus FIDÈLE à ses grosses stats (2 mono-types → un bi-type ; type partagé → mono-type, ou + le meilleur autre type).",
