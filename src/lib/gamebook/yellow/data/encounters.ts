@@ -1136,6 +1136,15 @@ function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: 
     return mon
 }
 
+/** VŒU DU GÉNIE — construit un spawn FORCÉ (rencontre imposée par un vœu). `hard` = capture BRUTALE façon légendaire
+ *  (statut majeur requis + Ball très puissante ballBonus≥5 + très coriace, captureMult 0.5) → quasi increvable. */
+export function buildForcedSpawn(speciesId: string, level: number, hard: boolean): MonInstance {
+    const lvl = Math.max(1, Math.min(100, Math.floor(level)))
+    const mon = createMonInstance(speciesId, lvl, { owned: false })
+    if (hard) Object.assign(mon, { captureRequiresStatus: true, captureMinBallBonus: 5, captureMult: 0.5 })
+    return mon
+}
+
 /** Exposé pour les tests/outils : poids de chaque espèce à une position. */
 export function debugWeights(mapId: string, x: number, y: number, player?: WildPlayerCtx): Record<string, number> {
     const zone = ZONES[mapId]

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects } from "./playerStore"
+import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects, clearForcedEncounter } from "./playerStore"
+import { buildForcedSpawn } from "../data/encounters"
 
 // VŒU DU GÉNIE — effet MACHINE (JSON en base) appliqué AUTOMATIQUEMENT à l'acceptation (plus d'aller-retour créateur
 // ni de redéploiement). Idempotent (1 marker save par vœu), monde LIVE uniquement.
@@ -49,5 +50,34 @@ describe("Vœu du génie — application AUTO des effets", () => {
         setup()
         expect(applyAcceptedGenieWishEffects({ accepted1: true, effect1: "{pas du json" })).toBe(false)
         expect(getPlayer().reps).toBe(100)
+    })
+
+    it("type d'effet INCONNU → non appliqué ET non marqué (sera re-tenté après un déploiement qui l'ajoute)", () => {
+        setup()
+        const row = { accepted1: true, effect1: JSON.stringify({ kind: "type_pas_encore_code", amount: 5 }) }
+        expect(applyAcceptedGenieWishEffects(row)).toBe(false)
+        expect(getPlayer().defeatedTrainers).not.toContain("genie_fx1")
+    })
+
+    it("force_encounter : pose forcedEncounter (JSON) puis clearForcedEncounter le retire", () => {
+        setup()
+        applyAcceptedGenieWishEffects({ accepted1: true, effect1: JSON.stringify({ kind: "force_encounter", id: "pyropanthe", level: 100, hard: true }) })
+        const raw = getPlayer().forcedEncounter
+        expect(raw).toBeTruthy()
+        const fe = JSON.parse(raw!)
+        expect(fe.speciesId).toBe("pyropanthe")
+        expect(fe.level).toBe(100)
+        expect(fe.hard).toBe(true)
+        clearForcedEncounter()
+        expect(getPlayer().forcedEncounter).toBeUndefined()
+    })
+
+    it("buildForcedSpawn(hard) = Pyropanthe niv 100 à capture BRUTALE (statut + Ball≥5 + coriace)", () => {
+        const mon = buildForcedSpawn("pyropanthe", 100, true) as unknown as { speciesId: string; level: number; captureRequiresStatus?: boolean; captureMinBallBonus?: number; captureMult?: number }
+        expect(mon.speciesId).toBe("pyropanthe")
+        expect(mon.level).toBe(100)
+        expect(mon.captureRequiresStatus).toBe(true)
+        expect(mon.captureMinBallBonus).toBe(5)
+        expect(mon.captureMult).toBe(0.5)
     })
 })

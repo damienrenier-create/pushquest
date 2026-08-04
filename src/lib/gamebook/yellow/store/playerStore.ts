@@ -178,6 +178,8 @@ interface PlayerState {
     mimimoyAppearances: number
     /** VŒU DU GÉNIE (LIVE) — ⚡ restant à dépenser avant de pouvoir réutiliser/acheter une Ball (verrou si > 0). Défaut 0. */
     ballLockRemaining: number
+    /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) consommée au prochain sauvage. */
+    forcedEncounter?: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -454,6 +456,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
+        forcedEncounter: p.forcedEncounter ?? st.forcedEncounter,
     }
     emit()
 }
@@ -947,19 +950,23 @@ export function trackBallLockSpend(n: number) {
 
 /** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
  *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
-export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number }
-/** Applique UN effet atomique. Type inconnu = ignoré (ajouter un `case` + 1 seul redéploiement pour un NOUVEAU type). */
-function runGenieEffect(e: GenieEffect) {
+export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean }
+/** Applique UN effet atomique. Renvoie true si le type est RECONNU (→ marquable). Type inconnu → false : le vœu n'est
+ *  PAS marqué appliqué, donc un déploiement futur qui ajoute le `case` l'appliquera au prochain login (zéro perte). */
+function runGenieEffect(e: GenieEffect): boolean {
     const amt = Math.floor(e.amount ?? 0)
     switch (e.kind) {
-        case "energy": grantBonusEnergyUncapped(Math.max(0, amt)); break                              // don d'⚡ hors plafond
-        case "ball_lock": st = { ...st, ballLockRemaining: Math.max(0, amt) }; break                  // arme le verrou Ball
-        case "item": if (e.id) addItem(e.id, Math.max(1, Math.floor(e.qty ?? 1))); break              // cadeau d'objet
-        case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; break                     // ajuste le plafond (+/-)
-        case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; break     // malus d'⚡
-        default: break                                                                                 // type non géré → ignoré
+        case "energy": grantBonusEnergyUncapped(Math.max(0, amt)); return true                              // don d'⚡ hors plafond
+        case "ball_lock": st = { ...st, ballLockRemaining: Math.max(0, amt) }; return true                  // arme le verrou Ball
+        case "item": if (e.id) addItem(e.id, Math.max(1, Math.floor(e.qty ?? 1))); return true             // cadeau d'objet
+        case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; return true                     // ajuste le plafond (+/-)
+        case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; return true     // malus d'⚡
+        case "force_encounter": if (e.id) st = { ...st, forcedEncounter: JSON.stringify({ speciesId: e.id, level: Math.max(1, Math.min(100, Math.floor(e.level ?? 50))), hard: !!e.hard }) }; return true // rencontre imposée
+        default: return false                                                                              // type non géré → non appliqué
     }
 }
+/** VŒU DU GÉNIE — consomme la rencontre forcée (appelé par le moteur quand elle se produit : one-shot). */
+export function clearForcedEncounter() { if (st.forcedEncounter) { st = { ...st, forcedEncounter: undefined }; emit() } }
 /** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Monde LIVE only
  *  (les dons d'⚡ no-op en run 3 → auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
 export function applyAcceptedGenieWishEffects(row: {
@@ -977,7 +984,9 @@ export function applyAcceptedGenieWishEffects(row: {
         if (w.acc !== true || !w.fx || st.defeatedTrainers.includes(w.mark)) continue
         let effects: GenieEffect[]
         try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue } // JSON invalide → on saute (pas de crash)
-        for (const e of effects) runGenieEffect(e)
+        let handled = false
+        for (const e of effects) { if (runGenieEffect(e)) handled = true }
+        if (!handled) continue // aucun effet RECONNU (build antérieur à ce type) → NE PAS marquer → re-tenté après déploiement
         st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark] } // marker one-shot par vœu
         changed = true
     }

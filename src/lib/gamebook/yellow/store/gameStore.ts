@@ -30,13 +30,13 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
-import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt } from "../data/encounters"
+import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt, buildForcedSpawn } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
@@ -1428,6 +1428,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             const fus = fusionForParents(grotteFusionPop.prev1, grotteFusionPop.prev2)
                             if (fus) grotteFusionPop.primed = fus
                         }
+                    }
+                    // VŒU DU GÉNIE — rencontre FORCÉE (one-shot, PRIORITÉ ABSOLUE sur tous les remplacements ci-dessus) :
+                    //   la prochaine rencontre devient l'espèce demandée puis se CONSOMME (« tant pis » s'il la rate).
+                    const forcedRaw = getPlayerSave().forcedEncounter
+                    if (forcedRaw) {
+                        try {
+                            const fe = JSON.parse(forcedRaw) as { speciesId?: string; level?: number; hard?: boolean }
+                            if (fe?.speciesId && getSpecies(fe.speciesId)) spawn = buildForcedSpawn(fe.speciesId, fe.level ?? 50, !!fe.hard)
+                        } catch { /* JSON invalide → ignoré, mais on consomme quand même pour ne pas rester bloqué */ }
+                        clearForcedEncounter(); persistYellowSave()
                     }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
                     // GROTTE DU NEXUS (tous les étages puzzle) : aucune capture tant que le sauvage est à PLEINS PV

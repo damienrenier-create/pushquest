@@ -185,6 +185,9 @@ export interface YellowSave {
     /** VŒU DU GÉNIE (monde LIVE) — ⚡ restant à dépenser avant de pouvoir RÉUTILISER/ACHETER une Ball.
      *  Verrou actif tant que > 0 ; chaque dépense de reps le réduit ; à 0 le verrou se lève. Défaut 0. */
     ballLockRemaining: number
+    /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
+     *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
+    forcedEncounter?: string
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -611,6 +614,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         mimimoyReturned: o.mimimoyReturned === true,
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
+        forcedEncounter: typeof o.forcedEncounter === "string" ? o.forcedEncounter : undefined,
     }
 }
 
