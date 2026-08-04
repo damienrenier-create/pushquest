@@ -188,6 +188,9 @@ export interface YellowSave {
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
+    /** LIGUE DE FUSION — usure du gauntlet persistée (JSON {team:[{a,b,hp,status,statusCounter,pp}]}) → au reload on
+     *  REPREND la ligue dans la salle courante avec l'équipe ABÎMÉE (pas de soin gratuit). Absent = pas de run en cours. */
+    fusionLeagueCarry?: string
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -615,6 +618,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         forcedEncounter: typeof o.forcedEncounter === "string" ? o.forcedEncounter : undefined,
+        fusionLeagueCarry: typeof o.fusionLeagueCarry === "string" ? o.fusionLeagueCarry : undefined,
     }
 }
 

@@ -53,7 +53,7 @@ import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
-import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/yellow/store/gameStore"
+import { useGameStore, setCurrentNickname, DEFAULT_SPAWN, restoreFusionGauntletFromCarry } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -763,11 +763,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const saved = SHARED_INTERIORS.has(data.player.mapId) ? readInteriorReturn(userId) : null
                 hydrate(data.player)
                 if (saved) useGameStore.getState().setInteriorReturn(saved)
-                // RELOAD en pleine LIGUE DE FUSION (gauntlet) : l'équipe-gauntlet est transiente → perdue au reload.
-                //   On renvoie à l'Autel pour recommencer proprement (sinon on rejouerait la salle avec une équipe
-                //   fraîche = contournement du « sans soin »). La ré-entrée par la porte à dragons réinitialise tout.
+                // RELOAD en pleine LIGUE DE FUSION (gauntlet) : on tente de RECONSTRUIRE l'équipe abîmée depuis la save
+                //   (carry : PV/statut/PP persistés). Réussi → on RESTE dans la salle (progression + usure conservées,
+                //   PAS de soin gratuit). Échec (pas de carry / roster changé / toutes K.O.) → repli à l'Autel (ancien
+                //   comportement, fail-safe pour les vieilles saves). La ré-entrée par la porte à dragons réinitialise tout.
                 if (typeof data.player.mapId === "string" && data.player.mapId.startsWith("yellow_fusion_")) {
-                    useGameStore.getState().setMap("yellow_combat_autel", 9, 8)
+                    if (!restoreFusionGauntletFromCarry()) useGameStore.getState().setMap("yellow_combat_autel", 9, 8)
                 }
             })
             .catch((e) => console.warn("[yellow] load failed", e))

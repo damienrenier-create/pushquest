@@ -180,6 +180,8 @@ interface PlayerState {
     ballLockRemaining: number
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) consommée au prochain sauvage. */
     forcedEncounter?: string
+    /** LIGUE DE FUSION — usure du gauntlet persistée (JSON) pour REPRENDRE la ligue au reload (équipe abîmée). */
+    fusionLeagueCarry?: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -457,6 +459,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         forcedEncounter: p.forcedEncounter ?? st.forcedEncounter,
+        fusionLeagueCarry: p.fusionLeagueCarry ?? st.fusionLeagueCarry,
     }
     emit()
 }
@@ -967,6 +970,10 @@ function runGenieEffect(e: GenieEffect): boolean {
 }
 /** VŒU DU GÉNIE — consomme la rencontre forcée (appelé par le moteur quand elle se produit : one-shot). */
 export function clearForcedEncounter() { if (st.forcedEncounter) { st = { ...st, forcedEncounter: undefined }; emit() } }
+
+/** LIGUE DE FUSION — persiste l'usure du gauntlet (JSON) pour reprendre au reload ; null = efface. */
+export function setFusionLeagueCarry(json: string | null) { st = { ...st, fusionLeagueCarry: json ?? undefined }; emit() }
+export function clearFusionLeagueCarry() { if (st.fusionLeagueCarry) { st = { ...st, fusionLeagueCarry: undefined }; emit() } }
 /** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Monde LIVE only
  *  (les dons d'⚡ no-op en run 3 → auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
 export function applyAcceptedGenieWishEffects(row: {

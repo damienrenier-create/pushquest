@@ -24,13 +24,13 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
 import { computeFusion } from "../data/fusionSpecies"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
-import { getGauntletTeam, setGauntletTeam, gauntletHasAlive } from "./fusionGauntlet"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -170,6 +170,38 @@ function disposeFusionLeagueSpecies() {
 function disposeFusionGauntlet() {
     getGauntletTeam()?.forEach((f) => disposeFusion(f.speciesId))
     setGauntletTeam(null)
+    clearFusionLeagueCarry() // plus de run en cours → on efface l'usure persistée (pas de reprise fantôme)
+}
+
+/** RELOAD en pleine Ligue de Fusion — RECONSTRUIT l'équipe-gauntlet depuis le roster + RÉ-APPLIQUE l'usure persistée
+ *  (PV/statut/PP) par PAIRE DE PARENTS (clé stable). Renvoie true si au moins une fusion est debout (→ on RESTE dans la
+ *  salle) ; false = pas de carry / roster incompatible / toutes K.O. → l'appelant renvoie à l'Autel (fail-safe). */
+export function restoreFusionGauntletFromCarry(): boolean {
+    const save = getPlayerSave()
+    if (!save.fusionLeagueCarry) return false
+    let carry: GauntletCarryMon[]
+    try { const parsed = JSON.parse(save.fusionLeagueCarry); carry = Array.isArray(parsed?.team) ? parsed.team : (Array.isArray(parsed) ? parsed : []) } catch { return false }
+    if (!carry.length) return false
+    const all = [...save.team, ...save.pc]
+    const byU = (uid: string) => all.find((m) => m.uid === uid)
+    const rebuilt = save.fusionRoster
+        .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
+        .filter((x): x is BuiltFusion => x !== null)
+    if (rebuilt.length === 0) return false
+    const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+    const wear = new Map(carry.map((c) => [pairKey(c.a, c.b), c]))
+    for (const f of rebuilt) {
+        const parents = (f.instance as { fusionParents?: [string, string] }).fusionParents
+        const w = parents ? wear.get(pairKey(parents[0], parents[1])) : undefined
+        if (!w) continue
+        f.instance.currentHp = Math.max(0, Math.min(f.instance.currentHp, w.hp)) // jamais soigné au-dessus du max
+        f.instance.status = w.status as typeof f.instance.status
+        f.instance.statusCounter = w.statusCounter
+        for (const mv of f.instance.moves) if (w.pp[mv.moveId] != null) mv.pp = Math.max(0, w.pp[mv.moveId])
+    }
+    if (!rebuilt.some((f) => f.instance.currentHp > 0)) { rebuilt.forEach((f) => disposeFusion(f.speciesId)); return false } // tous K.O. → fail-safe
+    setGauntletTeam(rebuilt)
+    return true
 }
 
 // GARANTIE DE DÉCOUVERTE — Centrale Psy (run 3) : état TRANSIENT par PASSAGE (non persisté). Tant qu'Hypnoppo
@@ -393,6 +425,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
+        const c0 = serializeGauntletCarry(); setFusionLeagueCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
         // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
         //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
         //   Dé-doublonné côté client + serveur (paires déjà READY/en mémoire ignorées) → aucun coût en double.

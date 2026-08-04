@@ -17,6 +17,24 @@ export function setGauntletTeam(t: BuiltFusion[] | null): void { team = t }
 /** Au moins une fusion encore debout ? (false = wipe). */
 export function gauntletHasAlive(): boolean { return !!team && team.some((f) => f.instance.currentHp > 0) }
 
+/** Usure sérialisable d'UNE fusion du gauntlet. Clé = paire de parents (a,b = uids des Daemons parents, STABLES au
+ *  reload car sauvegardés) → permet de ré-appliquer PV/statut/PP après reconstruction (les uids de fusion, eux, changent). */
+export interface GauntletCarryMon { a: string; b: string; hp: number; status: string; statusCounter: number; pp: Record<string, number> }
+/** Sérialise l'usure de l'équipe-gauntlet courante (pour persistance → REPRISE au reload). null = pas de gauntlet. */
+export function serializeGauntletCarry(): GauntletCarryMon[] | null {
+    if (!team) return null
+    return team.map((f) => {
+        const parents = (f.instance as { fusionParents?: [string, string] }).fusionParents
+        return {
+            a: parents?.[0] ?? "", b: parents?.[1] ?? "",
+            hp: Math.max(0, f.instance.currentHp),
+            status: String(f.instance.status ?? "NONE"),
+            statusCounter: f.instance.statusCounter ?? 0,
+            pp: Object.fromEntries(f.instance.moves.map((m) => [m.moveId, m.pp])),
+        }
+    })
+}
+
 /** CARRY entre salles : recopie PV / statut / PP de l'équipe de COMBAT finale vers les instances persistantes
  *  (matchées par uid). Appelé en fin de chaque combat de Ligue → la salle suivante réutilise ces MÊMES instances
  *  (donc PV/PP entamés, K.O. conservés). Ne touche pas frozenStats (les stats de combat sont figées). */
