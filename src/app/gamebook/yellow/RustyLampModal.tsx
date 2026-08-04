@@ -46,8 +46,10 @@ function derive(row: WishRow | null): { phase: Phase; step: number; condition: s
 }
 
 export default function RustyLampModal({ onClose }: { onClose: () => void }) {
-    const alreadyRubbed = getPlayer().defeatedTrainers.includes(LAMP_RUBBED_MARKER)
-    const [rubbed, setRubbed] = useState(alreadyRubbed)
+    // Le joueur doit FROTTER la lampe à CHAQUE ouverture pour invoquer le génie (choix Sartay 04/08) — que ce soit
+    // pour consulter ses vœux ou en formuler un nouveau. Donc TOUJOURS false au montage (le marker lamp_rubbed sert
+    // seulement à débloquer l'onglet 🧞 et n'est plus un raccourci de frottage).
+    const [rubbed, setRubbed] = useState(false)
     const [rub, setRub] = useState(0)
     const [row, setRow] = useState<WishRow | null | undefined>(undefined) // undefined = pas chargé
     const [draft, setDraft] = useState("")
@@ -66,9 +68,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
             const j = await r.json()
             const w = (j?.wish ?? null) as WishRow | null
             setRow(w)
-            // Un vœu déjà en base ⇒ la lampe a forcément été frottée : ne JAMAIS re-demander le frottage
-            // (blindage contre une lecture stale du marker `lamp_rubbed` au montage).
-            if (w && (w.wish1?.trim() || w.wish2?.trim() || w.wish3?.trim())) setRubbed(true)
+            // (Plus d'auto-skip du frottage : on veut que le joueur frotte à chaque fois.)
             // AUTO-APPLICATION : si un vœu vient d'être accepté (respond → load), on applique son effet machine
             //   TOUT DE SUITE (énergie/verrou/objet…), sans aller-retour créateur ni redéploiement. Idempotent.
             if (applyAcceptedGenieWishEffects(w)) persistYellowSave()
