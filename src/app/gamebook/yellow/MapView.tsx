@@ -809,12 +809,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_ligue_3_agatha: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },
     y_ligue_4_peter: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },
     y_ligue_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
-    // LIGUE DE FUSION — réutilise les sprites des Conseillers / du Maître de la vraie Ligue (mapping type 1:1).
-    y_fusion_1: { url: "/yellow/sprites/ligue_olga.png", frames: 1, h: 1.6 },     // salle Glace
-    y_fusion_2: { url: "/yellow/sprites/ligue_aldo.png", frames: 1, h: 1.6 },     // salle Combat
-    y_fusion_3: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },   // salle Spectre
-    y_fusion_4: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },    // salle Dragon
-    y_fusion_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },   // Champion
+    // LIGUE DE FUSION (Johto) — dresseurs WILL/KOGA/BRUNO/KAREN/LANCE migrés vers les planches Gen 3
+    //   (cf. NPC_GEN3_IDLE, qui prime sur NPC_SPRITES). Plus de réutilisation des sprites de la vraie Ligue.
     // ARÈNE EAU — Conseil des marées (gauche 1/2, droite 1/2) + ONDINE.
     y_eauarena_g1: { url: "/yellow/sprites/eau_g1.png", frames: 1, h: 1.9 },
     y_eauarena_g2: { url: "/yellow/sprites/eau_g2.png", frames: 1, h: 1.9 },
@@ -840,6 +836,12 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_cave_trader: { url: "/yellow/sprites/npc_cave_trader_gen3.png" },
     // Autel de la Chimère (DÔME FUSION, 9-6) : PNJ qui lance la fusion. Face au joueur (row 0 par défaut).
     y_autel_chimere: { url: "/yellow/sprites/npc_autel_chimere_gen3.png" },
+    // LIGUE DE FUSION Johto — Conseil des Chimères (planches Gen 3 dédiées). Chacun face au joueur (row Sud).
+    y_fusion_1: { url: "/yellow/sprites/npc_fusion_will_gen3.png" },   // WILL (Psy)
+    y_fusion_2: { url: "/yellow/sprites/npc_fusion_koga_gen3.png" },   // KOGA (Poison)
+    y_fusion_3: { url: "/yellow/sprites/npc_fusion_bruno_gen3.png" },  // BRUNO (Combat)
+    y_fusion_4: { url: "/yellow/sprites/npc_fusion_karen_gen3.png" },  // KAREN (Ténèbres)
+    y_fusion_maitre: { url: "/yellow/sprites/npc_fusion_lance_gen3.png" }, // LANCE (Dragon, Champion)
     // DIEU SPAGHETTI — boss final de la Ligue de Fusion (yellow_fusion_miroir, 10-2). Face au joueur.
     y_fusion_miroir: { url: "/yellow/sprites/npc_dieu_spaghetti_gen3.png" },
     // MAÎTRE DES CAPACITÉS — étage du Centre de Cendreville uniquement (labo, 9-3), regarde le NORD (row up).

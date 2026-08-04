@@ -1520,7 +1520,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_combat", targetSpawnX: 3, targetSpawnY: 6 })),
             { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
         ],
-        backgroundImage: "/yellow/sprites/ligue_glace.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé de la Ligue Glace
+        backgroundImage: "/yellow/sprites/fusion_room_will.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — WILL (Psy)
     },
     yellow_fusion_combat: {
         id: "yellow_fusion_combat", name: "LIGUE FUSION — COMBAT", tiles: buildLigueRoom(), width: 22, height: 12,
@@ -1528,7 +1528,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_spectre", targetSpawnX: 3, targetSpawnY: 6 })),
             { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
         ],
-        backgroundImage: "/yellow/sprites/ligue_combat.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé de la Ligue Combat
+        backgroundImage: "/yellow/sprites/fusion_room_koga.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — KOGA (Poison)
     },
     yellow_fusion_spectre: {
         id: "yellow_fusion_spectre", name: "LIGUE FUSION — SPECTRE", tiles: buildLigueRoom(), width: 22, height: 12,
@@ -1536,7 +1536,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_dragon", targetSpawnX: 3, targetSpawnY: 6 })),
             { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
         ],
-        backgroundImage: "/yellow/sprites/ligue_spectre.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé de la Ligue Spectre
+        backgroundImage: "/yellow/sprites/fusion_room_bruno.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — BRUNO (Combat)
     },
     yellow_fusion_dragon: {
         id: "yellow_fusion_dragon", name: "LIGUE FUSION — DRAGON", tiles: buildLigueRoom(), width: 22, height: 12,
@@ -1544,7 +1544,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_maitre", targetSpawnX: 3, targetSpawnY: 6 })),
             { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
         ],
-        backgroundImage: "/yellow/sprites/ligue_dragon.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé de la Ligue Dragon
+        backgroundImage: "/yellow/sprites/fusion_room_karen.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — KAREN (Ténèbres)
     },
     yellow_fusion_maitre: {
         id: "yellow_fusion_maitre", name: "LIGUE FUSION — CHAMPION", tiles: buildLigueRoom(), width: 22, height: 12,
@@ -1552,7 +1552,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_miroir", targetSpawnX: 3, targetSpawnY: 6 })),
             { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
         ],
-        backgroundImage: "/yellow/sprites/ligue_rival.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé du Trône du Maître
+        backgroundImage: "/yellow/sprites/fusion_room_lance.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — LANCE (Dragon, Champion)
     },
     yellow_fusion_miroir: {
         id: "yellow_fusion_miroir", name: "LIGUE FUSION — LE MIROIR", tiles: buildLigueRoom(), width: 22, height: 12,
