@@ -7,7 +7,7 @@
 //     (GET) → le modal est une simple machine à états. Sprites lampe/génie fournis par Sartay (repli emoji).
 
 import { useEffect, useRef, useState } from "react"
-import { getPlayer, markTrainerDefeated } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, markTrainerDefeated, applyAcceptedGenieWishEffects } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 
@@ -17,6 +17,7 @@ interface WishRow {
     wish1: string; wish2: string; wish3: string
     condition1: string | null; condition2: string | null; condition3: string | null
     accepted1: boolean | null; accepted2: boolean | null; accepted3: boolean | null
+    effect1?: string | null; effect2?: string | null; effect3?: string | null
 }
 type Phase = "loading" | "formulate" | "waiting" | "dilemma" | "done"
 
@@ -68,6 +69,9 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
             // Un vœu déjà en base ⇒ la lampe a forcément été frottée : ne JAMAIS re-demander le frottage
             // (blindage contre une lecture stale du marker `lamp_rubbed` au montage).
             if (w && (w.wish1?.trim() || w.wish2?.trim() || w.wish3?.trim())) setRubbed(true)
+            // AUTO-APPLICATION : si un vœu vient d'être accepté (respond → load), on applique son effet machine
+            //   TOUT DE SUITE (énergie/verrou/objet…), sans aller-retour créateur ni redéploiement. Idempotent.
+            if (applyAcceptedGenieWishEffects(w)) persistYellowSave()
         } catch { /* réseau → row reste undefined (chargement), pas de fausse 1re invocation */ }
     }
     // Charge TOUJOURS au montage (même avant frottage) → détecte un arc déjà entamé et évite un faux « 1re invocation ».

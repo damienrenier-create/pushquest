@@ -481,6 +481,12 @@ model GenieWish {
   accepted1    Boolean? // choix du joueur (accepte/refuse) après le retour du génie, par vœu
   accepted2    Boolean?
   accepted3    Boolean?
+  // EFFET MACHINE (JSON) appliqué AUTOMATIQUEMENT par le jeu quand le joueur accepte le vœu N (plus d'aller-retour
+  // créateur ni de déploiement). Set par le créateur en base en même temps que conditionN. Ex. : [{"kind":"energy",
+  // "amount":1000},{"kind":"ball_lock","amount":1000}]. Interprété par applyAcceptedGenieWishEffects (playerStore).
+  effect1      String?
+  effect2      String?
+  effect3      String?
   proposedSeen Boolean  @default(false) // le pop-up « le génie revient » a-t-il déjà été montré au login
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

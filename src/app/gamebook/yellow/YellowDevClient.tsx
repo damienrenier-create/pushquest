@@ -70,7 +70,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { evolveMagmatorWithChen } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -952,6 +952,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 try {
                     const r = await fetch("/api/gamebook/yellow/genie-wish") // PEEK — ne consomme PAS proposedSeen
                     const j = r.ok ? await r.json() : null
+                    // SELF-HEAL : applique tout effet de vœu ACCEPTÉ mais pas encore appliqué (idempotent) — filet si
+                    //   l'application à l'acceptation a été manquée (autre appareil, reload, etc.).
+                    if (!cancelled && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave()
                     if (!cancelled && j?.justReturned && j?.wish) {
                         showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
                             "*Ta lampe rougeoie soudain au fond de ton sac…*",

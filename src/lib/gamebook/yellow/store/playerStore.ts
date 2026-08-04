@@ -945,6 +945,46 @@ export function trackBallLockSpend(n: number) {
     if (st.ballLockRemaining > 0 && n > 0) st = { ...st, ballLockRemaining: Math.max(0, st.ballLockRemaining - Math.floor(n)) }
 }
 
+/** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
+ *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
+export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number }
+/** Applique UN effet atomique. Type inconnu = ignoré (ajouter un `case` + 1 seul redéploiement pour un NOUVEAU type). */
+function runGenieEffect(e: GenieEffect) {
+    const amt = Math.floor(e.amount ?? 0)
+    switch (e.kind) {
+        case "energy": grantBonusEnergyUncapped(Math.max(0, amt)); break                              // don d'⚡ hors plafond
+        case "ball_lock": st = { ...st, ballLockRemaining: Math.max(0, amt) }; break                  // arme le verrou Ball
+        case "item": if (e.id) addItem(e.id, Math.max(1, Math.floor(e.qty ?? 1))); break              // cadeau d'objet
+        case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; break                     // ajuste le plafond (+/-)
+        case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; break     // malus d'⚡
+        default: break                                                                                 // type non géré → ignoré
+    }
+}
+/** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Monde LIVE only
+ *  (les dons d'⚡ no-op en run 3 → auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
+export function applyAcceptedGenieWishEffects(row: {
+    accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
+    effect1?: string | null; effect2?: string | null; effect3?: string | null
+} | null | undefined): boolean {
+    if (!row || getActiveWorld() !== "live") return false
+    const wishes = [
+        { acc: row.accepted1, fx: row.effect1, mark: "genie_fx1" },
+        { acc: row.accepted2, fx: row.effect2, mark: "genie_fx2" },
+        { acc: row.accepted3, fx: row.effect3, mark: "genie_fx3" },
+    ]
+    let changed = false
+    for (const w of wishes) {
+        if (w.acc !== true || !w.fx || st.defeatedTrainers.includes(w.mark)) continue
+        let effects: GenieEffect[]
+        try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue } // JSON invalide → on saute (pas de crash)
+        for (const e of effects) runGenieEffect(e)
+        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark] } // marker one-shot par vœu
+        changed = true
+    }
+    if (changed) emit()
+    return changed
+}
+
 /** Dépense des reps (boutique OU attaque). Renvoie false si solde insuffisant. */
 export function spendReps(n: number): boolean {
     if (st.reps < n) tryModeRecharge()   // PARRAINAGE easy/debutant à sec : recharge avant de refuser l'action
