@@ -3895,6 +3895,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     <span>Statut : {inst.status === "NONE" ? "—" : inst.status}</span>
                                 </div>
                             )}
+                            {f.result.heldItems.length > 0 && (
+                                <div style={{ fontSize: 11, marginBottom: 6 }}>
+                                    🎒 {f.result.heldItems.map((id, i) => `${getItem(id)?.name ?? id}${i === 0 ? " (actif)" : " (2ᵉ — pas encore actif en combat)"}`).join(" · ")}
+                                </div>
+                            )}
+                            <div style={{ fontSize: 9.5, opacity: 0.6, marginBottom: 6 }}>Stats calculées depuis tes 2 parents — EV &amp; points Saiyan DÉJÀ inclus (via leurs stats réelles).</div>
                             <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (▲▼ = ordre en combat)</div>
                             {inst.moves.map((mv, i) => {
                                 const m = getMove(mv.moveId)
