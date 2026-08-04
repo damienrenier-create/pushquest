@@ -761,7 +761,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         fetch("/api/gamebook/yellow/state")
             .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
+            .then(async (data) => {
                 if (!data?.player) return
                 // RELOAD dans un intérieur PARTAGÉ (labo/boutique) : on restaure interiorReturn depuis localStorage
                 //   AVANT hydrate (qui laisse interiorReturn à null), puis on le réinjecte → le Maître des Capacités
@@ -769,11 +769,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const saved = SHARED_INTERIORS.has(data.player.mapId) ? readInteriorReturn(userId) : null
                 hydrate(data.player)
                 if (saved) useGameStore.getState().setInteriorReturn(saved)
-                // RELOAD en pleine LIGUE DE FUSION (gauntlet) : on tente de RECONSTRUIRE l'équipe abîmée depuis la save
-                //   (carry : PV/statut/PP persistés). Réussi → on RESTE dans la salle (progression + usure conservées,
-                //   PAS de soin gratuit). Échec (pas de carry / roster changé / toutes K.O.) → repli à l'Autel (ancien
-                //   comportement, fail-safe pour les vieilles saves). La ré-entrée par la porte à dragons réinitialise tout.
+                // RELOAD en pleine LIGUE DE FUSION (gauntlet) : on RECONSTRUIT l'équipe abîmée depuis la save (carry :
+                //   PV/statut/PP/ordre persistés). ⚠️ La restauration lit le carry DANS la save de jeu → il FAUT que
+                //   loadYellowSave soit terminé avant (sinon COURSE avec l'autre effet : carry pas encore chargé →
+                //   renvoi au Dôme À TORT). loadYellowSave est idempotent ; setGameMode d'abord (parrainage, cf. l'autre
+                //   effet). Réussi → on RESTE dans la salle (progression + usure gardées, pas de soin gratuit). Échec
+                //   (pas de carry / roster changé / toutes K.O.) → repli Autel (fail-safe). La ré-entrée réinitialise tout.
                 if (typeof data.player.mapId === "string" && data.player.mapId.startsWith("yellow_fusion_")) {
+                    setGameMode(gameMode)
+                    await loadYellowSave()
                     if (!restoreFusionGauntletFromCarry()) useGameStore.getState().setMap("yellow_combat_autel", 9, 8)
                 }
             })
