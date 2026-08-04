@@ -84,9 +84,10 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
     instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
-    // Objets tenus : le 1er est appliqué. ⚠️ Le 2e (result.heldItems[1]) attend l'extension moteur « 2 objets »
-    //   (le système de combat lit heldItem au singulier). Cf. spec Inc.1.
+    // Objets tenus : le fusionné hérite des 2 objets de ses parents (heldItem + heldItem2). Les helpers de
+    //   data/heldItems.ts COMBINENT les 2 effets (le moteur lit ces helpers → aucune touche à engine.ts).
     if (result.heldItems[0]) instance.heldItem = result.heldItems[0]
+    if (result.heldItems[1]) instance.heldItem2 = result.heldItems[1]
     return { instance, speciesId: id, result }
 }
 

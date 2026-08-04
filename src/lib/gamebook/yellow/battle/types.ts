@@ -236,6 +236,9 @@ export interface MonInstance {
     /** OBJET TENU (held item) : id d'un objet de data/heldItems.ts. 1 max par Daemon.
      *  Effets lus par fullStats (stats) et le moteur (dégâts/combat). cf. data/heldItems.ts. */
     heldItem?: string
+    /** 2e OBJET TENU — RÉSERVÉ AUX FUSIONNÉS (héritent des objets de leurs 2 parents). Les Daemons normaux n'en ont
+     *  jamais (undefined → comportement byte-identique). Combiné à heldItem par les helpers de data/heldItems.ts. */
+    heldItem2?: string
     /** Attaques apprises à un niveau alors que les 4 slots étaient pleins :
      *  en attente d'un choix « oublier une capacité » côté UI. Transitoire. */
     pendingMoves?: string[]

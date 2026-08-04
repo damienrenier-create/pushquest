@@ -144,32 +144,74 @@ function applies(it: HeldItemData, speciesId: string | undefined): boolean {
     return Array.isArray(it.species) ? (!!speciesId && it.species.includes(speciesId)) : it.species === speciesId
 }
 
-type MonRef = { speciesId?: string; heldItem?: string }
+type MonRef = { speciesId?: string; heldItem?: string; heldItem2?: string }
 
-/** Multiplicateurs de stat de l'objet tenu (lus par fullStats). {} si aucun. */
+/** Les objets tenus ACTIFS d'un Daemon (verrou d'espèce respecté). 1 pour un Daemon normal ; jusqu'à 2 pour un
+ *  FUSIONNÉ (heldItem + heldItem2 hérités des 2 parents). L'ordre est [slot1, slot2]. */
+function activeHeldItems(inst: MonRef): HeldItemData[] {
+    const out: HeldItemData[] = []
+    for (const id of [inst.heldItem, inst.heldItem2]) {
+        const it = getHeldItem(id)
+        if (it && applies(it, inst.speciesId)) out.push(it)
+    }
+    return out
+}
+
+/** Multiplicateurs de stat des objets tenus (lus par fullStats). {} si aucun. Combine les 2 objets d'un fusionné
+ *  (produit par stat). Byte-identique pour un Daemon normal (1 seul objet). */
 export function heldStatMult(inst: MonRef): Partial<Record<StatKey, number>> {
-    const it = getHeldItem(inst.heldItem)
-    if (!it?.statMult || !applies(it, inst.speciesId)) return {}
-    return it.statMult
+    const out: Partial<Record<StatKey, number>> = {}
+    for (const it of activeHeldItems(inst)) {
+        if (!it.statMult) continue
+        for (const [k, v] of Object.entries(it.statMult)) out[k as StatKey] = (out[k as StatKey] ?? 1) * (v as number)
+    }
+    return out
 }
 
-/** Multiplicateur de dégâts SORTANTS (boost de type), 1 si aucun. */
+/** Multiplicateur de dégâts SORTANTS (boost de type), 1 si aucun. Produit des 2 objets d'un fusionné. */
 export function heldOutgoingDmgMult(inst: MonRef, moveType: PokeType): number {
-    const it = getHeldItem(inst.heldItem)
-    if (it?.typeBoost && it.typeBoost === moveType && applies(it, inst.speciesId)) return 1 + (it.typeBoostPct ?? 10) / 100
-    return 1
+    let mult = 1
+    for (const it of activeHeldItems(inst)) {
+        if (it.typeBoost && it.typeBoost === moveType) mult *= 1 + (it.typeBoostPct ?? 10) / 100
+    }
+    return mult
 }
 
-/** Multiplicateur de dégâts ENTRANTS (Coquille Tony −20 % physique), 1 si aucun. */
+/** Multiplicateur de dégâts ENTRANTS (Coquille Tony −20 % physique), 1 si aucun. Produit des 2 objets d'un fusionné. */
 export function heldIncomingDmgMult(inst: MonRef, isPhysical: boolean): number {
-    const it = getHeldItem(inst.heldItem)
-    if (isPhysical && it?.physDmgTakenMult !== undefined && applies(it, inst.speciesId)) return it.physDmgTakenMult
-    return 1
+    let mult = 1
+    if (isPhysical) for (const it of activeHeldItems(inst)) {
+        if (it.physDmgTakenMult !== undefined) mult *= it.physDmgTakenMult
+    }
+    return mult
 }
 
-/** L'objet tenu ACTIF du Daemon (verrou d'espèce respecté), ou undefined. Pour les hooks de combat
- *  qui lisent un champ d'effet (leftoversFrac, drainDealtFrac, critStage, flinchPct, expMult…). */
+/** Combine les EFFETS PASSIFS de 2 objets tenus (fusionné) en un item synthétique. Base = le 1er objet (garde id/nom
+ *  + champs BAIE : les baies restent slot 1, consommables via mon.heldItem). Additifs : critStage sommé ; leftovers/
+ *  drain HARMONIQUES (soin = max/a + max/b) ; expMult/incomingAcc multipliés ; le reste (quickClaw/survie/flinch) au max. */
+function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
+    const harmonic = (x?: number, y?: number) => (!x ? y : !y ? x : 1 / (1 / x + 1 / y))
+    const maxOpt = (x?: number, y?: number) => (x == null ? y : y == null ? x : Math.max(x, y))
+    const prodOpt = (x?: number, y?: number) => (x == null && y == null ? undefined : (x ?? 1) * (y ?? 1))
+    return {
+        ...a,
+        leftoversFrac: harmonic(a.leftoversFrac, b.leftoversFrac),
+        drainDealtFrac: harmonic(a.drainDealtFrac, b.drainDealtFrac),
+        critStage: ((a.critStage ?? 0) + (b.critStage ?? 0)) || undefined,
+        quickClawPct: maxOpt(a.quickClawPct, b.quickClawPct),
+        survive1hpPct: maxOpt(a.survive1hpPct, b.survive1hpPct),
+        flinchPct: maxOpt(a.flinchPct, b.flinchPct),
+        incomingAccMult: prodOpt(a.incomingAccMult, b.incomingAccMult),
+        expMult: prodOpt(a.expMult, b.expMult),
+        negateStatDrop: a.negateStatDrop || b.negateStatDrop,
+    }
+}
+
+/** L'objet tenu ACTIF du Daemon (verrou d'espèce respecté), ou — pour un FUSIONNÉ à 2 objets — un item SYNTHÉTIQUE
+ *  combinant leurs effets passifs. Pour les hooks de combat (leftoversFrac, drainDealtFrac, critStage, flinchPct,
+ *  expMult…). Byte-identique pour un Daemon normal (renvoie son unique objet). */
 export function heldEffect(inst: MonRef): HeldItemData | undefined {
-    const it = getHeldItem(inst.heldItem)
-    return it && applies(it, inst.speciesId) ? it : undefined
+    const items = activeHeldItems(inst)
+    if (items.length <= 1) return items[0]
+    return mergeHeldEffects(items[0], items[1])
 }

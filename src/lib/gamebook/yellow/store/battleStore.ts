@@ -1401,8 +1401,8 @@ export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" 
     // PAS d'objets tenus en PvP : déterminisme dual-client. Les hooks (Vive Griffe/Focus Band/flinch…)
     // consomment du RNG conditionnellement → un objet non synchro entre les 2 clients désyncerait le match.
     // On retire donc heldItem des 2 équipes du COMBAT (copies BattleMon → l'équipe réelle n'est PAS touchée).
-    for (const m of battle.player.team) m.heldItem = undefined
-    for (const m of battle.enemy.team) m.heldItem = undefined
+    for (const m of battle.player.team) { m.heldItem = undefined; m.heldItem2 = undefined }
+    for (const m of battle.enemy.team) { m.heldItem = undefined; m.heldItem2 = undefined }
     mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
