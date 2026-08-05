@@ -44,16 +44,16 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "divinpate", b: "aquilord", name: "Divinaquil", moves: ["eveil_divin", "fonce_bec", "souffle_polaire", "lance_flammes"] },   // PSY/VOL ~Xatu
         { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["vague_mentale", "tempete_verte", "vampigraine", "repos"] },        // PSY/PLANTE ~Noadkoko (mur drain)
         { a: "flamaspic", b: "razmaree", name: "Flamarée", moves: ["hydrocanon", "choc_mental", "blizzard", "repos"] },                  // PSY/EAU ~Flagadoss (tank ; ex-Hippomarée, omnhippo libéré pour Hippofer)
-        { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["souffle_polaire", "eveil_divin", "hypnose", "focalisation"] },       // GLACE/PSY ~Lippoutou (glass-cannon)
+        { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["coup_d_givre", "eveil_divin", "hypnose", "focalisation"] },          // GLACE/PSY ~Lippoutou (glass-cannon) — coup_d_givre = STAB Glace légal (morrow)
         { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf)
     ] },
     { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
         // KOGA (Migalos/Aéromite/impératrice de fer/Grotadmorv/Nostenfer) → stallers Poison-Insecte + 1 bruiser Combat/Métal + 1 sweeper Élec/Vol.
         { a: "necrolopendre", b: "merorem", name: "Mérolopendre", moves: ["dard_fatal", "bombe_beurk", "toxik", "repos"] },              // INSECTE/POISON ~Migalos
-        { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["eveil_divin", "bombe_beurk", "hypnose", "onde_folie"] },       // PSY/POISON ~Aéromite
+        { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["vague_mentale", "bombe_beurk", "spores_dodo", "onde_folie"] }, // PSY/POISON ~Aéromite — vague_mentale + spores_dodo légaux (mycédruide/regnantaur)
         { a: "coccimperatrice", b: "colosfer", name: "Impérafer", moves: ["crochet_maitre", "poing_meteore", "seisme", "danse_lames"] }, // COMBAT/METAL ~impératrice de fer (bruiser physique : 2 STAB + séisme + danse-lames)
         { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller)
-        { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "serres_aube", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide)
+        { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "pique_fatal", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide) — pique_fatal = STAB Vol légal (les 2)
     ] },
     { key: "bruno", name: "BRUNO", theme: "COMBAT", icon: "🥊", pairs: [
         // BRUNO (Mackogneur/Tygnon/Kicklee/Kapoera/Onix) → cogneurs physiques COMBAT + le mur Roche/Sol.
@@ -76,9 +76,9 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     ] },
     { key: "lance", name: "LANCE", theme: "DRAGON", icon: "🐉", pairs: [
         // LANCE, Champion (Léviator/Dracaufeu/Ptéra + l'ACE Dracolosse) → sweepers physiques + le colosse dragon final.
-        { a: "leviathonn", b: "aquilord", name: "Aquilathonn", moves: ["deferlante", "fonce_bec", "souffle_polaire", "reprise_ailes"] }, // EAU/VOL ~Léviator (mur spé)
-        { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "seisme", "danse_lames"] },     // FEU/VOL ~Dracaufeu
-        { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "eclat_lunaire", "seisme", "danse_lames"] },      // VOL/FEE ~Ptéra
+        { a: "leviathonn", b: "aquilord", name: "Aquilathonn", moves: ["hydrocanon", "fonce_bec", "souffle_polaire", "reprise_ailes"] }, // EAU/VOL ~Léviator (mur spé) — hydrocanon = STAB Eau légal (léviathonn)
+        { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "draco_charge", "danse_lames"] }, // FEU/VOL ~Dracaufeu — draco_charge (Dragon) légal remplace seisme (non appris)
+        { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "bourrasque_feerique", "seisme", "danse_lames"] }, // VOL/FEE ~Ptéra — bourrasque_feerique = STAB Fée légal (ptérosidhe) remplace eclat_lunaire
         { a: "draconarque", b: "megalithe", name: "Dracolithe", moves: ["draco_charge", "lame_roche", "seisme", "danse_lames"] },        // DRAGON/ROCHE — RÉSISTE le Roche (casse le sweep anti-Vol) ; cogneur set-up
         { a: "draconarque", b: "goshendofy", name: "Goshendarque", moves: ["souffle_primordial", "pique_fatal", "seisme", "repos"] },    // DRAGON/VOL ~Dracolosse (ACE)
     ] },
@@ -122,9 +122,9 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
 // puis UKOGNOFY (Goshendofy + Ukognos = les 2 légendaires fusionnés, DRAGON/FÉE, BST ~1710). Scalé par palier.
 // Tous les parents sont DISTINCTS (aucun réutilisé de la Ligue). Movesets curés (spécial dominant + STAB).
 export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
-    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "lance_soleil", "vague_mentale", "repos"] },       // PSY/PLANTE — sweeper psy-plante (ex-fulgurance → 2e STAB Psy)
-    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "deferlante", "hydrocanon", "repos"] },            // FEU/EAU — le paradoxe primordial (ex-fulgurance → 2e STAB Eau)
-    { a: "zappeureal", b: "naiadrak", name: "Zappadrak", moves: ["ultra_foudre", "deferlante", "blizzard", "cage_eclair"] },       // ELEC/EAU — sweeper rapide (para)
+    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "tempete_verte", "vague_mentale", "repos"] },      // PSY/PLANTE — sweeper psy-plante (tempete_verte = STAB Plante légal, silviliane)
+    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "seisme", "hydrocanon", "repos"] },                 // FEU/EAU — le paradoxe primordial (seisme = couverture légale de pyrokoss remplace deferlante)
+    { a: "zappeureal", b: "naiadrak", name: "Zappadrak", moves: ["ultra_foudre", "hydrocanon", "coup_d_givre", "cage_eclair"] },    // ELEC/EAU — sweeper rapide (para) — hydrocanon + coup_d_givre légaux (naïadrak) remplacent deferlante/blizzard
     { a: "goshendofy", b: "ukognos", name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "draco_charge", "repos"] }, // DRAGON/FÉE — L'ACE ultime (ex-fulgurance → STAB Dragon fiable)
 ]
 
