@@ -23,6 +23,13 @@ const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string 
     { a: "alirocaillus", b: "sylvebarbe", name: "Sylvaroc", sprite: fusionSpritePath("Sylvaroc") },
     { a: "gloutanoir", b: "naiadrak", name: "Naianoir", sprite: fusionSpritePath("Naianoir") },
     { a: "lunarque", b: "jerbiwat", name: "Lunarwatt", sprite: fusionSpritePath("Lunarwatt") },
+    // ANCIENNES fusions du BOSS (retirées de FUSION_BOSS_PAIRS lors du passage à l'équipe « max-0.6 ») — gardées ici
+    //   pour ne pas orpheliner leurs sprites + rester reconnues à l'Atelier. UKOGNOFY (goshendofy+ukognos) est
+    //   RÉSERVÉE pour la vraie fin : elle n'apparaît plus dans aucune équipe mais reste une fusion officielle.
+    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", sprite: fusionSpritePath("Divinliane") },
+    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", sprite: fusionSpritePath("Pyromarée") },
+    { a: "zappeureal", b: "naiadrak", name: "Zappadrak", sprite: fusionSpritePath("Zappadrak") },
+    { a: "goshendofy", b: "ukognos", name: "Ukognofy", sprite: fusionSpritePath("Ukognofy") },
 ]
 
 /** Fusions de l'ANCIENNE Ligue Kanto, RETIRÉES de la Ligue Johto mais gardées comme fusions « bonus » : un joueur

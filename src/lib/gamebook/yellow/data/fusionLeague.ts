@@ -119,13 +119,17 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
 
 // ==================== BOSS FINAL — LE DIEU SPAGHETTI (forme ultime) ====================
 // Remplace le 6e combat (l'ancien MIROIR). Ton guide révélé comme l'adversaire ultime : 3 chimères d'échauffement
-// puis UKOGNOFY (Goshendofy + Ukognos = les 2 légendaires fusionnés, DRAGON/FÉE, BST ~1710). Scalé par palier.
-// Tous les parents sont DISTINCTS (aucun réutilisé de la Ligue). Movesets curés (spécial dominant + STAB).
+// Équipe de 6 fusions à TRÈS haut BST (1492-1750), 12 parents TOUS DISTINCTS, movesets 100% learnsets des parents.
+// GOSHENDOFY et UKOGNOS sont utilisés SÉPARÉMENT (jamais fusionnés ensemble) → UKOGNOFY (la double-légendaire)
+// reste RÉSERVÉE pour la vraie fin (zéro spoil ; toujours reconnue via officialFusions). tonytony est de la partie
+// (Cryotony, tank 811 PV). Ordre = BST croissant, ACE = Aquendofy en dernier. Scalé par palier (bronze/argent/or).
 export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
-    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "tempete_verte", "vague_mentale", "repos"] },      // PSY/PLANTE — sweeper psy-plante (tempete_verte = STAB Plante légal, silviliane)
-    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "seisme", "hydrocanon", "repos"] },                 // FEU/EAU — le paradoxe primordial (seisme = couverture légale de pyrokoss remplace deferlante)
-    { a: "zappeureal", b: "naiadrak", name: "Zappadrak", moves: ["ultra_foudre", "hydrocanon", "coup_d_givre", "cage_eclair"] },    // ELEC/EAU — sweeper rapide (para) — hydrocanon + coup_d_givre légaux (naïadrak) remplacent deferlante/blizzard
-    { a: "goshendofy", b: "ukognos", name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "draco_charge", "repos"] }, // DRAGON/FÉE — L'ACE ultime (ex-fulgurance → STAB Dragon fiable)
+    { a: "chronorex", b: "mobyd", name: "Chronobyd", moves: ["pique_fatal", "souffle_polaire", "seisme", "danse_lames"] },          // VOL/GLACE — attaquant mixte (ouvre)
+    { a: "dracarlin", b: "pyrokoss", name: "Dracakoss", moves: ["lance_flammes", "draco_charge", "seisme", "danse_lames"] },        // FEU/DRAGON — sweeper ultra-rapide (spe 502)
+    { a: "magnetor", b: "tenebrir", name: "Magnébrir", moves: ["devoreur_ombres", "poing_meteore", "lance_flammes", "hypnose"] },   // METAL/TÉN — mixte blindé + sommeil
+    { a: "tonytony", b: "cryotyran", name: "Cryotony", moves: ["blizzard", "eveil_divin", "fulgurance", "repos"] },                 // NORMAL/GLACE — tank 811 PV (la pasta du Dieu Spaghetti)
+    { a: "ukognos", b: "leviathonn", name: "Ukoviathonn", moves: ["cataclysme_lunaire", "hydrocanon", "fulgurance", "repos"] },     // FÉE/EAU — mur spécial (hp697/spc413)
+    { a: "goshendofy", b: "aquapanthe", name: "Aquendofy", moves: ["souffle_primordial", "hydrocanon", "seisme", "repos"] },        // DRAGON/EAU — ACE (BST 1750)
 ]
 
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat. */

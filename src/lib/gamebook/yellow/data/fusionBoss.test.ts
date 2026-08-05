@@ -3,16 +3,17 @@ import { buildFusionBossTeam, FUSION_BOSS_PAIRS, FUSION_LEAGUE } from "./fusionL
 import { getSpecies } from "./species"
 import { getMove } from "./moves"
 
-// BOSS FINAL — Dieu Spaghetti forme ultime : 3 chimères + UKOGNOFY (Goshendofy+Ukognos). Remplace le miroir.
+// BOSS FINAL — Dieu Spaghetti forme ultime : équipe « max-0.6 » de 6 fusions, 12 parents DISTINCTS. UKOGNOFY est
+//   réservée pour la VRAIE fin (goshendofy+ukognos jamais fusionnés ici). ACE = Aquendofy (DRAGON/EAU, BST 1750).
 describe("Boss final (Dieu Spaghetti) — équipe", () => {
-    it("4 fusions dans l'ordre, Ukognofy en ace (DRAGON/FÉE), movesets curés valides", () => {
+    it("6 fusions dans l'ordre, Aquendofy en ace (DRAGON/EAU), movesets curés valides", () => {
         const team = buildFusionBossTeam("or")
-        expect(team).toHaveLength(4)
+        expect(team).toHaveLength(6)
         const names = team.map((f) => getSpecies(f.speciesId)!.name)
-        expect(names).toEqual(["Divinliane", "Pyromarée", "Zappadrak", "Ukognofy"])
-        // Ukognofy = les 2 légendaires fusionnés → DRAGON/FÉE, stats énormes
-        const ukog = getSpecies(team[3].speciesId)!
-        expect(ukog.types.sort()).toEqual(["DRAGON", "FEE"])
+        expect(names).toEqual(["Chronobyd", "Dracakoss", "Magnébrir", "Cryotony", "Ukoviathonn", "Aquendofy"])
+        // ACE = Aquendofy (goshendofy × aquapanthe) → DRAGON/EAU
+        const ace = getSpecies(team[5].speciesId)!
+        expect(ace.types.sort()).toEqual(["DRAGON", "EAU"])
         for (const f of team) {
             expect(f.instance.level).toBe(100) // palier Or
             expect(f.instance.moves).toHaveLength(4)
@@ -20,11 +21,14 @@ describe("Boss final (Dieu Spaghetti) — équipe", () => {
         }
     })
 
-    it("parents distincts DANS le boss ; NOMS du boss distincts des 23 fusions de Ligue", () => {
+    it("12 parents DISTINCTS ; goshendofy+ukognos JAMAIS ensemble (Ukognofy réservée) ; NOMS ≠ Ligue", () => {
         const bossParents = FUSION_BOSS_PAIRS.flatMap((p) => [p.a, p.b])
-        expect(new Set(bossParents).size).toBe(bossParents.length) // pas de réutilisation INTERNE au boss
-        // Ligue Johto : parents RÉUTILISABLES entre Ligue et boss (cf. en-tête fusionLeague.ts) — ce sont les NOMS
-        //   de fusion, player-facing, qui doivent rester uniques.
+        expect(new Set(bossParents).size).toBe(bossParents.length) // 12 parents distincts, aucun réutilisé
+        // UKOGNOFY (goshendofy×ukognos) = la double-légendaire, gardée pour la vraie fin → jamais formée dans le boss.
+        for (const p of FUSION_BOSS_PAIRS) {
+            const pair = new Set([p.a, p.b])
+            expect(pair.has("goshendofy") && pair.has("ukognos"), "goshendofy+ukognos (Ukognofy) interdit dans le boss").toBe(false)
+        }
         const leagueNames = new Set(FUSION_LEAGUE.flatMap((t) => t.pairs).map((p) => p.name))
         for (const p of FUSION_BOSS_PAIRS) expect(leagueNames.has(p.name), `nom boss ${p.name} en collision avec la Ligue`).toBe(false)
     })
