@@ -26,6 +26,8 @@ export interface MakeMonOpts {
     allocated?: Partial<Record<StatKey, number>>
     /** CHROMATIQUE (shiny) : force des IV PARFAITS (15) + le flag shiny (= +10% stats via fullStats). */
     shiny?: boolean
+    /** Courbe d'XP FORCÉE (multiplicateur d'XP nécessaire) pour cette instance — ex. cadeau « lent comme un légendaire » (1.25). */
+    growthMult?: number
 }
 
 export function createMonInstance(speciesId: string, level: number, opts: MakeMonOpts = {}): MonInstance {
@@ -57,8 +59,8 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
         level,
         // XP cumulée = plancher du niveau (et NON 0) → la fiche/barre d'XP correspondent
         // au niveau réel dès la création/capture (un niv.20 n'affiche plus « XP : 0 »).
-        // Plancher calculé sur la courbe DE L'ESPÈCE (cf. growthCurve.ts).
-        exp: expForLevel(level, speciesId),
+        // Plancher calculé sur la courbe DE L'ESPÈCE (ou l'override `growthMult` si fourni).
+        exp: expForLevel(level, speciesId, opts.growthMult),
         ivs,
         currentHp: 0,
         status: "NONE",
@@ -69,6 +71,7 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
         ev: opts.ev && Object.keys(opts.ev).length ? opts.ev : undefined,
         allocated: opts.allocated && Object.keys(opts.allocated).length ? opts.allocated : undefined,
         shiny: opts.shiny || undefined,
+        growthMult: opts.growthMult,
     }
     inst.currentHp = fullStats(inst, sp).hp
     return inst

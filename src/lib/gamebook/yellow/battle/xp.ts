@@ -41,16 +41,19 @@ const EXP_CUM: number[] = (() => {
  * l'espèce (cf. growthCurve.ts : ×0.80 frêle → ×1.25 colossal). Sans espèce = courbe de
  * référence (×1.0), compatibilité ascendante stricte.
  */
-export function expForLevel(level: number, speciesId?: string): number {
+export function expForLevel(level: number, speciesId?: string, multOverride?: number): number {
     const L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
     const base = EXP_CUM[L]
+    // `multOverride` : courbe FORCÉE pour une INSTANCE (ex. Daemon offert « lent comme un légendaire », ×1.25),
+    //   indépendamment de l'espèce. Absent → courbe de l'espèce (inchangé pour tout le roster existant).
+    if (multOverride !== undefined) return Math.round(base * multOverride)
     return speciesId ? Math.round(base * growthMult(speciesId)) : base
 }
 
-/** Niveau correspondant à une XP cumulée (sur la courbe de l'espèce si fournie). */
-export function levelFromExp(exp: number, speciesId?: string): number {
+/** Niveau correspondant à une XP cumulée (sur la courbe de l'espèce, ou `multOverride` par instance si fourni). */
+export function levelFromExp(exp: number, speciesId?: string, multOverride?: number): number {
     let l = 1
-    while (l < MAX_LEVEL && expForLevel(l + 1, speciesId) <= exp) l++
+    while (l < MAX_LEVEL && expForLevel(l + 1, speciesId, multOverride) <= exp) l++
     return l
 }
 
@@ -77,9 +80,9 @@ export interface ExpResult {
 export function applyExp(mon: MonInstance, gained: number): ExpResult {
     const sp = getSpecies(mon.speciesId)
     const fromLevel = mon.level
-    const baseExp = Math.max(mon.exp, expForLevel(mon.level, mon.speciesId))
+    const baseExp = Math.max(mon.exp, expForLevel(mon.level, mon.speciesId, mon.growthMult))
     const newExp = baseExp + Math.max(0, gained)
-    const toLevel = Math.max(fromLevel, Math.min(MAX_LEVEL, levelFromExp(newExp, mon.speciesId)))
+    const toLevel = Math.max(fromLevel, Math.min(MAX_LEVEL, levelFromExp(newExp, mon.speciesId, mon.growthMult)))
 
     mon.exp = newExp
     mon.level = toLevel

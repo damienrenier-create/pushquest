@@ -269,6 +269,7 @@ function parseMon(raw: unknown): MonInstance | null {
         moves,
         owned: o.owned === true,
         shiny: o.shiny === true ? true : undefined,
+        growthMult: typeof o.growthMult === "number" && o.growthMult > 0 ? o.growthMult : undefined, // courbe d'XP forcée (cadeau « lent »)
         heldItem: typeof o.heldItem === "string" && isHeldItem(o.heldItem) ? o.heldItem : undefined, // sanitize : ignore un id inconnu/corrompu
         statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
         allocated: parseAllocated(o.allocated),
@@ -629,6 +630,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         ivs: { ...m.ivs }, currentHp: m.currentHp, status: m.status, statusCounter: m.statusCounter,
         moves: m.moves.map((mv) => ({ ...mv })), owned: m.owned,
         shiny: m.shiny ? true : undefined,
+        growthMult: m.growthMult && m.growthMult > 0 ? m.growthMult : undefined, // courbe d'XP forcée (cadeau « lent ») — persistée
         heldItem: m.heldItem,
         pendingMoves: m.pendingMoves && m.pendingMoves.length ? [...m.pendingMoves] : undefined,
         statPoints: m.statPoints && m.statPoints > 0 ? m.statPoints : undefined,

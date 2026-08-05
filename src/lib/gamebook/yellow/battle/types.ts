@@ -217,6 +217,9 @@ export interface MonInstance {
     statusCounter: number
     moves: MoveSlot[]
     owned?: boolean
+    /** COURBE D'XP FORCÉE pour cette instance (multiplicateur d'XP nécessaire), indépendante de l'espèce.
+     *  Ex. Daemon offert « lent comme un légendaire » = 1.25 (colossal). Absent → courbe de l'espèce. Persisté. */
+    growthMult?: number
     /** CHROMATIQUE (shiny) : tiré ~1/512 au spawn sauvage. IV parfaits + **+10% sur chaque stat**
      *  (cf. fullStats — "un peu plus que parfait"). Cosmétique : rendu avec un filtre + ✨. */
     shiny?: boolean
