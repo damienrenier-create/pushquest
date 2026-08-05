@@ -188,6 +188,9 @@ export const FUSION_UNLOCK_MARKER = "fusion_unlocked"
 //   atteint FUSIOBALL_REOFFER_REPS. Retiré à l'achat. Marker boolean (pas de nouveau champ save).
 export const FUSIOBALL_OWED_MARKER = "fusioball_owed"
 export const FUSIOBALL_REOFFER_REPS = 1200
+// Anti-spam : la re-proposition est plafonnée à 1×/JOUR via un marker DATÉ `fusioball_reoffer_<YYYY-MM-DD>`
+//   (persisté dans defeatedTrainers). Tant que le jour est marqué, plus de pop. S'arrête net à l'achat (owed retiré).
+export const FUSIOBALL_REOFFER_PREFIX = "fusioball_reoffer_"
 export function isFusionLeagueUnlocked(isCleared: (marker: string) => boolean): boolean {
     return isCleared(FUSION_UNLOCK_MARKER)
 }

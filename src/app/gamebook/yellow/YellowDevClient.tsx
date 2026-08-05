@@ -83,7 +83,7 @@ import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
-import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS } from "@/lib/gamebook/yellow/data/fusionLeague"
+import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun, postReplaySpend, fetchFrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
@@ -1408,15 +1408,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward])
 
     // FUSIO-BALL — RE-PROPOSITION : offre EN ATTENTE (non achetée au sacre, marker fusioball_owed) + reps ≥ seuil →
-    //   le Dieu Spaghetti la re-propose, UNE fois par session (anti-nag), une fois l'écran libre.
+    //   le Dieu Spaghetti la re-propose au MAX 1×/JOUR (marker daté persisté = anti-spam ; avant : 1×/session → re-pop à
+    //   chaque rechargement). S'arrête net à l'achat (owed retiré).
     useEffect(() => {
+        const today = player.creditedThrough || new Date().toISOString().slice(0, 10)
+        const dayMarker = FUSIOBALL_REOFFER_PREFIX + today
         if (player.reps >= FUSIOBALL_REOFFER_REPS && player.defeatedTrainers.includes(FUSIOBALL_OWED_MARKER)
-            && !fusioReofferShownRef.current && !fusioBallModal && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
+            && !player.defeatedTrainers.includes(dayMarker) && !fusioReofferShownRef.current
+            && !fusioBallModal && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
             fusioReofferShownRef.current = true
             fusioBuyingRef.current = false
+            markTrainerDefeated(dayMarker) // marque le jour → plus de pop aujourd'hui (persisté)
+            persistYellowSave()
             setFusioBallModal(true)
         }
-    }, [player.reps, player.defeatedTrainers, fusioBallModal, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
+    }, [player.reps, player.defeatedTrainers, player.creditedThrough, fusioBallModal, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
 
     // PNJ 6 — OFFRE D'ÉCHANGE (Crocavern ↔ team[0]) post-victoire : modale une fois l'écran LIBRE (après l'annonce
     // de victoire), comme l'offre Fusio-Ball.
