@@ -4,14 +4,14 @@ import { getMove } from "./moves"
 import { getSpecies } from "./species"
 import { moveCategory } from "../battle/typeChart"
 
-// MOVESETS CURÉS des 24 fusions de Ligue : chaque paire porte un `moves` de 4 attaques (override du dérivé).
+// MOVESETS CURÉS des 27 fusions de Ligue : chaque paire porte un `moves` de 4 attaques (override du dérivé).
 // On vérifie : ids réels, moveset bien appliqué à l'instance, ≥2 attaques offensives, ≥1 STAB offensif ALIGNÉ
 // sur la stat dominante (physique ATK vs spécial SpA), max 2 attaques de statut.
 
 describe("Ligue de Fusion — movesets curés", () => {
-    it("les 24 fusions ont un moveset curé de 4 attaques, toutes des ids réels", () => {
+    it("les 27 fusions ont un moveset curé de 4 attaques, toutes des ids réels", () => {
         const pairs = FUSION_LEAGUE.flatMap((t) => t.pairs)
-        expect(pairs).toHaveLength(24)
+        expect(pairs).toHaveLength(27)
         for (const p of pairs) {
             expect(p.moves, `${p.name} sans moveset`).toBeDefined()
             expect(p.moves!).toHaveLength(4)

@@ -37,14 +37,15 @@ export interface FusionLeagueTrainer {
     pairs: FusionPairDef[]
 }
 
-/** Les 5 dresseurs Johto (4 Conseil + Champion). 23 fusions ; noms uniques ; parents réutilisables (cf. en-tête). */
+/** Les 5 dresseurs Johto (4 Conseil + Champion). 27 fusions ; noms uniques ; parents réutilisables (cf. en-tête). */
 export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "will", name: "WILL", theme: "PSY", icon: "🔮", pairs: [
-        // WILL (Xatu/Lippoutou/Flagadoss/Noadkoko) → attaquants SPÉCIAUX. Chaque fusion garde le PSY.
+        // WILL (Xatu/Lippoutou/Flagadoss/Noadkoko + golem psi) → attaquants SPÉCIAUX + 1 mur métal anti-Ténèbres/Spectre.
         { a: "divinpate", b: "aquilord", name: "Divinaquil", moves: ["eveil_divin", "fonce_bec", "souffle_polaire", "lance_flammes"] },   // PSY/VOL ~Xatu
         { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["vague_mentale", "tempete_verte", "vampigraine", "repos"] },        // PSY/PLANTE ~Noadkoko (mur drain)
-        { a: "omnhippo", b: "razmaree", name: "Hippomarée", moves: ["eveil_divin", "hydrocanon", "souffle_polaire", "repos"] },          // PSY/EAU ~Flagadoss (pivot)
+        { a: "flamaspic", b: "razmaree", name: "Flamarée", moves: ["hydrocanon", "choc_mental", "blizzard", "repos"] },                  // PSY/EAU ~Flagadoss (tank ; ex-Hippomarée, omnhippo libéré pour Hippofer)
         { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["souffle_polaire", "eveil_divin", "hypnose", "focalisation"] },       // GLACE/PSY ~Lippoutou (glass-cannon)
+        { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf)
     ] },
     { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
         // KOGA (Migalos/Aéromite/impératrice de fer/Grotadmorv/Nostenfer) → stallers Poison-Insecte + 1 bruiser Combat/Métal + 1 sweeper Élec/Vol.
@@ -61,6 +62,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "maitrezenc", b: "aquilord", name: "Aquizenc", moves: ["crochet_maitre", "fonce_bec", "seisme", "danse_lames"] },           // COMBAT/VOL ~Kicklee
         { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera
         { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
+        { a: "merorem", b: "karatame", name: "Mérokara", moves: ["eveil_divin", "bombe_beurk", "toxik", "repos"] },                     // POISON/PSY — garde anti-FÉE (résiste + tape ×2 la Fée qui balaie les 4 Combat)
     ] },
     { key: "karen", name: "KAREN", theme: "TÉNÈBRES", icon: "🌙", pairs: [
         // KAREN (Conseil-4 Ténèbres) — ÉQUIPE BOSS de 6 fusions, MOVESETS 100% issus des learnsets des parents. Ordre =
@@ -77,6 +79,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "leviathonn", b: "aquilord", name: "Aquilathonn", moves: ["deferlante", "fonce_bec", "souffle_polaire", "reprise_ailes"] }, // EAU/VOL ~Léviator (mur spé)
         { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "seisme", "danse_lames"] },     // FEU/VOL ~Dracaufeu
         { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "eclat_lunaire", "seisme", "danse_lames"] },      // VOL/FEE ~Ptéra
+        { a: "draconarque", b: "megalithe", name: "Dracolithe", moves: ["draco_charge", "lame_roche", "seisme", "danse_lames"] },        // DRAGON/ROCHE — RÉSISTE le Roche (casse le sweep anti-Vol) ; cogneur set-up
         { a: "draconarque", b: "goshendofy", name: "Goshendarque", moves: ["souffle_primordial", "pique_fatal", "seisme", "repos"] },    // DRAGON/VOL ~Dracolosse (ACE)
     ] },
 ]
