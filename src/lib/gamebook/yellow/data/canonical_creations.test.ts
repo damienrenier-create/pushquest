@@ -130,4 +130,32 @@ describe("Créations canonisées — lignées Gavillus & Goatiny", () => {
         expect(moveCategory("ROCHE")).toBe("PHYSICAL")
         expect(moveCategory("SOL")).toBe("PHYSICAL")
     })
+
+    it("Lignée Joeyrrant (Jacanon) : TÉNÈBRES/FEU→TÉNÈBRES/GLACE, BST 198/300/440, évo 22/40, dexNo 200-202, runThreeOnly", () => {
+        // stade 1 = TÉNÈBRES/FEU, puis la lignée passe TÉNÈBRES/GLACE dès le stade 2 (fidèle à buildCustomSpecies)
+        expect(SPECIES.joeyrrant.types).toEqual(["TENEBRES", "FEU"])
+        expect(SPECIES.wallabisan.types).toEqual(["TENEBRES", "GLACE"])
+        expect(SPECIES.kangoudead.types).toEqual(["TENEBRES", "GLACE"])
+        expect(bst("joeyrrant")).toBe(198)
+        expect(bst("wallabisan")).toBe(300)
+        expect(bst("kangoudead")).toBe(440)
+        expect([SPECIES.joeyrrant.dexNo, SPECIES.wallabisan.dexNo, SPECIES.kangoudead.dexNo]).toEqual([200, 201, 202])
+        expect(SPECIES.joeyrrant.evolution).toEqual({ toId: "wallabisan", method: { kind: "LEVEL", level: 22 } })
+        expect(SPECIES.wallabisan.evolution).toEqual({ toId: "kangoudead", method: { kind: "LEVEL", level: 40 } })
+        expect(SPECIES.kangoudead.evolution).toBeUndefined()
+        // talent fidèle + learnset partagé (identique aux 3 stades) + tous les moves existent
+        for (const id of ["joeyrrant", "wallabisan", "kangoudead"]) {
+            expect(SPECIES[id].secretTalent).toBe("chair_coriace")
+            expect(SPECIES[id].growthRate).toBe("slow")
+            for (const l of SPECIES[id].learnset) expect(getMove(l.moveId), `${id}:${l.moveId}`).toBeTruthy()
+        }
+        expect(SPECIES.joeyrrant.learnset).toEqual(SPECIES.kangoudead.learnset)
+        // runThreeOnly (comme les autres créations users) → masqué run 1/2, révélé run 3 (n'infle pas le leaderboard)
+        for (const id of ["joeyrrant", "wallabisan", "kangoudead"]) {
+            expect(SPECIES[id].runThreeOnly, id).toBe(true)
+            expect(isDexHidden(SPECIES[id], [], false, false, false), `${id} run1`).toBe(true)
+            expect(isDexHidden(SPECIES[id], [], true, true, false), `${id} run2 champion`).toBe(true)
+            expect(isDexHidden(SPECIES[id], [], false, false, true), `${id} run3`).toBe(false)
+        }
+    })
 })

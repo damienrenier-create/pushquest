@@ -743,6 +743,8 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmml4dogn00005n1_bidouzen: ["/yellow/sprites/dex/bidouzen.png", "/yellow/sprites/dex/medisciple.png", "/yellow/sprites/dex/karatame.png"],
     // Phoéchaud → Phoéchaud II → III (Guillaume) : phénix maudit FEU/SPECTRE, mauve & noir aux flammes spectrales.
     custom_cmq950jkh000071u_phoechaud: ["/yellow/sprites/dex/phoechaud1.png", "/yellow/sprites/dex/phoechaud2.png", "/yellow/sprites/dex/phoechaud3.png"],
+    // Joeyrrant → Wallabisan → Kangoudead (Jacanon) : kangourou mort-vivant, TÉNÈBRES/FEU au stade 1 puis TÉNÈBRES/GLACE.
+    custom_cmsat15v80001wvy_joeyrrant: ["/yellow/sprites/dex/joeyrrant.png", "/yellow/sprites/dex/wallabisan.png", "/yellow/sprites/dex/kangoudead.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */

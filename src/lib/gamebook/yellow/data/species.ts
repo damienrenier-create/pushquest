@@ -2481,6 +2481,59 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Léviathan des abysses : il noie les flammes et engloutit les âmes. Le chasseur né du phénix maudit. — froid, patient, implacable",
         sprite: "/yellow/sprites/dex/leviabysse.png",
     },
+    // ═══════════════ LIGNE TÉNÈBRES — Joeyrrant → Wallabisan → Kangoudead (dexNo 200-202, run 3) ═══════════════
+    // CANON d'une CRÉATION de joueur (Jacanon, post-Ligue run 1) : larve-crevette noire → wallaby mort-vivant à bras
+    // d'os → kangourou squelettique sans mâchoire. « Ce sont SES Daemons » → TOUT porté FIDÈLEMENT (buildCustomSpecies) :
+    // stats (BST 198/300/440), learnset PARTAGÉ (identique aux 3 stades), éclosion tardive (courbe `slow`, évo 22/40),
+    // talent caché « chair_coriace ». Tank offensif mixte (atk 110 = spc 110, énorme PV 132). Le TYPE change : le stade 1
+    // est TÉNÈBRES/FEU puis la lignée devient TÉNÈBRES/GLACE dès le stade 2 (souffle_polaire = STAB Glace niv 42).
+    joeyrrant: {
+        id: "joeyrrant", dexNo: 200, name: "Joeyrrant", types: ["TENEBRES", "FEU"],
+        baseStats: { hp: 59, atk: 50, def: 19, spe: 20, spc: 50 }, // BST 198
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "charge" }, { level: 18, moveId: "vive_attaque" },
+            { level: 24, moveId: "onde_obscure" }, { level: 30, moveId: "jet_de_sable" },
+            { level: 36, moveId: "toxik" }, { level: 42, moveId: "souffle_polaire" },
+            { level: 48, moveId: "berceuse" }, { level: 54, moveId: "devoreur_ombres" },
+        ],
+        evolution: { toId: "wallabisan", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 89, rarity: "RARE", growthRate: "slow", secretTalent: "chair_coriace",
+        role: "Ténèbres/Feu — tank offensif (éclosion tardive)",
+        description: "Larve-crevette noire, sans yeux, qui s'accroche à sa mère pour ne pas lâcher la vie. — Timide et rancunier — 🖋️ Création de Jacanon",
+        sprite: "/yellow/sprites/dex/joeyrrant.png",
+    },
+    wallabisan: {
+        id: "wallabisan", dexNo: 201, name: "Wallabisan", types: ["TENEBRES", "GLACE"],
+        baseStats: { hp: 90, atk: 75, def: 29, spe: 31, spc: 75 }, // BST 300
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "charge" }, { level: 18, moveId: "vive_attaque" },
+            { level: 24, moveId: "onde_obscure" }, { level: 30, moveId: "jet_de_sable" },
+            { level: 36, moveId: "toxik" }, { level: 42, moveId: "souffle_polaire" },
+            { level: 48, moveId: "berceuse" }, { level: 54, moveId: "devoreur_ombres" },
+        ],
+        evolution: { toId: "kangoudead", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 135, rarity: "RARE", growthRate: "slow", secretTalent: "chair_coriace",
+        role: "Ténèbres/Glace — tank offensif",
+        description: "Petit wallaby noir dont un bras n'est plus que de l'os : à mi-chemin du mort-vivant. — Timide et rancunier — 🖋️ Création de Jacanon",
+        sprite: "/yellow/sprites/dex/wallabisan.png",
+    },
+    kangoudead: {
+        id: "kangoudead", dexNo: 202, name: "Kangoudead", types: ["TENEBRES", "GLACE"],
+        baseStats: { hp: 132, atk: 110, def: 43, spe: 45, spc: 110 }, // BST 440 — tank offensif mixte (atk=spc=110)
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "charge" }, { level: 18, moveId: "vive_attaque" },
+            { level: 24, moveId: "onde_obscure" }, { level: 30, moveId: "jet_de_sable" },
+            { level: 36, moveId: "toxik" }, { level: 42, moveId: "souffle_polaire" },
+            { level: 48, moveId: "berceuse" }, { level: 54, moveId: "devoreur_ombres" },
+        ],
+        catchRate: 45, baseExp: 198, rarity: "RARE", growthRate: "slow", secretTalent: "chair_coriace",
+        role: "Ténèbres/Glace — tank offensif (mort-vivant)",
+        description: "Kangourou noir mort-vivant, sans mâchoire inférieure : tout son flanc droit n'est plus qu'un squelette. — Timide et rancunier — 🖋️ Création de Jacanon",
+        sprite: "/yellow/sprites/dex/kangoudead.png",
+    },
     // 🐊🪨 CROCAVERN — EXCLUSIF de la Grotte du Nexus (échange PNJ 6 + ultra-rare dans les bancs de sable). Colosse
     //   ROCHE/PLANTE : lent, défense solide, ATTAQUE monstrueuse. Mono-stade (pas d'évolution). Courbe RAPIDE.
     //   ROCHE = physique (son arme, ATQ 128) ; PLANTE = spécial → thématique/défensif (Vampigraine, drains).
@@ -3098,7 +3151,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "sepulcru", "macabour", "condombre",                    // némésis (vautours des ténèbres) TÉNÈBRES/VOL de Bidouzen, forgé par ACE
     "bidouzen", "medisciple", "karatame",                   // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
-    "obscurene", "abyssombre", "leviabysse"]) {             // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
+    "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
+    "joeyrrant", "wallabisan", "kangoudead"]) {             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
