@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
+import { NEMESIS_ARMED_MARKER } from "../data/nemesisChallenge"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
@@ -965,6 +966,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; return true                     // ajuste le plafond (+/-)
         case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; return true     // malus d'⚡
         case "force_encounter": if (e.id) st = { ...st, forcedEncounter: JSON.stringify({ speciesId: e.id, level: Math.max(1, Math.min(100, Math.floor(e.level ?? 50))), hard: !!e.hard }) }; return true // rencontre imposée
+        case "nemesis_challenge": if (!st.defeatedTrainers.includes(NEMESIS_ARMED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, NEMESIS_ARMED_MARKER] }; return true // arme le défi némésis (PNJ apparaît)
         default: return false                                                                              // type non géré → non appliqué
     }
 }

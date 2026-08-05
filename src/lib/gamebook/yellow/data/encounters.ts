@@ -118,6 +118,7 @@ export interface EncounterCtx {
     run3Used?: boolean          // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser « regarde ce que t'as raté »)
     caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe, Panthéon run 3)
     fusionLeagueWon?: boolean   // le joueur a-t-il déjà vaincu la Ligue de Fusion ? → débloque les créatures anciennes B2F (requiresFusionLeague)
+    blockedSpecies?: readonly string[] // espèces DÉFINITIVEMENT bloquées pour ce joueur → ne popent JAMAIS (ex. Caninombre scellé après un défi némésis perdu)
 }
 
 /**
@@ -946,6 +947,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
     const weights = pool.map((e) =>
         (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
+        : (ctx.blockedSpecies?.includes(e.speciesId)) ? 0 // espèce scellée pour ce joueur (ex. Caninombre après défi némésis perdu) → ne pope jamais
         : (e.hourRange && ctx.hour != null && !inHourRange(ctx.hour, e.hourRange)) ? 0 // gate horaire (ex. Karmaki 0-12h, Hypnoppo 12-24h)
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion

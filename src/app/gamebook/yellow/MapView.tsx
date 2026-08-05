@@ -847,6 +847,8 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     // MAÎTRE DES CAPACITÉS — étage du Centre de Cendreville uniquement (labo, 9-3), regarde le NORD (row up).
     //   PNJ dédié injecté par activeNpcs() côté Cendreville (cf. gameStore).
     y_move_tutor: { url: "/yellow/sprites/npc_move_tutor_gen3.png", row: NPC40_ROW_UP },
+    // DÉFI NÉMÉSIS (vœu de Jacanon) — PNJ personnel au Centre Pokémon Ville Jaune (1,7), regarde vers la DROITE (Est).
+    y_nemesis_challenge: { url: "/yellow/sprites/npc_nemesis_gen3.png", row: NPC40_ROW_RIGHT },
     // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
     // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
     y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },

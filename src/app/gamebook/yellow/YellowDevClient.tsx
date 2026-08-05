@@ -58,7 +58,7 @@ import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -1117,6 +1117,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (whiteout && !battle) {
             const aceTaunt = getAceLossTaunt() // lu AVANT clearWhiteout (qui l'efface) — null si défaite hors ACE
+            const nemTaunt = getNemesisLossTaunt() // DÉFI NÉMÉSIS perdu → Caninombre scellé à jamais (lu AVANT clearWhiteout)
             if (mapPlayer.mapId.startsWith("yellow_fusion_")) {
                 setMap("yellow_combat_autel", 9, 8) // KO en LIGUE DE FUSION → retour au DÔME DE FUSION (Autel), pas au Centre
             } else {
@@ -1126,6 +1127,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             persistYellowSave()
             clearWhiteout()
             if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
+            else if (nemTaunt) showDialogue("y_nemesis_challenge", "LE NÉMÉSIS", [nemTaunt]) // défaite au défi némésis
         }
     }, [whiteout, battle, setMap, mapPlayer.mapId, showDialogue])
 

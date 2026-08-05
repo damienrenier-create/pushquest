@@ -36,6 +36,7 @@ import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
+import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, CANINOMBRE_BLOCKED_MARKER, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_WON_LINES, NEMESIS_LOST_LINES, NEMESIS_REWARD_SPECIES, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
@@ -109,6 +110,8 @@ interface BattleStoreState {
     aceRewardMsg: string | null
     /** Raillerie d'ACE quand IL gagne (le joueur a perdu) → affichée à la défaite ; null sinon. */
     aceLossTaunt: string | null
+    /** DÉFI NÉMÉSIS — message de défaite (« LE NÉMÉSIS ») → Caninombre scellé à jamais. Optionnel (câblage minimal). */
+    nemesisLossTaunt?: string | null
     /** Badge d'arène gagné ce combat (→ notification post-combat) ; null sinon. */
     badgeAwarded: BadgeId | null
     /** Nom de l'attaque de la CT cadeau remise par le boss (notif) ; null sinon. */
@@ -905,6 +908,17 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 "Prends ceci : une vieille lampe rouillée trouvée dans les dunes… je n'en ai jamais rien tiré.",
                 "🪔 Tu obtiens la LAMPE ROUILLÉE ! (sac → Objets clés)",
             ] }
+        } else if (storeState.trainer.trainerId === NEMESIS_CHALLENGE_TRAINER_ID) {
+            // DÉFI NÉMÉSIS (vœu de Jacanon) — VICTOIRE : Caninombre PARFAIT (IV 15) niv 5 à croissance LENTE offert
+            //   (équipe ou PC) + entrée Pokédex. Marker DONE → l'essai est consommé et le PNJ disparaît (gate !done).
+            //   1 seul essai : aucune ré-affrontation. (La DÉFAITE est gérée plus bas : Caninombre scellé à jamais.)
+            markTrainerDefeated(NEMESIS_DONE_MARKER)
+            addCaught(buildNemesisReward())
+            markCaught(NEMESIS_REWARD_SPECIES); markCaughtThisRun(NEMESIS_REWARD_SPECIES)
+            rematchReward = { npcId: NEMESIS_CHALLENGE_TRAINER_ID, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: [
+                ...NEMESIS_WON_LINES,
+                "🩸 Tu obtiens un CANINOMBRE au sang PARFAIT (niv 5) ! Il grandira LENTEMENT — comme les légendaires.",
+            ] }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
@@ -1106,6 +1120,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (isLose && !isFusionTrial) healAllTeam()
     // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
+    // DÉFI NÉMÉSIS (vœu de Jacanon) — DÉFAITE : le Caninombre est scellé À JAMAIS (marker) + l'unique essai est
+    //   consommé (DONE → le PNJ disparaît). Whiteout normal (soin + retour Centre). Message dédié « LE NÉMÉSIS ».
+    const isNemesisLoss = isLose && storeState.trainer?.trainerId === NEMESIS_CHALLENGE_TRAINER_ID
+    if (isNemesisLoss) { markTrainerDefeated(NEMESIS_DONE_MARKER); markTrainerDefeated(CANINOMBRE_BLOCKED_MARKER) }
+    const nemesisLossTaunt = isNemesisLoss ? NEMESIS_LOST_LINES[0] : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
     // DUEL reflet : on retient si le reflet adverse avait un Σ niveaux d'équipe SUPÉRIEUR (badge « Reflet niveau-sup »).
     const duelEnemyHigher = b.enemy.team.reduce((s, m) => s + m.level, 0) > b.player.team.reduce((s, m) => s + m.level, 0)
@@ -1151,7 +1170,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de l'AUTEL (fusion:TRIAL), elle, ne whiteout PAS (on y est déjà — on reste pour re-fusionner). Scopé y_fusion_*.
     const isFusionLeague = isFusionLeagueTrainer(storeState.trainer?.trainerId)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1236,12 +1255,17 @@ export function resolveBattleLearn(uid: string, moveId: string, slot: number | n
 
 /** Consommé par la carte une fois le joueur renvoyé au Centre (ou redéposé à la Ligue). */
 export function clearWhiteout() {
-    setStore({ ...storeState, whiteout: false, aceLossTaunt: null })
+    setStore({ ...storeState, whiteout: false, aceLossTaunt: null, nemesisLossTaunt: null })
 }
 
 /** Raillerie d'ACE à la défaite du joueur (lue dans l'effet whiteout) ; null si la défaite n'est pas contre ACE. */
 export function getAceLossTaunt(): string | null {
     return storeState.aceLossTaunt
+}
+
+/** DÉFI NÉMÉSIS — message de défaite (lu dans l'effet whiteout) ; null si la défaite n'est pas contre le némésis. */
+export function getNemesisLossTaunt(): string | null {
+    return storeState.nemesisLossTaunt ?? null
 }
 
 /** Consommé par la carte une fois l'explication du sbire affichée. */
