@@ -157,5 +157,13 @@ describe("Créations canonisées — lignées Gavillus & Goatiny", () => {
             expect(isDexHidden(SPECIES[id], [], true, true, false), `${id} run2 champion`).toBe(true)
             expect(isDexHidden(SPECIES[id], [], false, false, true), `${id} run3`).toBe(false)
         }
+        // NÉMÉSIS CANONIQUE : lignée Tauricendre (Brasicow→Tauricendre, FEU/COMBAT) — hard-counter GLACE/TÉNÈBRES
+        for (const id of ["joeyrrant", "wallabisan", "kangoudead"]) expect(CANONICAL_NEMESIS[id]).toBe("brasicow")
+        expect(speciesAtLevel("brasicow", 5)).toBe("brasicow")
+        expect(speciesAtLevel("brasicow", 50)).toBe("tauricendre")
+        // Tauricendre (FEU/COMBAT) contre bien Kangoudead (TÉNÈBRES/GLACE) : Combat ×4 + Feu ×2, et PAS faible à sa Glace
+        expect(typeEffectiveness("COMBAT", ["TENEBRES", "GLACE"])).toBe(4)
+        expect(typeEffectiveness("FEU", ["TENEBRES", "GLACE"])).toBe(2)
+        expect(typeEffectiveness("GLACE", ["FEU", "COMBAT"])).toBeLessThanOrEqual(1)
     })
 })

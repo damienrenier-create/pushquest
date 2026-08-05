@@ -3227,4 +3227,10 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     // riposte ×2 des deux côtés. Formes canoniques + ids custom (l'équipe de Guillaume joue son Phoéchaud custom → SON ACE field Léviabysse).
     phoechaudi: "obscurene", phoechaudii: "obscurene", phoechaudiii: "obscurene",
     custom_cmq950jkh000071u_phoechaud_s1: "obscurene", custom_cmq950jkh000071u_phoechaud_s2: "obscurene", custom_cmq950jkh000071u_phoechaud_s3: "obscurene",
+    // Joeyrrant (création JACANON, canonisée, TÉNÈBRES/FEU→TÉNÈBRES/GLACE) → lignée TAURICENDRE (Brasicow→Tauricendre,
+    // FEU/COMBAT) = le HARD-COUNTER : Combat ×4 sur Kangoudead (Ténèbres+Glace) ET Feu ×2 fait fondre sa Glace, sans être
+    // faible à son STAB Glace (neutre). Choix de Sartay : on réutilise une lignée existante (pas de création dédiée).
+    // Formes canoniques + ids custom (l'équipe de Jacanon joue son Joeyrrant custom → SON ACE field Tauricendre).
+    joeyrrant: "brasicow", wallabisan: "brasicow", kangoudead: "brasicow",
+    custom_cmsat15v80001wvy_joeyrrant_s1: "brasicow", custom_cmsat15v80001wvy_joeyrrant_s2: "brasicow", custom_cmsat15v80001wvy_joeyrrant_s3: "brasicow",
 }
