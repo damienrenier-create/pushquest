@@ -62,7 +62,7 @@ import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate } from "../data/genieLamp"
 import { antiNemesisFor } from "../data/genieAmbush"
-import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, CANINOMBRE_BLOCKED_MARKER, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_INTRO_LINES, NEMESIS_NO_TEAM_LINES, NEMESIS_WON_LINES, NEMESIS_LOST_LINES, isNemesisChallengePlayer, buildNemesisChallengeTeam } from "../data/nemesisChallenge"
+import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_NO_TEAM_LINES, nemesisIntroLines, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisChallengeFor, nemesisBattleTrainerId, buildNemesisChallengeTeam } from "../data/nemesisChallenge"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
@@ -121,7 +121,8 @@ export function activeNpcs() {
     // DÉFI NÉMÉSIS (vœu de Jacanon) : PNJ PERSONNEL au Centre Pokémon de la Ville Jaune (case 1,7, regard DROITE via
     //   le sprite Gen3). Visible UNIQUEMENT par Jacanon, UNIQUEMENT une fois le vœu accepté (armed) et TANT QUE
     //   l'unique essai n'est pas consommé (!done). Après la tentative → il disparaît. Orientation gérée dans MapView.
-    if (isNemesisChallengePlayer(currentNickname) && isTrainerDefeated(NEMESIS_ARMED_MARKER) && !isTrainerDefeated(NEMESIS_DONE_MARKER)) {
+    const nemCfg = nemesisChallengeFor(currentNickname)
+    if (nemCfg && isTrainerDefeated(NEMESIS_ARMED_MARKER) && !isTrainerDefeated(NEMESIS_DONE_MARKER)) {
         list = [...list, {
             id: NEMESIS_CHALLENGE_TRAINER_ID,
             name: NEMESIS_CHALLENGE_NPC_NAME,
@@ -131,7 +132,7 @@ export function activeNpcs() {
             sprite: { emoji: "🩸", color: "#6c2b8f" }, // repli si le sprite Gen3 manque
             initialX: NEMESIS_CHALLENGE_POS.x,
             initialY: NEMESIS_CHALLENGE_POS.y,
-            dialoguesAfter: NEMESIS_INTRO_LINES,
+            dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
         }]
     }
     return list
@@ -907,13 +908,16 @@ function tryLaunchPnj10(): ActiveDialogue | null {
 // offert / Caninombre scellé + marker DONE) est gérée dans battleStore.finishBattle. Équipe morte → on
 // NE lance PAS (l'essai n'est pas consommé). IA « hof » (la plus maligne).
 function tryLaunchNemesisChallenge(): ActiveDialogue | null {
+    const cfg = nemesisChallengeFor(currentNickname)
+    if (!cfg) return null // pas de défi pour ce pseudo (le PNJ n'aurait pas dû apparaître) — sécurité
     const team = getPlayerSave().team
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: NEMESIS_CHALLENGE_TRAINER_ID, npcName: NEMESIS_CHALLENGE_NPC_NAME, lineIndex: 0, lines: NEMESIS_NO_TEAM_LINES }
     }
     const enemyTeam = buildNemesisChallengeTeam(team)
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startTrainerBattle(team, enemyTeam, seed, { trainerId: NEMESIS_CHALLENGE_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    // trainerId « y_nemesis_challenge:<espèce> » → finishBattle sait quoi offrir/sceller (Caninombre, Pyropanthe, …).
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: nemesisBattleTrainerId(cfg.rewardSpecies), reward: 0, aiLevel: "hof" })
     return null
 }
 
@@ -1441,6 +1445,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // NG+ : DÉMARRAGE MOTIVANT — les 2 premiers sauvages sont TRÈS faibles (starter niv 5 → victoire
                 // quasi certaine), indépendamment de la rampe device-level (qui peut être épuisée). Après → normal.
                 const ngEasyWild = getActiveWorld() === "ngplus" && getPlayerSave().ngplusBattles < 2
+                // DÉFI NÉMÉSIS perdu → l'espèce-récompense de CE joueur est scellée (ne pope plus jamais).
+                const nemChal = nemesisChallengeFor(currentNickname)
+                const nemBlocked = nemChal && isTrainerDefeated(nemesisRewardBlockedMarker(nemChal.rewardSpecies)) ? [nemChal.rewardSpecies] : undefined
                 const wild = rollWildEncounter({
                     mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: ngEasyWild ? 3 : levelBasis,
                     weakestTeamLevel: Math.min(...team.map((m) => m.level)), // pour Namicha (Centrale / maison hantée)
@@ -1461,7 +1468,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     champion: getPlayerSave().isChampion,   // LIVE post-Ligue → rattrapage des inédits run 3 (champ + Grotte)
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
-                    blockedSpecies: isTrainerDefeated(CANINOMBRE_BLOCKED_MARKER) ? ["caninombre"] : undefined, // DÉFI NÉMÉSIS perdu → Caninombre scellé à jamais
+                    blockedSpecies: nemBlocked, // DÉFI NÉMÉSIS perdu → espèce-récompense scellée (Caninombre / Pyropanthe / …)
                 })
                 if (wild) {
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
@@ -2031,12 +2038,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         //   filet défensif : si on l'atteint encore, il rappelle l'issue. Sinon → avertissement puis combat (1 essai,
         //   armé via pendingNemesis, lancé à la fermeture du dialogue). L'essai n'est consommé qu'au win/lose (finishBattle).
         if (npc.id === NEMESIS_CHALLENGE_TRAINER_ID) {
+            const nemCfg = nemesisChallengeFor(currentNickname)
+            const rewardName = nemesisRewardName(nemCfg?.rewardSpecies ?? "")
             if (isTrainerDefeated(NEMESIS_DONE_MARKER)) {
-                const lost = isTrainerDefeated(CANINOMBRE_BLOCKED_MARKER)
-                set({ dialogue: { npcId: npc.id, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: lost ? NEMESIS_LOST_LINES : NEMESIS_WON_LINES, lineIndex: 0 } })
+                const lost = !!nemCfg && isTrainerDefeated(nemesisRewardBlockedMarker(nemCfg.rewardSpecies))
+                set({ dialogue: { npcId: npc.id, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: lost ? nemesisLostLines(rewardName) : nemesisWonLines(), lineIndex: 0 } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: NEMESIS_INTRO_LINES, lineIndex: 0 }, pendingNemesis: true })
+            set({ dialogue: { npcId: npc.id, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: nemesisIntroLines(rewardName), lineIndex: 0 }, pendingNemesis: true })
             return
         }
         // PNJ 6 — L'ÉCHANGEUR. (1) échange déjà conclu → salut, plus jamais de combat. (2) déjà combattu aujourd'hui →

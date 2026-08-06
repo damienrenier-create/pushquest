@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildNemesisChallengeTeam, buildNemesisReward, isNemesisChallengePlayer } from "./nemesisChallenge"
+import { buildNemesisChallengeTeam, buildNemesisReward, isNemesisChallengePlayer, nemesisChallengeFor, nemesisBattleTrainerId, nemesisRewardSpeciesFromTrainerId, nemesisRewardBlockedMarker } from "./nemesisChallenge"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -49,20 +49,36 @@ describe("Défi némésis — générateur d'équipe", () => {
     })
 })
 
-describe("Défi némésis — récompense + gate pseudo", () => {
-    it("Caninombre PARFAIT niv 5, croissance lente, possédé", () => {
-        const r = buildNemesisReward()
-        expect(r.speciesId).toBe("caninombre")
-        expect(r.level).toBe(5)
-        expect(r.owned).toBe(true)
-        expect(r.growthMult).toBe(1.25)
-        expect(Object.values(r.ivs).every((v) => v === 15)).toBe(true) // génétique parfaite
+describe("Défi némésis — récompense + registre par joueur", () => {
+    it("récompense PARFAITE niv 5, croissance lente, possédée (espèce paramétrable)", () => {
+        for (const sp of ["caninombre", "pyropanthe"]) {
+            const r = buildNemesisReward(sp)
+            expect(r.speciesId).toBe(sp)
+            expect(r.level).toBe(5)
+            expect(r.owned).toBe(true)
+            expect(r.growthMult).toBe(1.25)
+            expect(Object.values(r.ivs).every((v) => v === 15)).toBe(true) // génétique parfaite
+        }
     })
 
-    it("gate pseudo : seul Jacanon (insensible casse/espaces)", () => {
+    it("registre : Jacanon→Caninombre, Mools→Pyropanthe (insensible casse/espaces), autres = aucun défi", () => {
+        expect(nemesisChallengeFor("Jacanon")?.rewardSpecies).toBe("caninombre")
+        expect(nemesisChallengeFor("  jacanon ")?.rewardSpecies).toBe("caninombre")
+        expect(nemesisChallengeFor("Mools")?.rewardSpecies).toBe("pyropanthe")
+        expect(nemesisChallengeFor("MOOLS")?.rewardSpecies).toBe("pyropanthe")
+        expect(nemesisChallengeFor("Sartay")).toBeNull()
+        expect(nemesisChallengeFor("")).toBeNull()
         expect(isNemesisChallengePlayer("Jacanon")).toBe(true)
-        expect(isNemesisChallengePlayer("  jacanon ")).toBe(true)
-        expect(isNemesisChallengePlayer("Mools")).toBe(false)
-        expect(isNemesisChallengePlayer("")).toBe(false)
+        expect(isNemesisChallengePlayer("Mools")).toBe(true)
+        expect(isNemesisChallengePlayer("PersonneDInconnu")).toBe(false)
+    })
+
+    it("trainerId de combat porte l'espèce (round-trip) + marqueur de blocage par espèce", () => {
+        expect(nemesisRewardSpeciesFromTrainerId(nemesisBattleTrainerId("pyropanthe"))).toBe("pyropanthe")
+        expect(nemesisRewardSpeciesFromTrainerId(nemesisBattleTrainerId("caninombre"))).toBe("caninombre")
+        expect(nemesisRewardSpeciesFromTrainerId("y_nemesis_challenge")).toBeNull() // ancien id sans suffixe → null (sûr)
+        expect(nemesisRewardSpeciesFromTrainerId("y_arena_druide")).toBeNull()
+        expect(nemesisRewardBlockedMarker("pyropanthe")).toBe("pyropanthe_blocked")
+        expect(nemesisRewardBlockedMarker("caninombre")).toBe("caninombre_blocked") // rétro-compat Jacanon
     })
 })
