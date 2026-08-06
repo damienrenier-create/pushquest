@@ -30,6 +30,7 @@ const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string 
     { a: "pyrokoss", b: "razmaree", name: "Pyromarée", sprite: fusionSpritePath("Pyromarée") },
     { a: "zappeureal", b: "naiadrak", name: "Zappadrak", sprite: fusionSpritePath("Zappadrak") },
     { a: "goshendofy", b: "ukognos", name: "Ukognofy", sprite: fusionSpritePath("Ukognofy") },
+    { a: "shadow", b: "jerbiwat", name: "Shadowatt", sprite: fusionSpritePath("Shadowatt") }, // fusion faite-main (hors Ligue) — sprite fourni par Sartay
 ]
 
 /** Fusions de l'ANCIENNE Ligue Kanto, RETIRÉES de la Ligue Johto mais gardées comme fusions « bonus » : un joueur
@@ -60,6 +61,7 @@ const FUSION_RETIRED_PAIRS: { a: string; b: string; name: string }[] = [
     { a: "loupyre", b: "thundah", name: "Thundaloup" },
     { a: "omnhippo", b: "regnantaur", name: "Omnantaur" },
     { a: "tonytony", b: "calderont", name: "Tonyront" }, // orphelin re-câblé (sprite tonyront.png existait sans paire) — parents confirmés par Sartay
+    { a: "maitrezenc", b: "aquilord", name: "Aquizenc" }, // ex-Ligue (remplacée par Aquidruide) — gardée en bonus, sprite aquizenc.png fourni
 ]
 
 /** Clé de paire indépendante de l'ordre des parents. */
