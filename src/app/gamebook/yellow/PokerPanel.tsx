@@ -6,7 +6,7 @@
 // ⚠️ À TESTER EN LIVE à plusieurs (le réseau/UI ne se valident qu'avec de vrais joueurs connectés).
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, grantReps, creditReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, grantReps, creditReps, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCasinoPoker } from "@/lib/gamebook/yellow/multiplayer/useCasinoPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -45,9 +45,12 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
     async function sitDown() {
         const bi = Math.max(MIN_BUYIN, Math.min(5000, Math.floor(buyin)))
         if (player.reps < bi) return
+        if (!casinoBetAllowed(bi).ok) return // VŒU DU GÉNIE : buy-in au-dessus du cap casino (10/mise, 200/jour) → interdit
         spendReps(bi); persistYellowSave()
         const ok = await join(bi)
-        if (!ok) { grantReps(bi); persistYellowSave() } // échec (table pleine) → remboursé
+        if (!ok) { grantReps(bi); persistYellowSave() } // échec (table pleine) → remboursé (rien enregistré au cap)
+        else recordCasinoSpend(bi) // buy-in effectif → compte au plafond 200/jour du vœu
+
     }
     async function doLeave() {
         const refund = await leave()

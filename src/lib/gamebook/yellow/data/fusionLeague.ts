@@ -108,10 +108,12 @@ function buildParent(speciesId: string, level: number, saiyan: number): MonInsta
 
 /** Équipe de FUSIONS d'un dresseur pour un palier. Renvoie des BuiltFusion (espèces éphémères ENREGISTRÉES →
  *  à DÉTRUIRE après le combat via disposeFusionLeagueTeam). Les parents ne sont jamais persistés. */
-export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): BuiltFusion[] {
+export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, levelBonus = 0): BuiltFusion[] {
     const tr = FUSION_LEAGUE.find((t) => t.key === trainerKey)
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
-    const { level, saiyan } = FUSION_TIERS[tier]
+    const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
+    // levelBonus (ex. vœu du génie « Ligue +3 ») → tous les fusionnés montent d'autant, plafonné à 100.
+    const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
     return tr.pairs.map((p) =>
         buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
@@ -133,8 +135,9 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
 ]
 
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat. */
-export function buildFusionBossTeam(tier: FusionTier): BuiltFusion[] {
-    const { level, saiyan } = FUSION_TIERS[tier]
+export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0): BuiltFusion[] {
+    const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
+    const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
     return FUSION_BOSS_PAIRS.map((p) =>
         buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
@@ -182,6 +185,13 @@ export function isFusionChampion(isCleared: (marker: string) => boolean): boolea
 //   dans defeatedTrainers, NON purgé par resetFusionLeagueProgress car pas de préfixe y_fusion_) → la porte s'OUVRE
 //   (sprite fusion_altar_open.png) et l'entrée devient franchissable.
 export const FUSION_UNLOCK_MARKER = "fusion_unlocked"
+
+// VŒU DU GÉNIE — « Ligue +3 » : marqueur (dans defeatedTrainers) qui monte TOUS les fusionnés adverses de la Ligue
+//   de +3 niveaux (plafonné à 100 → n'affecte que bronze 80→83 / argent 90→93 ; l'or est déjà au max). Per-joueur.
+export const LEAGUE_PLUS3_MARKER = "league_plus3"
+export function leagueLevelBonus(isCleared: (marker: string) => boolean): number {
+    return isCleared(LEAGUE_PLUS3_MARKER) ? 3 : 0
+}
 
 // FUSIO-BALL — offre EN ATTENTE : si le joueur ne l'achète pas au sacre (souvent < 1000 reps après la Ligue), le
 //   marker `fusioball_owed` reste posé (dans defeatedTrainers) → le Dieu Spaghetti la RE-propose dès que le joueur

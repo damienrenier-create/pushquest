@@ -6,7 +6,7 @@
 // l'ancien casino (transition douce / A-B test). Le numéro gagnant est local en solo (serveur en multi).
 
 import { useState } from "react"
-import { usePlayer, spendReps, grantReps, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendCasinoBet, isCasinoRestricted, CASINO_VOW_MAX_BET, casinoRemainingToday, grantReps, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import RouletteTable from "./RouletteTable"
 
@@ -16,9 +16,12 @@ export default function RouletteCasinoModal({ onClose }: { onClose: () => void }
     const [caisse, setCaisse] = useState(0)
 
     const loadEnergy = (amount: number) => {
-        const amt = Math.min(amount, player.reps)
+        // VŒU DU GÉNIE (cap casino) : le chargement de la caisse est plafonné à 10/charge + 200/jour (le compteur ne
+        //   fait que monter → borne l'exposition totale même avec cashout/rechargement).
+        let amt = Math.min(amount, player.reps)
+        if (isCasinoRestricted()) amt = Math.min(amt, CASINO_VOW_MAX_BET, casinoRemainingToday())
         if (amt <= 0) return
-        if (spendReps(amt)) setCaisse((c) => c + amt) // débit immédiat ; recrédité à l'encaissement
+        if (spendCasinoBet(amt).ok) setCaisse((c) => c + amt) // débit immédiat ; recrédité à l'encaissement
     }
     const loadTicket = () => { const v = consumeTicket(); if (v > 0) setCaisse((c) => c + v) }
     const cancel = () => { if (caisse > 0) { grantReps(caisse); persistYellowSave() } onClose() }

@@ -5,7 +5,7 @@
 // et revient demain. Aucune triche — vrai cash game. Jouable tant qu'il reste des boss non ruinés.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, creditReps, beginPokerCashGame, savePokerBossStacks } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, creditReps, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCashPoker } from "@/lib/gamebook/yellow/multiplayer/useCashPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -71,6 +71,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
     function start() {
         const bi = Math.max(MIN_BUYIN, Math.min(player.reps, Math.floor(buyin) || MIN_BUYIN))
         if (player.reps < bi) return
+        if (!casinoBetAllowed(bi).ok) return // VŒU DU GÉNIE : buy-in (≥ 20) au-dessus du cap casino 10/mise → interdit
         spentRef.current = bi // buy-in au RISQUE (pas encore débité — réglé en NET à la sortie → un refresh n'engage rien)
         const { cap, bossStacks } = beginPokerCashGame(todayKey(), bi)
         persistYellowSave() // verrouille le cap/jour du cash même si la session est ensuite abandonnée

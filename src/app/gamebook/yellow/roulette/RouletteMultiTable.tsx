@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -320,6 +320,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const validate = async () => {
         if (!round || !open || locked || pendingTotal <= 0 || busy) return
         if (credit + player.reps < pendingTotal) { setFlash("Pas assez d'énergie."); return }
+        // VŒU DU GÉNIE (cap casino) : la mise TOTALE de la manche est plafonnée à 10 ⚡ + 200 ⚡/jour.
+        const allowed = casinoBetAllowed(pendingTotal)
+        if (!allowed.ok) { setFlash(allowed.reason ?? "Mise refusée."); return }
         // MINIMUM DE TABLE par case (style vrai casino) : 5 sur les chances extérieures, 1 sur les pleins.
         const below = pendingList.find((b) => b.chips < minStakeForType(b.type))
         if (below) { setFlash(`Mise mini sur cette case : ${minStakeForType(below.type)} ⚡ (chances extérieures = ${OUTSIDE_MIN_BET}).`); return }
@@ -337,6 +340,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 // débit APRÈS acceptation serveur : crédit roulette OFFERT d'abord, puis reps. Si le solde a
                 // chuté entre-temps (re-vérifié au débit), on n'enregistre PAS la mise comme validée.
                 if (!fundRouletteBet(pendingTotal)) { setFlash("Fonds insuffisants au moment du débit — réessaie."); return }
+                recordCasinoSpend(pendingTotal) // VŒU DU GÉNIE : mise engagée → compte au plafond 200 ⚡/jour
                 persistYellowSave()
                 setValidatedRound(round.id)
                 setFlash(`Mise validée : ${pendingTotal} ⚡`)

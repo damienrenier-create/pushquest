@@ -26,7 +26,7 @@ import { computeFusion } from "../data/fusionSpecies"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -507,16 +507,18 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Ton équipe de chimères est à terre. Retourne à l'Autel pour la réassembler et recommencer la Ligue."] }
     }
 
+    // VŒU DU GÉNIE « Ligue +3 » (Jacanon) : +3 niveaux à TOUS les fusionnés adverses (plafonné 100). Per-joueur.
+    const lvlBonus = leagueLevelBonus((m) => isTrainerDefeated(m))
     let enemyFusions: BuiltFusion[]
     if (trainerId === "y_fusion_miroir") {
         // BOSS FINAL — le Dieu Spaghetti forme ULTIME : 3 chimères + UKOGNOFY (Goshendofy+Ukognos), scalé au palier.
         //   (Remplace l'ancien miroir/reflet du roster.) Fusions FIXES, curées.
-        enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)))
+        enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)), lvlBonus)
     } else {
         const key = fusionLeagueKeyForTrainer(trainerId)
         if (!key) { disposeFusionGauntlet(); return null }
         const tier = activeFusionTier((m) => isTrainerDefeated(m))
-        enemyFusions = buildFusionLeagueTeam(key, tier)
+        enemyFusions = buildFusionLeagueTeam(key, tier, lvlBonus)
     }
 
     // ENNEMI seulement (le gauntlet joueur est disposé à part) → disposé à la salle suivante.

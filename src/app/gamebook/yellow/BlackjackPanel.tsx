@@ -5,7 +5,7 @@
 // (→ future CT signature). Moteur pur dans casino/blackjack.ts.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, settleBlackjack, claimBlackjackCt, getActiveWorld, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendCasinoBet, settleBlackjack, claimBlackjackCt, getActiveWorld, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { BLACKJACK_CT_TARGET, BLACKJACK_CT_NGPLUS_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
@@ -131,7 +131,8 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         if (inHand || dealing || busy) return
         if (player.reps < bet) { setMsg("Pas assez d'énergie pour cette mise."); return }
         setBusy(true)
-        if (!spendReps(bet)) { setBusy(false); setMsg("Pas assez d'énergie."); return }
+        const paid = spendCasinoBet(bet) // VŒU DU GÉNIE : applique le cap casino (10/mise + 200/jour) si actif
+        if (!paid.ok) { setBusy(false); setMsg(paid.reason ?? "Pas assez d'énergie."); return }
         const shoe = shoeRef.current.length < 24 ? freshShoe(Math.random) : shoeRef.current // re-mélange si sabot bas
         persistYellowSave() // débit de la mise persisté
         setMsg(""); setCtWon(null) // nettoie la bannière de déblocage CT de la main précédente
@@ -146,7 +147,8 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
     const onDouble = () => {
         if (!inHand || dealing || !canDouble(game!)) return
         if (player.reps < game!.bet) { setMsg("Pas assez d'énergie pour doubler."); return }
-        if (!spendReps(game!.bet)) return // débit de la mise supplémentaire
+        const paidDouble = spendCasinoBet(game!.bet) // VŒU DU GÉNIE : le double compte aussi dans le cap casino
+        if (!paidDouble.ok) { setMsg(paidDouble.reason ?? "Pas assez d'énergie."); return }
         persistYellowSave()
         apply(double(game!))
     }
