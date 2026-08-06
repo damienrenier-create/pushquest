@@ -32,7 +32,7 @@ describe("Ligue de Fusion — câblage combat (Inc.B)", () => {
             expect(snap.trainer?.trainerId).toBe("y_fusion_1") // → markTrainerDefeated (gating) à la victoire
             expect(snap.battle).not.toBeNull()
             expect(snap.battle!.player.team.length).toBe(1)
-            expect(snap.battle!.enemy.team.length).toBe(5)     // les 5 fusions de WILL (4 psy + Hippofer métal)
+            expect(snap.battle!.enemy.team.length).toBe(6)     // les 6 fusions de WILL (4 psy + Hippofer métal + Jerbibouh psy/spectre)
             // l'ennemi fusionné porte bien ses stats figées (Spéciale unique) → l'IA hof les lira
             expect(snap.battle!.enemy.team[0].frozenStats?.spc).toBeGreaterThan(0)
         } finally {

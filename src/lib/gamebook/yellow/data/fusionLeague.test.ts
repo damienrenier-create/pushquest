@@ -9,15 +9,15 @@ import { fusionParentFromInstance } from "./fusionMon"
 import { createMonInstance } from "../battle/factory"
 
 describe("Ligue de Fusion — data", () => {
-    it("27 fusions Johto : parents RÉUTILISABLES (éphémères, invisibles), seuls les NOMS restent uniques", () => {
+    it("30 fusions Johto : parents RÉUTILISABLES (éphémères, invisibles), seuls les NOMS restent uniques", () => {
         const pairs = allFusionLeaguePairs()
-        expect(pairs.length).toBe(27)
+        expect(pairs.length).toBe(30)
         const parents = pairs.flatMap((p) => [p.a, p.b])
-        expect(parents.length).toBe(54)
+        expect(parents.length).toBe(60)
         // Ligue Or/Argent : un parent peut nourrir plusieurs fusions/dresseurs (cf. en-tête fusionLeague.ts).
         //   L'invariant player-facing n'est donc PLUS l'unicité des parents mais l'unicité des NOMS de fusion.
         const names = pairs.map((p) => p.name)
-        expect(new Set(names).size).toBe(27)
+        expect(new Set(names).size).toBe(30)
     })
 
     it("INVARIANT 1-par-parent : chaque fusion curée (Ligue + boss) prend ≥1 type de CHAQUE parent", () => {
@@ -44,13 +44,13 @@ describe("Ligue de Fusion — data", () => {
         }
     })
 
-    it("toutes les espèces parents existent + 27 noms de fusion distincts", () => {
+    it("toutes les espèces parents existent + 30 noms de fusion distincts", () => {
         for (const p of allFusionLeaguePairs()) {
             expect(getSpecies(p.a), `parent ${p.a}`).not.toBeNull()
             expect(getSpecies(p.b), `parent ${p.b}`).not.toBeNull()
         }
         const names = allFusionLeaguePairs().map((p) => p.name)
-        expect(new Set(names).size).toBe(27)
+        expect(new Set(names).size).toBe(30)
     })
 
     it("chaque dresseur bâtit son équipe (bronze) : bon nombre, noms FIGÉS, niveau du palier", () => {

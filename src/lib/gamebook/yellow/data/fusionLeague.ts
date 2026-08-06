@@ -37,7 +37,7 @@ export interface FusionLeagueTrainer {
     pairs: FusionPairDef[]
 }
 
-/** Les 5 dresseurs Johto (4 Conseil + Champion). 27 fusions ; noms uniques ; parents réutilisables (cf. en-tête). */
+/** Les 5 dresseurs Johto (4 Conseil + Champion). 30 fusions ; noms uniques ; parents réutilisables (cf. en-tête). */
 export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "will", name: "WILL", theme: "PSY", icon: "🔮", pairs: [
         // WILL (Xatu/Lippoutou/Flagadoss/Noadkoko + golem psi) → attaquants SPÉCIAUX + 1 mur métal anti-Ténèbres/Spectre.
@@ -46,6 +46,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "flamaspic", b: "razmaree", name: "Flamarée", moves: ["hydrocanon", "choc_mental", "blizzard", "repos"] },                  // PSY/EAU ~Flagadoss (tank ; ex-Hippomarée, omnhippo libéré pour Hippofer)
         { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["coup_d_givre", "eveil_divin", "hypnose", "focalisation"] },          // GLACE/PSY ~Lippoutou (glass-cannon) — coup_d_givre = STAB Glace légal (morrow)
         { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf)
+        { a: "jerbiwat", b: "archibouh", name: "Jerbibouh", moves: ["vague_mentale", "ball_ombre", "fulgurance", "hypnose"] },           // PSY/SPECTRE — sweeper spé + hypnose (moves 100% jerbiwat/archibouh)
     ] },
     { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
         // KOGA (Migalos/Aéromite/impératrice de fer/Grotadmorv/Nostenfer) → stallers Poison-Insecte + 1 bruiser Combat/Métal + 1 sweeper Élec/Vol.
@@ -54,12 +55,13 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "coccimperatrice", b: "colosfer", name: "Impérafer", moves: ["crochet_maitre", "poing_meteore", "seisme", "danse_lames"] }, // COMBAT/METAL ~impératrice de fer (bruiser physique : 2 STAB + séisme + danse-lames)
         { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller)
         { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "pique_fatal", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide) — pique_fatal = STAB Vol légal (les 2)
+        { a: "sylvapuce", b: "merorem", name: "Cerforem", moves: ["spores_dodo", "tempete_verte", "bombe_beurk", "toxik"] },            // PLANTE/POISON — staller végétal empoisonné (moves 100% cerfeuillu/merorem)
     ] },
     { key: "bruno", name: "BRUNO", theme: "COMBAT", icon: "🥊", pairs: [
         // BRUNO (Mackogneur/Tygnon/Kicklee/Kapoera/Onix) → cogneurs physiques COMBAT + le mur Roche/Sol.
         { a: "maitrezenc", b: "enclumind", name: "Zenclumind", moves: ["crochet_maitre", "vague_mentale", "seisme", "danse_lames"], sprite: "/yellow/sprites/dex/fusion/maitreclume.png" }, // COMBAT/PSY ~Mackogneur — RÉUTILISE le sprite existant (même paire = ex-Maîtreclume)
         { a: "maitrezenc", b: "hebulmin", name: "Maîtrelmin", moves: ["crochet_maitre", "fulgurance", "seisme", "danse_lames"] },        // COMBAT/ELEC ~Tygnon — Maîtrezenc (final) au lieu de Frappard (stade 2) = paire de l'épreuve → réutilise maitrelmin.png
-        { a: "maitrezenc", b: "aquilord", name: "Aquizenc", moves: ["crochet_maitre", "fonce_bec", "seisme", "danse_lames"] },           // COMBAT/VOL ~Kicklee
+        { a: "druidours", b: "aquilord", name: "Aquidruide", moves: ["crochet_maitre", "fonce_bec", "seisme", "lance_flammes"] },        // COMBAT/VOL ~Kicklee — Druidours (au lieu de Maîtrezenc, qui passe à 2×) ; moves 100% druidours/aquilord
         { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera
         { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
         { a: "merorem", b: "karatame", name: "Mérokara", moves: ["eveil_divin", "bombe_beurk", "toxik", "repos"] },                     // POISON/PSY — garde anti-FÉE (résiste + tape ×2 la Fée qui balaie les 4 Combat)
@@ -80,6 +82,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "draco_charge", "danse_lames"] }, // FEU/VOL ~Dracaufeu — draco_charge (Dragon) légal remplace seisme (non appris)
         { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "bourrasque_feerique", "seisme", "danse_lames"] }, // VOL/FEE ~Ptéra — bourrasque_feerique = STAB Fée légal (ptérosidhe) remplace eclat_lunaire
         { a: "draconarque", b: "megalithe", name: "Dracolithe", moves: ["draco_charge", "lame_roche", "seisme", "danse_lames"] },        // DRAGON/ROCHE — RÉSISTE le Roche (casse le sweep anti-Vol) ; cogneur set-up
+        { a: "oragron", b: "lunarque", name: "Lunagron", moves: ["tornade", "bourrasque_feerique", "fulgurance", "focalisation"] },      // VOL/FÉE — sweeper spé + set-up (moves 100% oragron/lunarque)
         { a: "draconarque", b: "goshendofy", name: "Goshendarque", moves: ["souffle_primordial", "pique_fatal", "seisme", "repos"] },    // DRAGON/VOL ~Dracolosse (ACE)
     ] },
 ]
