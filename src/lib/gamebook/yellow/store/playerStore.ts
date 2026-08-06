@@ -1018,13 +1018,14 @@ export function clearForcedEncounter() { if (st.forcedEncounter) { st = { ...st,
 /** LIGUE DE FUSION — persiste l'usure du gauntlet (JSON) pour reprendre au reload ; null = efface. */
 export function setFusionLeagueCarry(json: string | null) { st = { ...st, fusionLeagueCarry: json ?? undefined }; emit() }
 export function clearFusionLeagueCarry() { if (st.fusionLeagueCarry) { st = { ...st, fusionLeagueCarry: undefined }; emit() } }
-/** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Monde LIVE only
- *  (les dons d'⚡ no-op en run 3 → auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
+/** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Appliqué en
+ *  LIVE **et en NG+** (run 2) ; SEUL le run 3 est différé (l'énergie y a une source unique → les dons d'⚡ no-op,
+ *  auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
 export function applyAcceptedGenieWishEffects(row: {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null
 } | null | undefined): boolean {
-    if (!row || getActiveWorld() !== "live") return false
+    if (!row || getActiveWorld() === "run3") return false
     const wishes = [
         { acc: row.accepted1, fx: row.effect1, mark: "genie_fx1" },
         { acc: row.accepted2, fx: row.effect2, mark: "genie_fx2" },

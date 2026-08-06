@@ -3,7 +3,7 @@ import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects
 import { buildForcedSpawn } from "../data/encounters"
 
 // VŒU DU GÉNIE — effet MACHINE (JSON en base) appliqué AUTOMATIQUEMENT à l'acceptation (plus d'aller-retour créateur
-// ni de redéploiement). Idempotent (1 marker save par vœu), monde LIVE uniquement.
+// ni de redéploiement). Idempotent (1 marker save par vœu). Appliqué en LIVE **et NG+** ; seul le run 3 est différé.
 const setup = () => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {} }); setActiveWorld("live") }
 
 describe("Vœu du génie — application AUTO des effets", () => {
@@ -40,8 +40,13 @@ describe("Vœu du génie — application AUTO des effets", () => {
         expect(getPlayer().defeatedTrainers).toContain("genie_fx2")
     })
 
-    it("hors monde LIVE (ng+/run3) → n'applique rien (auto-retry au retour)", () => {
+    it("NG+ (run 2) → applique les vœux ; SEUL run 3 diffère (auto-retry au retour)", () => {
+        // NG+ : les vœux s'appliquent désormais (fix : Jacanon, en run 2, doit recevoir ses vœux)
         setup(); setActiveWorld("ngplus")
+        expect(applyAcceptedGenieWishEffects({ accepted1: true, effect1: JSON.stringify({ kind: "energy", amount: 999 }) })).toBe(true)
+        expect(getPlayer().reps).toBe(1099) // +999 hors plafond appliqué en NG+
+        // run 3 : différé (énergie à source unique) → rien appliqué, re-tenté au retour en live/NG+
+        setup(); setActiveWorld("run3")
         expect(applyAcceptedGenieWishEffects({ accepted1: true, effect1: JSON.stringify({ kind: "energy", amount: 999 }) })).toBe(false)
         setActiveWorld("live")
     })
