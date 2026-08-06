@@ -691,7 +691,8 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "plumiot", base: COMMON }, { speciesId: "couperin", base: COMMON },
             { speciesId: "cailloutchi", base: COMMON }, { speciesId: "ruffiant", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
             // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt + Colibraise (Vol/Feu)
-            { speciesId: "blaziper", base: UNCOMMON }, { speciesId: "jerbiwat", base: UNCOMMON },
+            { speciesId: "blaziper", base: UNCOMMON },
+            { speciesId: "jerbiwat", base: 5, rare: true, captureMult: 0.5 }, // run 2 : rendu TRÈS rare (~0,75 % : 5/663) + capture ÷2 (trop courant à UNCOMMON — choix Sartay)
             { speciesId: "bouh", base: UNCOMMON },
             { speciesId: "colibraise", base: UNCOMMON },
             // Rares — le starter Plante (Gouttiny/Glacirex déplacés à la GROTTE GELÉE ; Braisille/Fennaise → CENTRALE FEU)

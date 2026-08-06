@@ -59,6 +59,7 @@ const FUSION_RETIRED_PAIRS: { a: string; b: string; name: string }[] = [
     { a: "magnetor", b: "rochison", name: "Rockator" },
     { a: "loupyre", b: "thundah", name: "Thundaloup" },
     { a: "omnhippo", b: "regnantaur", name: "Omnantaur" },
+    { a: "tonytony", b: "calderont", name: "Tonyront" }, // orphelin re-câblé (sprite tonyront.png existait sans paire) — parents confirmés par Sartay
 ]
 
 /** Clé de paire indépendante de l'ordre des parents. */
