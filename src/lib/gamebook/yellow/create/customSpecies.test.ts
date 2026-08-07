@@ -352,3 +352,22 @@ describe("Carotte ultime (slot bonus hors pool)", () => {
         expect(final.learnset.some((l) => l.moveId === um && l.level === ULTIMATE_LEVEL)).toBe(true)
     })
 })
+
+describe("sprites générés (Gemini au démarrage run 2) — priorité spriteUrls > canonisé > MISSINGNO", () => {
+    it("sans spriteUrls : MISSINGNO (lignée non canonisée)", () => {
+        const chain = buildCustomSpecies(validSpec(), "nobody")
+        for (const sp of chain) expect(sp.sprite).toBe("/yellow/sprites/dex/missingno.png")
+    })
+    it("spriteUrls fournis : chaque stade prend SON url généré (index 0 = stade 1)", () => {
+        const urls = ["https://blob/s1.png", "https://blob/s2.png", "https://blob/s3.png"]
+        const chain = buildCustomSpecies({ ...validSpec(), spriteUrls: urls }, "nobody")
+        expect(chain.map((s) => s.sprite)).toEqual(urls)
+    })
+    it("slot vide ('') dans spriteUrls → retombe sur MISSINGNO pour CE stade seulement (génération partielle)", () => {
+        const urls = ["https://blob/s1.png", "", "https://blob/s3.png"]
+        const chain = buildCustomSpecies({ ...validSpec(), spriteUrls: urls }, "nobody")
+        expect(chain[0].sprite).toBe("https://blob/s1.png")
+        expect(chain[1].sprite).toBe("/yellow/sprites/dex/missingno.png") // "" falsy → fallback
+        expect(chain[2].sprite).toBe("https://blob/s3.png")
+    })
+})

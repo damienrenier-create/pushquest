@@ -18,7 +18,7 @@ import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
 const MODEL = process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image" // Nano Banana 2 ; 0,5K ≈ 0,045 $/image
-export const PROMPT_VERSION = 4 // v4 = fond MAGENTA + détourage flood-fill BORDS puis key GLOBAL par dominance magenta (enclavé + anti-frange)
+export const PROMPT_VERSION = 5 // v5 = STYLE_BIBLE durcie « VRAI pixel art » (grille visible, dithering, contour 1px, pas d'illustration lissée)
 const CHROMA_TOL = 96 // tolérance de détourage (somme des écarts RGB au fond estimé)
 const RES = 512
 
@@ -141,6 +141,60 @@ export async function generateFusionSprite(opts: {
 
         const blob = await put(`yellow/fusion/${fusionPairKey(aId, bId)}.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false, allowOverwrite: true })
         return { ok: true, url: blob.url, model: MODEL }
+    } catch (e) {
+        return { ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) }
+    }
+}
+
+/** GÉNÉRATEUR de sprite d'un Daemon CRÉÉ au wizard (texte→sprite d'après la Direction Artistique, SANS parents).
+ *  UN stade à la fois ; `refB64` = sprite du stade PRÉCÉDENT (cohérence d'évolution). Upload Blob → URL + b64
+ *  (pour chaîner). Réutilise le style bible, les ancres, le détourage magenta et la validation de la fusion. */
+export async function generateCustomDaemonSprite(opts: {
+    origin: string
+    key: string          // clé Blob unique (ex. custom_<owner>_<name>_s2)
+    da: string           // direction artistique (texte du joueur)
+    name: string
+    types: string[]
+    stage: number
+    totalStages: number
+    refB64?: string | null
+    refUrl?: string | null   // alternative à refB64 : URL du sprite du stade précédent (refetché + normalisé ici) → chaînage entre appels HTTP séparés
+}): Promise<{ ok: true; url: string; b64: string; model: string } | { ok: false; error: string }> {
+    if (!fusionGenEnabled()) return { ok: false, error: "disabled" }
+    const ref = opts.refB64 ?? (opts.refUrl ? await fetchNormalizedB64(opts.refUrl) : null)
+    const anchorRefs = (await Promise.all(STYLE_ANCHORS.map((p) => fetchNormalizedB64(`${opts.origin}/yellow/sprites/dex/${p}`)))).filter((x): x is string => !!x)
+    const refs = [...(ref ? [ref] : []), ...anchorRefs]
+    const evoNote = opts.stage > 1
+        ? `Stade d'évolution ${opts.stage}/${opts.totalStages} : forme ÉVOLUÉE (plus grande, plus imposante et détaillée que le stade précédent), MÊME identité/créature.`
+        : `Stade 1/${opts.totalStages} : forme de BASE (jeune, plus petite).`
+    const refNote = ref
+        ? `La 1re image = le STADE PRÉCÉDENT de CETTE créature : conserve silhouette + identité, fais-la ÉVOLUER.` + (anchorRefs.length ? ` Les ${anchorRefs.length} suivantes = RÉFÉRENCES DE STYLE (imite le rendu, NE COPIE PAS le contenu).` : "")
+        : (anchorRefs.length ? `Les ${anchorRefs.length} images = RÉFÉRENCES DE STYLE : imite leur rendu pixel/détail, NE COPIE PAS leur contenu.` : "")
+    const prompt = [
+        STYLE_BIBLE,
+        `\nCrée UNE créature de jeu (type Pokémon/Fakémon) ORIGINALE d'après cette description : « ${opts.da} ».`,
+        `Nom : ${opts.name}. Types : ${opts.types.join("/")} → palette dérivée de ces types. ${evoNote}`,
+        refNote,
+        `Une SEULE créature cohérente (pas un collage), sujet ENTIER et CENTRÉ. FOND : une couleur PARFAITEMENT UNIE et VIVE, MAGENTA pur (#FF00FF), remplissant TOUT l'arrière-plan — AUCUN autre élément, dégradé, décor, texte, bordure, ombre au sol, NI halo/lueur magenta autour du sujet (ce fond sera détouré ; toute bavure magenta gâche le découpage). Le sujet lui-même ne doit PAS contenir de magenta ni de rose vif.`,
+    ].filter(Boolean).join("\n")
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+        const res = await ai.models.generateContent({
+            model: MODEL,
+            contents: [{ role: "user", parts: [{ text: prompt }, ...refs.map((data) => ({ inlineData: { mimeType: "image/png", data } }))] }],
+        })
+        const parts = (res as { candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[] }).candidates?.[0]?.content?.parts ?? []
+        const b64in = parts.find((p) => p.inlineData?.data)?.inlineData?.data
+        if (!b64in) return { ok: false, error: "no-image" }
+        const { data: raw, info } = await sharp(Buffer.from(b64in, "base64")).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+        floodRemoveBackground(raw, info.width, info.height)
+        const png = await sharp(raw, { raw: { width: info.width, height: info.height, channels: 4 } })
+            .png().trim().resize(RES, RES, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()
+        const { data } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+        if (nearlyEmpty(data)) return { ok: false, error: "bad-output-empty" }
+        if (!bordersMostlyTransparent(data, RES, RES)) return { ok: false, error: "bad-output-bg" }
+        const blob = await put(`yellow/custom/${opts.key}.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false, allowOverwrite: true })
+        return { ok: true, url: blob.url, b64: png.toString("base64"), model: MODEL }
     } catch (e) {
         return { ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) }
     }

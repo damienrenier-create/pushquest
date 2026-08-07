@@ -334,6 +334,23 @@ export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
     st = { ...st, customDaemons: [...st.customDaemons, { ownerId, spec }].slice(-MAX) }
     emit()
 }
+/** Attache les sprites GÉNÉRÉS (Gemini, 1 par stade — index 0 = stade 1) à une lignée custom déjà créée, puis
+ *  RÉ-ENREGISTRE l'espèce (le combat/Pokédex montrent enfin les vrais sprites au lieu de MISSINGNO) et persiste.
+ *  Positionnel : un slot vide ("" / null) laisse le sprite existant (regénération partielle) → MISSINGNO en dernier. */
+export function setCustomDaemonSprites(ownerId: string, specName: string, spriteUrls: (string | null)[]): void {
+    if (!Array.isArray(spriteUrls) || !spriteUrls.some((u) => typeof u === "string" && u)) return // rien de généré → on garde ce qu'on a
+    let changed = false
+    const next = st.customDaemons.map((d) => {
+        if (d.ownerId !== ownerId || d.spec.name !== specName) return d
+        const merged = spriteUrls.map((u, i) => (typeof u === "string" && u ? u : (d.spec.spriteUrls?.[i] ?? ""))) // "" = falsy → buildCustomSpecies retombe sur canonisé/MISSINGNO
+        const spec: CustomSpec = { ...d.spec, spriteUrls: merged }
+        try { registerCustomSpecies(buildCustomSpecies(spec, d.ownerId)); changed = true } catch { return d } // spec cassée → on garde l'ancien enregistrement
+        return { ownerId: d.ownerId, spec }
+    })
+    if (!changed) return
+    st = { ...st, customDaemons: next }
+    emit()
+}
 /** Ré-enregistre au chargement toutes les lignées custom persistées (défensif : une entrée cassée est ignorée). */
 export function reregisterCustomDaemons(): void {
     // FUSIONS DE BASE PERMANENTES (Grotte du Nexus) : enregistrées comme espèces custom → résolvables (getSpecies /

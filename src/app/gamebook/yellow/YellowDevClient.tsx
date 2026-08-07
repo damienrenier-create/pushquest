@@ -71,7 +71,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects, setCustomDaemonSprites } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -1710,6 +1710,33 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         ])
     }
 
+    // Génère en TÂCHE DE FOND les sprites de la création (Gemini, texte→pixel art) une fois le run 2 EFFECTIVEMENT
+    //   lancé. UN stade par appel (chaînage via refUrl = URL du stade précédent). Le Daemon reste MISSINGNO tant que
+    //   ce n'est pas prêt ; à l'arrivée on ré-enregistre l'espèce + persiste. Silencieux + coût 0 si la génération est
+    //   désactivée en prod (route → "disabled"), ou en cas d'échec réseau → MISSINGNO reste (dégradation propre).
+    const generateCustomSpritesInBackground = async (stored: StoredCustomDaemon) => {
+        try {
+            const n = Number(stored.spec.stages) || 1
+            const urls: (string | null)[] = []
+            let refUrl: string | null = null
+            for (let stage = 1; stage <= n; stage++) {
+                let url: string | null = null
+                try {
+                    const resp: Response = await fetch("/api/gamebook/yellow/custom-sprite", {
+                        method: "POST", headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ ownerId: stored.ownerId, spec: stored.spec, stage, refUrl }),
+                    })
+                    const j = (await resp.json().catch(() => null)) as { ok?: boolean; status?: string; url?: string } | null
+                    if (j?.status === "disabled" || j?.status === "capped") return // OFF ou budget épuisé → inutile d'insister, MISSINGNO reste
+                    if (j?.ok && j.status === "READY" && typeof j.url === "string") url = j.url
+                } catch { /* réseau → ce stade reste vide (MISSINGNO) */ }
+                urls.push(url)
+                if (url) refUrl = url // chaînage d'évolution : le stade suivant part du précédent
+            }
+            if (urls.some((u) => u)) { setCustomDaemonSprites(stored.ownerId, stored.spec.name, urls); persistYellowSaveNow() }
+        } catch { /* jamais bloquant */ }
+    }
+
     const launchNewGamePlus = async (stored: StoredCustomDaemon) => {
         if (getPlayer().ngplusUsed) { setToast("Tu as déjà accompli ta seconde vie. Pour en relancer une, il faut recommencer le run 1 (réinitialiser le chapitre)."); return }
         let starter
@@ -1718,6 +1745,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const oldTeam = freezeTeam(getPlayer().team)
         const ok = await startNewGamePlus(starter, oldTeam)
         if (!ok) { setToast("New Game+ réservé aux Champions du Nexus."); return }
+        void generateCustomSpritesInBackground(stored) // NON bloquant : le run 2 démarre tout de suite, les sprites arrivent après (MISSINGNO en attendant)
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le NG+ démarre au tout début
         // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique le NG+ ET la fenêtre d'abandon.

@@ -567,6 +567,7 @@ export interface CustomSpec {
     talentRerolls?: number                       // nb de relances de talent déjà payées (max MAX_TALENT_REROLLS)
     learnset: Array<{ level: number; moveId: string }> // 1 pick par slot de LEARN_LEVELS
     ultimateMove?: string                        // « CAROTTE ULTIME » : 1 attaque bonus HORS pool de puissance (cap selon la vitesse). Optionnel.
+    spriteUrls?: string[]                        // sprites GÉNÉRÉS (Gemini) au démarrage du run 2, 1 par stade (index 0 = stade 1). Absent/undefined → MISSINGNO en attendant. Prioritaire sur CANONIZED_CUSTOM_SPRITES.
 }
 
 /** Entrée PERSISTÉE dans la save (Phase 2) : la spec + l'ownerId (pour reconstruire des ids déterministes). */
@@ -784,7 +785,7 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
                 + (spec.character.trim() ? ` — ${spec.character.trim()}` : "")
                 + (spec.creatorName?.trim() ? ` — 🖋️ Création de ${spec.creatorName.trim()}` : ""), // WATERMARK créateur
-            sprite: CANONIZED_CUSTOM_SPRITES[baseId]?.[i] ?? "/yellow/sprites/dex/missingno.png", // canonisé → vrais sprites ; sinon placeholder MISSINGNO (jusqu'à l'ajout d'une entrée ci-dessus)
+            sprite: spec.spriteUrls?.[i] || CANONIZED_CUSTOM_SPRITES[baseId]?.[i] || "/yellow/sprites/dex/missingno.png", // 1) sprites GÉNÉRÉS (Gemini, au démarrage run 2) ; 2) canonisé main ; 3) placeholder MISSINGNO en attendant
         })
         void finalBst
     }

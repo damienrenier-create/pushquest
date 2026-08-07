@@ -114,7 +114,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
         // Mools/créateur), on poste sur le Wall → tout le monde (dont Mools/Sartay, pour générer le vrai sprite) est
         // prévenu. Posté AS le créateur (session). Fire-and-forget, jamais bloquant.
         if (forced) {
-            const wallMsg = `🧬 J'ai créé mon Daemon « ${finalSpec.name} » ! Sprite mystère ❓ en attendant que Sartay lui donne son visage.`.slice(0, 240)
+            const wallMsg = `🧬 J'ai créé mon Daemon « ${finalSpec.name} » ! Son vrai visage arrive sous peu. ✨`.slice(0, 240)
             void fetch("/api/wall", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: wallMsg }) }).catch(() => { /* neutre */ })
         }
         setCreated(JSON.stringify(payload, null, 2))
@@ -129,7 +129,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
             <div style={S.overlay} onClick={forced ? undefined : close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
                     <div style={S.h}>🧬 Daemon envoyé au labo !</div>
-                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ en attendant que Sartay lui donne son vrai visage).</p>
+                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ pour l&apos;instant — son vrai visage arrive sous peu, une fois ton New Game+ lancé).</p>
                     {nemFinal && (
                         <div style={{ ...S.errBox, background: "#f3e6f6", border: "2px solid #8a4a9a", color: "#4a1c54", marginBottom: 8 }}>
                             <b>👹 Le Némésis d&apos;ACE</b> — une lignée forgée pour te contrer :
