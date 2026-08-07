@@ -4,15 +4,17 @@
 // + les espèces. Fiche détaillée : VU = infos partielles (type, rareté, lieu, lore) ;
 // CAPTURÉ = tout (stats de base, rôle, évolution, learnset par niveau). Pur affichage.
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
+import { galijahCounterStyle, megamonarxHint } from "../dex/dexShared"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import type { SpeciesData, StatKey } from "@/lib/gamebook/yellow/battle/types"
 
@@ -31,7 +33,13 @@ function DexIcon({ sp, seen, caught, big }: { sp: SpeciesData; seen: boolean; ca
     const sz = big ? 88 : 40
     return (
         <div style={{ ...S.icon, width: sz, height: sz, fontSize: big ? 36 : 20, filter: caught ? "none" : seen ? "grayscale(1) brightness(0.6)" : "brightness(0)" }}>
-            {!seen ? "?" : err ? sp.name[0] : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+            {/* ULTRA-SECRET non vu : on montre l'OMBRE NOIRE du vrai sprite (silhouette, brightness(0) du div) — on devine
+                qu'un gros truc existe sans pouvoir l'identifier. Les autres non-vus gardent un simple « ? ». */}
+            {!seen
+                ? (DEX_ULTRA_SECRET.has(sp.id) && !err
+                    ? <img src={sp.sprite} alt="?" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+                    : "?")
+                : err ? sp.name[0] : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
         </div>
     )
 }
@@ -125,8 +133,9 @@ export default function PokedexClient() {
     const aw = useActiveWorld() // hook réactif : re-render au changement de monde
     const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
     const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, player.run3Used)
-    // 🐉🪨 MÉGAMONARX : indice discret sur la carte « ??? » dès que le joueur a ATTEINT le Dôme/Ligue de Fusion.
+    // 🐉🪨 MÉGAMONARX : indice à 2 paliers — atteint le Dôme (AUTEL_VISITED) → rumeur vague ; a GAGNÉ la Ligue de Fusion → indice « une fusion peut évoluer ».
     const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
+    const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
     const [sel, setSel] = useState<SpeciesData | null>(null)
     // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
     // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
@@ -164,6 +173,12 @@ export default function PokedexClient() {
                     // (MégamonarX/Galijah) restent « ??? » (silhouette noire) tant que non CAPTURÉS, même post-run 3.
                     const seen = caught || dex.seen.includes(sp.id) || (player.run3Used && !DEX_ULTRA_SECRET.has(sp.id))
                     const caughtNow = multiRun && caught && (player.caughtThisRun ?? []).includes(sp.id)
+                    // Indice d'un ultra-secret non révélé : Galijah = décompte énigmatique ; MégamonarX = rumeur (2 paliers).
+                    let secretHint: ReactNode = "Inconnu"
+                    if (!seen) {
+                        if (sp.id === "galijah") { const rem = galijahCountdown(player.capturesToday ?? 0); secretHint = <span style={galijahCounterStyle(rem)}>{rem}</span> }
+                        else if (sp.id === "megamonarx") secretHint = megamonarxHint(reachedFusion, wonFusion) ?? "Inconnu"
+                    }
                     return (
                         <button
                             key={sp.id}
@@ -175,9 +190,11 @@ export default function PokedexClient() {
                             <DexIcon sp={sp} seen={seen} caught={caught} />
                             <div style={S.body}>
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
-                                {seen && <div style={S.types}>{sp.types.join(" / ")}</div>}
+                                {seen
+                                    ? <div style={S.types}>{sp.types.join(" / ")}</div>
+                                    : DEX_ULTRA_SECRET.has(sp.id) ? <div style={S.types}>??? / ???</div> : null}
                                 <div style={{ ...S.state, ...(caughtNow ? { color: "#ffcf40", fontWeight: 700 } : {}) }}>
-                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : (sp.id === "megamonarx" && reachedFusion ? "🔮 Une rumeur court au Dôme… une fusion poussée à son ultime limite pourrait transcender. Nul ne sait vraiment comment." : "Inconnu")}
+                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : secretHint}
                                 </div>
                             </div>
                             <div style={{ ...S.tag, ...(caughtNow ? { color: "#ffcf40" } : {}) }}>{caughtNow ? "✨" : caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>

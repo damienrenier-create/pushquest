@@ -8,14 +8,17 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SPECIES, isDexHidden, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import {
     TYPE_COLORS, STAT_ORDER, STAT_LABEL, baseStatTotal, statColor,
     buildEvolutionChain, computeTypeDefenses, type TypeMatch,
+    galijahCounterStyle, megamonarxHint,
 } from "../dexShared"
 import TypeChip, { typeChartHref } from "../TypeChip"
 
@@ -78,13 +81,26 @@ export default function DexDetailClient({ id }: { id: string }) {
     // même post-run 3 (secret préservé en fin de jeu). Seule la capture réelle la révèle.
     const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !dex.caught.includes(id)
     if (runThreeLocked || runTwoLocked || postLeagueLocked || ultraSecretLocked) {
+        // Ultra-secret : on montre l'OMBRE NOIRE (silhouette) + un indice à paliers (MégamonarX) ou le décompte (Galijah).
+        const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
+        const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
+        const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
+        const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(player.capturesToday ?? 0) : null
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
-                    <div style={{ fontSize: 48, marginBottom: 12 }}>❓</div>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>
+                        {ultraSecretLocked
+                            ? <img src={sp.sprite} alt="?" style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated", filter: "brightness(0)" }} />
+                            : "❓"}
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                     <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
-                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20 }}>
-                        {ultraSecretLocked ? "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien." : postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
+                    {gRem !== null && <div style={{ ...galijahCounterStyle(gRem), marginBottom: 8 }}>{gRem}</div>}
+                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 320, marginLeft: "auto", marginRight: "auto" }}>
+                        {ultraSecretLocked
+                            ? (mHint ?? (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien."))
+                            : postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
                 </div>

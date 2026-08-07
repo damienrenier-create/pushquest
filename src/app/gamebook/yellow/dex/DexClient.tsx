@@ -6,21 +6,22 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
-import { TYPE_COLORS, baseStatTotal } from "./dexShared"
+import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
 
-// Vignette : sprite PNG, repli sur l'initiale si le fichier manque.
-function DexIcon({ sp }: { sp: SpeciesData }) {
+// Vignette : sprite PNG, repli sur l'initiale si le fichier manque. `secret` = ULTRA-SECRET non capturé → on ne
+// montre que l'OMBRE NOIRE du sprite (silhouette, brightness(0)) pour ne pas révéler l'identité.
+function DexIcon({ sp, secret }: { sp: SpeciesData; secret?: boolean }) {
     const [err, setErr] = useState(false)
     return (
         <div style={S.icon}>
-            {err ? sp.name[0] : (
-                <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+            {err ? (secret ? "?" : sp.name[0]) : (
+                <img src={sp.sprite} alt={secret ? "?" : sp.name} onError={() => setErr(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(secret ? { filter: "brightness(0)" } : {}) }} />
             )}
         </div>
     )
@@ -44,12 +45,18 @@ export default function DexClient() {
         const q = query.trim().toLowerCase()
         return visible
             .filter((sp) => {
-                if (typeFilter && !sp.types.includes(typeFilter)) return false
-                if (q && !sp.name.toLowerCase().includes(q) && !String(sp.dexNo).includes(q)) return false
+                const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
+                // ANTI-LEAK : un ultra-secret non capturé n'apparaît JAMAIS via un filtre de type (sinon on déduit son
+                // type), et n'est trouvable en recherche que par son NUMÉRO (jamais par son nom).
+                if (typeFilter && (secret || !sp.types.includes(typeFilter))) return false
+                if (q) {
+                    if (secret) { if (!String(sp.dexNo).includes(q)) return false }
+                    else if (!sp.name.toLowerCase().includes(q) && !String(sp.dexNo).includes(q)) return false
+                }
                 return true
             })
             .sort((a, b) => a.dexNo - b.dexNo)
-    }, [query, typeFilter, visible])
+    }, [query, typeFilter, visible, dex.caught])
 
     return (
         <div style={S.root}>
@@ -84,26 +91,32 @@ export default function DexClient() {
             </div>
 
             <div style={S.list}>
-                {entries.map((sp) => (
-                    <button
-                        key={sp.id}
-                        onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)}
-                        style={S.card}
-                    >
-                        <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
-                        <DexIcon sp={sp} />
-                        <div style={S.body}>
-                            <div style={S.name}>{sp.name.toUpperCase()}</div>
-                            <div style={S.chips}>{sp.types.map((t) => (
-                                <span key={t} style={{ ...S.chip, background: TYPE_COLORS[t] }}>{t}</span>
-                            ))}</div>
-                        </div>
-                        <div style={S.bst}>
-                            <div style={S.bstNum}>{baseStatTotal(sp.baseStats)}</div>
-                            <div style={S.bstLbl}>BST</div>
-                        </div>
-                    </button>
-                ))}
+                {entries.map((sp) => {
+                    // ULTRA-SECRET non capturé : tout masqué (ombre, nom/types « ??? », BST « 5XX »). Galijah : décompte énigmatique.
+                    const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
+                    const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(player.capturesToday ?? 0) : null
+                    return (
+                        <button
+                            key={sp.id}
+                            onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)}
+                            style={S.card}
+                        >
+                            <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
+                            <DexIcon sp={sp} secret={secret} />
+                            <div style={S.body}>
+                                <div style={S.name}>{secret ? "???" : sp.name.toUpperCase()}</div>
+                                <div style={S.chips}>{secret
+                                    ? sp.types.map((_t, i) => <span key={i} style={{ ...S.chip, background: "#555" }}>???</span>)
+                                    : sp.types.map((t) => <span key={t} style={{ ...S.chip, background: TYPE_COLORS[t] }}>{t}</span>)}</div>
+                            </div>
+                            <div style={S.bst}>
+                                {galijahRem !== null
+                                    ? <div style={galijahCounterStyle(galijahRem)}>{galijahRem}</div>
+                                    : <><div style={S.bstNum}>{secret ? maskedBst(baseStatTotal(sp.baseStats)) : baseStatTotal(sp.baseStats)}</div><div style={S.bstLbl}>BST</div></>}
+                            </div>
+                        </button>
+                    )
+                })}
                 {entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
             </div>
         </div>

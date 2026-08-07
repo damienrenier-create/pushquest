@@ -1115,18 +1115,28 @@ export function creditReps(n: number): number {
 export const GALIJAH_ARMED_MARKER = "galijah_armed"          // chasse Galijah en cours (150ᵉ atteint, spawn imminent)
 export const GALIJAH_OFFERED_MARKER = "galijah_offered"      // cadeau du 200ᵉ dex déjà donné (one-shot)
 export const MEGAMONARX_GRANTED_MARKER = "megamonarx_granted" // MégamonarX déjà octroyé (one-shot)
-const GALIJAH_CAPTURE_THRESHOLD = 150 // captures du jour → arme Galijah
+export const GALIJAH_CAPTURE_THRESHOLD = 150 // 1re apparition : 150ᵉ capture du jour
+export const GALIJAH_RETRY_STEP = 50 // ratée ? nouvelle apparition toutes les +50 captures (200, 250, …)
 const GALIJAH_DEX_GIFT_THRESHOLD = 200 // Daemons différents au Pokédex → cadeau de secours
 
-/** GALIJAH — +1 capture sauvage RÉUSSIE du jour. À la 150ᵉ (Galijah non encore capturé), ARME la chasse : le spawn
- *  forcé (3-4 pas plus tard, niveau moyen d'équipe) est ensuite géré côté gameStore. À n'appeler QUE pour une vraie
- *  capture à la Ball d'un sauvage (jamais pour les cadeaux/piliers → sinon le compteur serait faussé). */
+/** GALIJAH — captures RESTANTES avant sa prochaine apparition (décompte énigmatique du Pokédex). 150→0 d'abord,
+ *  puis 50→0 à chaque tentative ratée. 0 = imminent. (Pur, lisible aussi côté UI.) */
+export function galijahCountdown(capturesToday: number): number {
+    const c = Math.max(0, capturesToday)
+    if (c <= GALIJAH_CAPTURE_THRESHOLD) return GALIJAH_CAPTURE_THRESHOLD - c
+    return (GALIJAH_RETRY_STEP - ((c - GALIJAH_CAPTURE_THRESHOLD) % GALIJAH_RETRY_STEP)) % GALIJAH_RETRY_STEP
+}
+
+/** GALIJAH — +1 capture sauvage RÉUSSIE du jour. À la 150ᵉ (puis toutes les +50 si ratée, tant que Galijah n'est pas
+ *  capturé), ARME la chasse : le spawn forcé (3-4 pas plus tard, niveau moyen d'équipe) est géré côté gameStore. À
+ *  n'appeler QUE pour une vraie capture à la Ball d'un sauvage (jamais pour les cadeaux/piliers). */
 export function bumpCapturesToday() {
     const n = (st.capturesToday ?? 0) + 1
     st = { ...st, capturesToday: n }
-    if (n >= GALIJAH_CAPTURE_THRESHOLD && !getPokedex().caught.includes("galijah")
-        && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) {
-        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] } // arme la rencontre légendaire
+    // Palier atteint (150, 200, 250, …), Galijah pas encore capturé, pas déjà armé → arme la rencontre légendaire.
+    if (n >= GALIJAH_CAPTURE_THRESHOLD && (n - GALIJAH_CAPTURE_THRESHOLD) % GALIJAH_RETRY_STEP === 0
+        && !getPokedex().caught.includes("galijah") && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) {
+        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] }
     }
     emit()
 }

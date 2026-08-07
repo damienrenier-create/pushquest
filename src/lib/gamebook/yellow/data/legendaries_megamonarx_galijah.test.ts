@@ -5,7 +5,7 @@ import { getMove } from "./moves"
 import {
     hydratePlayer, getPlayer, creditDailyReps,
     grantMegamonarx, hasMegamonarx,
-    bumpCapturesToday, isGalijahArmed, disarmGalijah, grantGalijahIfDexMilestone, poseGalijahEncounter,
+    bumpCapturesToday, isGalijahArmed, disarmGalijah, grantGalijahIfDexMilestone, poseGalijahEncounter, galijahCountdown,
     GALIJAH_ARMED_MARKER, GALIJAH_OFFERED_MARKER, MEGAMONARX_GRANTED_MARKER,
 } from "../store/playerStore"
 import { hydratePokedex, getPokedex } from "../store/pokedexStore"
@@ -68,6 +68,25 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         bumpCapturesToday() // 150ᵉ
         expect(isGalijahArmed()).toBe(true)
         expect(getPlayer().capturesToday).toBe(150)
+    })
+
+    it("Galijah — décompte énigmatique : 150→0, puis 50→0 (re-armement)", () => {
+        expect(galijahCountdown(0)).toBe(150)
+        expect(galijahCountdown(149)).toBe(1)
+        expect(galijahCountdown(150)).toBe(0)
+        expect(galijahCountdown(151)).toBe(49)
+        expect(galijahCountdown(200)).toBe(0)
+        expect(galijahCountdown(201)).toBe(49)
+        expect(galijahCountdown(250)).toBe(0)
+    })
+
+    it("Galijah — re-armement aux paliers +50 après une tentative ratée", () => {
+        resetAll()
+        for (let i = 0; i < 150; i++) bumpCapturesToday()
+        expect(isGalijahArmed()).toBe(true)
+        disarmGalijah() // tentative ratée (spawn posé + fui/KO → marker retiré, Galijah non capturé)
+        for (let i = 150; i < 200; i++) bumpCapturesToday()
+        expect(isGalijahArmed()).toBe(true) // re-armé à la 200ᵉ
     })
 
     it("Galijah — déjà capturé : la 150ᵉ n'arme PAS", () => {

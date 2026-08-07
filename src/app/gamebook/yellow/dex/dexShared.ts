@@ -2,9 +2,36 @@
 // Helpers PARTAGÉS par la liste et la fiche : couleurs de type, chaîne d'évolution,
 // défenses (table des types), couleur de barre de stat. Données pures, React-free.
 
+import type { CSSProperties } from "react"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
 import { POKE_TYPES, type PokeType, type StatKey, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { typeEffectiveness } from "@/lib/gamebook/yellow/battle/typeChart"
+
+// ═══════ LÉGENDAIRES ULTRA-SECRETS — masquage cohérent (catalogue + Pokédex + fiche) ═══════
+/** BST masqué : 1er chiffre + XX (ex. 750 → « 7XX »). Donne un ordre de grandeur sans révéler. */
+export function maskedBst(bst: number): string {
+    return `${String(bst)[0] ?? "?"}XX`
+}
+/** Style DYNAMIQUE du décompte énigmatique de Galijah : proche de 0 → GRAND & DORÉ (halo) ; proche de 150 → petit & sombre. */
+export function galijahCounterStyle(remaining: number): CSSProperties {
+    const t = Math.min(1, Math.max(0, remaining / 150)) // 0 = imminent, 1 = loin
+    const lerp = (a: number, b: number) => Math.round(a + (b - a) * (1 - t))
+    const glow = 1 - t
+    return {
+        fontSize: Math.round(12 + (1 - t) * 20), fontWeight: 900, lineHeight: 1,
+        color: `rgb(${lerp(80, 255)},${lerp(80, 207)},${lerp(80, 64)})`, // gris foncé → doré
+        textShadow: glow > 0.45 ? `0 0 ${Math.round(glow * 12)}px rgba(255,207,64,${glow.toFixed(2)})` : "none",
+        fontVariantNumeric: "tabular-nums",
+    }
+}
+/** Indice MégamonarX (« ??? ») à 2 paliers narratifs selon l'avancée à la Ligue de Fusion. null = pas encore d'indice. */
+export function megamonarxHint(reachedFusion: boolean, wonFusion: boolean): string | null {
+    return wonFusion
+        ? "🔮 On murmure qu'une fusion peut ÉVOLUER dans de bonnes conditions… une victoire à la Ligue, dit-on, en serait la clé."
+        : reachedFusion
+            ? "🔮 Une rumeur court au Dôme… une fusion poussée à son ultime limite pourrait transcender. Nul ne sait vraiment comment."
+            : null
+}
 
 // Couleur par type (chips + accents). Palette type-Gen1 classique.
 export const TYPE_COLORS: Record<PokeType, string> = {
