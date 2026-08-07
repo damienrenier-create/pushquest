@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES, isDexHidden } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, isDexHidden, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -74,14 +74,17 @@ export default function DexDetailClient({ id }: { id: string }) {
     const runThreeLocked = sp.runThreeOnly && !isRun3 && !player.run3Used && !dex.caught.includes(id) && !dex.seen.includes(id)
     const runTwoLocked = sp.runTwoOnly && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
     const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
-    if (runThreeLocked || runTwoLocked || postLeagueLocked) {
+    // LÉGENDAIRE ULTRA-SECRET (MégamonarX/Galijah) : fiche SCELLÉE tant que non CAPTURÉ — même par accès URL direct,
+    // même post-run 3 (secret préservé en fin de jeu). Seule la capture réelle la révèle.
+    const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !dex.caught.includes(id)
+    if (runThreeLocked || runTwoLocked || postLeagueLocked || ultraSecretLocked) {
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>❓</div>
                     <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
                     <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20 }}>
-                        {postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
+                        {ultraSecretLocked ? "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien." : postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
                 </div>

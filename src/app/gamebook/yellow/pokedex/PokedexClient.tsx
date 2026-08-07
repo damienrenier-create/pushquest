@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { SPECIES, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
@@ -160,8 +160,9 @@ export default function PokedexClient() {
                     const multiRun = player.ngplusUsed || player.run3Used
                     const caught = dex.caught.includes(sp.id)
                     // POST-RUN 3 (run3Used) : catalogue 100% RÉVÉLÉ — même les surprises hiddenUntilCaught
-                    // (Gékroc/Goshendofy/légendaires) montrent leur identité (le joueur a fini le jeu).
-                    const seen = caught || dex.seen.includes(sp.id) || player.run3Used
+                    // (Gékroc/Goshendofy…) montrent leur identité. EXCEPTION : les légendaires ULTRA-SECRETS
+                    // (MégamonarX/Galijah) restent « ??? » (silhouette noire) tant que non CAPTURÉS, même post-run 3.
+                    const seen = caught || dex.seen.includes(sp.id) || (player.run3Used && !DEX_ULTRA_SECRET.has(sp.id))
                     const caughtNow = multiRun && caught && (player.caughtThisRun ?? []).includes(sp.id)
                     return (
                         <button
@@ -176,7 +177,7 @@ export default function PokedexClient() {
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
                                 {seen && <div style={S.types}>{sp.types.join(" / ")}</div>}
                                 <div style={{ ...S.state, ...(caughtNow ? { color: "#ffcf40", fontWeight: 700 } : {}) }}>
-                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : (sp.id === "megamonarx" && reachedFusion ? "🔮 Rumeur du Dôme : une fusion Dragon-Roche parfaite, sacrée à la Ligue, transcenderait toute forme connue…" : "Inconnu")}
+                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : (sp.id === "megamonarx" && reachedFusion ? "🔮 Une rumeur court au Dôme… une fusion poussée à son ultime limite pourrait transcender. Nul ne sait vraiment comment." : "Inconnu")}
                                 </div>
                             </div>
                             <div style={{ ...S.tag, ...(caughtNow ? { color: "#ffcf40" } : {}) }}>{caughtNow ? "✨" : caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>

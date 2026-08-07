@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { getSpecies } from "./species"
+import { getSpecies, DEX_ULTRA_SECRET } from "./species"
 import { canLearnCt, getCt } from "./cts"
 import { getMove } from "./moves"
 import {
@@ -95,6 +95,11 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(getPokedex().caught).toContain("galijah")
         expect(getPlayer().defeatedTrainers).toContain(GALIJAH_OFFERED_MARKER)
         expect(grantGalijahIfDexMilestone()).toBeNull() // 2e appel = no-op (one-shot)
+    })
+
+    it("ANTI-SPOILER : les 2 sont ultra-secrets (masqués sauf capture réelle) + hiddenUntilCaught", () => {
+        expect([...DEX_ULTRA_SECRET].sort()).toEqual(["galijah", "megamonarx"])
+        for (const id of DEX_ULTRA_SECRET) expect(getSpecies(id)?.hiddenUntilCaught, id).toBe(true)
     })
 
     it("creditDailyReps : nouveau jour → capturesToday remis à 0 + chasse désarmée", () => {

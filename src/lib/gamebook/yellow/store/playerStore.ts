@@ -1166,6 +1166,7 @@ export function grantGalijahIfDexMilestone(): "team" | "pc" | null {
  *  fusion persistante, on le CRÉE (niv 100) et on le donne (modèle Ukognofy/pilier), puis on le marque au dex. */
 export function grantMegamonarx(): "team" | "pc" | null {
     if (st.defeatedTrainers.includes(MEGAMONARX_GRANTED_MARKER)) return null
+    if (getPokedex().caught.includes("megamonarx")) return null // one-shot GLOBAL (le Pokédex est cumulatif inter-runs)
     let mon: MonInstance
     try { mon = createMonInstance("megamonarx", 100, { owned: true }) } catch { return null }
     st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MEGAMONARX_GRANTED_MARKER] } // flag AVANT (anti double-don)

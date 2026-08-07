@@ -3177,6 +3177,11 @@ export function getSpecies(id: string): SpeciesData | null {
     return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? null // statique d'abord, puis custom runtime
 }
 
+/** LÉGENDAIRES ULTRA-SECRETS : ne se révèlent au Pokédex QUE par CAPTURE RÉELLE — JAMAIS par « vu », ni par le
+ *  déverrouillage post-run 3, ni par accès URL à la fiche. Leur carte reste « N°XXX · ??? » (silhouette noire) et
+ *  leur fiche scellée tant qu'ils ne sont pas capturés. Obtention hors-normes → secret préservé même en fin de jeu. */
+export const DEX_ULTRA_SECRET: ReadonlySet<string> = new Set(["megamonarx", "galijah"])
+
 // RUN 3 — les 10 espèces du run 3 (Magnetor + les 9 starters du triangle) ne sont visibles dans le DEX qu'à
 // partir du run 3 (dex tiéré par run). Marquées runThreeOnly ici, en un seul endroit, pour éviter d'éparpiller
 // le flag dans 10 littéraux. (Le POKÉDEX reste cumulatif — cf. isDexHidden / le caract. global des captures.)

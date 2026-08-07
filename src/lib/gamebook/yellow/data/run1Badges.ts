@@ -13,7 +13,7 @@
 // INSTRUMENTER (évolutions, échange joueur, shiny échangé, duel niveau-sup, casino/pari, ligue 6-shiny…) sont
 // des champs OPTIONNELS de BadgeInput — le badge reste simplement non-gagné tant qu'ils valent 0/false.
 
-import { getSpecies, visibleDexSpecies, SPECIES } from "./species"
+import { getSpecies, visibleDexSpecies, SPECIES, DEX_ULTRA_SECRET } from "./species"
 import type { YellowSave } from "../storage/save"
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
@@ -27,12 +27,10 @@ export type BadgeTier = "bronze" | "silver" | "gold" | "diamond" | "legend"
 export const TIER_POINTS: Record<BadgeTier, number> = { bronze: 5, silver: 15, gold: 30, diamond: 75, legend: 150 }
 export const TIER_EMOJI: Record<BadgeTier, string> = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎", legend: "🌟" }
 
-/** Légendaires ULTRA-SECRETS exclus de la COMPLÉTION du dex run 1 (obtention hors-normes : MégamonarX = gagner la
- *  Ligue de Fusion avec un Dracolithe niv 100 ; Galijah = 150 captures/jour ou 200 espèces). Ils restent dans le
- *  Pokédex (cartes « ??? » + capturables), mais ne sont PAS requis pour le badge de complétion. */
-const DEX_COMPLETION_EXCLUDE: ReadonlySet<string> = new Set(["megamonarx", "galijah"])
-/** Ensemble des espèces requises pour le badge « Pokédex run 1 complet » (hors ultra-secrets). Calculé une fois. */
-const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_COMPLETION_EXCLUDE.has(id))
+/** Ensemble des espèces requises pour le badge « Pokédex run 1 complet ». Les légendaires ULTRA-SECRETS
+ *  (DEX_ULTRA_SECRET : MégamonarX/Galijah, obtention hors-normes) en sont EXCLUS — ils restent dans le Pokédex
+ *  (cartes « ??? » capturables) mais ne bloquent pas la complétion. Calculé une fois. */
+const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_ULTRA_SECRET.has(id))
 export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 141
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
 
