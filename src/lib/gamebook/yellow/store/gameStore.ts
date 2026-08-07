@@ -22,7 +22,8 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
-import { computeFusion } from "../data/fusionSpecies"
+import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
+import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
@@ -477,6 +478,7 @@ function fusionSpriteItemsFromRoster(): Array<{ aId: string; bId: string; name: 
 /** LIGUE DE FUSION — lance un combat : le joueur PILOTE son roster de fusions ; l'ennemi = équipe fusionnée du
  *  dresseur (buildFusionLeagueTeam au palier actif), ou le REFLET du roster (miroir). Toutes les espèces éphémères
  *  sont enregistrées ici et détruites au lancement suivant (disposeFusionLeagueSpecies). */
+const SYNERGY_INTRO_MARKER = "synergy_intro_seen" // 🔮 le Dieu Spaghetti a déjà félicité ce joueur pour ses fusions synergiques (one-time)
 function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDialogue | null {
     // GAUNTLET : on ne dispose QUE les espèces ENNEMIES de la salle précédente. L'équipe du joueur (le gauntlet)
     //   est CONSERVÉE d'une salle à l'autre (mêmes instances → PV/PP/K.O. entamés) : ne PAS la disposer ici.
@@ -508,6 +510,25 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     if (!gauntletHasAlive()) {
         disposeFusionGauntlet()
         return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Ton équipe de chimères est à terre. Retourne à l'Autel pour la réassembler et recommencer la Ligue."] }
+    }
+
+    // 🔮 SYNERGIES SECRÈTES : le roster contient-il des fusions « secrètes » (inédites/clans/paires/mimimoy) ?
+    //   → fête communautaire de découverte (idempotente MONDIALE côté serveur) + 1er mot du Dieu Spaghetti (one-time).
+    const synergies = save.fusionRoster
+        .map((p) => fusionSynergy(byU(p.a)?.speciesId, byU(p.b)?.speciesId))
+        .filter((s): s is FusionSynergy => !!s)
+    if (synergies.length) {
+        const seenKeys = new Set<string>()
+        for (const s of synergies) if (!seenKeys.has(s.key)) { seenKeys.add(s.key); reportSynergyDiscovery(s.key, s.label) } // best-effort, serveur dédupe à vie
+        if (!isTrainerDefeated(SYNERGY_INTRO_MARKER)) {
+            markTrainerDefeated(SYNERGY_INTRO_MARKER) // one-time : on interrompt AVANT le combat pour féliciter le joueur
+            return { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [
+                "*Le Dieu Spaghetti surgit dans une volute dorée alors que tu t'avances vers l'arène…*",
+                "« Un instant, Maître ! J'ai observé tes chimères… quelle PERSPICACITÉ dans tes croisements ! »",
+                "« Apprends un secret : certaines fusions, par affinité cachée, jouissent d'un SUPPLÉMENT DE SYNERGIE — des stats renforcées que le commun des dresseurs ignore. Tu l'as flairé. »",
+                "« Tu as l'œil d'un vrai maître de la fusion. Reviens me défier — et fais trembler la Ligue ! 🍝 »",
+            ] }
+        }
     }
 
     // VŒU DU GÉNIE « Ligue +3 » (Jacanon) : +3 niveaux à TOUS les fusionnés adverses (plafonné 100). Per-joueur.

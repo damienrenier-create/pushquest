@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeFusion, fusionWeights, type FusionParent } from "./fusionSpecies"
+import { computeFusion, fusionWeights, fusionSynergy, type FusionParent } from "./fusionSpecies"
 import type { StatKey } from "../battle/types"
 
 // Génétique boostée + fusions inédites + synergies (07/08). On travaille en stats ÉGALES (100 partout) → le poids
@@ -86,6 +86,16 @@ describe("synergies", () => {
         expect(computeFusion(P("gekraise"), P("draclet")).stats.hp).toBe(120)
         expect(computeFusion(P("leviathonn"), P("orcaline")).stats.hp).toBe(120) // paire non déclarée
     })
+    it("fusionSynergy : identifie le SECRET (fête de découverte) ou null", () => {
+        expect(fusionSynergy("sylvapuce", "pyrokoss")).toEqual({ key: "special:Cendrecerf", label: "Cendrecerf" })
+        expect(fusionSynergy("florapanthe", "pyropanthe")?.key).toBe("clan:panthere")
+        expect(fusionSynergy("gekraise", "gekosmic")?.key).toBe("clan:gecko")
+        expect(fusionSynergy("leviathonn", "mobyd")?.key).toBe("pair:leviathonn|mobyd")
+        expect(fusionSynergy("mimimoy", "draclet")?.key).toBe("mimimoy")
+        expect(fusionSynergy("draclet", "nouillon")).toBeNull() // paire banale = pas de secret
+        expect(fusionSynergy("florapanthe", "draclet")).toBeNull() // 1 seule panthère = pas de secret
+    })
+
     it("2 SHINY → tier max 0.8/0.6 (l'emporte sur le boost)", () => {
         const f = computeFusion(P("florapanthe", { shiny: true, types: ["PLANTE"] }), P("pyropanthe", { shiny: true, types: ["FEU"] }))
         expect(f.stats.hp).toBe(160); expect(f.stats.spc).toBe(120) // 0.8/0.6

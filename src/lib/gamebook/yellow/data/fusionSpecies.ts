@@ -61,20 +61,23 @@ export type FusionWeightMode = "normal" | "boosted" | "shiny" | "all"
 const WEIGHTS: Record<Exclude<FusionWeightMode, "all">, [number, number]> = {
     normal: [0.6, 0.45], boosted: [0.7, 0.5], shiny: [0.8, 0.6],
 }
-/** CLANS : fusionner DEUX membres d'un même clan = synergie boostée (0,7/0,5). */
+/** CLANS : fusionner DEUX membres d'un même clan = synergie boostée (0,7/0,5). `label` = annonce de découverte. */
 const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"]) // 6 panthères évoluées (Panthéon-base exclu)
 const GECKO_IDS: ReadonlySet<string> = new Set(["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke"]) // lignée Gékroc (couteaux-suisses)
-const CLANS: readonly ReadonlySet<string>[] = [PANTHERE_IDS, GECKO_IDS]
+const CLANS: readonly { key: string; label: string; ids: ReadonlySet<string> }[] = [
+    { key: "panthere", label: "la synergie des Panthères", ids: PANTHERE_IDS },
+    { key: "gecko", label: "la synergie des Geckos", ids: GECKO_IDS },
+]
 const MIMIMOY_ID = "mimimoy" // parent Mimimoy → TOUTES ses stats à 0,7 (révèle son potentiel aux croisements)
 /** Clé de paire indépendante de l'ordre. */
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
-/** Paires de SYNERGIE précises (boost only, nom auto conservé). */
-const SYNERGY_PAIRS: ReadonlySet<string> = new Set([
-    pairKey("merorem", "tonytony"),   // piliers casino
-    pairKey("leviathonn", "mobyd"),   // monstres marins
-    pairKey("mobyd", "orcaline"),     // monstres marins
-    pairKey("tenebrir", "loupyre"),   // la meute
-])
+/** Paires de SYNERGIE précises (boost only, nom auto conservé) → label d'annonce de découverte. */
+const SYNERGY_PAIRS: Record<string, string> = {
+    [pairKey("merorem", "tonytony")]: "la synergie des piliers du casino",
+    [pairKey("leviathonn", "mobyd")]: "la synergie des monstres marins",
+    [pairKey("mobyd", "orcaline")]: "la synergie des monstres marins",
+    [pairKey("tenebrir", "loupyre")]: "la synergie de la meute",
+}
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
 interface SpecialFusion { name: string; forcedType?: PokeType; concept?: string }
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
@@ -100,12 +103,26 @@ function isBoostedFusion(a: FusionParent, b: FusionParent): boolean {
     if (specialFusionFor(a, b)) return true
     if (!a.speciesId || !b.speciesId) return false
     const aId = a.speciesId, bId = b.speciesId
-    if (CLANS.some((clan) => clan.has(aId) && clan.has(bId))) return true // 2 panthères, ou 2 geckos…
-    return SYNERGY_PAIRS.has(pairKey(aId, bId))
+    if (CLANS.some((clan) => clan.ids.has(aId) && clan.ids.has(bId))) return true // 2 panthères, ou 2 geckos…
+    return !!SYNERGY_PAIRS[pairKey(aId, bId)]
 }
 /** La fusion est-elle DORÉE (2 parents shiny → tier max 0,8/0,6) ? */
 export function isShinyFusion(a: FusionParent, b: FusionParent): boolean {
     return !!a.shiny && !!b.shiny
+}
+
+export interface FusionSynergy { key: string; label: string }
+/** Identifie le « SECRET » de synergie d'une fusion (inédite nommée / clan / paire / mimimoy), ou null. Sert à la
+ *  FÊTE COMMUNAUTAIRE de découverte (key = idempotence MONDIALE). Le SHINY est exclu (il a déjà sa propre fête). */
+export function fusionSynergy(aId?: string, bId?: string): FusionSynergy | null {
+    if (!aId || !bId) return null
+    const sp = specialFusionForIds(aId, bId)
+    if (sp) return { key: `special:${sp.name}`, label: sp.name }
+    for (const c of CLANS) if (c.ids.has(aId) && c.ids.has(bId)) return { key: `clan:${c.key}`, label: c.label }
+    const pk = pairKey(aId, bId)
+    if (SYNERGY_PAIRS[pk]) return { key: `pair:${pk}`, label: SYNERGY_PAIRS[pk] }
+    if (aId === MIMIMOY_ID || bId === MIMIMOY_ID) return { key: "mimimoy", label: "le potentiel caché de Mimimoy" }
+    return null
 }
 
 /** Poids par stat pour un parent selon le `mode` : "all" (Mimimoy) = 0,7 partout ; sinon 3 plus HAUTES = hi,

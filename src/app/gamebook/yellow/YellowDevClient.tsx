@@ -923,9 +923,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         const who = (es: typeof events) => [...new Set(es.map((e) => e.fromNickname).filter(Boolean))].join(", ")
                         const caps = events.filter((e) => e.kind === "captured")
                         const encs = events.filter((e) => e.kind === "encounter")
+                        const synes = events.filter((e) => e.kind === "synergy") // 🔮 secrets de synergie percés (speciesId = label)
                         const lines: string[] = ["*Le Dieu Spaghetti apparaît dans une volute de vapeur dorée…*"]
                         if (encs.length) lines.push(`✨ « Un Daemon SHINY a été aperçu sur le Nexus${who(encs) ? ` (par ${who(encs)})` : ""} ! La chance rayonne. »`)
                         if (caps.length) lines.push(`🎉 « JOUR DE FÊTE : un shiny a été CAPTURÉ${who(caps) ? ` par ${who(caps)}` : ""} ! »`)
+                        for (const s of [...new Map(synes.map((e) => [e.speciesId, e])).values()].slice(0, 3)) {
+                            lines.push(`🔮 « SECRET PERCÉ${s.fromNickname ? ` par ${s.fromNickname}` : ""} : ${s.speciesId} ! Un croisement d'une rare perspicacité. »`)
+                        }
                         lines.push(`« Je régale toute la communauté : +${energy} énergie (hors plafond) pour toi ! »`)
                         showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", lines)
                     }
