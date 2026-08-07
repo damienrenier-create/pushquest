@@ -81,6 +81,10 @@ describe("synergies", () => {
         const f = computeFusion(P("vipember", { types: ["PSY", "FEU"] }), P("necrocorbe", { types: ["VOL", "POISON"] }))
         expect(f.name).toBe("Orochitachi"); expect(f.stats.hp).toBe(140)
     })
+    it("Karmaki × Enclumind → Karmind Z, boosté, type calculé", () => {
+        const f = computeFusion(P("karmaki", { types: ["PLANTE", "PSY"] }), P("enclumind", { types: ["COMBAT", "PSY"] }))
+        expect(f.name).toBe("Karmind Z"); expect(f.stats.hp).toBe(140)
+    })
     it("synergies marines + meute → boosté", () => {
         expect(computeFusion(P("leviathonn"), P("mobyd")).stats.hp).toBe(140)
         expect(computeFusion(P("mobyd"), P("orcaline")).stats.hp).toBe(140)
