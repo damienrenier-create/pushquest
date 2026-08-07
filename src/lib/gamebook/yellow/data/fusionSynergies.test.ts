@@ -68,9 +68,14 @@ describe("synergies", () => {
         const f = computeFusion(P("rochison", { types: ["ROCHE", "SOL"] }), P("mouflorage", { types: ["SOL", "ELEC"] }))
         expect(f.name).toBe("Aimouflon"); expect(f.types).toEqual(["METAL"]); expect(f.stats.hp).toBe(140)
     })
-    it("CLAN gecko : 2 geckos → boosté", () => {
+    it("CLAN gecko : 2 geckos (n'importe quels éléments) → boosté", () => {
         expect(computeFusion(P("gekraise"), P("gekosmic")).stats.hp).toBe(140)
         expect(computeFusion(P("gekroc"), P("geaucke")).stats.hp).toBe(140)
+        expect(computeFusion(P("geckebre"), P("gekosmic")).stats.hp).toBe(140) // ténèbre × psy
+    })
+    it("Crapôtaure × Uzumaro → Gamabunta (les 2 grenouilles), boosté, type calculé", () => {
+        const f = computeFusion(P("crapotaure", { types: ["ROCHE", "EAU"] }), P("uzumaro", { types: ["COMBAT", "EAU"] }))
+        expect(f.name).toBe("Gamabunta"); expect(f.stats.hp).toBe(140); expect(f.types.length).toBeGreaterThanOrEqual(1)
     })
     it("synergies marines + meute → boosté", () => {
         expect(computeFusion(P("leviathonn"), P("mobyd")).stats.hp).toBe(140)

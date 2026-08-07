@@ -84,6 +84,7 @@ const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
     [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE", concept: "un spectre vaporeux fait de NUAGE et de brume bouillonnante née de la rencontre du feu et de l'eau, silhouette fantomatique aux volutes de vapeur, yeux luisants dans la brume" }, // feu × eau → nuage
     [pairKey("crocavern", "alirocaillus")]: { name: "Crocaroc", concept: "un crocodile massif cuirassé de ROCHE, plaques rocheuses et ailes membraneuses repliées, gueule minérale hérissée de cristaux" }, // croisement des crocos (type calculé)
     [pairKey("rochison", "mouflorage")]: { name: "Aimouflon", forcedType: "METAL", concept: "une chèvre-bouquetin faite de MÉTAL aimanté, grandes cornes en fer magnétisé attirant des éclats métalliques en orbite, pelage de limaille grise, sabots d'acier" }, // roche × mouflon → chèvre de métal (aimant)
+    [pairKey("crapotaure", "uzumaro")]: { name: "Gamabunta", concept: "un crapaud GIGANTESQUE bordeaux (rouge sombre) façon chef des crapauds, portant un pagne/haori de guerrier, fumant une longue pipe japonaise (kiseru), un immense sabre (katana) à la ceinture, posture massive et martiale" }, // les 2 grenouilles → crapaud-boss (type calculé)
 }
 /** Fusion INÉDITE pour cette paire d'IDS de parents (ordre indifférent), ou null. */
 export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion | null {
