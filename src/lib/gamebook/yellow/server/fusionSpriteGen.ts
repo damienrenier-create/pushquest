@@ -91,6 +91,7 @@ export async function generateFusionSprite(opts: {
     bId: string
     fusionName: string
     types: string[]
+    concept?: string // FUSION INÉDITE : description PHYSIQUE visée (charbon, boue, nuage…) → le rendu colle au thème
 }): Promise<{ ok: true; url: string; model: string } | { ok: false; error: string }> {
     if (!fusionGenEnabled()) return { ok: false, error: "disabled" }
     const [aId, bId] = canonicalPair(opts.aId, opts.bId)
@@ -110,6 +111,7 @@ export async function generateFusionSprite(opts: {
     const prompt = [
         STYLE_BIBLE,
         `\nCrée UNE créature unique = la FUSION de ${spA.name} (DOMINANT : silhouette/gabarit de base) et ${spB.name} (couleurs & éléments signature intégrés).`,
+        opts.concept ? `CONCEPT VISÉ (PRIORITAIRE, respecte-le) : ${opts.concept}.` : "",
         `Nom : ${opts.fusionName}. Types : ${opts.types.join("/")} → palette dérivée de ces types.`,
         spA.description ? `Réf ${spA.name} : ${spA.description}` : "",
         spB.description ? `Réf ${spB.name} : ${spB.description}` : "",

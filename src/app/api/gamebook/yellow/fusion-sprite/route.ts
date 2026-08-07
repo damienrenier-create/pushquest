@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { fusionPairKey, canGenerate, nextStatusAfterAttempt, withinTotalBudget, MAX_ATTEMPTS } from "@/lib/gamebook/yellow/data/fusionSpriteCache"
 import { generateFusionSprite, fusionGenEnabled, PROMPT_VERSION } from "@/lib/gamebook/yellow/server/fusionSpriteGen"
+import { specialFusionForIds } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60 // la génération image peut prendre quelques secondes
@@ -118,8 +119,8 @@ export async function POST(req: NextRequest) {
             attemptNo = (existing.attempts ?? 0) + 1
         }
 
-        // GÉNÉRATION (facturée). L'origine sert à fetch les sprites de référence (_norm).
-        const gen = await generateFusionSprite({ origin: req.nextUrl.origin, aId, bId, fusionName, types })
+        // GÉNÉRATION (facturée). L'origine sert à fetch les sprites de référence (_norm). Concept = physique visé (fusions inédites).
+        const gen = await generateFusionSprite({ origin: req.nextUrl.origin, aId, bId, fusionName, types, concept: specialFusionForIds(aId, bId)?.concept })
         if (gen.ok) {
             await fs.update({ where: { pairKey }, data: { status: "READY", blobUrl: gen.url, model: gen.model, error: null } })
             return NextResponse.json({ ok: true, status: "READY", url: gen.url })
