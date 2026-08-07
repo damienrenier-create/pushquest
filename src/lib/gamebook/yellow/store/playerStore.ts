@@ -1025,7 +1025,11 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "item": if (e.id) addItem(e.id, Math.max(1, Math.floor(e.qty ?? 1))); return true             // cadeau d'objet
         case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; return true                     // ajuste le plafond (+/-)
         case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; return true     // malus d'⚡
-        case "force_encounter": if (e.id) st = { ...st, forcedEncounter: JSON.stringify({ speciesId: e.id, level: Math.max(1, Math.min(100, Math.floor(e.level ?? 50))), hard: !!e.hard }) }; return true // rencontre imposée
+        case "force_encounter": if (e.id) {
+            // Si un vœu écrase une rencontre GALIJAH en attente, on RE-ARME Galijah (sinon sa chasse serait perdue).
+            const clobbersGalijah = st.forcedEncounter?.includes('"galijah"') && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)
+            st = { ...st, forcedEncounter: JSON.stringify({ speciesId: e.id, level: Math.max(1, Math.min(100, Math.floor(e.level ?? 50))), hard: !!e.hard }), defeatedTrainers: clobbersGalijah ? [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] : st.defeatedTrainers }
+        }; return true // rencontre imposée
         case "nemesis_challenge": if (!st.defeatedTrainers.includes(NEMESIS_ARMED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, NEMESIS_ARMED_MARKER] }; return true // arme le défi némésis (PNJ apparaît)
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino 10/mise + 200/jour (enforcé par les jeux)
@@ -1136,6 +1140,7 @@ export function disarmGalijah() {
 /** GALIJAH — pose la rencontre FORCÉE (one-shot, capture légendaire `hard`) au niveau donné + DÉSARME la chasse.
  *  Consommée par le moteur au prochain sauvage (gameStore) → Galijah apparaît dans les hautes herbes. */
 export function poseGalijahEncounter(level: number) {
+    if (st.forcedEncounter) return // NE PAS écraser une rencontre forcée déjà posée (ex. vœu génie one-shot) → Galijah reste ARMÉ, réessaiera au pas suivant une fois le slot libéré
     const lvl = Math.max(5, Math.min(100, Math.floor(level)))
     st = {
         ...st,

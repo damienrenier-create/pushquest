@@ -2548,7 +2548,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 55, moveId: "griffe_draconique" }, { level: 66, moveId: "roc_titanesque" },
             { level: 80, moveId: "souffle_primordial" },
         ],
-        catchRate: 3, baseExp: 300, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 300, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true, exclusive: true,
         role: "Dragon/Roche — LÉGENDAIRE (fusion infinie, mur-cogneur ultra-lent)",
         description: "MégamonarX — l'apogée absolue de la fusion. Quand un Dracolithe atteint la perfection et triomphe de la Ligue, la roche et le dragon ne font plus qu'un : un colosse de pierre vivante hérissé de cristaux, dont chaque pas fait trembler le Nexus. On le dit immortel.",
         sprite: "/yellow/sprites/dex/megamonarx.png",
@@ -2566,7 +2566,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 30, moveId: "griffe_spectrale" }, { level: 38, moveId: "eveil_divin" }, { level: 46, moveId: "eclat_lunaire" },
             { level: 54, moveId: "ball_ombre" }, { level: 62, moveId: "vague_mentale" }, { level: 72, moveId: "cataclysme_lunaire" },
         ],
-        catchRate: 3, baseExp: 280, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 280, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true, exclusive: true,
         learnsAllCts: true, learnsAllCtsExcept: ["TENEBRES"], // façon Mew : apprend TOUS les types sauf Ténèbres
         role: "Fée/Spectre — LÉGENDAIRE polyvalent (façon Mew)",
         description: "Galijah — créature paisible et joueuse que l'on croyait légende. On raconte qu'elle porte en elle l'empreinte de tous les Daemons : elle imite n'importe quelle technique (hormis les ténèbres, qu'elle fuit). Elle n'apparaît qu'aux dresseurs les plus assidus, un jour de grande chasse.",

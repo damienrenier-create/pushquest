@@ -28,6 +28,7 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(sp.baseStats.hp).toBe(205) // gros PV
         expect(sp.hiddenUntilCaught).toBe(true)
         expect(sp.rarity).toBe("LEGENDARY")
+        expect(sp.exclusive).toBe(true) // exclu de la Zone de Combat (convention légendaire)
         for (const l of sp.learnset) expect(getMove(l.moveId), l.moveId).toBeTruthy()
     })
 
@@ -37,6 +38,7 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(sp.types).toEqual(["FEE", "SPECTRE"])
         expect(bst("galijah")).toBe(600)
         expect(sp.hiddenUntilCaught).toBe(true)
+        expect(sp.exclusive).toBe(true) // exclu de la Zone de Combat (convention légendaire)
         expect(sp.learnsAllCts).toBe(true)
         expect(sp.learnsAllCtsExcept).toEqual(["TENEBRES"])
         for (const l of sp.learnset) expect(getMove(l.moveId), l.moveId).toBeTruthy()
@@ -83,6 +85,13 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(fe.speciesId).toBe("galijah")
         expect(fe.level).toBe(42)
         expect(fe.hard).toBe(true) // méthode légendaire
+    })
+
+    it("Galijah — poseGalijahEncounter n'ÉCRASE PAS une rencontre déjà posée (vœu génie) et reste armé", () => {
+        hydratePlayer({ team: [], pc: [], reps: 0, defeatedTrainers: [GALIJAH_ARMED_MARKER], items: {}, forcedEncounter: JSON.stringify({ speciesId: "draclet", level: 30, hard: false }) })
+        poseGalijahEncounter(40)
+        expect(JSON.parse(getPlayer().forcedEncounter!).speciesId).toBe("draclet") // slot génie préservé
+        expect(isGalijahArmed()).toBe(true) // Galijah reste armé → réessaiera au pas suivant
     })
 
     it("Galijah — cadeau de secours au 200ᵉ dex (one-shot), pas avant", () => {

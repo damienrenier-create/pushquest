@@ -600,8 +600,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
             // 🐈‍⬛ GALIJAH : +1 capture du jour (à la 150ᵉ → arme sa chasse) ; puis cadeau de secours au 200ᵉ dex.
-            bumpCapturesToday()
-            grantGalijahIfDexMilestone()
+            //   JAMAIS en bulle de REJEU (jetable) : sinon markCaught (dex GLOBAL) brûlerait le garde one-shot alors
+            //   que le Daemon est perdu à la sortie → légendaire à jamais inobtenable + entrée dex fantôme.
+            if (getActiveWorld() !== "replay") { bumpCapturesToday(); grantGalijahIfDexMilestone() }
         }
     }
 
@@ -1102,7 +1103,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         // 🐉🪨 MÉGAMONARX : si un DRACOLITHE niv 100 (Draconarque×Megalithe) était dans l'équipe-gauntlet vainqueur,
         //   il TRANSCENDE en MégamonarX — octroi one-shot d'un vrai légendaire gardable + cinématique côté client.
         //   getSpecies(f.speciesId).name = le nom OFFICIEL « Dracolithe » (via officialFusionForParents), pas le mot-valise.
-        if (!hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
+        //   JAMAIS en bulle de REJEU (jetable) : l'octroi grave le dex GLOBAL mais le Daemon est perdu à la sortie.
+        if (getActiveWorld() !== "replay" && !hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
             if (grantMegamonarx()) megamonarxReveal = true
         }
     }
