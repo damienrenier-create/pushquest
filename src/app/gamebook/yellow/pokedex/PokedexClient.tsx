@@ -12,6 +12,7 @@ import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
+import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import type { SpeciesData, StatKey } from "@/lib/gamebook/yellow/battle/types"
 
@@ -124,6 +125,8 @@ export default function PokedexClient() {
     const aw = useActiveWorld() // hook réactif : re-render au changement de monde
     const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
     const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, player.run3Used)
+    // 🐉🪨 MÉGAMONARX : indice discret sur la carte « ??? » dès que le joueur a ATTEINT le Dôme/Ligue de Fusion.
+    const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
     const [sel, setSel] = useState<SpeciesData | null>(null)
     // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
     // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
@@ -173,7 +176,7 @@ export default function PokedexClient() {
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
                                 {seen && <div style={S.types}>{sp.types.join(" / ")}</div>}
                                 <div style={{ ...S.state, ...(caughtNow ? { color: "#ffcf40", fontWeight: 700 } : {}) }}>
-                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : "Inconnu"}
+                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : (sp.id === "megamonarx" && reachedFusion ? "🔮 Rumeur du Dôme : une fusion Dragon-Roche parfaite, sacrée à la Ligue, transcenderait toute forme connue…" : "Inconnu")}
                                 </div>
                             </div>
                             <div style={{ ...S.tag, ...(caughtNow ? { color: "#ffcf40" } : {}) }}>{caughtNow ? "✨" : caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>

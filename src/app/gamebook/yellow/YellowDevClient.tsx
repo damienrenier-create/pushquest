@@ -58,7 +58,7 @@ import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -390,6 +390,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusioBallOffer = useFusioBallOffer() // LIGUE DE FUSION : offre Fusio-Ball du Dieu Spaghetti (post-sacre)
     const fusionParentReward = useFusionParentReward() // LIGUE DE FUSION : XP reversée aux parents (fin de combat)
     const fusionSacre = useFusionSacre() // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (sacre Dieu Spaghetti)
+    const megamonarxReveal = useMegamonarxReveal() // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vient de transcender → cinématique historique
     const pnj6TradeOffer = usePnj6TradeOffer() // PNJ 6 : offre d'échange Crocavern ↔ team[0] (post-victoire)
     const justCaught = useJustCaught()
     const [showGeneIntro, setShowGeneIntro] = useState(false) // carrousel génétique one-shot (post-capture)
@@ -1377,6 +1378,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }).catch(() => { /* hors-ligne : silencieux */ })
         clearFusionSacre()
     }, [fusionSacre])
+
+    // 🐉🪨 MÉGAMONARX — CINÉMATIQUE HISTORIQUE : un Dracolithe niv 100 a remporté la Ligue de Fusion et TRANSCENDE en
+    //   3ᵉ légendaire. Le Daemon est déjà en équipe/PC (grantMegamonarx). On fige la save (événement critique) et le
+    //   Dieu Spaghetti narre la naissance de la « fusion infinie ». One-shot (signal effacé après lecture).
+    useEffect(() => {
+        if (!megamonarxReveal) return
+        persistYellowSaveNow()
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            "*Le sol du Nexus se fissure. Ton Dracolithe, sacré champion de la Fusion, se met à irradier d'une lumière que nul œil n'a jamais contemplée…*",
+            "« IM… IMPOSSIBLE. La fusion parfaite, poussée à son APOGÉE ABSOLUE… Elle ne se contente plus d'unir deux âmes. Elle en FORGE une TROISIÈME. »",
+            "*La roche et le dragon rugissent d'une seule voix. Des cristaux de pierre vive jaillissent de sa carapace ; ses ailes déchirent le ciel du Nexus. La terre tremble.*",
+            "« Contemple, Maître. Ce que tu vois n'est PLUS un Dracolithe. C'est la FUSION INFINIE faite chair — une légende née de tes mains, à l'identité propre. »",
+            "🐉🪨 « MÉGAMONARX s'éveille. Le 3ᵉ légendaire du Nexus. Immortel. Colossal. Et il est TIEN — à jamais. Que ton nom résonne dans l'éternité, champion. »",
+        ])
+        clearMegamonarxReveal()
+    }, [megamonarxReveal, showDialogue])
 
     // LIGUE DE FUSION : à la fin d'un combat, les fusionnés reversent la moitié de leur XP à leurs parents →
     // notification (une fois l'écran libre, sans écraser un prompt d'apprentissage / dialogue en cours).

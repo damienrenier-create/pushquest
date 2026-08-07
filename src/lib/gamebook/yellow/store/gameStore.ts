@@ -30,7 +30,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, isGalijahArmed, poseGalijahEncounter } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -291,6 +291,9 @@ let ukognofyChainArmed = false
 // ARC LAMPE & GÉNIE — compteur d'embuscade (transient : re-tiré au chargement dans [3,10]). Le DÉSARMEMENT
 //   définitif (colporteur battu) est PERSISTÉ via le marker GENIE_TRAINER_ID (defeatedTrainers). -1 = pas encore tiré.
 let genieAmbushCountdown = -1
+// 🐈‍⬛ GALIJAH — décompte de pas AVANT l'apparition (transient : re-tiré au chargement si la chasse est encore armée
+//   via le marker persistant GALIJAH_ARMED_MARKER). -1 = pas encore tiré. À 0 → on pose la rencontre forcée.
+let galijahStepsLeft = -1
 // DAEMOMANIAQUE : 7 emplacements possibles à Cendreville ; un est tiré au hasard PAR SESSION (stable tant que la
 //   page n'est pas rechargée → le PNJ reste atteignable), re-tiré au prochain chargement → « pop à différents endroits ».
 const DAEMO_SPOTS: ReadonlyArray<readonly [number, number]> = [[26, 15], [8, 17], [17, 29], [36, 4], [22, 2], [7, 8], [30, 29]]
@@ -1425,6 +1428,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
         if (moved && !!map.darkness && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
+        // 🐈‍⬛ GALIJAH : la chasse est armée (150ᵉ capture du jour) → après 3-4 pas EFFECTIFS, on pose la rencontre
+        //   forcée (niveau moyen d'équipe, capture légendaire). Elle surgira dans les prochaines hautes herbes.
+        if (moved && isGalijahArmed()) {
+            if (galijahStepsLeft < 0) galijahStepsLeft = 3 + Math.floor(Math.random() * 2) // 3 ou 4 pas
+            if (galijahStepsLeft > 0) galijahStepsLeft--
+            if (galijahStepsLeft === 0) {
+                const gTeam = getPlayerSave().team
+                const gAvg = gTeam.length ? Math.round(gTeam.reduce((s, m) => s + m.level, 0) / gTeam.length) : 40
+                poseGalijahEncounter(gAvg); persistYellowSave(); galijahStepsLeft = -1
+            }
+        }
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
         if (moved && get().encounterCooldown > 0) {
             set({ encounterCooldown: get().encounterCooldown - 1 })

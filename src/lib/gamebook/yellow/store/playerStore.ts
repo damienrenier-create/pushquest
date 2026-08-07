@@ -28,7 +28,7 @@ import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "
 import type { WildPlayerCtx } from "../data/encounters"
 import { aceTargetLevel, bestCounter, ACE_EASY_START } from "../data/ace"
 import { GEKROC_STONE_ITEM, PANTHEON_BASE_ID, PANTHEON_STONE_EVOS } from "../data/gekroc"
-import { markCaught } from "./pokedexStore"
+import { markCaught, getPokedex } from "./pokedexStore"
 import type { PokeType } from "../battle/types"
 
 export const TEAM_MAX = 6
@@ -86,6 +86,8 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    /** GALIJAH : captures sauvages RÉUSSIES aujourd'hui (reset au tick quotidien). À la 150ᵉ → Galijah s'arme. Optionnel (défaut 0). */
+    capturesToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
     sbireWinsTotal: number
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
@@ -216,7 +218,7 @@ export interface DomeStats {
 }
 export function emptyDomeStats(): DomeStats { return { wins: 0, losses: 0, daemonUse: {}, moveUse: {} } }
 
-let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -429,6 +431,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
+        capturesToday: p.capturesToday ?? st.capturesToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
         domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(),
@@ -1104,6 +1107,75 @@ export function creditReps(n: number): number {
  * Tick quotidien (1×/jour) : reset des achats Super Pasta (+3 au prix plancher) et
  * du compteur de combats du sbire. Le CRÉDIT des reps est désormais géré par bankReps.
  */
+// ═══════ LÉGENDAIRES SECRETS — markers (vivent dans defeatedTrainers → persistés, pas de nouveau champ de save) ═══════
+export const GALIJAH_ARMED_MARKER = "galijah_armed"          // chasse Galijah en cours (150ᵉ atteint, spawn imminent)
+export const GALIJAH_OFFERED_MARKER = "galijah_offered"      // cadeau du 200ᵉ dex déjà donné (one-shot)
+export const MEGAMONARX_GRANTED_MARKER = "megamonarx_granted" // MégamonarX déjà octroyé (one-shot)
+const GALIJAH_CAPTURE_THRESHOLD = 150 // captures du jour → arme Galijah
+const GALIJAH_DEX_GIFT_THRESHOLD = 200 // Daemons différents au Pokédex → cadeau de secours
+
+/** GALIJAH — +1 capture sauvage RÉUSSIE du jour. À la 150ᵉ (Galijah non encore capturé), ARME la chasse : le spawn
+ *  forcé (3-4 pas plus tard, niveau moyen d'équipe) est ensuite géré côté gameStore. À n'appeler QUE pour une vraie
+ *  capture à la Ball d'un sauvage (jamais pour les cadeaux/piliers → sinon le compteur serait faussé). */
+export function bumpCapturesToday() {
+    const n = (st.capturesToday ?? 0) + 1
+    st = { ...st, capturesToday: n }
+    if (n >= GALIJAH_CAPTURE_THRESHOLD && !getPokedex().caught.includes("galijah")
+        && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) {
+        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] } // arme la rencontre légendaire
+    }
+    emit()
+}
+/** GALIJAH — la chasse est-elle armée (150ᵉ atteint, pas encore apparu) ? Lu par gameStore pour poser le spawn forcé. */
+export function isGalijahArmed(): boolean { return st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER) }
+/** GALIJAH — désarme la chasse (une fois le spawn forcé posé, ou après capture/fuite). */
+export function disarmGalijah() {
+    if (!st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) return
+    st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== GALIJAH_ARMED_MARKER) }; emit()
+}
+/** GALIJAH — pose la rencontre FORCÉE (one-shot, capture légendaire `hard`) au niveau donné + DÉSARME la chasse.
+ *  Consommée par le moteur au prochain sauvage (gameStore) → Galijah apparaît dans les hautes herbes. */
+export function poseGalijahEncounter(level: number) {
+    const lvl = Math.max(5, Math.min(100, Math.floor(level)))
+    st = {
+        ...st,
+        forcedEncounter: JSON.stringify({ speciesId: "galijah", level: lvl, hard: true }),
+        defeatedTrainers: st.defeatedTrainers.filter((m) => m !== GALIJAH_ARMED_MARKER),
+    }
+    emit()
+}
+/** GALIJAH — niveau de spawn/cadeau = moyenne des niveaux de l'équipe (clampé 5-100), façon rencontres badge-roche. */
+function teamAverageLevel(): number {
+    const t = st.team
+    return t.length ? Math.max(5, Math.min(100, Math.round(t.reduce((s, m) => s + m.level, 0) / t.length))) : 40
+}
+/** GALIJAH — cadeau de SECOURS : au 200ᵉ Daemon DIFFÉRENT du Pokédex, s'il n'a jamais été capturé, on l'offre
+ *  (au niveau moyen de l'équipe), one-shot. Renvoie le placement (team/pc) ou null si non éligible. */
+export function grantGalijahIfDexMilestone(): "team" | "pc" | null {
+    if (st.defeatedTrainers.includes(GALIJAH_OFFERED_MARKER)) return null
+    const caught = getPokedex().caught
+    if (caught.includes("galijah") || caught.length < GALIJAH_DEX_GIFT_THRESHOLD) return null
+    let mon: MonInstance
+    try { mon = createMonInstance("galijah", teamAverageLevel(), { owned: true }) } catch { return null }
+    st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_OFFERED_MARKER].filter((m) => m !== GALIJAH_ARMED_MARKER) } // flag AVANT + désarme
+    const where = addCaught(mon)
+    markCaught("galijah"); markCaughtThisRun("galijah")
+    return where
+}
+/** MÉGAMONARX — octroi ONE-SHOT (victoire Ligue de Fusion avec Dracolithe niv 100). MégamonarX n'étant pas une
+ *  fusion persistante, on le CRÉE (niv 100) et on le donne (modèle Ukognofy/pilier), puis on le marque au dex. */
+export function grantMegamonarx(): "team" | "pc" | null {
+    if (st.defeatedTrainers.includes(MEGAMONARX_GRANTED_MARKER)) return null
+    let mon: MonInstance
+    try { mon = createMonInstance("megamonarx", 100, { owned: true }) } catch { return null }
+    st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MEGAMONARX_GRANTED_MARKER] } // flag AVANT (anti double-don)
+    const where = addCaught(mon)
+    markCaught("megamonarx"); markCaughtThisRun("megamonarx")
+    return where
+}
+/** MÉGAMONARX — déjà obtenu ? (garde one-shot lue par le hook de la Ligue de Fusion). */
+export function hasMegamonarx(): boolean { return st.defeatedTrainers.includes(MEGAMONARX_GRANTED_MARKER) }
+
 export function creditDailyReps(today: string) {
     if (st.creditedThrough === today) return // déjà tické aujourd'hui
     const firstEver = st.creditedThrough === ""
@@ -1115,7 +1187,10 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
+        capturesToday: 0, // GALIJAH : nouveau jour → le compteur de captures repart de 0 (re-armable à la 150ᵉ)
     }
+    // GALIJAH : un nouveau jour désarme une chasse non aboutie de la veille (repart proprement à la prochaine 150ᵉ).
+    st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== GALIJAH_ARMED_MARKER) }
     emit()
 }
 

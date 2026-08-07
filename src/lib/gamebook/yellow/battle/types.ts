@@ -165,6 +165,9 @@ export interface SpeciesData {
     secretTalent?: string
     /** GÉKROC : apprend TOUTES les CT, quel que soit le type (couteau-suisse). Défaut : compat normale. */
     learnsAllCts?: boolean
+    /** GALIJAH (façon Mew) : combiné à learnsAllCts, EXCLUT ces types de l'apprentissage universel de CT
+     *  (ex. ["TENEBRES"] → apprend tout SAUF Ténèbres). Sans effet si learnsAllCts n'est pas true. */
+    learnsAllCtsExcept?: PokeType[]
     /** SURPRISE : MASQUÉ du Pokédex (même pas « vu ») tant que NON capturé (ex. Gékroc, Goshendofy). */
     hiddenUntilCaught?: boolean
     /** RÉSERVÉ AU RUN 2 (New Game+) : ABSENT des dex (Pokédex in-game ET dex de référence) — pas même une

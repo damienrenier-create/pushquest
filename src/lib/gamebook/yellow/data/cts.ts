@@ -181,7 +181,10 @@ export function getCt(id: string): CtData | null {
  *   OU attaque NORMAL.
  */
 export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
-    if (species.learnsAllCts) return true // GÉKROC : couteau-suisse, apprend TOUTES les CT (tous types)
+    if (species.learnsAllCts) { // GÉKROC : couteau-suisse, apprend TOUTES les CT (tous types)
+        const t = getMove(ct.moveId)?.type // GALIJAH : sauf les types exclus (ex. Ténèbres → bloque l'unique CT Ténèbres ct60)
+        return !(t && species.learnsAllCtsExcept?.includes(t))
+    }
     if (ct.universal) return true
     const move = getMove(ct.moveId)
     if (!move) return false

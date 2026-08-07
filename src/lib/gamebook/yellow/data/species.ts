@@ -2534,6 +2534,44 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Kangourou noir mort-vivant, sans mâchoire inférieure : tout son flanc droit n'est plus qu'un squelette. — Timide et rancunier — 🖋️ Création de Jacanon",
         sprite: "/yellow/sprites/dex/kangoudead.png",
     },
+    // ═══════ 🐉🪨 MÉGAMONARX — 3ᵉ LÉGENDAIRE (« fusion infinie » à l'identité propre) ═══════
+    //   Obtenu UNIQUEMENT en remportant la Ligue de Fusion avec un Dracolithe (Draconarque×Megalithe) niv 100 dans
+    //   l'équipe → il se matérialise en vrai Daemon officiel gardable (cf. grantMegamonarx / battleStore). Secret :
+    //   hiddenUntilCaught → « N°203 · ??? » jusqu'à obtention. Stats boostées au rang légendaire depuis ses 2 sources
+    //   (mur Megalithe hp/def + offense Draconarque atk) ; TRÈS lent (vit 55) pour laisser l'adversaire agir.
+    megamonarx: {
+        id: "megamonarx", dexNo: 203, name: "MégamonarX", types: ["DRAGON", "ROCHE"],
+        baseStats: { hp: 205, atk: 175, def: 170, spe: 55, spc: 145 }, // BST 750 — colosse ultra-lent (Megalithe × Draconarque, boosté légendaire)
+        learnset: [
+            { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "draco_souffle" },
+            { level: 30, moveId: "lame_roche" }, { level: 44, moveId: "danse_lames" },
+            { level: 55, moveId: "griffe_draconique" }, { level: 66, moveId: "roc_titanesque" },
+            { level: 80, moveId: "souffle_primordial" },
+        ],
+        catchRate: 3, baseExp: 300, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true,
+        role: "Dragon/Roche — LÉGENDAIRE (fusion infinie, mur-cogneur ultra-lent)",
+        description: "MégamonarX — l'apogée absolue de la fusion. Quand un Dracolithe atteint la perfection et triomphe de la Ligue, la roche et le dragon ne font plus qu'un : un colosse de pierre vivante hérissé de cristaux, dont chaque pas fait trembler le Nexus. On le dit immortel.",
+        sprite: "/yellow/sprites/dex/megamonarx.png",
+    },
+    // ═══════ 🐈‍⬛ GALIJAH — 4ᵉ et DERNIER LÉGENDAIRE (paisible, façon Mew) ═══════
+    //   Apparaît au niveau moyen de l'équipe ~3-4 pas après la 150ᵉ capture du jour (capture méthode légendaire) ;
+    //   à défaut, OFFERT au 200ᵉ Daemon différent du Pokédex. Apprend les CT de TOUS les types SAUF Ténèbres
+    //   (learnsAllCts + learnsAllCtsExcept). Secret : hiddenUntilCaught → « N°204 · ??? » jusqu'à obtention.
+    galijah: {
+        id: "galijah", dexNo: 204, name: "Galijah", types: ["FEE", "SPECTRE"],
+        baseStats: { hp: 120, atk: 100, def: 105, spe: 125, spc: 150 }, // BST 600 — polyvalent rapide/spécial (façon Mew)
+        learnset: [
+            { level: 1, moveId: "leche" }, { level: 1, moveId: "bourrasque_feerique" }, { level: 1, moveId: "choc_mental" },
+            { level: 12, moveId: "onde_folie" }, { level: 18, moveId: "drain_ame" }, { level: 24, moveId: "voile_feerique" },
+            { level: 30, moveId: "griffe_spectrale" }, { level: 38, moveId: "eveil_divin" }, { level: 46, moveId: "eclat_lunaire" },
+            { level: 54, moveId: "ball_ombre" }, { level: 62, moveId: "vague_mentale" }, { level: 72, moveId: "cataclysme_lunaire" },
+        ],
+        catchRate: 3, baseExp: 280, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true,
+        learnsAllCts: true, learnsAllCtsExcept: ["TENEBRES"], // façon Mew : apprend TOUS les types sauf Ténèbres
+        role: "Fée/Spectre — LÉGENDAIRE polyvalent (façon Mew)",
+        description: "Galijah — créature paisible et joueuse que l'on croyait légende. On raconte qu'elle porte en elle l'empreinte de tous les Daemons : elle imite n'importe quelle technique (hormis les ténèbres, qu'elle fuit). Elle n'apparaît qu'aux dresseurs les plus assidus, un jour de grande chasse.",
+        sprite: "/yellow/sprites/dex/galijah.png",
+    },
     // 🐊🪨 CROCAVERN — EXCLUSIF de la Grotte du Nexus (échange PNJ 6 + ultra-rare dans les bancs de sable). Colosse
     //   ROCHE/PLANTE : lent, défense solide, ATTAQUE monstrueuse. Mono-stade (pas d'évolution). Courbe RAPIDE.
     //   ROCHE = physique (son arme, ATQ 128) ; PLANTE = spécial → thématique/défensif (Vampigraine, drains).

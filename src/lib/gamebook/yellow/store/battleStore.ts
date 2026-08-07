@@ -56,6 +56,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
+import { bumpCapturesToday, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -122,6 +123,7 @@ interface BattleStoreState {
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
+    megamonarxReveal: boolean // 🐉🪨 MÉGAMONARX : signal one-shot « Dracolithe niv100 a transcendé » → cinématique + persist côté client (transitoire)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
@@ -178,7 +180,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, fusionSacre: null, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, fusionSacre: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -597,6 +599,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
+            // 🐈‍⬛ GALIJAH : +1 capture du jour (à la 150ᵉ → arme sa chasse) ; puis cadeau de secours au 200ᵉ dex.
+            bumpCapturesToday()
+            grantGalijahIfDexMilestone()
         }
     }
 
@@ -635,6 +640,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let lavapetitTeaser: "seen" | "caught" | null = null
     let fusioBallOffer = false // posé au sacre de la Ligue de Fusion (offre d'achat Fusio-Ball par le Dieu Spaghetti)
     let fusionSacre: { tier: string; team: FusionChampionMon[] } | null = null // roster vainqueur à graver au Hall of Fame
+    let megamonarxReveal = false // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vainqueur → cinématique de transcendance (client)
     let pnj6TradeOffer = false // posé à la victoire sur PNJ 6 (offre d'échange Crocavern ↔ team[0])
     if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
         const pl = getPlayer()
@@ -1093,6 +1099,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 })),
             }
         }
+        // 🐉🪨 MÉGAMONARX : si un DRACOLITHE niv 100 (Draconarque×Megalithe) était dans l'équipe-gauntlet vainqueur,
+        //   il TRANSCENDE en MégamonarX — octroi one-shot d'un vrai légendaire gardable + cinématique côté client.
+        //   getSpecies(f.speciesId).name = le nom OFFICIEL « Dracolithe » (via officialFusionForParents), pas le mot-valise.
+        if (!hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
+            if (grantMegamonarx()) megamonarxReveal = true
+        }
     }
 
     // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),
@@ -1175,7 +1187,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de l'AUTEL (fusion:TRIAL), elle, ne whiteout PAS (on y est déjà — on reste pour re-fusionner). Scopé y_fusion_*.
     const isFusionLeague = isFusionLeagueTrainer(storeState.trainer?.trainerId)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1766,6 +1778,19 @@ export function useFusionSacre(): { tier: string; team: FusionChampionMon[] } | 
 }
 export function clearFusionSacre() {
     setStore({ fusionSacre: null })
+}
+
+/** 🐉🪨 MÉGAMONARX — un Dracolithe niv100 vient-il de transcender (à la victoire de la Ligue de Fusion) ? Le client
+ *  lit ce signal one-shot pour jouer la cinématique historique puis appelle clearMegamonarxReveal + persiste. */
+export function useMegamonarxReveal(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().megamonarxReveal,
+        () => getSnapshot().megamonarxReveal,
+    )
+}
+export function clearMegamonarxReveal() {
+    setStore({ megamonarxReveal: false })
 }
 
 /** PNJ 6 (Échangeur Grotte) — propose-t-il l'échange Crocavern ↔ team[0] (post-victoire, transitoire) ? */

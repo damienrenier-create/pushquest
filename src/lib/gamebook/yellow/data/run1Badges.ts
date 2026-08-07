@@ -27,8 +27,12 @@ export type BadgeTier = "bronze" | "silver" | "gold" | "diamond" | "legend"
 export const TIER_POINTS: Record<BadgeTier, number> = { bronze: 5, silver: 15, gold: 30, diamond: 75, legend: 150 }
 export const TIER_EMOJI: Record<BadgeTier, string> = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎", legend: "🌟" }
 
-/** Ensemble des espèces capturables en RUN 1 (pour le badge « Pokédex run 1 complet »). Calculé une fois. */
-const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id)
+/** Légendaires ULTRA-SECRETS exclus de la COMPLÉTION du dex run 1 (obtention hors-normes : MégamonarX = gagner la
+ *  Ligue de Fusion avec un Dracolithe niv 100 ; Galijah = 150 captures/jour ou 200 espèces). Ils restent dans le
+ *  Pokédex (cartes « ??? » + capturables), mais ne sont PAS requis pour le badge de complétion. */
+const DEX_COMPLETION_EXCLUDE: ReadonlySet<string> = new Set(["megamonarx", "galijah"])
+/** Ensemble des espèces requises pour le badge « Pokédex run 1 complet » (hors ultra-secrets). Calculé une fois. */
+const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_COMPLETION_EXCLUDE.has(id))
 export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 141
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
 
