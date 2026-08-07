@@ -32,6 +32,7 @@ const FUSION_CUSTOM_PAIRS: { a: string; b: string; name: string; sprite: string 
     { a: "goshendofy", b: "ukognos", name: "Ukognofy", sprite: fusionSpritePath("Ukognofy") },
     { a: "shadow", b: "jerbiwat", name: "Shadowatt", sprite: fusionSpritePath("Shadowatt") }, // fusion faite-main (hors Ligue) — sprite fourni par Sartay
     { a: "crapotaure", b: "uzumaro", name: "Gamabunta", sprite: fusionSpritePath("Gamabunta") }, // fusion inédite « 2 grenouilles » (cf. SPECIAL_FUSION_PAIRS) — sprite crapaud-boss fourni par Sartay
+    { a: "vipember", b: "necrocorbe", name: "Orochitachi", sprite: fusionSpritePath("Orochitachi") }, // fusion inédite « vipère × corbeau » (cf. SPECIAL_FUSION_PAIRS) — sprite corbeau-serpent fourni par Sartay
 ]
 
 /** Fusions de l'ANCIENNE Ligue Kanto, RETIRÉES de la Ligue Johto mais gardées comme fusions « bonus » : un joueur

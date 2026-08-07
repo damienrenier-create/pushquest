@@ -77,6 +77,10 @@ describe("synergies", () => {
         const f = computeFusion(P("crapotaure", { types: ["ROCHE", "EAU"] }), P("uzumaro", { types: ["COMBAT", "EAU"] }))
         expect(f.name).toBe("Gamabunta"); expect(f.stats.hp).toBe(140); expect(f.types.length).toBeGreaterThanOrEqual(1)
     })
+    it("Vipember × Nécrocorbe → Orochitachi, boosté, type calculé", () => {
+        const f = computeFusion(P("vipember", { types: ["PSY", "FEU"] }), P("necrocorbe", { types: ["VOL", "POISON"] }))
+        expect(f.name).toBe("Orochitachi"); expect(f.stats.hp).toBe(140)
+    })
     it("synergies marines + meute → boosté", () => {
         expect(computeFusion(P("leviathonn"), P("mobyd")).stats.hp).toBe(140)
         expect(computeFusion(P("mobyd"), P("orcaline")).stats.hp).toBe(140)
