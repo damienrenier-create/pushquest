@@ -64,6 +64,23 @@ describe("synergies", () => {
         expect(f.stats.hp).toBe(130)  // mimimoy 0.7 + autre 0.6 (dominant)
         expect(f.stats.spc).toBe(115) // mimimoy 0.7 + autre 0.45 (récessif)
     })
+    it("Rochison × Mouflorage → Aimouflon, MÉTAL mono forcé, boosté", () => {
+        const f = computeFusion(P("rochison", { types: ["ROCHE", "SOL"] }), P("mouflorage", { types: ["SOL", "ELEC"] }))
+        expect(f.name).toBe("Aimouflon"); expect(f.types).toEqual(["METAL"]); expect(f.stats.hp).toBe(140)
+    })
+    it("CLAN gecko : 2 geckos → boosté", () => {
+        expect(computeFusion(P("gekraise"), P("gekosmic")).stats.hp).toBe(140)
+        expect(computeFusion(P("gekroc"), P("geaucke")).stats.hp).toBe(140)
+    })
+    it("synergies marines + meute → boosté", () => {
+        expect(computeFusion(P("leviathonn"), P("mobyd")).stats.hp).toBe(140)
+        expect(computeFusion(P("mobyd"), P("orcaline")).stats.hp).toBe(140)
+        expect(computeFusion(P("tenebrir"), P("loupyre")).stats.hp).toBe(140)
+    })
+    it("1 seul gecko / paire marine non listée → PAS de boost", () => {
+        expect(computeFusion(P("gekraise"), P("draclet")).stats.hp).toBe(120)
+        expect(computeFusion(P("leviathonn"), P("orcaline")).stats.hp).toBe(120) // paire non déclarée
+    })
     it("2 SHINY → tier max 0.8/0.6 (l'emporte sur le boost)", () => {
         const f = computeFusion(P("florapanthe", { shiny: true, types: ["PLANTE"] }), P("pyropanthe", { shiny: true, types: ["FEU"] }))
         expect(f.stats.hp).toBe(160); expect(f.stats.spc).toBe(120) // 0.8/0.6

@@ -61,13 +61,20 @@ export type FusionWeightMode = "normal" | "boosted" | "shiny" | "all"
 const WEIGHTS: Record<Exclude<FusionWeightMode, "all">, [number, number]> = {
     normal: [0.6, 0.45], boosted: [0.7, 0.5], shiny: [0.8, 0.6],
 }
-/** Les 6 PANTHÈRES évoluées : fusionner DEUX d'entre elles = synergie boostée. (Panthéon-base exclu, choix Sartay.) */
-const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"])
+/** CLANS : fusionner DEUX membres d'un même clan = synergie boostée (0,7/0,5). */
+const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"]) // 6 panthères évoluées (Panthéon-base exclu)
+const GECKO_IDS: ReadonlySet<string> = new Set(["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke"]) // lignée Gékroc (couteaux-suisses)
+const CLANS: readonly ReadonlySet<string>[] = [PANTHERE_IDS, GECKO_IDS]
 const MIMIMOY_ID = "mimimoy" // parent Mimimoy → TOUTES ses stats à 0,7 (révèle son potentiel aux croisements)
 /** Clé de paire indépendante de l'ordre. */
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
-/** Paires de SYNERGIE (boost only, nom auto conservé). */
-const SYNERGY_PAIRS: ReadonlySet<string> = new Set([pairKey("merorem", "tonytony")]) // piliers casino
+/** Paires de SYNERGIE précises (boost only, nom auto conservé). */
+const SYNERGY_PAIRS: ReadonlySet<string> = new Set([
+    pairKey("merorem", "tonytony"),   // piliers casino
+    pairKey("leviathonn", "mobyd"),   // monstres marins
+    pairKey("mobyd", "orcaline"),     // monstres marins
+    pairKey("tenebrir", "loupyre"),   // la meute
+])
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
 interface SpecialFusion { name: string; forcedType?: PokeType; concept?: string }
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
@@ -76,6 +83,7 @@ const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
     [pairKey("sylvapuce", "razmaree")]: { name: "Bourbicerf", forcedType: "SOL", concept: "un cerf trapu fait de BOUE et d'argile terreuse dégoulinante, bois de racines et de vase séchée, sabots enfoncés dans la fange, coulures brunes" }, // plante × eau → boue
     [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE", concept: "un spectre vaporeux fait de NUAGE et de brume bouillonnante née de la rencontre du feu et de l'eau, silhouette fantomatique aux volutes de vapeur, yeux luisants dans la brume" }, // feu × eau → nuage
     [pairKey("crocavern", "alirocaillus")]: { name: "Crocaroc", concept: "un crocodile massif cuirassé de ROCHE, plaques rocheuses et ailes membraneuses repliées, gueule minérale hérissée de cristaux" }, // croisement des crocos (type calculé)
+    [pairKey("rochison", "mouflorage")]: { name: "Aimouflon", forcedType: "METAL", concept: "une chèvre-bouquetin faite de MÉTAL aimanté, grandes cornes en fer magnétisé attirant des éclats métalliques en orbite, pelage de limaille grise, sabots d'acier" }, // roche × mouflon → chèvre de métal (aimant)
 }
 /** Fusion INÉDITE pour cette paire d'IDS de parents (ordre indifférent), ou null. */
 export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion | null {
@@ -86,12 +94,13 @@ export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion |
 export function specialFusionFor(a: FusionParent, b: FusionParent): SpecialFusion | null {
     return specialFusionForIds(a.speciesId, b.speciesId)
 }
-/** Génétique BOOSTÉE (0,7/0,5) ? = fusion inédite nommée OU 2 panthères OU paire de synergie. */
+/** Génétique BOOSTÉE (0,7/0,5) ? = fusion inédite nommée OU 2 membres d'un même CLAN OU paire de synergie. */
 function isBoostedFusion(a: FusionParent, b: FusionParent): boolean {
     if (specialFusionFor(a, b)) return true
     if (!a.speciesId || !b.speciesId) return false
-    if (PANTHERE_IDS.has(a.speciesId) && PANTHERE_IDS.has(b.speciesId)) return true
-    return SYNERGY_PAIRS.has(pairKey(a.speciesId, b.speciesId))
+    const aId = a.speciesId, bId = b.speciesId
+    if (CLANS.some((clan) => clan.has(aId) && clan.has(bId))) return true // 2 panthères, ou 2 geckos…
+    return SYNERGY_PAIRS.has(pairKey(aId, bId))
 }
 /** La fusion est-elle DORÉE (2 parents shiny → tier max 0,8/0,6) ? */
 export function isShinyFusion(a: FusionParent, b: FusionParent): boolean {
