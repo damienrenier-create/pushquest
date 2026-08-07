@@ -28,6 +28,8 @@ export interface FusionParent {
     level: number
     moves: readonly string[]   // ids des attaques ACTUELLES du parent (ordre = slots 1..4)
     heldItem?: string          // objet tenu (id) — le fusionné hérite de ceux de ses parents
+    speciesId?: string         // id d'espèce — sert aux FUSIONS SPÉCIALES + synergies (panthères, mimimoy). Optionnel (repli : génétique normale).
+    shiny?: boolean            // parent SHINY — si les DEUX parents sont shiny → génétique 0.8/0.6 + fusion dorée.
 }
 
 /** Bloc de stats du fusionné : 5 stats classiques (une SEULE Spéciale, comme tout Daemon — pas de split SpA/SpD). */
@@ -53,12 +55,52 @@ export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, Fusion
 // Les 5 stats soumises à la génétique dom/récessif — Spéciale INCLUSE dans le classement (choix Sartay 04/08).
 const STATS5: readonly StatKey[] = ["hp", "atk", "def", "spe", "spc"]
 
-/** Poids par stat pour un parent : les 3 plus HAUTES des 5 stats = 0,6 (dominantes), les 2 plus basses = 0,45
- *  (récessives). Égalité de valeur départagée par l'ordre fixe hp > atk > déf > vit > spé (déterministe). */
-export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<string, number> {
+// ═══════ FUSIONS SPÉCIALES & SYNERGIES (07/08) — génétique BOOSTÉE + types forcés ═══════
+/** Poids (dominant, récessif) par TIER de génétique. normal = base ; boosted = paires/synergies ; shiny = 2 shiny. */
+export type FusionWeightMode = "normal" | "boosted" | "shiny" | "all"
+const WEIGHTS: Record<Exclude<FusionWeightMode, "all">, [number, number]> = {
+    normal: [0.6, 0.45], boosted: [0.7, 0.5], shiny: [0.8, 0.6],
+}
+/** Les 6 PANTHÈRES évoluées : fusionner DEUX d'entre elles = synergie boostée. (Panthéon-base exclu, choix Sartay.) */
+const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"])
+const MIMIMOY_ID = "mimimoy" // parent Mimimoy → TOUTES ses stats à 0,7 (révèle son potentiel aux croisements)
+/** Clé de paire indépendante de l'ordre. */
+const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+/** Paires de SYNERGIE (boost only, nom auto conservé). */
+const SYNERGY_PAIRS: ReadonlySet<string> = new Set([pairKey("merorem", "tonytony")]) // piliers casino
+interface SpecialFusion { name: string; forcedType?: PokeType }
+/** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé). Toutes boostées (0,7/0,5). */
+const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
+    [pairKey("sylvapuce", "pyrokoss")]: { name: "Cendrecerf", forcedType: "TENEBRES" }, // plante × feu → charbon
+    [pairKey("sylvapuce", "razmaree")]: { name: "Bourbicerf", forcedType: "SOL" },       // plante × eau → boue
+    [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE" },      // feu × eau → nuage
+    [pairKey("crocavern", "alirocaillus")]: { name: "Crocaroc" },                         // croisement des crocos (type calculé)
+}
+/** Fusion INÉDITE nommée pour cette paire de parents (ordre indifférent), ou null. */
+export function specialFusionFor(a: FusionParent, b: FusionParent): SpecialFusion | null {
+    if (!a.speciesId || !b.speciesId) return null
+    return SPECIAL_FUSION_PAIRS[pairKey(a.speciesId, b.speciesId)] ?? null
+}
+/** Génétique BOOSTÉE (0,7/0,5) ? = fusion inédite nommée OU 2 panthères OU paire de synergie. */
+function isBoostedFusion(a: FusionParent, b: FusionParent): boolean {
+    if (specialFusionFor(a, b)) return true
+    if (!a.speciesId || !b.speciesId) return false
+    if (PANTHERE_IDS.has(a.speciesId) && PANTHERE_IDS.has(b.speciesId)) return true
+    return SYNERGY_PAIRS.has(pairKey(a.speciesId, b.speciesId))
+}
+/** La fusion est-elle DORÉE (2 parents shiny → tier max 0,8/0,6) ? */
+export function isShinyFusion(a: FusionParent, b: FusionParent): boolean {
+    return !!a.shiny && !!b.shiny
+}
+
+/** Poids par stat pour un parent selon le `mode` : "all" (Mimimoy) = 0,7 partout ; sinon 3 plus HAUTES = hi,
+ *  2 plus basses = lo (hi/lo selon le tier). Égalité départagée par l'ordre fixe hp>atk>déf>vit>spé (déterministe). */
+export function fusionWeights(stats: Readonly<Record<StatKey, number>>, mode: FusionWeightMode = "normal"): Record<string, number> {
+    if (mode === "all") { const w: Record<string, number> = {}; for (const k of STATS5) w[k] = 0.7; return w }
+    const [hi, lo] = WEIGHTS[mode]
     const order = [...STATS5].sort((a, b) => stats[b] - stats[a] || STATS5.indexOf(a) - STATS5.indexOf(b))
     const w: Record<string, number> = {}
-    order.forEach((k, i) => (w[k] = i < 3 ? 0.6 : 0.45))
+    order.forEach((k, i) => (w[k] = i < 3 ? hi : lo))
     return w
 }
 
@@ -66,7 +108,10 @@ export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<
  *  le poids vaut 0,6 si la stat est parmi les 3 plus hautes du parent, 0,45 sinon. Une stat dominante des DEUX côtés
  *  atteint 1,2 (peut dépasser les deux parents). Totalement INDÉPENDANT de l'ordre des parents (PvP déterministe). */
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
-    const wA = fusionWeights(a.stats), wB = fusionWeights(b.stats)
+    // Tier de la fusion : 2 shiny (0,8/0,6) > inédite/synergie (0,7/0,5) > normal (0,6/0,45). Mimimoy = 0,7 partout (par parent).
+    const tier: FusionWeightMode = isShinyFusion(a, b) ? "shiny" : isBoostedFusion(a, b) ? "boosted" : "normal"
+    const modeFor = (p: FusionParent): FusionWeightMode => (p.speciesId === MIMIMOY_ID ? "all" : tier)
+    const wA = fusionWeights(a.stats, modeFor(a)), wB = fusionWeights(b.stats, modeFor(b))
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])
     return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spc: s("spc") }
 }
@@ -150,12 +195,14 @@ export function fusionName(a: FusionParent, b: FusionParent): string {
     return `${head}-${tail}`
 }
 
-/** Calcule le profil complet de la fusion de A (dominant/tête) et B. Pur. */
+/** Calcule le profil complet de la fusion de A (dominant/tête) et B. Pur. Applique les FUSIONS INÉDITES
+ *  (nom curé + type MONO forcé) ; les stats intègrent déjà les tiers boostés (fuseStats). */
 export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const stats = fuseStats(a, b)
+    const special = specialFusionFor(a, b)
     return {
-        name: fusionName(a, b),
-        types: fuseTypes(a, b, stats),
+        name: special?.name ?? fusionName(a, b),
+        types: special?.forcedType ? [special.forcedType] : fuseTypes(a, b, stats),
         stats,
         level: Math.max(a.level, b.level),
         moves: fuseMoves(a, b),

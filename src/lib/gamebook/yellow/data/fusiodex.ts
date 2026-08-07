@@ -65,7 +65,7 @@ export function officialFusionProgress(seenIds: string[]): { seen: number; total
 
 /** FusionParent à partir d'une ESPÈCE seule : level/moves sont des placeholders (sans effet sur nom/types). */
 function fusionParentFromSpecies(sp: SpeciesData): FusionParent {
-    return { name: sp.name, types: sp.types, stats: sp.baseStats, level: 1, moves: sp.learnset.map((l) => l.moveId) }
+    return { name: sp.name, types: sp.types, stats: sp.baseStats, level: 1, moves: sp.learnset.map((l) => l.moveId), speciesId: sp.id }
 }
 
 export interface HistoryFusionEntry {

@@ -27,6 +27,8 @@ export function fusionParentFromInstance(inst: MonInstance): FusionParent {
         level: inst.level,
         moves: inst.moves.map((m) => m.moveId),
         heldItem: inst.heldItem,
+        speciesId: inst.speciesId, // FUSIONS SPÉCIALES + synergies (panthères/mimimoy/merorem×tonytony)
+        shiny: inst.shiny,         // 2 parents shiny → génétique 0,8/0,6 + fusion dorée
     }
 }
 
@@ -83,6 +85,7 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     registerCustomSpecies([buildFusionSpecies(id, result, sprite, [a.speciesId, b.speciesId], name, opts?.moves)])
     const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
+    if (a.shiny && b.shiny) instance.shiny = true // ✨ FUSION DORÉE : 2 parents shiny → résultat shiny (+ génétique 0,8/0,6 déjà appliquée)
     instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
     // Objets tenus : le fusionné hérite des 2 objets de ses parents (heldItem + heldItem2). Les helpers de
     //   data/heldItems.ts COMBINENT les 2 effets (le moteur lit ces helpers → aucune touche à engine.ts).
