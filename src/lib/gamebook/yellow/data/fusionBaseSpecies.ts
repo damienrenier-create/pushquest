@@ -131,13 +131,18 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         description: "Fusion exclusive du couloir de Shady : une ombre-nouille aux pouvoirs psychiques troubles.",
         sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
     },
-    {   // Rocaptère = gavillus + lavapetit (zone B1F-6)
+    {   // ★ Rocaptère = gavillus + lavapetit (zone B1F-6) — STADE 1 de la SEULE lignée de fusion ÉVOLUTIVE du jeu.
+        //   Stats/learnset = calcul-moteur de la fusion des stades de BASE des 2 lignées parentes (fuseStats/fuseTypes).
+        //   Learnset = UNION des learnsets de gavillus + lavapetit (la lignée cumule tout via l'évolution). Évolue niv 20
+        //   (= moyenne des évos parentes : lavapetit→fissuralave niv17 & gavillus→crocodaillus niv22). Stades ≥2 = SECRETS
+        //   (aucun pop Grotte, uniquement par évolution) → cf. fissuraillus/magmaillus plus bas.
         id: "rocaptere", dexNo: 516, name: "Rocaptère", types: ["ROCHE", "VOL"],
-        baseStats: { hp: 74, atk: 47, def: 39, spe: 31, spc: 24 }, // BST 215
-        learnset: [{ level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "picpic" }, { level: 14, moveId: "tornade" }, { level: 28, moveId: "eboulis" }, { level: 44, moveId: "fonce_bec" }, { level: 60, moveId: "lame_roche" }, { level: 84, moveId: "roc_titanesque" }],
+        baseStats: { hp: 41, atk: 88, def: 70, spe: 65, spc: 42 }, // BST 306 (fusion base×base : gavillus × lavapetit)
+        learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "picpic" }, { level: 1, moveId: "jet_de_sable" }, { level: 8, moveId: "jet_pierres" }, { level: 16, moveId: "flammeche" }, { level: 18, moveId: "malediction" }, { level: 28, moveId: "mur_de_fer" }],
+        evolution: { toId: "fissuraillus", method: { kind: "LEVEL", level: 20 } },
         catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
-        description: "Fusion exclusive du couloir de Gavillus : un ptérosaure de roche magmatique.",
-        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+        description: "Fusion exclusive du couloir de Gavillus : un ptérosaure de roche magmatique — et l'aube d'une lignée insoupçonnée.",
+        sprite: "/yellow/sprites/dex/rocaptere.png", hiddenUntilCaught: true,
     },
     {   // Givrasol = goatiny + guizer (zone B2F)
         id: "givrasol", dexNo: 517, name: "Givrasol", types: ["SOL", "GLACE"],
@@ -146,6 +151,30 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Fusion exclusive du Sanctuaire B2F : un béhémoth de sol gelé né de deux créations.",
         sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+
+    // ═══════ LIGNÉE ÉVOLUTIVE SECRÈTE (1re fusion qui évolue) — Rocaptère(516) → Fissuraillus → Magmaillus ═══════
+    //   Fusion « stade par stade » des 2 lignées Roche/Feu (lavapetit→fissuralave→magmator) et Vol/Roche
+    //   (gavillus→crocodaillus→alirocaillus). Stats/types = calcul-moteur (fuseStats/fuseTypes) sur les stats de BASE
+    //   des paires correspondantes ; learnset = UNION des 2 parents (l'évolution conserve les acquis → la lignée
+    //   apprend ÉNORMÉMENT d'attaques). Stades 2/3 = ULTRA SECRETS : AUCUN pop Grotte, AUCUNE paire dans
+    //   FUSION_BASE_PARENTS → obtenables UNIQUEMENT en faisant évoluer Rocaptère, et catalogués seulement au Fusiodex.
+    {   // Fissuraillus = fissuralave × crocodaillus (stade 2) — évolue de Rocaptère niv 20, évolue niv 39 (= moy 37 & 40).
+        id: "fissuraillus", dexNo: 518, name: "Fissuraillus", types: ["ROCHE", "VOL"],
+        baseStats: { hp: 66, atk: 119, def: 96, spe: 86, spc: 47 }, // BST 414 (fusion base×base : fissuralave × crocodaillus)
+        learnset: [{ level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "flammeche" }, { level: 1, moveId: "picpic" }, { level: 1, moveId: "jet_de_sable" }, { level: 24, moveId: "vive_attaque" }, { level: 30, moveId: "seisme" }, { level: 30, moveId: "hurlement" }, { level: 36, moveId: "lance_flammes" }, { level: 36, moveId: "mur_de_fer" }],
+        evolution: { toId: "magmaillus", method: { kind: "LEVEL", level: 39 } },
+        catchRate: 3, baseExp: 155, rarity: "RARE", growthRate: "medium_fast",
+        description: "Stade 2 secret : le ptérosaure de roche déploie des ailes membraneuses et laisse la lave suinter de ses fissures.",
+        sprite: "/yellow/sprites/dex/fissuraillus.png", hiddenUntilCaught: true,
+    },
+    {   // Magmaillus = magmator × alirocaillus (stade 3, final) — évolue de Fissuraillus niv 39.
+        id: "magmaillus", dexNo: 519, name: "Magmaillus", types: ["ROCHE", "VOL"],
+        baseStats: { hp: 68, atk: 148, def: 105, spe: 101, spc: 69 }, // BST 491 (fusion base×base : magmator × alirocaillus)
+        learnset: [{ level: 1, moveId: "seisme" }, { level: 1, moveId: "lance_flammes" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "mur_de_fer" }, { level: 1, moveId: "vive_attaque" }, { level: 42, moveId: "lame_roche" }, { level: 44, moveId: "belier" }, { level: 48, moveId: "carapace_diamant" }, { level: 48, moveId: "berceuse" }, { level: 54, moveId: "vol" }, { level: 60, moveId: "meteores" }],
+        catchRate: 3, baseExp: 240, rarity: "RARE", growthRate: "medium_fast",
+        description: "Stade 3 secret : un dragon volcanique majestueux dont la roche en fusion irradie à chaque battement d'ailes.",
+        sprite: "/yellow/sprites/dex/magmaillus.png", hiddenUntilCaught: true,
     },
 ]
 
