@@ -6,7 +6,7 @@
 // l'ancien casino (transition douce / A-B test). Le numéro gagnant est local en solo (serveur en multi).
 
 import { useState } from "react"
-import { usePlayer, spendCasinoBet, isCasinoRestricted, CASINO_VOW_MAX_BET, casinoRemainingToday, grantReps, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendCasinoBet, isCasinoRestricted, CASINO_VOW_MAX_BET, casinoRemainingToday, grantReps, creditReps, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import RouletteTable from "./RouletteTable"
 
@@ -24,8 +24,20 @@ export default function RouletteCasinoModal({ onClose }: { onClose: () => void }
         if (spendCasinoBet(amt).ok) setCaisse((c) => c + amt) // débit immédiat ; recrédité à l'encaissement
     }
     const loadTicket = () => { const v = consumeTicket(); if (v > 0) setCaisse((c) => c + v) }
+    // ANNULATION (sans jouer) : simple remboursement du chargé → PLAFONNÉ (grantReps). Surtout pas creditReps :
+    // la caisse peut contenir la valeur d'un TICKET jamais débité des reps → creditReps donnerait de l'énergie
+    // gratuite au-dessus du plafond + gonflerait le cap. Le rachat de ticket doit respecter la jauge (cf. barman).
     const cancel = () => { if (caisse > 0) { grantReps(caisse); persistYellowSave() } onClose() }
-    const cashout = (finalBalance: number) => { grantReps(finalBalance); persistYellowSave(); onClose() }
+    // ENCAISSEMENT : on sépare le PRINCIPAL (≤ chargé, remboursement plafonné) du GAIN réel (au-delà du chargé),
+    // seul ce dernier échappant au plafond (creditReps, comme le cash-out poker) → un gros gain n'est jamais
+    // tronqué, sans transformer la valeur d'un ticket non joué en énergie au-dessus du cap.
+    const cashout = (finalBalance: number) => {
+        const gain = Math.max(0, finalBalance - caisse)   // gain réel = solde final au-delà du chargé
+        const principal = finalBalance - gain             // = min(finalBalance, caisse)
+        if (principal > 0) grantReps(principal)
+        if (gain > 0) creditReps(gain)
+        persistYellowSave(); onClose()
+    }
 
     if (entered) {
         return (

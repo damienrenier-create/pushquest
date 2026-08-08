@@ -215,8 +215,12 @@ export async function getRouletteState(): Promise<RouletteStatePayload> {
         userId: b.userId, nickname: b.nickname, staked: b.staked, net: b.net, bets: parseBets(b.betsJson), ready: b.ready,
     }))
 
+    // `bets: { some: {} }` : on n'expose QUE les manches où au moins un joueur a misé. Une manche résolue
+    // à VIDE (doublon de création refermé par tick, ou timer expiré sans parieur) ne doit jamais devenir le
+    // "dernier résultat" affiché — c'est ce qui faisait tourner la roue sur un numéro fantôme (ex. 33) pour un
+    // joueur dont la vraie manche était ailleurs. Sans pari, il n'y a de toute façon aucun gain à réconcilier.
     const resolved = await prisma.rouletteRound.findMany({
-        where: { status: "RESOLVED", winningNumber: { not: null } },
+        where: { status: "RESOLVED", winningNumber: { not: null }, bets: { some: {} } },
         orderBy: { resolvedAt: "desc" },
         take: RECENT_RESULTS,
         select: {

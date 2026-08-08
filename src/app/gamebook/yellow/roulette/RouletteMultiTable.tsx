@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, creditReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -139,8 +139,14 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         const pc = pendingCreditRef.current
         pendingCreditRef.current = null
         if (!pc || !markRouletteClaimed(pc.roundId)) return
-        const ret = pc.staked + pc.net // mise remboursée + gain net (net<0 = perte déjà actée au débit)
-        if (ret > 0) grantReps(ret)
+        // On sépare le RETOUR en deux : le PRINCIPAL (remboursement de la mise, ≤ mise) reste plafonné
+        // (grantReps) — la part venant des reps tenait déjà sous le cap, la part venant du crédit/ticket doit
+        // respecter le cap (pas d'énergie gratuite au-dessus). Seul le GAIN net réel échappe au plafond
+        // (creditReps, comme le cash-out poker) → un gros gain n'est jamais tronqué.
+        const gain = Math.max(0, pc.net)
+        const principal = pc.staked + pc.net - gain // = min(retour, mise)
+        if (principal > 0) grantReps(principal)
+        if (gain > 0) creditReps(gain)
         if (pc.net > 0) addCasinoWon(pc.net) // 🥚 le gain net fait progresser la quête Tonytony (compte tenu par le croupier)
         if (pc.solo && pc.net > 0) decrementRouletteLuck(pc.net) // chance potion (secret) : récup jusqu'au prix payé
         persistYellowSave()
@@ -199,6 +205,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         }
 
         // Quelle manche DÉMARRE une animation ce cycle ? (nouvelle manche résolue, hors 1er chargement statique)
+        // = la dernière manche résolue AVEC AU MOINS UN PARI (le serveur exclut désormais les manches vides de
+        // recentResults) → on n'anime plus jamais un numéro "fantôme" d'une manche sans parieur, tout en gardant
+        // l'animation partagée (spectateur inclus). C'était la cause du "33 affiché alors que ma manche = 12".
         const latest = data.recentResults[0]
         const startingSpin = latest && wheelInitRef.current && latest.roundId !== lastSpunRef.current ? latest.roundId : null
         // Manche dont le crédit est DIFFÉRÉ jusqu'à l'arrêt de la bille (celle qui démarre OU qui anime déjà).
@@ -219,8 +228,11 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             if (!mine) continue
             if (r.roundId === deferId) continue // ⏳ crédit différé → onDone
             if (markRouletteClaimed(r.roundId)) {
-                const ret = mine.staked + mine.net      // mise remboursée + gain net (net<0 = perte déjà actée au débit)
-                if (ret > 0) grantReps(ret)
+                // Principal (mise) plafonné, gain net non tronqué — cf. creditPending.
+                const gain = Math.max(0, mine.net)
+                const principal = mine.staked + mine.net - gain
+                if (principal > 0) grantReps(principal)
+                if (gain > 0) creditReps(gain)
                 // CHANCE potion (secret) : si SEUL sur la manche et gain net, on récupère jusqu'au prix payé.
                 if (r.players.length === 1 && mine.net > 0) decrementRouletteLuck(mine.net)
                 persistYellowSave()
