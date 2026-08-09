@@ -189,6 +189,12 @@ export interface YellowSave {
     /** VŒU DU GÉNIE (monde LIVE) — ⚡ restant à dépenser avant de pouvoir RÉUTILISER/ACHETER une Ball.
      *  Verrou actif tant que > 0 ; chaque dépense de reps le réduit ; à 0 le verrou se lève. Défaut 0. */
     ballLockRemaining: number
+    /** VŒU « ABONDANCE MAUDITE » (Jacanon) — début (ms) de la malédiction (1 semaine) ; nb d'objets gratuits pris
+     *  (→ nb de Daemons rendus désobéissants à la fin, max 7) ; date du dernier objet gratuit (throttle 1/jour).
+     *  Tous optionnels/absents par défaut → save-safe, additif. */
+    curseAbundanceStart?: number
+    curseFreeItemsTaken?: number
+    curseFreeItemDate?: string
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -291,6 +297,7 @@ function parseMon(raw: unknown): MonInstance | null {
         originalNickname: typeof o.originalNickname === "string" ? o.originalNickname : undefined,
         capturedMapId: typeof o.capturedMapId === "string" ? o.capturedMapId : undefined,
         capturedQuotaReached: o.capturedQuotaReached === true ? true : undefined,
+        disobedient: o.disobedient === true ? true : undefined, // VŒU MAUDIT (Jacanon) : ce Daemon refuse d'obéir jusqu'à la grâce du créateur
     }
 }
 
@@ -626,6 +633,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         forcedEncounter: typeof o.forcedEncounter === "string" ? o.forcedEncounter : undefined,
         fusionLeagueCarry: typeof o.fusionLeagueCarry === "string" ? o.fusionLeagueCarry : undefined,
+        curseAbundanceStart: typeof o.curseAbundanceStart === "number" ? o.curseAbundanceStart : undefined,       // vœu maudit Jacanon
+        curseFreeItemsTaken: typeof o.curseFreeItemsTaken === "number" ? Math.max(0, Math.floor(o.curseFreeItemsTaken)) : undefined,
+        curseFreeItemDate: typeof o.curseFreeItemDate === "string" ? o.curseFreeItemDate : undefined,
     }
 }
 
@@ -655,5 +665,6 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         originalNickname: m.originalNickname,
         capturedMapId: m.capturedMapId,
         capturedQuotaReached: m.capturedQuotaReached ? true : undefined,
+        disobedient: m.disobedient ? true : undefined, // VŒU MAUDIT (Jacanon) : persiste le refus d'obéir
     }
 }

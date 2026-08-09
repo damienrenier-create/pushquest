@@ -71,7 +71,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects, setCustomDaemonSprites } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -983,6 +983,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 } catch { /* neutre */ }
             }
+            // 🍝 VŒU MAUDIT (Jacanon) : à l'EXPIRATION de la semaine, N Daemons du PC deviennent désobéissants (login,
+            //   one-shot ; no-op ailleurs car le marqueur est per-monde). Non-destructif (flag réversible par le créateur).
+            if (!cancelled) { const n = resolveAbundanceCurse(); if (n > 0) { persistYellowSave(); setToast(`😈 L'abondance a un prix : ${n} de tes Daemons refusent désormais de t'obéir…`) } }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)
@@ -3581,6 +3584,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
                             <span>BOUTIQUE</span><span>💪 {player.reps}/{player.repsCap} reps</span>
                         </div>
+                        {isAbundanceCurseActive() && (
+                            <div style={{ fontSize: 11, color: "#e8b84a", background: "rgba(232,184,74,0.12)", borderRadius: 8, padding: "6px 8px", margin: "4px 0 6px", lineHeight: 1.4 }}>
+                                🍝 <b>Abondance maudite</b> — achat payant COUPÉ. {abundanceFreeItemAvailableToday() ? "Choisis 1 objet GRATUIT aujourd'hui (hors CT)." : "Objet gratuit du jour déjà pris — reviens demain."}
+                            </div>
+                        )}
                         {(() => {
                             const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
                             const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
@@ -3596,18 +3604,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "6px 0 2px" }}>{label}</div>
                                         {list.map((it) => {
                                             const owned = player.items[it.id] ?? 0
-                                            const locked = it.category === "BALL" && player.ballLockRemaining > 0 // VŒU DU GÉNIE : achat de Ball verrouillé
+                                            const ballLocked = it.category === "BALL" && player.ballLockRemaining > 0 // VŒU DU GÉNIE : achat de Ball verrouillé
+                                            const curse = isAbundanceCurseActive() // VŒU MAUDIT (Jacanon) : achat payant coupé, 1 objet gratuit/jour (hors CT)
+                                            const freeAvail = curse && abundanceFreeItemAvailableToday()
                                             const afford = player.reps >= it.price
+                                            const usable = curse ? freeAvail : (afford && !ballLocked) // maudit → seul l'objet gratuit du jour est cliquable
                                             return (
                                                 <button
                                                     key={it.id}
-                                                    style={afford && !locked ? menuBtnStyle : menuBtnDimStyle}
-                                                    disabled={!afford || locked}
-                                                    onClick={() => { setBuyConfirm({ id: it.id, name: it.name, price: it.price }); setBuyQty(1) }}
+                                                    style={usable ? menuBtnStyle : menuBtnDimStyle}
+                                                    disabled={!usable}
+                                                    onClick={() => {
+                                                        if (curse) { if (takeFreeShopItem(it.id)) { persistYellowSave(); setToast(`🎁 Objet gratuit du jour : ${it.name} ! (vœu maudit)`) } return }
+                                                        setBuyConfirm({ id: it.id, name: it.name, price: it.price }); setBuyQty(1)
+                                                    }}
                                                 >
                                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
-                                                        <span>{it.price} reps</span>
+                                                        <span>{curse ? "GRATUIT" : `${it.price} reps`}</span>
                                                     </span>
                                                     <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}</span>
                                                 </button>
@@ -3622,7 +3636,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {/* Super Pasta : +1 niveau, prix dynamique (monte à chaque achat du jour). */}
                         {(() => {
                             const price = superPastaPrice()
-                            const afford = player.reps >= price && player.team.length > 0
+                            const afford = player.reps >= price && player.team.length > 0 && !isAbundanceCurseActive() // VŒU MAUDIT : achat payant coupé
                             return (
                                 <button
                                     style={afford ? { ...menuBtnStyle, borderColor: "#f5d020" } : menuBtnDimStyle}
@@ -3637,8 +3651,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </button>
                             )
                         })()}
-                        {/* Accès aux Capsules Techniques (CT) */}
-                        <button style={menuBtnStyle} onClick={() => { setCtShop(true); setCtPick(null) }}>
+                        {/* Accès aux Capsules Techniques (CT) — coupé pendant l'abondance maudite (CT exclues du gratuit + achat off) */}
+                        <button style={isAbundanceCurseActive() ? menuBtnDimStyle : menuBtnStyle} disabled={isAbundanceCurseActive()} onClick={() => { setCtShop(true); setCtPick(null) }}>
                             <span style={{ display: "flex", justifyContent: "space-between" }}>
                                 <span>🎓 Capsules CT</span><span>attaques</span>
                             </span>

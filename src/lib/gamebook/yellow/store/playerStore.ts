@@ -188,6 +188,10 @@ interface PlayerState {
     forcedEncounter?: string
     /** LIGUE DE FUSION — usure du gauntlet persistée (JSON) pour REPRENDRE la ligue au reload (équipe abîmée). */
     fusionLeagueCarry?: string
+    /** VŒU « ABONDANCE MAUDITE » (Jacanon) — début (ms), nb d'objets gratuits pris, date du dernier objet gratuit. */
+    curseAbundanceStart?: number
+    curseFreeItemsTaken?: number
+    curseFreeItemDate?: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -507,6 +511,9 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         forcedEncounter: p.forcedEncounter ?? st.forcedEncounter,
         fusionLeagueCarry: p.fusionLeagueCarry ?? st.fusionLeagueCarry,
+        curseAbundanceStart: "curseAbundanceStart" in p ? p.curseAbundanceStart : st.curseAbundanceStart,
+        curseFreeItemsTaken: "curseFreeItemsTaken" in p ? p.curseFreeItemsTaken : st.curseFreeItemsTaken,
+        curseFreeItemDate: "curseFreeItemDate" in p ? p.curseFreeItemDate : st.curseFreeItemDate,
     }
     emit()
 }
@@ -1005,6 +1012,12 @@ export function trackBallLockSpend(n: number) {
 export const CASINO_RESTRICTED_MARKER = "casino_restricted"
 export const CASINO_VOW_MAX_BET = 10
 export const CASINO_VOW_MAX_PER_DAY = 200
+// VŒU « ABONDANCE MAUDITE » (Jacanon) : marqueur d'activité (defeatedTrainers) + durée 1 semaine + plafond de
+//   Daemons rendus désobéissants à la fin. Le compteur d'objets gratuits pris = le nb de Daemons touchés (max 7).
+export const ABUNDANCE_CURSE_MARKER = "abundance_curse_active"
+export const ABUNDANCE_CURSE_MS = 7 * 24 * 3600 * 1000
+export const ABUNDANCE_MAX_DISOBEY = 7
+const todayStr = () => new Date().toISOString().slice(0, 10)
 export function isCasinoRestricted(): boolean { return st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER) }
 /** Mise autorisée ? (cap génie). Ne débite RIEN. `ok:true` si non restreint. */
 export function casinoBetAllowed(bet: number): { ok: boolean; reason?: string } {
@@ -1056,6 +1069,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "nemesis_challenge": if (!st.defeatedTrainers.includes(NEMESIS_ARMED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, NEMESIS_ARMED_MARKER] }; return true // arme le défi némésis (PNJ apparaît)
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino 10/mise + 200/jour (enforcé par les jeux)
+        case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         default: return false                                                                              // type non géré → non appliqué
     }
 }
@@ -1091,6 +1105,42 @@ export function applyAcceptedGenieWishEffects(row: {
     }
     if (changed) emit()
     return changed
+}
+
+// ═══════ VŒU « ABONDANCE MAUDITE » (Jacanon) — helpers (gaté par ABUNDANCE_CURSE_MARKER, save-safe) ═══════
+/** La malédiction est-elle ACTIVE ? (marqueur posé ET moins d'1 semaine écoulée depuis le départ). */
+export function isAbundanceCurseActive(): boolean {
+    if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) return false
+    const start = st.curseAbundanceStart ?? 0
+    return start > 0 && Date.now() < start + ABUNDANCE_CURSE_MS
+}
+/** Un objet gratuit est-il DISPONIBLE aujourd'hui ? (malédiction active + pas déjà pris ce jour). */
+export function abundanceFreeItemAvailableToday(): boolean {
+    return isAbundanceCurseActive() && (st.curseFreeItemDate ?? "") !== todayStr()
+}
+/** Prend l'objet gratuit du jour (1/jour ; l'UI restreint aux non-CT). Renvoie true si donné. */
+export function takeFreeShopItem(itemId: string): boolean {
+    if (!itemId || !abundanceFreeItemAvailableToday()) return false
+    addItem(itemId, 1)
+    st = { ...st, curseFreeItemDate: todayStr(), curseFreeItemsTaken: Math.min(ABUNDANCE_MAX_DISOBEY, (st.curseFreeItemsTaken ?? 0) + 1) }
+    emit()
+    return true
+}
+/** À l'EXPIRATION (>1 semaine) : marque N Daemons AU HASARD du PC `disobedient` (N = objets gratuits pris, max 7),
+ *  puis désarme la malédiction. NON-destructif (flag réversible par le créateur). Appelé au login. Renvoie N touchés. */
+export function resolveAbundanceCurse(): number {
+    if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) return 0
+    const start = st.curseAbundanceStart ?? 0
+    if (start <= 0) return 0 // défensif : marqueur présent mais date de début manquante (persistance/corruption) → NE PAS désarmer
+    if (Date.now() < start + ABUNDANCE_CURSE_MS) return 0 // pas encore expiré
+    const n = Math.min(ABUNDANCE_MAX_DISOBEY, st.curseFreeItemsTaken ?? 0)
+    const idx = st.pc.map((_, i) => i)
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]] } // Fisher-Yates
+    const chosen = new Set(idx.slice(0, n))
+    const pc = st.pc.map((m, i) => (chosen.has(i) ? { ...m, disobedient: true } : m))
+    st = { ...st, pc, defeatedTrainers: st.defeatedTrainers.filter((t) => t !== ABUNDANCE_CURSE_MARKER), curseAbundanceStart: undefined }
+    emit()
+    return chosen.size
 }
 
 /** Dépense des reps (boutique OU attaque). Renvoie false si solde insuffisant. */

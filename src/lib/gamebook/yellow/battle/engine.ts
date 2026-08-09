@@ -363,13 +363,19 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
             // normal où l'équipe suit la progression) → resolveTurnPvp intact (le PvP saute ce bloc via !state.pvp).
             let disobeyed = false
             if (!state.pvp && act.side === "player") {
-                const cap = obedienceCap(cur.traded, state.playerBadgeCount ?? 5)
-                if (cur.level > cap && rng.chance(disobeyChance(cur.level, cap))) {
+                if (cur.disobedient) {
+                    // VŒU MAUDIT (Jacanon) : ce Daemon refuse TOUJOURS, quels que soient les badges, jusqu'à la grâce du créateur.
                     disobeyed = true
-                    const why = cur.traded === true
-                        ? "pas assez de badges pour commander un Daemon échangé"
-                        : "il est trop fort pour ton niveau de Dresseur — décroche plus de badges !"
-                    events.push({ kind: "message", text: `${displayName(cur)} n'en fait qu'à sa tête et IGNORE ton ordre ! 😾 (${why})` })
+                    events.push({ kind: "message", text: `${displayName(cur)} refuse catégoriquement de t'obéir… 😈 (Daemon frappé par le vœu maudit)` })
+                } else {
+                    const cap = obedienceCap(cur.traded, state.playerBadgeCount ?? 5)
+                    if (cur.level > cap && rng.chance(disobeyChance(cur.level, cap))) {
+                        disobeyed = true
+                        const why = cur.traded === true
+                            ? "pas assez de badges pour commander un Daemon échangé"
+                            : "il est trop fort pour ton niveau de Dresseur — décroche plus de badges !"
+                        events.push({ kind: "message", text: `${displayName(cur)} n'en fait qu'à sa tête et IGNORE ton ordre ! 😾 (${why})` })
+                    }
                 }
             }
             // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir : si le Daemon ne peut PAS
