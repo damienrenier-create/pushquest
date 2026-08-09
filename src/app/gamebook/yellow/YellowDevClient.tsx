@@ -58,7 +58,7 @@ import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -388,6 +388,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const stoneReward = useStoneReward()
     const lavapetitTeaser = useLavapetitTeaser() // RUN 3 : teaser Dieu Spag Lavapetit (post-combat)
     const fusioBallOffer = useFusioBallOffer() // LIGUE DE FUSION : offre Fusio-Ball du Dieu Spaghetti (post-sacre)
+    const loopOffer = useLoopOffer() // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (post-capture Ukognofy / sacre OR)
     const fusionParentReward = useFusionParentReward() // LIGUE DE FUSION : XP reversée aux parents (fin de combat)
     const fusionSacre = useFusionSacre() // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (sacre Dieu Spaghetti)
     const megamonarxReveal = useMegamonarxReveal() // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vient de transcender → cinématique historique
@@ -484,6 +485,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => () => { if (resetHoldTimer.current) clearTimeout(resetHoldTimer.current) }, [])
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
+    const [loopModal, setLoopModal] = useState(false) // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (accepter/refuser)
+    const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation
     const fusioBuyingRef = useRef(false) // verrou anti-double-tap sur l'achat (mobile) : 1 débit / 1 balle max
     const fusioReofferShownRef = useRef(false) // Fusio-Ball : re-proposition montrée UNE fois par session (anti-nag)
     const [pnj6Modal, setPnj6Modal] = useState(false) // offre d'échange PNJ 6 (post-victoire)
@@ -1430,6 +1433,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward])
 
+    // BOUCLE ENDGAME — OFFRE « recrée ton Daemon & repars » : posée par finishBattle (capture Ukognofy / sacre OR),
+    //   consommée ici une fois l'écran LIBRE. On s'enchaîne APRÈS l'offre Fusio-Ball (au sacre OR, les deux partent
+    //   dans le même flush) via !fusioBallModal && !fusioBallOffer. Jamais en bulle de rejeu (double garde).
+    useEffect(() => {
+        if (loopOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun
+            && !fusionParentReward && !fusioBallOffer && !fusioBallModal && !fusionSacre && getActiveWorld() !== "replay") {
+            setLoopModal(true)
+            clearLoopOffer()
+        }
+    }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre])
+
     // FUSIO-BALL — RE-PROPOSITION : offre EN ATTENTE (non achetée au sacre, marker fusioball_owed) + reps ≥ seuil →
     //   le Dieu Spaghetti la re-propose au MAX 1×/JOUR (marker daté persisté = anti-spam ; avant : 1×/session → re-pop à
     //   chaque rechargement). S'arrête net à l'achat (owed retiré).
@@ -1804,6 +1818,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         ])
     }
 
+    // BOUCLE ENDGAME — lance le rejeu du run 1 GRATUITEMENT (récompense de fin de jeu) avec le Daemon custom
+    //   fraîchement recréé comme starter. Contourne postReplaySpend (pas de coût JC — c'est un cadeau). Non-destructif :
+    //   passe par startReplay (bulle isolée), le vrai monde est stashé/restauré intact. Créé HORS bulle (garde amont).
+    const startLoopReplay = async (stored: StoredCustomDaemon) => {
+        let starter: ReturnType<typeof createMonInstance>
+        try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) } catch { setToast("Daemon custom corrompu."); return }
+        const ok = await startReplay("run1", starter)
+        if (!ok) { setToast("Rejeu impossible pour l'instant."); return }
+        void generateCustomSpritesInBackground(stored) // NON bloquant : génère le vrai sprite de la création (comme le NG+) → tient la promesse de l'écran de succès (MISSINGNO en attendant)
+        setMenu("none"); setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            "*Le Dieu Spaghetti sourit. Une bulle dorée t'enveloppe, ta nouvelle création à tes côtés…*",
+            `« Repars au tout début du Nexus avec ${stored.spec.name} ! Une traversée fraîche, rien que vous deux. »`,
+            "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² ». »",
+            "« À la SORTIE (Menu → 🚪), tu ramèneras autant de Daemons que de BADGES gagnés ici (+1 si tu bats la Ligue) — dont ta création, si tu la gardes. Bonne route, champion ! 🍝 »",
+        ])
+    }
+
     // REJEU — SORT de la bulle : fige le score « bis » au classement (POST) puis restaure le vrai monde INTACT.
     const doExitReplay = async (keep: MonInstance[] = []) => {
         const run = getReplayRun()
@@ -1869,6 +1901,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (selectedFusionUid) { setSelectedFusionUid(null); return true } // fermer la fiche fusion
         if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
         if (fusioBallModal) { setFusioBallModal(false); return true } // offre Fusio-Ball post-sacre (décliner)
+        if (loopModal) { setLoopModal(false); return true } // BOUCLE ENDGAME : décliner l'offre (re-proposée au prochain sacre OR / capture)
         if (pnj6Modal) { setPnj6Modal(false); return true } // offre d'échange PNJ 6 (décliner)
         // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
         if (pantheonEvo) { setPantheonEvo(null); return true }
@@ -3326,6 +3359,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 />
             )}
 
+            {/* BOUCLE ENDGAME — créateur en mode « boucle » : à la création, on enchaîne sur un REJEU du run 1 (gratuit,
+                bulle isolée) avec la nouvelle création en starter. Créé HORS bulle (l'offre est gatée activeWorld!=="replay"). */}
+            {loopCreatorOpen && (
+                <DaemonCreator
+                    ownerId={userId} nickname={nickname}
+                    mode="loop"
+                    close={() => setLoopCreatorOpen(false)}
+                    onCreated={(spec) => { setLoopCreatorOpen(false); void startLoopReplay({ ownerId: userId, spec }) }}
+                />
+            )}
+
             {/* NG+ — confirmation d'ABANDON (chez le Prof. CHEN) : action IRRÉVERSIBLE (starter + 6000⚡ perdus). */}
             {abandonConfirm && (
                 <div style={menuOverlayStyle} onClick={() => setAbandonConfirm(false)}>
@@ -3661,6 +3705,25 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 )
             })()}
+
+            {/* BOUCLE ENDGAME — offre « recrée ton Daemon & repars » (post-capture Ukognofy / sacre OR). Accepter →
+                ouvre le créateur (mode boucle) → rejeu run 1 gratuit avec la création en starter. Refuser → re-proposé
+                au prochain sacre OR. Non-destructif (bulle isolée). */}
+            {loopModal && (
+                <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setLoopModal(false)}>
+                    <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🔁 UNE NOUVELLE BOUCLE ?</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
+                            Tu as atteint le sommet, Maître. 🍝 Le Dieu Spaghetti t&apos;offre de <b style={{ color: "#ffe36b" }}>concevoir un nouveau compagnon</b> et de <b>repartir au tout début du Nexus</b> avec lui — une traversée fraîche, rien que vous deux.
+                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
+                                Ton vrai monde reste <b>intact</b> (simple bulle de rejeu). Tu refuses ? Il te le re-proposera à ta prochaine victoire à la Ligue de Fusion.
+                            </div>
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>
+                        <button style={menuBtnDimStyle} onClick={() => setLoopModal(false)}>Plus tard</button>
+                    </div>
+                </div>
+            )}
 
             {/* PNJ 6 — offre d'échange Crocavern ↔ team[0] (post-victoire). IRRÉVERSIBLE : verrou anti-double-tap. */}
             {pnj6Modal && (() => {

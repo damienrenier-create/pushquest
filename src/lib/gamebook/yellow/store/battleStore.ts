@@ -121,6 +121,7 @@ interface BattleStoreState {
     stoneReward: string | null
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
+    loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
     megamonarxReveal: boolean // 🐉🪨 MÉGAMONARX : signal one-shot « Dracolithe niv100 a transcendé » → cinématique + persist côté client (transitoire)
@@ -180,7 +181,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, fusionSacre: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -609,6 +610,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)
     //        et la Pierre Gékroc est libérée (objet → fait évoluer Panthéon, cf. Part B).
     let stoneReward: string | null = null
+    let loopOffer = false // BOUCLE ENDGAME : passe à true à la capture d'Ukognofy ou au sacre OR (hors bulle de rejeu) → exposé au client
     if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc" || e.speciesId === "gekraise" || e.speciesId === "gekosmic")) {
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
@@ -631,7 +633,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2-quater) UKOGNOFY (LÉGENDAIRE ULTIME, chambre cachée) : CAPTURÉ → marker « caught » (disparu à jamais) ;
     //           toute AUTRE issue (KO/défaite/fuite) = 1 ÉCHEC. Au 3e échec → disparu à jamais (isUkognofyGone).
     if (b.isWild && b.enemy.team.some((e) => e.speciesId === "ukognofy")) {
-        if (b.outcome === "caught") markTrainerDefeated(UKOGNOFY_CAUGHT_MARKER)
+        if (b.outcome === "caught") {
+            markTrainerDefeated(UKOGNOFY_CAUGHT_MARKER)
+            if (getActiveWorld() !== "replay") loopOffer = true // BOUCLE : capturer le légendaire ultime propose de recréer son Daemon & repartir
+        }
         else { const fm = nextUkognofyFailMarker(isTrainerDefeated); if (fm) markTrainerDefeated(fm) }
     }
 
@@ -1080,6 +1085,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
         markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
+        // BOUCLE ENDGAME : le palier ULTIME (OR) propose de recréer son Daemon perso & rejouer le run 1. Re-proposé
+        //   à CHAQUE sacre OR (événementiel) → refus = re-tenté au prochain. Jamais en bulle de rejeu.
+        if (sacredTier === "or" && getActiveWorld() !== "replay") loopOffer = true
         // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) au sacre (offre transitoire, modale côté client).
         //   On pose AUSSI le marker `fusioball_owed` (persistant) : si le joueur ne l'achète pas maintenant (souvent
         //   < 1000 reps après la Ligue), il la RE-proposera dès que le joueur atteindra 1200 reps. Retiré à l'achat.
@@ -1189,7 +1197,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de l'AUTEL (fusion:TRIAL), elle, ne whiteout PAS (on y est déjà — on reste pour re-fusionner). Scopé y_fusion_*.
     const isFusionLeague = isFusionLeagueTrainer(storeState.trainer?.trainerId)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, fusionSacre, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1756,6 +1764,19 @@ export function useFusioBallOffer(): boolean {
 }
 export function clearFusioBallOffer() {
     setStore({ fusioBallOffer: false })
+}
+
+/** BOUCLE ENDGAME — le Dieu Spaghetti propose-t-il de recréer son Daemon & rejouer le run 1 (post-capture Ukognofy
+ *  ou post-sacre OR, transitoire) ? Consommé UNE fois par le client puis clearé. */
+export function useLoopOffer(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().loopOffer,
+        () => getSnapshot().loopOffer,
+    )
+}
+export function clearLoopOffer() {
+    setStore({ loopOffer: false })
 }
 
 /** LIGUE DE FUSION — message « XP reversée aux parents » à afficher en fin de combat (transitoire), ou null. */

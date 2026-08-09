@@ -262,7 +262,14 @@ export function effectiveRunWorld(): "live" | "ngplus" | "run3" { return runMode
  *  exigent un starter. Les flags `used` posés ici vivent dans la bulle (jetée à la sortie) → sans effet sur le réel.
  *  L'énergie de départ + le passage activeWorld="replay" sont gérés par saveManager.startReplay. */
 export function startReplayWorld(run: "run1" | "run2" | "run3", starter: MonInstance | null): boolean {
-    if (run === "run1") { resetForIntro(); return true }   // fresh run 1 → l'intro choisit le starter
+    if (run === "run1") {
+        resetForIntro()                                     // monde run 1 FRAIS (reps/énergie regérés ensuite par startReplay)
+        // BOUCLE ENDGAME : si un starter custom est fourni, on l'installe en équipe et on SAUTE l'intro (comme
+        //   startNgPlusWorld) — le joueur repart directement avec son Daemon perso. Sinon (rejeu classique du menu),
+        //   introSeen reste false → l'intro choisit un starter de base. customDaemons est préservé par resetForIntro.
+        if (starter) { st = { ...st, team: [starter], introSeen: true }; emit() }
+        return true
+    }
     if (!starter) return false
     if (run === "run2") { startNgPlusWorld(starter); return true }
     startRun3World(starter); return true
@@ -332,8 +339,24 @@ export function incNgplusBattles() {
  *  (ré-enregistré au chargement). Idempotent-ish : borne la liste, ignore une spec qui ne se construit pas. */
 export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
     try { registerCustomSpecies(buildCustomSpecies(spec, ownerId)) } catch { return } // spec illégale → on n'enregistre rien
-    const MAX = 20
-    st = { ...st, customDaemons: [...st.customDaemons, { ownerId, spec }].slice(-MAX) }
+    const MAX = 40 // relevé (la boucle endgame permet plus de créations) ; le vrai garde-fou est l'éviction ci-dessous
+    const list: StoredCustomDaemon[] = [...st.customDaemons, { ownerId, spec }]
+    let trimmed = list
+    if (list.length > MAX) {
+        // RÈGLE D'OR : ne JAMAIS évincer une lignée RÉFÉRENCÉE par un Daemon POSSÉDÉ (équipe/PC). Sinon, au reload,
+        //   reregisterCustomDaemons ne la ré-enregistre plus → l'instance possédée devient irrésoluble (speciesOf
+        //   throw = combat/dex cassés pour un Daemon réel). On retire les PLUS ANCIENNES lignées NON référencées
+        //   jusqu'à revenir sous le plafond ; on garde TOUTES les référencées + la plus récente (quitte à dépasser
+        //   MAX transitoirement — la sécurité d'un owned prime sur le plafond de confort).
+        const ownedIds = [...st.team, ...st.pc].map((m) => m.speciesId)
+        const isReferenced = (d: StoredCustomDaemon) => { const base = customLineageBaseId(d); return ownedIds.some((sid) => sid === base || sid.startsWith(`${base}_`)) }
+        let excess = list.length - MAX
+        trimmed = list.filter((d, i) => {
+            if (excess <= 0 || i === list.length - 1 || isReferenced(d)) return true // rien à retirer / la nouvelle / protégée
+            excess--; return false // plus ancienne lignée NON référencée → évincée
+        })
+    }
+    st = { ...st, customDaemons: trimmed }
     emit()
 }
 /** Attache les sprites GÉNÉRÉS (Gemini, 1 par stade — index 0 = stade 1) à une lignée custom déjà créée, puis

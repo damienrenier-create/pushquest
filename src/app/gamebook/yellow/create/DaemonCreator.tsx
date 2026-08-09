@@ -43,9 +43,10 @@ function defaultSpec(): CustomSpec {
     }
 }
 
-export default function DaemonCreator({ ownerId, nickname, close, onCreated }: { ownerId: string; nickname: string; close: () => void; onCreated?: (spec: CustomSpec) => void }) {
-    // Mode FORCÉ (post-sacre) : le créateur n'est pas dismissable et lance le New Game+ à la création.
+export default function DaemonCreator({ ownerId, nickname, close, onCreated, mode }: { ownerId: string; nickname: string; close: () => void; onCreated?: (spec: CustomSpec) => void; mode?: "ngplus" | "loop" }) {
+    // Mode FORCÉ (post-sacre NG+ OU boucle endgame) : le créateur n'est pas dismissable et enchaîne à la création.
     const forced = !!onCreated
+    const isLoop = mode === "loop" // BOUCLE ENDGAME : enchaîne sur un REJEU du run 1 (pas un NG+) → libellés adaptés
     const [step, setStep] = useState(0)
     const [spec, setSpec] = useState<CustomSpec>(defaultSpec)
     const [created, setCreated] = useState<string | null>(null) // JSON soumis (écran de succès)
@@ -129,7 +130,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
             <div style={S.overlay} onClick={forced ? undefined : close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
                     <div style={S.h}>🧬 Daemon envoyé au labo !</div>
-                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ pour l&apos;instant — son vrai visage arrive sous peu, une fois ton New Game+ lancé).</p>
+                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ pour l&apos;instant — son vrai visage arrive sous peu{isLoop ? ", une fois de retour au Nexus" : ", une fois ton New Game+ lancé"}).</p>
                     {nemFinal && (
                         <div style={{ ...S.errBox, background: "#f3e6f6", border: "2px solid #8a4a9a", color: "#4a1c54", marginBottom: 8 }}>
                             <b>👹 Le Némésis d&apos;ACE</b> — une lignée forgée pour te contrer :
@@ -139,10 +140,10 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
                             <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>Bats ACE en 1ʳᵉ ville pour te l&apos;approprier.</div>
                         </div>
                     )}
-                    <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>Phase 2 : sauvegarde en base, New Game+ (6000 ⚡), puis fusion des comptes après avoir battu ta propre équipe.</p>
+                    <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>{isLoop ? "Il t'accompagnera comme starter dans une nouvelle traversée du Nexus (bulle de rejeu — ton vrai monde reste intact)." : "Phase 2 : sauvegarde en base, New Game+ (6000 ⚡), puis fusion des comptes après avoir battu ta propre équipe."}</p>
                     {forced ? (
                         <button style={{ ...S.primary, fontSize: 15, padding: "12px 0", background: "#e0a020", borderColor: "#e0a020" }} onClick={() => onCreated!(effSpec)}>
-                            🚀 COMMENCER TON NEW GAME+
+                            {isLoop ? "🔁 REPARTIR AU NEXUS AVEC LUI !" : "🚀 COMMENCER TON NEW GAME+"}
                         </button>
                     ) : (
                         <>
