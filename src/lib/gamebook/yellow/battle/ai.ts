@@ -8,6 +8,7 @@ import type { BattleMon } from "./types"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { typeEffectiveness, moveCategory } from "./typeChart"
+import { computeDamage } from "./damage"
 import { fullStats } from "./stats"
 import type { Rng } from "./rng"
 
@@ -91,8 +92,16 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             const phys = moveCategory(mv.type) === "PHYSICAL"
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
             const def = fStats ? (phys ? fStats.def : (foe.frozenSpd ?? fStats.spc)) : 1 // FUSION : SpD séparée si présente
-            score = mv.power * eff * stab * (off / Math.max(1, def))
+            const acc = mv.accuracy > 0 ? mv.accuracy / 100 : 1 // PRÉCISION : un coup peu fiable vaut moins (n'enchaîne pas un move à 70 %)
+            score = mv.power * eff * stab * (off / Math.max(1, def)) * acc
             if (eff === 0) score = -1 // IMMUNISÉ (ex. NORMAL→SPECTRE, SOL→VOL) : ne JAMAIS choisir tant qu'un autre coup existe
+            else {
+                // KO : le coup TUE la cible ce tour (dégâts RÉELS estimés, sans crit, aléa moyen 0,9 → conservateur)
+                //   ≥ PV restants → priorité ABSOLUE (finir le travail plutôt que sur-optimiser). Pondéré par la
+                //   précision → un KO fiable prime sur un KO risqué.
+                const est = computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: stab > 1, typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
+                if (est >= foe.currentHp) score += 1e6 * acc
+            }
             // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
         }
@@ -159,21 +168,10 @@ export function chooseAiAction(
     // --- "hof" (Hall of Fame) : la plus maligne. Dégâts attendus (STAB + bonne stat), ouverture statut,
     //     et un switch UNIQUEMENT face à une faiblesse ×4 qu'on ne peut pas punir (sans yo-yo). ---
     if (level === "hof") {
-        const myTypes = getSpecies(self.speciesId)?.types ?? []
-        const foeTypes = getSpecies(foe.speciesId)?.types ?? []
-        const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
+        // LIGUE : ne CHANGE JAMAIS de Daemon (choix de Sartay) — chaque Daemon combat jusqu'au KO. TOUTE
+        //   l'intelligence est dans le CHOIX DU COUP (dégâts RÉELS estimés + détection de KO + précision +
+        //   ouverture statut + anti-immunité + anti-buff-gâché), cf. scoreMovesHof. (Ancien switch ×4 retiré.)
         const scoredHof = scoreMovesHof(self, foe)
-        const myBestEff = Math.max(0, ...scoredHof.map((s) => s.eff))
-        // Switch seulement si on est ×4 faible ET incapable de frapper en super-efficace, vers un banc
-        // STRICTEMENT plus résistant (anti yo-yo : une fois rentré sur un bon matchup, on cesse de switcher).
-        if (incomingOnMe >= 4 && myBestEff < 2) {
-            const sw = bestSwitchIndex(team, activeIndex, foe)
-            if (sw !== null) {
-                const candTypes = getSpecies(team[sw].speciesId)?.types ?? []
-                const incomingOnCand = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, candTypes), 1)
-                if (incomingOnCand < incomingOnMe && rng.chance(75)) return { kind: "switch", teamIndex: sw }
-            }
-        }
         let best = scoredHof[0]
         for (const s of scoredHof) if (s.score > best.score) best = s
         return { kind: "move", moveIndex: best.index }

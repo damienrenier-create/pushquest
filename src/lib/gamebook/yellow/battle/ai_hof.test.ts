@@ -31,26 +31,24 @@ describe("IA Hall of Fame (\"hof\") — la plus maligne", () => {
         expect(attack.moveIndex).toBe(1) // frappe plutôt que de statuer une cible déjà au tapis
     })
 
-    it("CHANGE de Daemon face à une faiblesse ×4 imparable, sans le faire hors de ce cas (anti yo-yo)", () => {
-        // ×4 : Rochison (Roche/Sol) actif face à un assaillant EAU, banc = Cerfeuillu (résiste Eau).
+    it("ne CHANGE JAMAIS de Daemon (Ligue : combat jusqu'au KO, même face à une faiblesse ×4)", () => {
+        // Choix de Sartay : l'IA de Ligue ("hof") ne switch plus — toute l'intelligence est dans le coup joué.
+        // Même un lead ×4 faible (Rochison Roche/Sol face à un assaillant EAU) reste en jeu et frappe.
         const weakLead = mon("rochison", 60, ["charge"])
         const bench = mon("cerfeuillu", 60, ["charge"])
         const foeWater = mon("razmaree", 60, ["hydrocanon"])
-        let switches = 0
         for (let s = 0; s < 40; s++) {
             const c = chooseAiAction(weakLead, foeWater, [weakLead, bench], 0, "hof", new Rng(s + 1))
-            if (c.kind === "switch") { expect(c.teamIndex).toBe(1); switches++ }
+            expect(c.kind).toBe("move") // JAMAIS de switch en Ligue
         }
-        expect(switches).toBeGreaterThan(10) // le switch se déclenche bien (≈75% du temps)
+    })
 
-        // Contrôle : un lead qui RÉSISTE ne doit JAMAIS changer.
-        const safeLead = mon("cerfeuillu", 60, ["charge"])
-        let safeSwitches = 0
-        for (let s = 0; s < 40; s++) {
-            const c = chooseAiAction(safeLead, foeWater, [safeLead, weakLead], 0, "hof", new Rng(s + 1))
-            if (c.kind === "switch") safeSwitches++
+    it("FINIT le travail : sur une cible presque morte, préfère le coup LÉTAL au buff (Danse-Lames)", () => {
+        const foe = mon("cerfeuillu", 60, ["charge"]); foe.currentHp = 6 // presque mort → un coup Eau le met K.O.
+        for (let s = 0; s < 20; s++) {
+            const self = mon("razmaree", 60, ["danse_lames", "pistolet_a_o"]) // buff (0) vs coup Eau (létal ici)
+            expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
         }
-        expect(safeSwitches).toBe(0)
     })
 })
 
