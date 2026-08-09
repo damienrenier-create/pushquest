@@ -358,7 +358,7 @@ export const TRAINERS: TrainerData[] = [
         x: 16,
         y: 29,
         team: [
-            { speciesId: "aquilord", level: 88 }, { speciesId: "rochison", level: 88 }, { speciesId: "megalithe", level: 88 },
+            { speciesId: "aquilord", level: 88 }, { speciesId: "rochison", level: 88 }, { speciesId: "megalithe", level: 88, moves: ["roc_titanesque", "seisme", "lame_roche", "carapace_diamant"] },
             { speciesId: "chronorex", level: 88 }, { speciesId: "alirocaillus", level: 88 }, { speciesId: "gekraise", level: 88 },
         ],
         reward: 1000,
@@ -1377,7 +1377,7 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "toucanyon", level: 56 },   // VOL/FEU — rapace de feu
             { speciesId: "chronorex", level: 57 },   // ROCHE/VOL — façon Ptéra
             { speciesId: "cryotyran", level: 58 },   // DRAGON/GLACE — tyran des glaces
-            { speciesId: "draconarque", level: 60, moves: ["draco_charge", "pique_fatal", "belier", "danse_lames"], opening: ["danse_lames"] }, // VOL/DRAGON — l'AS dragon
+            { speciesId: "draconarque", level: 60, moves: ["draco_charge", "pique_fatal", "belier", "danse_lames"] }, // VOL/DRAGON — l'AS dragon (opening Danse-Lames RETIRÉ : il gâchait le 1er tour à se buffer ; l'IA décide maintenant → attaque d'entrée)
         ],
         reward: 450, aiLevel: "trainer",
         intro: [
@@ -1399,7 +1399,7 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "voltapanthe", level: 59 },
             { speciesId: "aquilothan", level: 60 },
             { speciesId: "divinpate", level: 60 },
-            { speciesId: "megalithe", level: 62 },
+            { speciesId: "megalithe", level: 62, moves: ["seisme", "lame_roche", "belier", "carapace_diamant"] },
         ],
         reward: 0, aiLevel: "ace",
         intro: [
