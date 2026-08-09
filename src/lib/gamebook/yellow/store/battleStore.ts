@@ -61,7 +61,7 @@ import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
-import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { attackCost, effectiveQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
 import { BATTLE_LS_KEY } from "../storage/sessionKeys"
@@ -464,7 +464,11 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
     const hpFrac = me.currentHp / Math.max(1, maxHpOf(me)) // Patience : coût ∝ puissance réelle (PV bas → plus cher)
-    return attackCost(getMove(slot.moveId), me.level, effectiveQuota(getPlayer().wildCtx?.quota), hpFrac)
+    // RUN 3 (concours) : coût UNIFORME (quota étalon) → INDÉPENDANT des reps du jour du joueur, pour que la
+    //   compétition soit ÉGALE pour tous (un petit jour ne donne plus des attaques moins chères). Hors run 3 :
+    //   coût scalé par le quota IRL (mercy des petits jours). effectiveRunWorld couvre aussi le rejeu run 3 (bulle).
+    const quota = effectiveRunWorld() === "run3" ? QUOTA_STD : effectiveQuota(getPlayer().wildCtx?.quota)
+    return attackCost(getMove(slot.moveId), me.level, quota, hpFrac)
 }
 
 export function submitPlayerAction(action: PlayerAction) {
