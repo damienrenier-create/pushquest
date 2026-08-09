@@ -33,6 +33,9 @@ export const TIER_EMOJI: Record<BadgeTier, string> = { bronze: "🥉", silver: "
 const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_ULTRA_SECRET.has(id))
 export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 141
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
+// Lignée Gékroc — les 5 Geckos élémentaires (miroir de GECKO_IDS dans fusionSpecies.ts). Inliné en littéral pour
+// garder ce module PUR (pas d'import de données lourdes). Collectionner les 5 = un vrai haut fait de complétion.
+const GECKO_IDS = ["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke"]
 
 /** Données (issues d'UNE save) nécessaires pour évaluer TOUS les badges. Pur → pas de store. */
 export interface BadgeInput {
@@ -69,6 +72,10 @@ export interface BadgeInput {
     markers?: readonly string[]   // save.defeatedTrainers (marqueurs d'événement + ids de dresseurs battus)
     pnj5Wins?: number             // victoires sur le Gardien du Nexus (descente de la Grotte)
     fusionsCreated?: number       // fusionHistory.length (fusions créées à l'Autel)
+    // ── side quests « plaisir » (dérivés DIRECTS de la save → rétroactifs, aucun nouveau champ save) ──
+    pokerPlayed?: boolean         // pokerFirstGameDone (a joué au moins une partie de poker)
+    heldItemEquipped?: boolean    // un Daemon (équipe ou PC) porte un objet tenu
+    giftCts?: number              // ownedCts.length (CT-cadeaux/trophées de boss possédées)
 }
 
 const shinyCount = (i: BadgeInput) => i.mons.filter((m) => m.shiny).length
@@ -171,6 +178,16 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "fusion_league", label: "Débloquer la Ligue de Fusion", tier: "gold", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_UNLOCK), reveal: (i) => (i.fusionsCreated ?? 0) >= 1 || hasMk(i, MK_AUTEL) || hasMk(i, MK_FUSION_UNLOCK) },
     { id: "fusion_champion", label: "Maître de la Chimère (Ligue de Fusion vaincue)", tier: "diamond", secret: true, cat: "fusion", earned: (i) => hasAnyMk(i, MK_FUSION_TIERS), reveal: (i) => hasMk(i, MK_FUSION_UNLOCK) || hasAnyMk(i, MK_FUSION_TIERS) },
     { id: "fusion_gold", label: "Champion OR de la Ligue de Fusion", tier: "legend", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_OR), reveal: (i) => hasAnyMk(i, MK_FUSION_TIERS) },
+
+    // ── ⑨ SIDE QUESTS « plaisir » (🔒 révélées à la réalisation) : baies, poker, objet tenu, CT-cadeau ──
+    { id: "berries", label: "Percer le secret des baies", tier: "silver", secret: true, cat: "exploration", earned: (i) => i.berrySecretKnown, reveal: (i) => i.berrySecretKnown },
+    { id: "poker", label: "Jouer une partie de poker", tier: "bronze", secret: true, cat: "special", earned: (i) => i.pokerPlayed === true, reveal: (i) => i.pokerPlayed === true },
+    { id: "held_item", label: "Équiper un objet tenu à un Daemon", tier: "silver", secret: true, cat: "special", earned: (i) => i.heldItemEquipped === true, reveal: (i) => i.heldItemEquipped === true },
+    { id: "gift_ct", label: "Obtenir une CT-cadeau (trophée de boss)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.giftCts ?? 0) >= 1, reveal: (i) => (i.giftCts ?? 0) >= 1 },
+
+    // ── ⑩ COLLECTIONS de lignées — réunir toute une famille (🔒 révélées dès qu'on croise la famille) ──
+    { id: "geckos_all", label: "Réunir les 5 Geckos élémentaires", tier: "gold", secret: true, cat: "collection", earned: (i) => GECKO_IDS.every((id) => has(i, id)), reveal: (i) => sawAny(i, ...GECKO_IDS) },
+    { id: "panthers_all", label: "Réunir les 6 Panthères élémentaires", tier: "diamond", secret: true, cat: "collection", earned: (i) => PANTHEON_EVOS.every((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
 ]
 
 export interface BadgeState { id: string; tier: BadgeTier; points: number; earned: boolean; revealed: boolean }
@@ -231,5 +248,9 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         markers: s.defeatedTrainers ?? [],
         pnj5Wins: s.pnj5Wins ?? 0,
         fusionsCreated: (s.fusionHistory ?? []).length,
+        // ── side quests « plaisir » : dérivés DIRECTS de la save (rétroactifs, aucun nouveau champ) ──
+        pokerPlayed: s.pokerFirstGameDone === true,
+        heldItemEquipped: mons.some((m) => !!m.heldItem),
+        giftCts: (s.ownedCts ?? []).length,
     }
 }

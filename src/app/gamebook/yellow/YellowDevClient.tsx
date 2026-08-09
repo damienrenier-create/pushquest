@@ -3188,7 +3188,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 🏆 Ton score : <b style={{ color: "#ffe36b" }}>{run3EndOffer.score}</b> — gravé dans le Nexus.
                             </div>
                             <div style={{ margin: "6px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
-                                🍝 <b>MÉGA-FUSION</b> : tes trois vies (run 1 + run 2 + run 3) n'en font plus qu'UNE. Ton équipe du concours reste active ; tous tes anciens Daemons rejoignent ton PC.
+                                🍝 <b>MÉGA-FUSION</b> : tes trois vies (run 1 + run 2 + run 3) n'en font plus qu'UNE. Ton équipe du concours reste active ; tous tes anciens Daemons, objets et CT te rejoignent au PC/sac. La suite t'attend au <b>SUD de Ville Jaune</b>…
                             </div>
                         </div>
                         <button style={menuBtnStyle} onClick={async () => {
@@ -3209,11 +3209,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             completeRun3().finally(() => {
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",
-                                    `Ton score final : ${score}. Il rejoint le grand registre du Nexus — sauras-tu le battre un jour ?`,
+                                    `Ton score final : ${score}. Gravé au grand registre du Nexus — sauras-tu le battre un jour ?`,
                                     "En cet instant, tes TROIS vies FUSIONNENT : run 1, run 2 et run 3 n'en font plus qu'un seul monde unifié.",
-                                    "➡️ TOUT ce que tu as entraîné t'attend : file au PC d'un Centre Daemon — tes anciennes équipes, tes captures et tes fusions des TROIS runs y sont TOUTES réunies. Tes objets et tes CT aussi, dans ton sac.",
-                                    "🧬 À toi de composer ton ÉQUIPE IDÉALE : pioche le meilleur de chacune de tes vies pour bâtir la team ultime.",
-                                    "⚔️ Puis reprends l'aventure là où tu l'avais laissée — va défier SYLVEBARBE et les dresseurs les plus aguerris du Nexus. La suite du monde t'attend, Maître ! 🍝",
+                                    "🖥️ Fonce au PC d'un Centre Daemon : TOUTES tes équipes, tes captures et tes fusions des TROIS runs y sont réunies — et tes objets & CT dans ton sac. Compose ta team ULTIME en piochant le meilleur de chaque vie.",
+                                    "🗺️ Ensuite, cap au SUD de Ville Jaune : là veille SYLVEBARBE. Une fois la voie franchie, la ZONE DE COMBAT s'ouvre à toi.",
+                                    "⚔️ Un conseil : décroche d'abord l'OR au DÔME DE COMBAT — sans ce titre, le gardien de la grotte te refoulera.",
+                                    "🌀 Alors le passeur t'ouvrira la GROTTE DU NEXUS — ta Grotte Victoire — et tout au fond t'attendent l'ULTIME Ligue et les secrets qu'elle scelle. Va, Maître ! 🍝",
                                 ])
                             })
                         }}>🌀 MÉGA-FUSION</button>
