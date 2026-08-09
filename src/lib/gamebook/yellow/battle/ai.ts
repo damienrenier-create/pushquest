@@ -42,6 +42,7 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
             else score = 25 // autre statut (para/sommeil/boost…) : score plancher utile
         } else {
             score = power * eff
+            if (eff === 0) score = -1 // IMMUNISÉ (ex. NORMAL→SPECTRE, SOL→VOL) : ne JAMAIS choisir tant qu'un autre coup existe
             // RECUL : à basse vie, un coup à recul risque le SUICIDE → on l'évite fortement SAUF s'il est
             // super-efficace (kamikaze probablement fatal à l'adversaire, assumé). À vie haute, recul OK (survivable).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
@@ -73,6 +74,16 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
         if (isStatus) {
             // SOIN : inutile à pleine vie, précieux à basse vie → échelonné sur les PV MANQUANTS (anti « Repos à full »).
             if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            // BUFF de stat sur SOI (Danse-Lames…) : à ÉVITER à bas PV (on meurt avant d'en profiter) ET si le boost
+            //   OFFENSIF ne matche pas notre stat d'attaque dominante (ex. +Atk sur un attaquant SPÉCIAL = quasi
+            //   inutile). Sinon, mise en place raisonnable (sous un bon coup). Corrige « Danse-Lames à bas PV / spé ».
+            else if (mv.effect?.statChanges?.some((c) => c.target === "self" && c.stages > 0)) {
+                const boosts = mv.effect.statChanges.filter((c) => c.target === "self" && c.stages > 0)
+                const isPhysAttacker = sStats ? sStats.atk >= sStats.spc : true
+                const boostsAtk = boosts.some((c) => c.stat === "atk"), boostsSpc = boosts.some((c) => c.stat === "spc")
+                const mismatched = (boostsAtk && !boostsSpc && !isPhysAttacker) || (boostsSpc && !boostsAtk && isPhysAttacker)
+                score = selfFrac < 0.4 || mismatched ? 2 : 18
+            }
             // Ouverture : sur une cible FRAÎCHE et SAINE, mener par un statut (sommeil/para…) est fort.
             else { const inflicts = mv.effect?.inflictStatus; score = inflicts && foe.status === "NONE" && foeFresh ? 80 : 18 }
         } else {
@@ -81,6 +92,7 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
             const def = fStats ? (phys ? fStats.def : (foe.frozenSpd ?? fStats.spc)) : 1 // FUSION : SpD séparée si présente
             score = mv.power * eff * stab * (off / Math.max(1, def))
+            if (eff === 0) score = -1 // IMMUNISÉ (ex. NORMAL→SPECTRE, SOL→VOL) : ne JAMAIS choisir tant qu'un autre coup existe
             // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
         }

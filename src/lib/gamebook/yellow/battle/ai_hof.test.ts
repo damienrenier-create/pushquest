@@ -108,6 +108,23 @@ describe("scoreMoves — soin & recul (IA dresseur, anti-gâchis)", () => {
     })
 })
 
+describe("IA \"hof\" — anti-gâchis Ligue (moves immunisés + buffs)", () => {
+    it("ne choisit JAMAIS un move IMMUNISÉ (Tranche NORMAL sur un SPECTRE) s'il a un autre coup", () => {
+        const foe = mon("ombrapanthe", 60, ["charge"]) // SPECTRE : NORMAL ×0 (immunisé)
+        for (let s = 0; s < 20; s++) {
+            const self = mon("razmaree", 60, ["tranche", "pistolet_a_o"]) // Tranche NORMAL (immunisée) + Eau (neutre)
+            expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
+        }
+    })
+    it("ne se BUFFE PAS à bas PV — il frappe (anti « Danse-Lames alors qu'il va mourir »)", () => {
+        const foe = mon("tonytony", 60, ["charge"]) // Normal, neutre sur l'Eau
+        for (let s = 0; s < 20; s++) {
+            const self = mon("razmaree", 60, ["danse_lames", "pistolet_a_o"]); self.currentHp = 1
+            expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
+        }
+    })
+})
+
 describe("fullStats — stats FIGÉES (Hall of Fame)", () => {
     it("renvoie telles quelles les frozenStats si présentes (aucun recalcul)", () => {
         const species = getSpecies("razmaree")!
