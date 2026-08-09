@@ -22,9 +22,14 @@ export const PROMPT_VERSION = 5 // v5 = STYLE_BIBLE durcie « VRAI pixel art » 
 const CHROMA_TOL = 96 // tolérance de détourage (somme des écarts RGB au fond estimé)
 const RES = 512
 
-/** La génération est-elle ARMÉE ? (coupe-circuit env + présence de la clé). false → aucun appel, coût 0. */
+/** La génération est-elle ARMÉE ? (08/08 : ARMÉE PAR DÉFAUT dès que la clé Gemini est présente → génération
+ *  autonome des sprites, sans avoir à basculer une variable Vercel — utile quand Sartay est absent). La sécurité
+ *  COÛT n'est PAS ce flag : elle vient des PLAFONDS SERVEUR (route : TOTAL 500 / JOUR 50) + du budget Google Cloud.
+ *  COUPE-CIRCUIT d'urgence SANS redéploiement de code : poser la variable d'env `FUSION_GEN_KILL="true"` → coût 0.
+ *  (Ancien flag `FUSION_GEN_ENABLED` volontairement IGNORÉ : sa valeur "false" en prod bloquait tout.) */
 export function fusionGenEnabled(): boolean {
-    return process.env.FUSION_GEN_ENABLED === "true" && !!process.env.GEMINI_API_KEY
+    if (process.env.FUSION_GEN_KILL === "true") return false
+    return !!process.env.GEMINI_API_KEY
 }
 
 /** Fetch un sprite ORIGINAL (public/) et le NORMALISE à la volée (trim alpha + recentrage 512 transparent) → base64.
