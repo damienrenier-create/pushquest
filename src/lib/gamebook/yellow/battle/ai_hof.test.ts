@@ -31,16 +31,25 @@ describe("IA Hall of Fame (\"hof\") — la plus maligne", () => {
         expect(attack.moveIndex).toBe(1) // frappe plutôt que de statuer une cible déjà au tapis
     })
 
-    it("ne CHANGE JAMAIS de Daemon (Ligue : combat jusqu'au KO, même face à une faiblesse ×4)", () => {
-        // Choix de Sartay : l'IA de Ligue ("hof") ne switch plus — toute l'intelligence est dans le coup joué.
-        // Même un lead ×4 faible (Rochison Roche/Sol face à un assaillant EAU) reste en jeu et frappe.
-        const weakLead = mon("rochison", 60, ["charge"])
+    it("ELITE (Conseil des Chimères = gauntlet) : ne CHANGE JAMAIS de Daemon, même ×4 faible (combat jusqu'au KO)", () => {
+        const weakLead = mon("rochison", 60, ["charge"]) // Roche/Sol : ×4 faible à l'Eau
         const bench = mon("cerfeuillu", 60, ["charge"])
         const foeWater = mon("razmaree", 60, ["hydrocanon"])
         for (let s = 0; s < 40; s++) {
-            const c = chooseAiAction(weakLead, foeWater, [weakLead, bench], 0, "hof", new Rng(s + 1))
-            expect(c.kind).toBe("move") // JAMAIS de switch en Ligue
+            expect(chooseAiAction(weakLead, foeWater, [weakLead, bench], 0, "elite", new Rng(s + 1)).kind).toBe("move")
         }
+    })
+
+    it("HOF (boss ultimes / miroirs) : CHANGE encore de Daemon face à une faiblesse ×4 imparable", () => {
+        const weakLead = mon("rochison", 60, ["charge"]) // ×4 faible à l'Eau, sans coup super-efficace en retour
+        const bench = mon("cerfeuillu", 60, ["charge"])   // résiste l'Eau
+        const foeWater = mon("razmaree", 60, ["hydrocanon"])
+        let switches = 0
+        for (let s = 0; s < 40; s++) {
+            const c = chooseAiAction(weakLead, foeWater, [weakLead, bench], 0, "hof", new Rng(s + 1))
+            if (c.kind === "switch") { expect(c.teamIndex).toBe(1); switches++ }
+        }
+        expect(switches).toBeGreaterThan(10) // le switch se déclenche toujours pour les boss (~75%)
     })
 
     it("FINIT le travail : sur une cible presque morte, préfère le coup LÉTAL au buff (Danse-Lames)", () => {

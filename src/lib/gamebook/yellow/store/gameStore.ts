@@ -548,7 +548,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     // ENNEMI seulement (le gauntlet joueur est disposé à part) → disposé à la salle suivante.
     pendingFusionLeagueSpecies = enemyFusions.map((f) => f.speciesId)
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startFusionLeagueBattle(playerFusions.map((f) => f.instance), enemyFusions.map((f) => f.instance), seed, trainerId)
+    startFusionLeagueBattle(playerFusions.map((f) => f.instance), enemyFusions.map((f) => f.instance), seed, trainerId, trainer.aiLevel)
     return null
 }
 

@@ -43,15 +43,20 @@ describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
         expect(isTrainerDefeated("y_ligue_1_olga")).toBe(true)   // vraie Ligue de Cendreville PRÉSERVÉE
     })
 
-    it("les 6 dresseurs existent, IA hof, chaîne requiresTrainers, mapId cohérent", () => {
+    it("les 6 dresseurs existent, IA hof/elite (scoreMovesHof), chaîne requiresTrainers, mapId cohérent", () => {
         const ids = [...FUSION_LEAGUE_ORDER, "y_fusion_miroir"]
         for (const id of ids) {
             const t = getTrainer(id)
             expect(t, id).not.toBeNull()
-            expect(t!.aiLevel, `${id} doit être hof`).toBe("hof") // sinon l'IA ignore la Déf Spé des fusions
+            expect(["hof", "elite"], `${id} doit router vers scoreMovesHof (Déf Spé des fusions)`).toContain(t!.aiLevel)
             expect(t!.mapId.startsWith("yellow_fusion_"), id).toBe(true)
             expect(YELLOW_MAPS[t!.mapId], `map ${t!.mapId}`).toBeDefined() // la salle existe
         }
+        // SPLIT du switch : Conseil des Chimères = "elite" (gauntlet, ne change JAMAIS de Daemon) ; LANCE (Champion)
+        //   + DIEU SPAGHETTI (boss final, miroir) = "hof" (boss ultimes → PEUVENT changer de Daemon).
+        for (const id of ["y_fusion_1", "y_fusion_2", "y_fusion_3", "y_fusion_4"]) expect(getTrainer(id)!.aiLevel, id).toBe("elite")
+        expect(getTrainer("y_fusion_maitre")!.aiLevel).toBe("hof")
+        expect(getTrainer("y_fusion_miroir")!.aiLevel).toBe("hof")
         // chaîne de gating
         expect(getTrainer("y_fusion_1")!.requiresTrainers).toBeUndefined()
         expect(getTrainer("y_fusion_2")!.requiresTrainers).toEqual(["y_fusion_1"])

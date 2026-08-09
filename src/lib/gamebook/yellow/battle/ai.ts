@@ -12,7 +12,9 @@ import { computeDamage } from "./damage"
 import { fullStats } from "./stats"
 import type { Rng } from "./rng"
 
-export type AiLevel = "wild" | "trainer" | "ace" | "hof"
+// "hof" = boss ultimes / miroirs (le plus malin, PEUT changer de Daemon) ; "elite" = gauntlet de Ligue (Conseil des
+// Chimères) — MÊME intelligence de coup que "hof" mais ne CHANGE JAMAIS de Daemon (combat jusqu'au KO, choix de Sartay).
+export type AiLevel = "wild" | "trainer" | "ace" | "hof" | "elite"
 
 export interface AiChoice {
     kind: "move" | "switch"
@@ -167,11 +169,26 @@ export function chooseAiAction(
 
     // --- "hof" (Hall of Fame) : la plus maligne. Dégâts attendus (STAB + bonne stat), ouverture statut,
     //     et un switch UNIQUEMENT face à une faiblesse ×4 qu'on ne peut pas punir (sans yo-yo). ---
-    if (level === "hof") {
-        // LIGUE : ne CHANGE JAMAIS de Daemon (choix de Sartay) — chaque Daemon combat jusqu'au KO. TOUTE
-        //   l'intelligence est dans le CHOIX DU COUP (dégâts RÉELS estimés + détection de KO + précision +
-        //   ouverture statut + anti-immunité + anti-buff-gâché), cf. scoreMovesHof. (Ancien switch ×4 retiré.)
+    if (level === "hof" || level === "elite") {
         const scoredHof = scoreMovesHof(self, foe)
+        // SWITCH réservé aux BOSS ULTIMES / MIROIRS ("hof") : face à une faiblesse ×4 imparable, ils changent vers
+        //   un banc STRICTEMENT plus résistant (anti yo-yo). La GAUNTLET de Ligue ("elite" = Conseil des Chimères)
+        //   ne switch JAMAIS — chaque membre combat jusqu'au KO ; toute son intelligence est dans le choix du coup
+        //   (dégâts réels + KO + précision + anti-immunité + anti-buff-gâché, cf. scoreMovesHof).
+        if (level === "hof") {
+            const myTypes = getSpecies(self.speciesId)?.types ?? []
+            const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+            const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
+            const myBestEff = Math.max(0, ...scoredHof.map((s) => s.eff))
+            if (incomingOnMe >= 4 && myBestEff < 2) {
+                const sw = bestSwitchIndex(team, activeIndex, foe)
+                if (sw !== null) {
+                    const candTypes = getSpecies(team[sw].speciesId)?.types ?? []
+                    const incomingOnCand = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, candTypes), 1)
+                    if (incomingOnCand < incomingOnMe && rng.chance(75)) return { kind: "switch", teamIndex: sw }
+                }
+            }
+        }
         let best = scoredHof[0]
         for (const s of scoredHof) if (s.score > best.score) best = s
         return { kind: "move", moveIndex: best.index }
