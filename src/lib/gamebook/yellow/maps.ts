@@ -1252,8 +1252,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     //   Daemon niv 100, après une fusion sauvage vue sans croiser de sauvage depuis (Repousse). Combat à l'arrivée.
     yellow_ukognofy_chamber: {
         id: "yellow_ukognofy_chamber", name: "SANCTUAIRE", tiles: buildUkognofyChamber(), width: 14, height: 14,
-        backgroundImage: "/yellow/sprites/salle_ukognofy.png", backgroundImageWidth: 2120, backgroundImageHeight: 2016, backgroundImageTileSize: 151,
-        debugGrid: true, // collisions à affiner en jeu si besoin
+        // Fond étiré à 14×14 tuiles. La hauteur RÉELLE de l'image (2016) ne fait que 13,35 tuiles → une bande noire
+        // restait en bas sur la rangée de la porte (y=13). On DÉCLARE 2114 (=14×151) pour remplir toute la hauteur
+        // (étirement vertical ~5 %, imperceptible, aucun rognage) → sanctuaire couvert de haut en bas, plus de vide.
+        backgroundImage: "/yellow/sprites/salle_ukognofy.png", backgroundImageWidth: 2120, backgroundImageHeight: 2114, backgroundImageTileSize: 151,
+        debugGrid: false, // grille de calage COUPÉE pour les joueurs (?grid=1 en dev si besoin). Le SANCTUAIRE n'est PAS sombre (pas de darkness) → visible sans lampe torche.
         exits: [
             { x: 7, y: 13, targetMapId: "yellow_grotte_nexus", targetSpawnX: 18, targetSpawnY: 39 }, // sortie basse → entrée Grotte 1F
         ],
