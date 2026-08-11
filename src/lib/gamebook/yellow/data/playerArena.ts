@@ -129,6 +129,11 @@ export function buildHubTeam(player: RegistryPlayer): MonInstance[] {
     const ordered = player.team.filter((m) => getSpecies(m.speciesId))
     const fav = player.favoriteDaemon
     if (fav) { const i = ordered.findIndex((m) => m.speciesId === fav); if (i > 0) ordered.unshift(...ordered.splice(i, 1)) }
+    // GARDE-FOU TONYTONY : mur spécial (DÉF 5) → il ne doit pas OUVRIR le combat (un attaquant physique l'OHKO). On le
+    //   renvoie en FIN d'ordre (jamais lead, sauf s'il est seul) ; le garde-fou dynamique (chooseReplacementIndex) gère
+    //   ensuite : Tonytony n'entre en renfort qu'une fois les physiques adverses éliminés.
+    const ti = ordered.findIndex((m) => m.speciesId === "tonytony")
+    if (ti >= 0 && ti < ordered.length - 1) ordered.push(...ordered.splice(ti, 1))
     return ordered.map((m) => {
         const mon = createMonInstance(m.speciesId, m.level, { owned: false, shiny: m.shiny })
         if (m.nickname) mon.nickname = m.nickname

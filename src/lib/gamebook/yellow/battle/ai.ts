@@ -127,13 +127,76 @@ function bestSwitchIndex(team: BattleMon[], activeIndex: number, foe: BattleMon)
     return bestI >= 0 ? bestI : null
 }
 
+// ═══════════════ PILOTE SPÉCIAL : TONYTONY (mur spécial de Mools — PV 250 / DÉF 5 / SPC 105) ═══════════════
+// Stratégie voulue par le créateur : Tonytony ENTRE sur un attaquant SPÉCIAL (qu'il mure), monte l'ESQUIVE (Mirage,
+// +2/coup, plafond +6) pour survivre aux physiques qui l'OHKO (DÉF 5), et fait boule de neige avec ÉVEIL DIVIN
+// (dégâts + Spé +1/coup → et comme « spc » sert d'attaque ET de défense spéciale, il devient irrésistible), en
+// glissant un REPOS quand c'est SÛR. Il NE SORT JAMAIS de lui-même. Reproduit l'ESPRIT de la séquence demandée mais
+// RÉACTIF : saisit les KO, respecte le plafond d'esquive, détecte les coups « sûrs » qui ignorent l'esquive, se
+// soigne au bon moment. Le GARDE-FOU d'ENTRÉE (ne l'envoyer qu'une fois les physiques adverses KO) vit dans
+// chooseReplacementIndex + l'ordre d'équipe (buildHubTeam). PvE only (les vraies équipes IA des autres joueurs).
+const TONYTONY_ID = "tonytony"
+const T_EVEIL = "eveil_divin", T_MIRAGE = "mirage", T_REPOS = "repos"
+
+/** Mon dont l'offensive est à dominante PHYSIQUE (ATK ≥ SPC) → menace mortelle pour Tonytony (DÉF 5). */
+function isPhysicalThreat(mon: BattleMon): boolean {
+    const sp = getSpecies(mon.speciesId)
+    if (!sp) return false
+    const st = fullStats(mon, sp)
+    return st.atk >= st.spc
+}
+/** Le foe a-t-il un coup « sûr » (sureHit / précision 0, ex. Météores) qui IGNORE l'esquive ? → Mirage inutile. */
+function foeHasSureHit(foe: BattleMon): boolean {
+    return foe.moves.some((s) => { const mv = getMove(s.moveId); return !!mv && s.pp > 0 && mv.power > 0 && (mv.effect?.sureHit === true || mv.accuracy === 0) })
+}
+/** Index d'un move (PP > 0) chez `self`, ou -1. */
+function moveIndexOf(self: BattleMon, moveId: string): number {
+    return self.moves.findIndex((s) => s.moveId === moveId && s.pp > 0)
+}
+/** Éveil Divin met-il KO le foe CE tour ? (dégâts spéciaux conservateurs, sans crit). */
+function eveilDivinKOs(self: BattleMon, foe: BattleMon): boolean {
+    const mv = getMove(T_EVEIL), selfSp = getSpecies(self.speciesId), foeSp = getSpecies(foe.speciesId)
+    if (!mv || !selfSp || !foeSp) return false
+    const eff = typeEffectiveness(mv.type, foeSp.types)
+    if (eff === 0) return false
+    const off = fullStats(self, selfSp).spc
+    const def = foe.frozenSpd ?? fullStats(foe, foeSp).spc
+    const est = computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: selfSp.types.includes(mv.type), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
+    return est >= foe.currentHp
+}
+/** Pilote de coup de Tonytony → moveIndex, ou null si son kit n'a pas la panoplie attendue (→ IA générique). */
+function chooseTonytonyMove(self: BattleMon, foe: BattleMon): number | null {
+    const iEveil = moveIndexOf(self, T_EVEIL), iMirage = moveIndexOf(self, T_MIRAGE), iRepos = moveIndexOf(self, T_REPOS)
+    if (iEveil < 0 && iMirage < 0) return null // pas la panoplie → laisse l'IA générique jouer
+    const selfSp = getSpecies(self.speciesId)
+    const maxHp = selfSp ? fullStats(self, selfSp).hp : Math.max(1, self.currentHp)
+    const frac = self.currentHp / Math.max(1, maxHp)
+    const eva = self.stages?.eva ?? 0
+    const foePhys = isPhysicalThreat(foe)
+    const canDodge = !foeHasSureHit(foe) // Mirage ne protège que si le foe n'a pas de coup « sûr »
+    // 1) FINIR : Éveil Divin qui met KO ce tour prime sur tout.
+    if (iEveil >= 0 && eveilDivinKOs(self, foe)) return iEveil
+    // 2) REPOS quand c'est SÛR (PV bas ET on encaisse : foe spécial muré, OU esquive déjà haute face à un physique).
+    if (iRepos >= 0 && frac < 0.5 && (!foePhys || (eva >= 4 && canDodge))) return iRepos
+    // 3) SURVIE physique : monter l'esquive tant qu'on n'est pas au plafond, face à un physique esquivable.
+    if (iMirage >= 0 && eva < 6 && foePhys && canDodge) return iMirage
+    // 4) SNOWBALL : Éveil Divin (dégâts + Spé). À défaut, Mirage encore utile ; sinon IA générique.
+    if (iEveil >= 0) return iEveil
+    if (iMirage >= 0 && eva < 6) return iMirage
+    return null
+}
+
 /** Choix du REMPLAÇANT à envoyer après un KO (envoi FORCÉ, TOUS niveaux de dresseur). Renvoie l'index du banc
  *  au MEILLEUR matchup face à l'actif adverse : priorité à ENCAISSER ses types (le remplaçant ne doit pas vouloir
  *  re-switcher aussitôt → fin du ping-pong « on renvoie le suivant, il fuit, on renvoie le suivant… »), puis à le
  *  PUNIR (meilleur coup réel). Déterministe (aucun RNG) → sûr côté replay/checksum. -1 si le banc est vide
  *  (le moteur garantit ≥1 vivant avant l'appel). Remplace l'ancien « firstAliveIndex » (= premier dans la liste). */
-export function chooseReplacementIndex(team: BattleMon[], foe: BattleMon): number {
+export function chooseReplacementIndex(team: BattleMon[], foe: BattleMon, foeTeam?: BattleMon[]): number {
     const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+    // GARDE-FOU TONYTONY : tant qu'un attaquant PHYSIQUE adverse est ENCORE VIVANT (n'importe lequel de l'équipe,
+    //   pas seulement l'actif), on ÉVITE d'envoyer Tonytony (DÉF 5 → un physique l'OHKO). On le déprécie fortement ;
+    //   il reste choisi s'il est le SEUL Daemon vivant du banc. `foeTeam` absent → repli sur l'actif seul.
+    const foePhysAlive = (foeTeam ?? [foe]).some((m) => m.currentHp > 0 && isPhysicalThreat(m))
     let bestI = -1
     let bestScore = -Infinity
     team.forEach((m, i) => {
@@ -150,7 +213,8 @@ export function chooseReplacementIndex(team: BattleMon[], foe: BattleMon): numbe
             bestOff = Math.max(bestOff, mv.power * typeEffectiveness(mv.type, foeTypes) * stab)
         }
         // Encaisser PRIME (anti-ping-pong), punir en SECONDAIRE. Magnitudes comparables (def ~25→400, off ~0→300).
-        const score = (1 / Math.max(0.25, incoming)) * 100 + bestOff
+        let score = (1 / Math.max(0.25, incoming)) * 100 + bestOff
+        if (m.speciesId === TONYTONY_ID && foePhysAlive) score -= 1e6 // réservé tant qu'un physique adverse est debout
         if (score > bestScore) { bestScore = score; bestI = i }
     })
     return bestI
@@ -164,6 +228,12 @@ export function chooseAiAction(
     level: AiLevel,
     rng: Rng,
 ): AiChoice {
+    // PILOTE SPÉCIAL TONYTONY : stratégie dédiée (esquive + Éveil Divin + Repos), et JAMAIS de switch volontaire
+    //   (il reste en jeu jusqu'au KO). S'applique à tous les niveaux d'IA — Tonytony n'est piloté que côté IA.
+    if (self.speciesId === TONYTONY_ID) {
+        const ti = chooseTonytonyMove(self, foe)
+        if (ti !== null) return { kind: "move", moveIndex: ti }
+    }
     const scored = scoreMoves(self, foe)
     if (scored.length === 0) return { kind: "move", moveIndex: 0 } // Lutte (placeholder)
 

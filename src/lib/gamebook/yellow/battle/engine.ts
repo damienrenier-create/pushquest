@@ -1213,7 +1213,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
     if (active(state.enemy).currentHp <= 0 && !state.enemySendOut) {
         // IA INTELLIGENTE : le remplaçant = MEILLEUR matchup vs l'actif du joueur (encaisse + punit), pas « le
         // suivant dans la liste ». Corrige le ping-pong (on renvoyait un mauvais matchup qui re-switchait aussitôt).
-        const enemyIdx = state.isWild ? firstAliveIndex(state.enemy) : chooseReplacementIndex(state.enemy.team, active(state.player))
+        const enemyIdx = state.isWild ? firstAliveIndex(state.enemy) : chooseReplacementIndex(state.enemy.team, active(state.player), state.player.team)
         // COMBAT DE DRESSEUR — flow Game Boy : on N'envoie PAS le suivant tout de suite. On ANNONCE le
         // prochain Daemon adverse et on laisse le joueur décider de changer (fenêtre gérée en tête de
         // resolveTurn). EXCEPTION : si le joueur est LUI AUSSI K.O. (double KO), il devra de toute façon
