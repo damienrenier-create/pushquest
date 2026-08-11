@@ -173,6 +173,10 @@ export interface YellowSave {
     /** ARC LAMPE & GÉNIE — le colporteur a-t-il déjà été rencontré/battu ? GLOBAL au PROFIL (survit aux runs 1/2/3) →
      *  le génie n'apparaît qu'UNE fois par profil, pas à chaque run. Frais pour un NOUVEAU profil (emptySave). */
     genieArcSeen?: boolean
+    /** MODE GENÈSE — profil « 6 Daemons craftés / zéro capture » : on démarre avec 6 créations et la Ball est
+     *  VERROUILLÉE jusqu'à la victoire à la Ligue de Fusion (marqueur fusleague_or). GLOBAL au profil. La fusion
+     *  reste autorisée. Absent/false = mode normal. */
+    genesisMode?: boolean
     /** RUN 3 — ennemis VAINCUS (boss d'arène + Ligue), dédupliqués par clé (cf. bossEnemyKey/leagueEnemyKey),
      *  pour le SCORE du concours = Σ de leurs niveaux (run3Score). Per-monde (vit dans le monde run 3). Défaut [].
      *  Type structurel (= Run3DefeatedEnemy) inliné pour éviter tout cycle d'import storage↔data. */
@@ -620,6 +624,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         run3StarterBase: typeof o.run3StarterBase === "string" ? o.run3StarterBase : "",
         ngplusStarterBase: typeof o.ngplusStarterBase === "string" ? o.ngplusStarterBase : undefined,
         genieArcSeen: o.genieArcSeen === true ? true : undefined,
+        genesisMode: o.genesisMode === true ? true : undefined,
         // RUN 3 — ennemis vaincus (score). Parse défensif (façon chips) : ne garde que les entrées {key,level}
         // plausibles, dédup non nécessaire ici (addRun3Defeated dédup à l'écriture), borné à 64.
         run3Defeated: Array.isArray(o.run3Defeated)

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { applyServerSave, snapshot, startNewProfileFromRun1, switchProfile, profileCount, getAltProfileSummaries } from "./saveManager"
-import { getPlayer } from "./playerStore"
+import { applyServerSave, snapshot, startNewProfileFromRun1, switchProfile, profileCount, getAltProfileSummaries, startGenesisProfile } from "./saveManager"
+import { getPlayer, isGenesisMode, genesisCaptureLocked, markTrainerDefeated } from "./playerStore"
 import { getPokedex } from "./pokedexStore"
 import { emptySave, parseSave, type YellowSave } from "../storage/save"
 import type { MonInstance } from "../battle/types"
@@ -78,5 +78,32 @@ describe("Multi-profils — création (Rejouer run 1) & bascule (NON-destructif)
         applyServerSave(world({ activeWorld: "live", badges: ["feu"] }))
         expect(await switchProfile(0)).toBe(false)  // aucun profil inactif
         expect(getPlayer().badges).toEqual(["feu"]) // inchangé
+    })
+})
+
+describe("Mode GENÈSE — 6 craftés / zéro capture jusqu'à la Ligue de Fusion", () => {
+    it("startGenesisProfile : profil Genèse (équipe = créations, capture verrouillée), ancien profil stashé", async () => {
+        applyServerSave(world({ activeWorld: "live", badges: ["feu"], isChampion: true }))
+        const team = [mon("g1", "cerfeuillu", 5), mon("g2", "razmaree", 5)]
+        expect(await startGenesisProfile(team, [])).toBe(true)
+        expect(isGenesisMode()).toBe(true)
+        expect(getPlayer().team.map((m) => m.speciesId)).toEqual(["cerfeuillu", "razmaree"])
+        expect(genesisCaptureLocked()).toBe(true) // Ball verrouillée
+        expect(profileCount()).toBe(2)            // ancien profil préservé
+    })
+    it("capture DÉVERROUILLÉE une fois la Ligue de Fusion gagnée (fusleague_or)", async () => {
+        applyServerSave(world({ activeWorld: "live" }))
+        await startGenesisProfile([mon("g", "cerfeuillu", 5)], [])
+        expect(genesisCaptureLocked()).toBe(true)
+        markTrainerDefeated("fusleague_or")
+        expect(genesisCaptureLocked()).toBe(false) // déverrouillé après la Ligue de Fusion
+    })
+    it("mode NORMAL : jamais verrouillé par Genèse, et un profil neuf normal n'hérite pas genesisMode", async () => {
+        applyServerSave(world({ activeWorld: "live" }))
+        await startGenesisProfile([mon("g", "cerfeuillu", 5)], []) // profil Genèse
+        expect(isGenesisMode()).toBe(true)
+        await startNewProfileFromRun1()                            // profil NORMAL neuf
+        expect(isGenesisMode()).toBe(false)                        // n'hérite PAS genesisMode (fix in-pattern)
+        expect(genesisCaptureLocked()).toBe(false)
     })
 })

@@ -57,7 +57,7 @@ import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry } from "./fu
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { bumpCapturesToday, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
-import { markGenieArcSeen } from "./playerStore"
+import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -487,6 +487,8 @@ export function submitPlayerAction(action: PlayerAction) {
     // VŒU DU GÉNIE : Balls VERROUILLÉES tant que le quota d'⚡ n'est pas dépensé → refus AUTORITAIRE avant toute
     //   consommation/stat/tour (backstop du grisage UI). Couvre TOUTES les Balls (kind==="ball").
     if (action.kind === "ball" && isBallLocked()) return
+    // MODE GENÈSE : Ball VERROUILLÉE jusqu'à la victoire à la Ligue de Fusion (refus autoritaire, avant consommation/tour).
+    if (action.kind === "ball" && genesisCaptureLocked()) return
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     if (action.kind === "ball") bumpStat("ballsUsed") // STAT : ball lancée
