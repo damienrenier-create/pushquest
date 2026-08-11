@@ -44,4 +44,24 @@ describe("Guide Daemomaniaque — fallback ZONES + modificateurs de grille run-2
         expect(set.has("ukognos")).toBe(true)
         expect(set.has("goshendofy")).toBe(false)
     })
+
+    it("rattrapage post-Ligue : Otama introuvable en run 1 SANS champion, capturable une fois CHAMPION", () => {
+        const notChamp = captureGuide("otama", 1, false, false)
+        expect(notChamp.where.length).toBe(0)
+        expect(notChamp.note).toMatch(/ne se croise pas/)
+        const champ = captureGuide("otama", 1, false, true)     // player.isChampion
+        expect(champ.where.length).toBeGreaterThan(0)
+        expect(hasHH(champ)).toBe(true)                          // Hautes Herbes carré EAU/COMBAT
+        expect(champ.note).toBeNull()
+    })
+
+    it("rattrapage post-Ligue : Wistree gagne le rôdeur Grotte une fois Champion (sans perdre son spot B1F)", () => {
+        const champ = captureGuide("wistree", 1, false, true)
+        expect(champ.where.some((w) => w.includes("Grotte") && w.includes("post-Ligue"))).toBe(true)
+    })
+
+    it("le rattrapage NE s'applique PAS en run 2/3 (Otama y a ses propres zones ou reste absent)", () => {
+        // champion=true mais run≠1 → pas d'injection de rattrapage LIVE
+        expect(captureGuide("otama", 2, false, true).where.every((w) => !w.includes("post-Ligue"))).toBe(true)
+    })
 })

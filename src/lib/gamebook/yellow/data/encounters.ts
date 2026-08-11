@@ -241,7 +241,7 @@ const fmtPct = (p: number): string => `≈${p >= 1 ? Math.round(p) : p.toFixed(1
 export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
 /** Guide « où/quand/comment » d'un Daemon POUR UNE RUN donnée (1/2/3). hideEndgame masque les zones post-Ligue
  *  (run 1 avant la Ligue). Ne renvoie QUE des localisations de cette run → chaque mode du Daemomaniaque reste cohérent. */
-export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false): CaptureGuide {
+export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false): CaptureGuide {
     const sp = getSpecies(speciesId)
     if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
     const matches = guideMatchesRun(speciesId, run, hideEndgame)
@@ -268,6 +268,16 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
         if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
     }
+    // RATTRAPAGE LIVE post-Ligue : une fois CHAMPION (run 1), des inédits du run 3 (Otama, Hypnoppo, Karmaki, Wistree)
+    //   deviennent capturables en LIVE (run3LiveCatchupHH/Grotte). Le guide DOIT les ajouter — sinon « ne se croise
+    //   pas » à tort (ex. Otama). Ne s'applique qu'à run===1 && champion (jamais en run 2/3, où ils ont leurs zones).
+    if (run === 1 && champion) {
+        const catchup = run1ChampionCatchup(speciesId)
+        if (catchup.length) {
+            where.push(...catchup)
+            how.add("Rattrapage post-Ligue : ces inédits du run 3 rôdent en LIVE une fois Champion (RARES ; plus fréquents une fois le run 3 terminé).")
+        }
+    }
     if (where.length === 0) {
         // Pas sauvage dans cette run → obtention SPÉCIALE curée (pierre/objet/échange/cadeau/boss/rôdeur).
         const special = SPECIAL_OBTAIN[speciesId]
@@ -275,7 +285,7 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         // Sinon : repli sur le pré-évolué (récursif — trouve la base sauvage OU sa propre obtention spéciale).
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
-            const base = captureGuide(preEvo.id, run, hideEndgame)
+            const base = captureGuide(preEvo.id, run, hideEndgame, champion)
             if (base.where.length > 0 || base.how.length > 0) {
                 return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
             }
@@ -285,6 +295,17 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
     if (modulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce et selon tes exercices (pompes/squats).")
     how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
     return { where, how: [...how], note: null }
+}
+/** Localisations de RATTRAPAGE LIVE post-Ligue (run 1 CHAMPION) — miroir de RUN3_HH_CATCHUP (Hautes Herbes) +
+ *  du rôdeur Wistree (Grotte). [] si l'espèce n'est pas concernée. Référence RUN3_HH_CATCHUP au call time (défini plus bas). */
+function run1ChampionCatchup(speciesId: string): string[] {
+    const hh = RUN3_HH_CATCHUP.find((e) => e.speciesId === speciesId)
+    if (hh) {
+        const cap = hh.maxLevel != null ? ` · niv ≤ ${hh.maxLevel}` : ""
+        return [`📍 Hautes Herbes (Cendreville) — carré ${hh.types.join("/")}${cap} · rattrapage post-Ligue (rare)`]
+    }
+    if (speciesId === "wistree") return ["📍 Grotte Rocheuse · rôdeur post-Ligue (rare)"]
+    return []
 }
 /** Espèces spawnables dans une run (base + formes évoluées in situ). Fusions/customs exclus par l'appelant (getSpecies null). Mémoïsé. */
 const _runSpawnCache: Record<string, Set<string>> = {}

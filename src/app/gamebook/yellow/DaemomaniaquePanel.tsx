@@ -79,11 +79,11 @@ export default function DaemomaniaquePanel() {
     const pick = (sp: SpeciesData) => {
         setErr(null)
         if (!infoAllowed(sp.id)) { setErr("Le Daemomaniaque ne parle que des Daemons que tu as déjà croisés."); return }
-        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame) }); return }
+        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion) }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
         setRevealed((s) => new Set(s).add(sp.id))
-        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame) })
+        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion) })
     }
 
     const left = freeConsultsLeft()
