@@ -537,6 +537,52 @@ export async function exitReplay(): Promise<void> {
     await persistNow()
 }
 
+// ═══════════════ MULTI-PROFILS ═══════════════
+// « Rejouer le RUN 1 » = démarrer un 2ᵉ PROFIL complet et frais qui COEXISTE avec l'ancien (jamais fusionné/supprimé).
+// Le profil ACTIF vit dans les stores + les slots de monde ; les autres sont stashés (altProfilesStash), OPAQUES.
+/** Plafond de profils INACTIFS (→ 4 profils au total). Borne la taille de la save (chaque profil = un save complet). */
+export const MAX_ALT_PROFILES = 3
+
+/** Résumé LÉGER d'un profil (pour le sélecteur — n'expose pas le save complet). */
+export interface ProfileSummary { badges: number; isChampion: boolean; ngplusUsed: boolean; run3Used: boolean; dex: number; teamLead: string | null }
+function summarize(s: YellowSave): ProfileSummary {
+    return { badges: s.badges?.length ?? 0, isChampion: !!s.isChampion, ngplusUsed: !!s.ngplusUsed, run3Used: !!s.run3Used, dex: s.pokedex?.caught?.length ?? 0, teamLead: s.team?.[0]?.speciesId ?? null }
+}
+/** Résumés des profils INACTIFS (pour le sélecteur). Vide s'il n'y a qu'un profil. */
+export function getAltProfileSummaries(): ProfileSummary[] { return altProfilesStash.map(summarize) }
+/** Nombre de profils au total (actif + inactifs). */
+export function profileCount(): number { return 1 + altProfilesStash.length }
+
+/** « Rejouer le RUN 1 » — démarre un PROFIL neuf (run 1 depuis l'intro : équipe/PC/Pokédex/customDaemons/progression
+ *  À ZÉRO), en STASHANT le profil actif COMPLET dans altProfiles. NON-destructif (rien n'est perdu, tout coexiste).
+ *  false si on est dans une bulle de rejeu ou si le plafond de profils est atteint. */
+export async function startNewProfileFromRun1(): Promise<boolean> {
+    if (getActiveWorld() === "replay") return false
+    if (altProfilesStash.length >= MAX_ALT_PROFILES) return false
+    const cur = snapshot()                                        // profil actif COMPLET (tous mondes + Pokédex + méta)
+    const stashedCurrent: YellowSave = { ...cur, altProfiles: undefined } // un profil stashé ne re-porte pas les autres
+    const fresh: YellowSave = { ...emptySave(), altProfiles: [...(cur.altProfiles ?? []), stashedCurrent] }
+    applyServerSave(fresh)                                        // hydrate stores + Pokédex VIDES ; l'actif devient inactif
+    await persistNow()
+    return true
+}
+
+/** MULTI-PROFILS — bascule sur le profil INACTIF `index` (le profil actif courant devient inactif à sa place).
+ *  Tout est préservé (aucune fusion, aucune suppression). No-op si index invalide ou en rejeu-bulle. */
+export async function switchProfile(index: number): Promise<boolean> {
+    if (getActiveWorld() === "replay") return false
+    const cur = snapshot()
+    const others = cur.altProfiles ?? []
+    if (index < 0 || index >= others.length) return false
+    const target = parseSave(others[index])                      // re-valide le profil cible avant de l'activer
+    const remaining = others.filter((_, i) => i !== index)
+    const stashedCurrent: YellowSave = { ...cur, altProfiles: undefined }
+    const activated: YellowSave = { ...target, altProfiles: [...remaining, stashedCurrent] }
+    applyServerSave(activated)
+    await persistNow()
+    return true
+}
+
 /** RUN 3 — FIN (0 énergie) → FUSION 3-VOIES : run 3 ⊕ run 2 ⊕ run 1 en un seul monde live. run 3 = timeline
  *  « gagnante » (garde son équipe active) ; run 2 puis run 1 sont absorbés (Daemons versés au PC, Pokédex/
  *  badges/CT/objets fusionnés). Backup pré-fusion → réversible. */

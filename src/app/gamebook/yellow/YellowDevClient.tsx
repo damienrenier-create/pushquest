@@ -65,7 +65,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
@@ -479,6 +479,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         fetchFrontierProfile().then((p) => setReplayNextCost(replayCost(p.replaysUsed))).catch(() => setReplayNextCost(null))
     }, [replayMenu])
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
+    const [profileView, setProfileView] = useState(false) // MULTI-PROFILS : overlay « Mes profils » (nouveau profil + bascule)
     // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
     // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
     const [resetHolding, setResetHolding] = useState(false)
@@ -1820,6 +1821,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "« Et surtout : à la SORTIE, tu pourras RAMENER dans ton vrai monde autant de DAEMONS que de BADGES gagnés ici (+1 si tu bats la Ligue) — à choisir parmi ton équipe et ton PC. Le reste sera perdu. »",
             "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé et tu choisiras tes Daemons à garder. Bonne chance, champion ! 🍝 »",
         ])
+    }
+
+    // MULTI-PROFILS — « Rejouer le RUN 1 » = démarre un 2ᵉ PROFIL complet et frais (run 1 depuis l'intro), en
+    //   STASHANT le profil actif. NON-destructif (les profils coexistent). Recréer un Daemon perso passe par là.
+    const doNewProfileRun1 = async () => {
+        const ok = await startNewProfileFromRun1()
+        if (!ok) { setToast(`Impossible : maximum ${MAX_ALT_PROFILES + 1} profils (ou action indisponible ici).`); return }
+        setProfileView(false); setReplayMenu(false); setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // profil FRAIS → l'intro run 1 se joue (introSeen=false)
+    }
+    // MULTI-PROFILS — bascule sur un profil inactif (repart à l'entrée ; position par-profil = raffinement futur).
+    const doSwitchProfile = async (i: number) => {
+        const ok = await switchProfile(i)
+        if (!ok) { setToast("Bascule de profil impossible."); return }
+        setProfileView(false); setReplayMenu(false); setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
     }
 
     // BOUCLE ENDGAME — lance le rejeu du run 1 GRATUITEMENT (récompense de fin de jeu) avec le Daemon custom
@@ -3275,7 +3292,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ fontSize: 11, fontWeight: 800, textAlign: "center", marginBottom: 8, color: replayNextCost ? "#c9a227" : "#3ad06a" }}>
                             💠 Prochain rejeu : {replayNextCost === null ? "…" : replayNextCost === 0 ? "GRATUIT" : `${replayNextCost} JC`}
                         </div>
-                        <button style={menuBtnStyle} onClick={() => void doStartReplay("run1")}>🏅 Rejouer le RUN 1</button>
+                        <button style={menuBtnStyle} onClick={() => { setReplayMenu(false); setProfileView(true) }}>🏅 Rejouer le RUN 1 (nouveau profil){profileCount() > 1 ? ` · ${profileCount()} profils` : ""}</button>
                         {getPlayer().ngplusUsed && (
                             <button style={menuBtnStyle} onClick={() => {
                                 // Starter du run 2 MÉMORISÉ (ngplusStarterBase) → rejeu direct avec lui, niv 5. Robuste à la
@@ -3308,6 +3325,27 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
             {/* REJEU run 3 — choix du starter (les 3 lignées) via la cinématique existante. */}
             {replayPickRun === "run3" && <Run3IntroCinematic onComplete={(id) => { let s; try { s = createMonInstance(id, 5, { owned: true }) } catch { setToast("Starter introuvable."); return } void doStartReplay("run3", s) }} />}
+            {/* MULTI-PROFILS — « Mes profils » : créer un 2ᵉ profil (Run 1) + basculer entre profils COEXISTANTS. */}
+            {profileView && (
+                <div style={menuOverlayStyle} onClick={() => setProfileView(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🧬 MES PROFILS</div>
+                        <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 8, lineHeight: 1.35 }}>
+                            « Rejouer le RUN 1 » crée un 2ᵉ profil COMPLET à zéro (nouvelle création possible). Les profils COEXISTENT : rien n'est fusionné ni supprimé, tu bascules quand tu veux.
+                        </div>
+                        {getAltProfileSummaries().length < MAX_ALT_PROFILES
+                            ? <button style={menuBtnStyle} onClick={() => void doNewProfileRun1()}>🆕 Nouveau profil (recommencer au Run 1)</button>
+                            : <div style={{ fontSize: 10, opacity: 0.6, textAlign: "center", margin: "4px 0" }}>Maximum de {MAX_ALT_PROFILES + 1} profils atteint.</div>}
+                        {getAltProfileSummaries().length > 0 && <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.7, margin: "8px 0 2px" }}>BASCULER SUR :</div>}
+                        {getAltProfileSummaries().map((p, i) => (
+                            <button key={i} style={menuBtnStyle} onClick={() => void doSwitchProfile(i)}>
+                                🔀 Profil {i + 1} — {p.badges} badge{p.badges > 1 ? "s" : ""}{p.isChampion ? " · Champion" : ""}{p.run3Used ? " · run 3" : p.ngplusUsed ? " · run 2" : ""} · {p.dex} au Dex
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setProfileView(false)}>← Retour</button>
+                    </div>
+                </div>
+            )}
             {/* REJEU — bannière permanente (rappel : tu es dans une bulle jetable). */}
             {activeWorld === "replay" && !battle && (
                 <div style={{ position: "absolute", top: 2, left: "50%", transform: "translateX(-50%)", zIndex: 40, background: "#c9a227", color: "#3a2a00", fontSize: 8, fontWeight: 700, padding: "1px 7px", borderRadius: 8, pointerEvents: "none", whiteSpace: "nowrap", opacity: 0.9 }}>

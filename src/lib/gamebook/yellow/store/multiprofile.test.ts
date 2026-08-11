@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { applyServerSave, snapshot } from "./saveManager"
+import { applyServerSave, snapshot, startNewProfileFromRun1, switchProfile, profileCount, getAltProfileSummaries } from "./saveManager"
+import { getPlayer } from "./playerStore"
+import { getPokedex } from "./pokedexStore"
 import { emptySave, parseSave, type YellowSave } from "../storage/save"
 import type { MonInstance } from "../battle/types"
+
+const world = (over: Partial<YellowSave>): YellowSave => ({ ...emptySave(), ...over })
 
 // MULTI-PROFILS (socle) : le profil ACTIF vit au top-level ; les profils inactifs sont portés OPAQUES dans
 // `altProfiles` à travers tout le cycle save (applyServerSave → snapshot → parseSave), sans être altérés.
@@ -37,5 +41,42 @@ describe("Multi-profils — socle (altProfiles opaques, round-trip)", () => {
         expect(snap.ngplusWorld).toBeNull() // pas de monde ngplus ici, mais la règle : un monde imbriqué n'a pas d'altProfiles
         // le profil inactif lui-même ne doit pas re-porter des altProfiles (borné)
         expect((snap.altProfiles?.[0] as YellowSave).altProfiles).toBeUndefined()
+    })
+})
+
+describe("Multi-profils — création (Rejouer run 1) & bascule (NON-destructif)", () => {
+    it("startNewProfileFromRun1 : profil FRAIS actif, ancien profil STASHÉ intact (rien perdu)", async () => {
+        applyServerSave(world({ activeWorld: "live", badges: ["feu", "eau", "plante", "roche", "elec"], isChampion: true,
+            team: [mon("a", "cerfeuillu", 63)], pc: [mon("apc", "pyrokoss", 55)], pokedex: { seen: ["cerfeuillu"], caught: ["cerfeuillu"] } }))
+        expect(await startNewProfileFromRun1()).toBe(true)
+        // Nouveau profil = tout à zéro
+        expect(getPlayer().team.length).toBe(0)
+        expect(getPlayer().badges.length).toBe(0)
+        expect(getPlayer().isChampion).toBe(false)
+        expect(getPokedex().caught.length).toBe(0) // Pokédex PER-PROFIL, frais
+        // Ancien profil A préservé en inactif
+        expect(profileCount()).toBe(2)
+        const a = getAltProfileSummaries()[0]
+        expect(a.isChampion).toBe(true)
+        expect(a.badges).toBe(5)
+        expect(a.dex).toBe(1)
+    })
+
+    it("switchProfile : rebascule sur l'ancien profil → tout restauré (badges, champion, Pokédex)", async () => {
+        applyServerSave(world({ activeWorld: "live", badges: ["feu"], isChampion: true,
+            team: [mon("a", "cerfeuillu", 63)], pokedex: { seen: ["cerfeuillu"], caught: ["cerfeuillu"] } }))
+        await startNewProfileFromRun1()             // → profil frais actif, A stashé
+        expect(getPlayer().badges.length).toBe(0)
+        expect(await switchProfile(0)).toBe(true)   // rebascule sur A
+        expect(getPlayer().badges).toEqual(["feu"])
+        expect(getPlayer().isChampion).toBe(true)
+        expect(getPokedex().caught).toContain("cerfeuillu") // Pokédex de A restauré
+        expect(profileCount()).toBe(2)              // toujours 2 profils (le frais est désormais inactif)
+    })
+
+    it("switchProfile(index invalide) = no-op", async () => {
+        applyServerSave(world({ activeWorld: "live", badges: ["feu"] }))
+        expect(await switchProfile(0)).toBe(false)  // aucun profil inactif
+        expect(getPlayer().badges).toEqual(["feu"]) // inchangé
     })
 })
