@@ -2945,6 +2945,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const closeIt = () => { setFusionPick([]); closeFusionMenu() }
                 const launch = () => {
                     if (!ready) return
+                    if (picks[0].speciesId === picks[1].speciesId) { setToast("Impossible de fusionner deux Daemons de la MÊME espèce."); return } // ex. 2 Gavillus → interdit
                     fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes (joueur + ennemi)
                     const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
                     recordFusionCreated(picks[0].speciesId, picks[1].speciesId); persistYellowSave() // journalise dans « Mes fusions » (Fusiodex) — l'épreuve EST une chimère assemblée à l'Autel (dédup idempotent)
@@ -2966,7 +2967,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 const sp = getSpecies(m.speciesId)
                                 const idx = fusionPick.indexOf(m.uid)
                                 const picked = idx >= 0
-                                const dis = !picked && fusionPick.length >= 2
+                                // 2 Daemons de la MÊME espèce ne peuvent pas fusionner → une fois le 1er choisi, on grise ses congénères.
+                                const dis = !picked && (fusionPick.length >= 2 || (fusionPick.length === 1 && picks[0]?.speciesId === m.speciesId))
                                 return (
                                     <button key={m.uid} disabled={dis}
                                         style={{ ...(dis ? menuBtnDimStyle : menuBtnStyle), textAlign: "left", outline: picked ? "2px solid #7c4fc0" : "none", borderRadius: picked ? 6 : undefined }}
@@ -3018,6 +3020,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const confirmAdd = () => {
                     const add = atelierAdd
                     if (!add?.a || !add?.b || add.a === add.b || rosterUids.has(add.a) || rosterUids.has(add.b) || roster.length >= 6) return
+                    // 2 Daemons de la MÊME espèce ne peuvent pas fusionner (ex. 2 Gavillus).
+                    const sameA = byUid(add.a), sameB = byUid(add.b)
+                    if (sameA && sameB && sameA.speciesId === sameB.speciesId) { setToast("Impossible de fusionner deux Daemons de la MÊME espèce."); return }
                     // Dédup EXACTE (même ordre = même espèce éphémère) ; (A,B) et (B,A) restent 2 fusions distinctes.
                     if (!roster.some((p) => p.a === add.a && p.b === add.b)) {
                         setFusionRoster([...roster, { a: add.a, b: add.b }])
