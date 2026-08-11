@@ -162,6 +162,10 @@ export interface YellowSave {
     /** RUN 3 — speciesId de BASE du starter CHOISI (elefer/cornaive/coccipoing). Sert à donner à ACE le starter
      *  qui CONTRE le joueur (triangle Métal›Fée›Combat›Métal) + à résoudre le 3e starter (éleveur). "" hors run 3. */
     run3StarterBase: string
+    /** REJEU RUN 2 — speciesId du STARTER du run 2 (le Daemon perso créé au NG+). Sert à REJOUER le run 2 avec lui,
+     *  même après CANONISATION de la création (auquel cas customDaemons peut être vide). Global (survit aux bascules
+     *  de monde) ; "" / absent si le run 2 n'a jamais été lancé. */
+    ngplusStarterBase?: string
     /** RUN 3 — ennemis VAINCUS (boss d'arène + Ligue), dédupliqués par clé (cf. bossEnemyKey/leagueEnemyKey),
      *  pour le SCORE du concours = Σ de leurs niveaux (run3Score). Per-monde (vit dans le monde run 3). Défaut [].
      *  Type structurel (= Run3DefeatedEnemy) inliné pour éviter tout cycle d'import storage↔data. */
@@ -607,6 +611,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         // à tous les niveaux ; false par défaut (anciennes saves + monde live/run3 qui ne l'utilisent pas).
         ngplusMaitreBeaten: o.ngplusMaitreBeaten === true,
         run3StarterBase: typeof o.run3StarterBase === "string" ? o.run3StarterBase : "",
+        ngplusStarterBase: typeof o.ngplusStarterBase === "string" ? o.ngplusStarterBase : undefined,
         // RUN 3 — ennemis vaincus (score). Parse défensif (façon chips) : ne garde que les entrées {key,level}
         // plausibles, dédup non nécessaire ici (addRun3Defeated dédup à l'écriture), borné à 64.
         run3Defeated: Array.isArray(o.run3Defeated)

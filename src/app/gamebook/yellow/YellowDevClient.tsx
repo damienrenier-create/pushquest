@@ -3277,7 +3277,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </div>
                         <button style={menuBtnStyle} onClick={() => void doStartReplay("run1")}>🏅 Rejouer le RUN 1</button>
                         {getPlayer().ngplusUsed && (
-                            <button style={menuBtnStyle} onClick={() => { if ((getPlayer().customDaemons?.length ?? 0) === 0) { setToast("Crée d'abord ton Daemon pour rejouer le run 2."); return } setReplayMenu(false); setReplayPickRun("run2") }}>🏆 Rejouer le RUN 2</button>
+                            <button style={menuBtnStyle} onClick={() => {
+                                // Starter du run 2 MÉMORISÉ (ngplusStarterBase) → rejeu direct avec lui, niv 5. Robuste à la
+                                //   CANONISATION (customDaemons peut être vide alors que la création est devenue une espèce canon).
+                                const base = getPlayer().ngplusStarterBase
+                                if (base) { let s; try { s = createMonInstance(base, 5, { owned: true }) } catch { setToast("Ton starter du run 2 est introuvable."); return } setReplayMenu(false); void doStartReplay("run2", s); return }
+                                // Repli (saves sans starter mémorisé) : ancien choix parmi les Daemons custom.
+                                if ((getPlayer().customDaemons?.length ?? 0) === 0) { setToast("Ton starter du run 2 est introuvable — recommence le run 1 pour recréer un Daemon."); return }
+                                setReplayMenu(false); setReplayPickRun("run2")
+                            }}>🏆 Rejouer le RUN 2</button>
                         )}
                         {getPlayer().run3Used && (
                             <button style={menuBtnStyle} onClick={() => { setReplayMenu(false); setReplayPickRun("run3") }}>🔥 Rejouer le RUN 3</button>
