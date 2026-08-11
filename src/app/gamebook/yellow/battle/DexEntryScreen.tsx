@@ -10,6 +10,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getPunchline } from "@/lib/gamebook/yellow/data/dexPunchlines"
 import { renameDaemon } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86", GOLD = "#f5c518"
 
@@ -40,7 +41,7 @@ export default function DexEntryScreen({ entry, onDone }: { entry: { speciesId: 
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "14px 16px 4px" }}>
                     {sp.sprite && !imgErr
-                        ? <img src={sp.sprite} alt={sp.name} onError={() => setImgErr(true)} style={entry.shiny ? { ...sprite, filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 6px gold)" } : sprite} />
+                        ? <img src={sp.sprite} alt={sp.name} onError={() => setImgErr(true)} style={entry.shiny ? { ...sprite, filter: SHINY_FILTER } : sprite} />
                         : <div style={{ ...sprite, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, fontWeight: 900, color: INK }}>{sp.name[0]}</div>}
                     {entry.shiny && <div style={{ fontSize: 11, fontWeight: 900, color: "#8a5a1c", letterSpacing: 0.6, marginBottom: 2 }}>✨ CHROMATIQUE ✨</div>}
                     <div style={{ fontSize: 18, fontWeight: 900, color: INK, letterSpacing: 0.5 }}>{sp.name}{entry.shiny ? " ✨" : ""}</div>

@@ -51,6 +51,7 @@ import DiablesRougesQuiz, { diablesRougesAvailable } from "./DiablesRougesQuiz"
 import GlandEvent, { type GlandScreen, GLAND_EVENT_DATE, GLAND_STEP_INTERVAL, GLAND_ENERGY_STOLEN, GLAND_TICKET_COUNT, GLAND_TICKET_VALUE, glandCartonDone, glandJusticeDone, markGlandCartonDone, markGlandJusticeDone } from "./GlandEvent"
 import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
+import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname, DEFAULT_SPAWN, restoreFusionGauntletFromCarry, reorderFusionGauntletTeam, reorderFusionGauntletMove } from "@/lib/gamebook/yellow/store/gameStore"
@@ -4095,7 +4096,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(-1)}>◀</button>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(1)}>▶</button>
                             </div>
-                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : ficheSpriteStyle} />}
+                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: SHINY_FILTER } : ficheSpriteStyle} />}
                             <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
                                 N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `PC ${ficheIdx + 1}/${ficheList.length}`}
                             </div>

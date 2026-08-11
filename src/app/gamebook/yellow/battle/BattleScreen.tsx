@@ -15,6 +15,7 @@ import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import AttackFx from "./AttackFx"
@@ -768,12 +769,13 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
             >
                 {imgSrc
                     ? <img src={imgSrc} alt={sp.name} onError={() => (realSrc ? setRealErr(true) : setGenErr(true))}
-                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : {}) }} />
+                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: SHINY_FILTER } : {}) }} />
                     : chimera
                         ? <ChimeraPlaceholder aSprite={chimera.a} bSprite={chimera.b} types={sp.types} size={76} />
                         : <span style={S.spriteGlyph}>{sp.name[0]}</span>}
-                {/* CHROMATIQUE (shiny) : ✨ scintillantes par-dessus le sprite (le filtre recolore l'image). */}
+                {/* CHROMATIQUE (shiny) : halo doré (SHINY_FILTER, sans recolorer) + ✨ scintillantes (2, décalées). */}
                 {mon.shiny && imgSrc && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
+                {mon.shiny && imgSrc && <span style={{ position: "absolute", bottom: 2, left: 0, fontSize: 12, animation: "victoryPulse 1.6s ease-in-out 0.4s infinite", pointerEvents: "none" }}>✨</span>}
             </div>
         </div>
     )
