@@ -489,7 +489,7 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     setActiveWorld("replay")
     reregisterCustomDaemons() // rend les Daemons custom résolvables en combat dans la bulle de rejeu (aligne les 6 chemins d'hydratation)
     // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
-    if (run === "run2") { grantReps(1000) }                                                                // REJEU run 2 = 1000⚡ (choix Sartay ; ≠ NG+ initial 10000). Cap reste 1000 (posé par startNgPlusWorld).
+    if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // REJEU run 2 = 10000⚡ (comme le NG+ initial — choix Sartay)
     else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
     else { // run1 : reporte l'énergie réelle (relève le cap au besoin) + cadeaux de bienvenue → jouable dès le départ (sinon 0⚡).
         if (carryReps > 1000) raiseRepsCap(carryReps - 1000)

@@ -3270,7 +3270,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔁 REJOUER UN RUN</div>
                         <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 6, lineHeight: 1.35 }}>
-                            RUN 1 & 3 : bulle ISOLÉE (améliore ton score + complète ton Pokédex, ton monde reste intact, classement « {nickname || "Toi"}² »). RUN 2 : ADDITIF — repars avec ton starter perso (niv 5, 1000⚡) et les Daemons capturés REJOIGNENT ta collection.
+                            RUN 1 & 3 : bulle ISOLÉE (améliore ton score + complète ton Pokédex, ton monde reste intact, classement « {nickname || "Toi"}² »). RUN 2 : ADDITIF — repars avec ton starter perso (niv 5, 10 000⚡) et les Daemons capturés REJOIGNENT ta collection.
                         </div>
                         <div style={{ fontSize: 11, fontWeight: 800, textAlign: "center", marginBottom: 8, color: replayNextCost ? "#c9a227" : "#3ad06a" }}>
                             💠 Prochain rejeu : {replayNextCost === null ? "…" : replayNextCost === 0 ? "GRATUIT" : `${replayNextCost} JC`}

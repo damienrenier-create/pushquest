@@ -25,7 +25,7 @@ describe("Rejeu RUN 2 — additif (Daemons de la bulle → PC réel)", () => {
         const ok = await startReplay("run2", mon("s", "gavillus", 5))
         expect(ok).toBe(true)
         expect(getActiveWorld()).toBe("replay")
-        expect(getPlayer().reps).toBe(1000)                              // 1000⚡ (≠ NG+ 10000)
+        expect(getPlayer().reps).toBe(10000)                             // 10 000⚡ (comme le NG+ initial)
         expect(getPlayer().team.map((m) => m.speciesId)).toEqual(["gavillus"]) // équipe = starter niv 5
 
         await exitReplay()
