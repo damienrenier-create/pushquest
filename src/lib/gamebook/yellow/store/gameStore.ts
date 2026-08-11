@@ -1525,7 +1525,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   décompte N∈[3,10] (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
                     //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
-                    if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID)) {
+                    if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID) && !getPlayerSave().genieArcSeen) {
                         const genieNow = genieArcImmediate() // phase de test (allowlist) → pop dès la 1re rencontre, sans garde PV
                         if (genieAmbushCountdown < 0) genieAmbushCountdown = genieNow ? 0 : rollLampCountdown()
                         const genieTeamHp = team.map((m) => { const gsp = getSpecies(m.speciesId); return { hp: m.currentHp, maxHp: gsp ? fullStats(m, gsp).hp : m.currentHp } })

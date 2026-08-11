@@ -57,6 +57,7 @@ import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry } from "./fu
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { bumpCapturesToday, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
+import { markGenieArcSeen } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -921,6 +922,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // ARC LAMPE & GÉNIE : le colporteur-embuscade vaincu → marque vaincu (embuscade one-shot, ne revient
             //   plus jamais) + remet la « vieille lampe rouillée » dans le sac. Annonce en dialogue post-combat.
             markTrainerDefeated(storeState.trainer.trainerId)
+            markGenieArcSeen() // GLOBAL au profil : le génie n'apparaît qu'1× par profil (plus à chaque run)
             addItem(LAMP_ITEM_ID, 1)
             rematchReward = { npcId: storeState.trainer.trainerId, npcName: getTrainer(GENIE_TRAINER_ID)?.name ?? "COLPORTEUR", lines: [
                 "Tu m'as battu à la loyale, voyageur.",
