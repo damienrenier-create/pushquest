@@ -32,20 +32,24 @@ const IV_SUM_MAX = 75 // 5 stats × 15
  * Max = ⌊510 × 1.10⌋ = 561. Le cap PAR STAT (252) reste inchangé.
  */
 export function evTotalCap(mon: MonInstance): number {
+    // SHINY : +10 % de plafond d'EV SUPPLÉMENTAIRE (à GRINDER en combat — pas offert), CUMULÉ avec les autres boosts.
+    //   Rétroactif de fait : le plafond est recalculé en direct → tout shiny déjà capturé peut désormais grinder ces
+    //   10 % (ex. 510 → 561). Le cap PAR STAT (252) reste inchangé.
+    const shinyMult = mon.shiny ? 1.10 : 1
     // GROS LATE BLOOMER (créatures anciennes B2F) : règle d'EV intrinsèque et DURCIE, prioritaire sur le boost
     //   post-Ligue standard. Capturé TÔT (niv 5) → plafond +20 % (612) ; capturé TARD (niv 90) → −20 % (408).
     //   Interpolé linéairement sur la plage de pop 5→90 (0 % au milieu, ~niv 47).
     if (getSpecies(mon.speciesId)?.lateBloomerEv) {
         const cl = Math.max(5, Math.min(90, mon.capturedLevel ?? mon.level))
         const factor = 0.20 - 0.40 * (cl - 5) / 85 // +0.20 @niv5 → −0.20 @niv90
-        return Math.floor(EV_TOTAL_CAP * (1 + factor))
+        return Math.floor(EV_TOTAL_CAP * (1 + factor) * shinyMult)
     }
-    if (!mon.evCapBoost) return EV_TOTAL_CAP
+    if (!mon.evCapBoost) return Math.floor(EV_TOTAL_CAP * shinyMult)
     const ivSum = STAT_KEYS.reduce((a, k) => a + Math.max(0, mon.ivs?.[k] ?? 0), 0)
     const genetic = EV_CAP_GENETIC_MAX * Math.min(1, ivSum / IV_SUM_MAX)
     const cl = mon.capturedLevel ?? mon.level
     const capture = cl <= 10 ? 0.05 : cl <= 19 ? 0.03 : cl <= 30 ? 0.01 : 0
-    return Math.floor(EV_TOTAL_CAP * (1 + genetic + capture))
+    return Math.floor(EV_TOTAL_CAP * (1 + genetic + capture) * shinyMult)
 }
 
 /** Contribution d'une réserve d'EV au calcul de stat (terme interne Gen-1). */
