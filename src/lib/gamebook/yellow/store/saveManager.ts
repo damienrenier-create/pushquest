@@ -32,6 +32,9 @@ let suppressAutosave = false
 let liveStash: YellowSave | null = null      // run 1, stashé quand actif ≠ live
 let ngplusStash: YellowSave | null = null    // run 2, stashé quand actif ≠ ngplus (null si jamais lancé)
 let run3Stash: YellowSave | null = null      // run 3, stashé quand actif ≠ run3 (null si jamais lancé)
+// MULTI-PROFILS : profils COMPLETS inactifs (chacun un YellowSave à part entière). Le profil ACTIF vit dans les
+// stores + les 3 slots ci-dessus ; les AUTRES profils sont stashés ici, OPAQUES, réémis tels quels par snapshot.
+let altProfilesStash: YellowSave[] = []
 let ngplusOldTeam: ChampionMon[] | null = null
 
 /** Un monde « nu » (sans méta multi-mondes), prêt à être stashé ou imbriqué. */
@@ -59,6 +62,7 @@ export function applyServerSave(save: YellowSave): void {
         : save.activeWorld === "replay" && save.replayWorld ? "replay"
         : "live"
     ngplusOldTeam = save.ngplusOldTeam ?? null
+    altProfilesStash = Array.isArray(save.altProfiles) ? save.altProfiles : [] // profils inactifs (opaques) — restaurés tels quels au snapshot
     // Stashe les mondes NON actifs (le slot du monde actif reste null → il vit dans les stores). Pendant un REJEU,
     // les 3 mondes réels sont TOUS stashés (la bulle est active) ; les champs plats = TOUJOURS le run 1 (garde-fou).
     liveStash = aw === "live" ? null : liveWorldOf(save)
@@ -143,14 +147,14 @@ export function snapshot(): YellowSave {
     const aw = getActiveWorld()
     // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
     const norm = (w: YellowSave | null): YellowSave | null =>
-        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null } : null
+        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, altProfiles: undefined } : null
     // REJEU : la bulle est ACTIVE (dans les stores) → les 3 mondes réels viennent TOUS de leurs stashes.
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
     const replay = aw === "replay" ? active : null // la bulle n'existe QUE pendant un rejeu
     const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS — même pendant un rejeu (= liveStash)
-    return { ...flat, customDaemons: cds, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn() }
+    return { ...flat, customDaemons: cds, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn(), altProfiles: altProfilesStash.length ? altProfilesStash : undefined }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).

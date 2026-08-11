@@ -152,6 +152,10 @@ export interface YellowSave {
     replayRun: "run1" | "run2" | "run3" | null
     /** REJEU — monde réel à RESTAURER en sortant du rejeu (celui qui était actif avant). "live" par défaut. null hors rejeu. */
     replayReturn: "live" | "ngplus" | "run3" | null
+    /** MULTI-PROFILS — profils COMPLETS inactifs (chacun un save à part entière avec ses runs 1/2/3). Le profil ACTIF
+     *  vit au top-level (100 % rétro-compat) ; « Rejouer le RUN 1 » stashe l'actif ici et démarre un profil FRAIS.
+     *  Portés OPAQUES dans le cycle save (re-parsés seulement au moment de basculer dessus). Absent = 1 seul profil. */
+    altProfiles?: YellowSave[]
     /** RUN 3 — le concours a-t-il déjà été LANCÉ ? (jumeau de ngplusUsed). Survit à la fusion. Défaut false. */
     run3Used: boolean
     /** RUN 2 — le Maître de Ligue vient d'être battu et il RESTE le combat de fin (vs l'ancienne équipe). Marqueur
@@ -637,6 +641,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         forcedEncounter: typeof o.forcedEncounter === "string" ? o.forcedEncounter : undefined,
+        // MULTI-PROFILS : profils inactifs portés OPAQUES (jamais imbriqués dans un monde `nested` → top-level only).
+        //   Re-parsés seulement au moment de la bascule (switchProfile). Les blobs stockés n'ont PAS d'altProfiles (stripés au stash).
+        altProfiles: !nested && Array.isArray(o.altProfiles) ? (o.altProfiles as YellowSave[]) : undefined,
         fusionLeagueCarry: typeof o.fusionLeagueCarry === "string" ? o.fusionLeagueCarry : undefined,
         curseAbundanceStart: typeof o.curseAbundanceStart === "number" ? o.curseAbundanceStart : undefined,       // vœu maudit Jacanon
         curseFreeItemsTaken: typeof o.curseFreeItemsTaken === "number" ? Math.max(0, Math.floor(o.curseFreeItemsTaken)) : undefined,
