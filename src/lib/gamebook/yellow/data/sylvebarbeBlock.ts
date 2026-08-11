@@ -12,3 +12,24 @@ export const SYLVEBARBE_SLEEP_SPRITE = "/yellow/sprites/sylvebarbe_endormi.png"
 export function inSylvebarbeBlock(x: number, y: number): boolean {
     return x >= SYLVEBARBE_BLOCK.x0 && x <= SYLVEBARBE_BLOCK.x1 && y >= SYLVEBARBE_BLOCK.y0 && y <= SYLVEBARBE_BLOCK.y1
 }
+
+// ── GATE DE RUN — le SUD (Zone de Combat → Grotte du Nexus → Ligue de Fusion) est le POST-GAME, ouvert aux
+//    CHAMPIONS. En quête principale (monde LIVE) c'est Sylvebarbe qui garde la porte. En NG+ (run 2), concours
+//    (run 3) ou rejeu, il faut d'abord RE-TERMINER cette run (battre sa Ligue = devenir champion de CE monde) :
+//    tant que ce n'est pas fait, le Dieu Spaghetti barre le passage — MÊME si un flag Sylvebarbe traînait d'un
+//    autre monde (garde-fou anti-fuite). Une fois champion de la run, on passe (puis la logique Sylvebarbe reprend). ──
+export const SUD_GATE_NPC = "spaghetti_sud_gate"
+export const SUD_GATE_NPC_NAME = "DIEU SPAGHETTI"
+export const SUD_GATE_WRONG_RUN_LINES = [
+    "*Une volute de sauce tomate jaillit du sol et prend la forme du DIEU SPAGHETTI.*",
+    "🍝 « Halte-là ! La ZONE DE COMBAT et la LIGUE DE FUSION ne s'ouvrent qu'aux CHAMPIONS de CETTE aventure. »",
+    "« Tu as recommencé une nouvelle quête ici — termine-la d'abord : bats la LIGUE de cette run. »",
+    "« Reviens me voir une fois sacré, et le Sud de la Ville Jaune s'ouvrira. »",
+]
+
+/** Le passage SUD (endgame) est-il barré par le gate de RUN ? → vrai si, HORS de la quête principale (monde ≠ "live"),
+ *  on n'est PAS encore champion de cette run et qu'on tente d'entrer dans le rectangle sud. En LIVE, ou une fois
+ *  champion de la run en cours, ce gate ne s'applique pas (la logique Sylvebarbe/Daemonflûte prend le relais). */
+export function sudGateBlockedByRun(activeWorld: string, isChampion: boolean, x: number, y: number): boolean {
+    return activeWorld !== "live" && !isChampion && inSylvebarbeBlock(x, y)
+}

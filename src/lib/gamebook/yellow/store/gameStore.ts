@@ -49,7 +49,7 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, A
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
+import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -1017,6 +1017,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && findNpcAt(activeNpcs(), next.posX, next.posY, player.mapId)) {
             set({ player: { ...player, direction: next.direction } })
+            scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+
+        // GATE DE RUN — ZONE DE COMBAT / LIGUE DE FUSION (au sud) = POST-GAME ouvert aux CHAMPIONS. En NG+ (run 2),
+        //   concours (run 3) ou rejeu, tant qu'on n'a pas RE-TERMINÉ cette run (battu sa Ligue = champion de CE monde),
+        //   le Dieu Spaghetti barre le passage sud — MÊME si un flag Sylvebarbe traînait d'un autre monde (anti-fuite).
+        //   Une fois champion de la run, on passe (la logique Sylvebarbe/Daemonflûte reprend). En LIVE : inchangé.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === SYLVEBARBE_BLOCK_MAP && sudGateBlockedByRun(getActiveWorld(), getPlayerSave().isChampion, next.posX, next.posY)) {
+            set({ player: { ...player, direction: next.direction }, dialogue: { npcId: SUD_GATE_NPC, npcName: SUD_GATE_NPC_NAME, lines: SUD_GATE_WRONG_RUN_LINES, lineIndex: 0 } })
             scheduleSave({ ...player, direction: next.direction })
             return
         }
