@@ -489,7 +489,7 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     setActiveWorld("replay")
     reregisterCustomDaemons() // rend les Daemons custom résolvables en combat dans la bulle de rejeu (aligne les 6 chemins d'hydratation)
     // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
-    if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // NG+ = 10000
+    if (run === "run2") { grantReps(1000) }                                                                // REJEU run 2 = 1000⚡ (choix Sartay ; ≠ NG+ initial 10000). Cap reste 1000 (posé par startNgPlusWorld).
     else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
     else { // run1 : reporte l'énergie réelle (relève le cap au besoin) + cadeaux de bienvenue → jouable dès le départ (sinon 0⚡).
         if (carryReps > 1000) raiseRepsCap(carryReps - 1000)
@@ -505,9 +505,18 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
  *  Les captures faites pendant le rejeu RESTENT (Pokédex global). No-op hors rejeu. */
 export async function exitReplay(): Promise<void> {
     if (getActiveWorld() !== "replay") return
+    const replayRun = getReplayRun() // AVANT clearReplayContext (qui l'efface)
     const ret = getReplayReturn() ?? "live"
     const stash = ret === "ngplus" ? ngplusStash : ret === "run3" ? run3Stash : liveStash
-    const world = stash ?? liveStash ?? emptySave() // défensif : jamais d'écran noir
+    let world = stash ?? liveStash ?? emptySave() // défensif : jamais d'écran noir
+    // ADDITIF (rejeu RUN 2 UNIQUEMENT) : les Daemons de la bulle (équipe + PC : starter monté + captures) REJOIGNENT
+    //   le PC du monde de retour, uid taggés anti-collision. NON-destructif : on n'AJOUTE qu'au PC — rien du monde
+    //   réel n'est retiré. Le Pokédex est déjà global (captures conservées). Les rejeux run1/run3 restent JETÉS (isolés).
+    if (replayRun === "run2") {
+        const bubble = activeWorldSave()
+        const add = [...bubble.team, ...bubble.pc].map((m, i) => ({ ...m, uid: `rpl2-${i}-${m.uid}` }))
+        if (add.length) world = { ...world, pc: [...world.pc, ...add] }
+    }
     clearReplayContext()
     // suppressAutosave : hydrateFromWorld émet et armerait l'autosave débouncé qui pourrait POSTer un état
     //   intermédiaire → on désarme le temps de restaurer + flusher.
