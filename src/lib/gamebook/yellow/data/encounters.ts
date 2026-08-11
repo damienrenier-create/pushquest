@@ -177,7 +177,20 @@ const hourText = (hr: readonly [number, number]) => {
 //   la Grotte du Nexus (le casse-tête, accessible via la Zone de Combat = post-Ligue). Les Hautes Herbes de
 //   Cendreville (plaine d'entraînement) sont gatées par le badge ÉLEC (pré-Ligue) → contenu run 1 normal, PAS masquées.
 const GUIDE_ENDGAME_MAPS = new Set(["yellow_grotte_nexus", "yellow_grotte_nexus_b1f", "yellow_grotte_nexus_b2f"])
-const guideTable = (run: number): Record<string, Zone> => (run === 2 ? NGPLUS_ZONES : run === 3 ? RUN3_ZONES : ZONES)
+// MIROIR du runtime (rollWildEncounter : `RUN3_ZONES[map] || NGPLUS_ZONES[map] || ZONES[map]`) : le guide doit
+// RETOMBER sur ZONES pour toute carte NON re-mixée (NGPLUS/RUN3 n'en overrident que 5 sur 11). Sans ce fallback,
+// Plage / Grotte du Nexus / Maison Hantée / Hautes Herbes — et donc ukognos, les créations B2F, etc. — étaient
+// déclarés à tort « ne se croise pas dans cette run ». Le spread écrase par clé, exactement comme le || par-carte.
+const guideTable = (run: number): Record<string, Zone> =>
+    run === 2 ? { ...ZONES, ...NGPLUS_ZONES } : run === 3 ? { ...ZONES, ...RUN3_ZONES } : ZONES
+// La GRILLE (Hautes Herbes) n'existe que dans ZONES → servie par fallback en run 2/3, mais le runtime
+// (rollTrainingGrid) lui applique des modificateurs run-2 que le guide doit REPRODUIRE : en run 2 le légendaire
+// goshendofy devient UKOGNOS, et « mottoche » est RETIRÉ des pools de type (exclusif à la Grotte en run 2).
+// (run 1 et run 3 : grille inchangée — goshendofy + mottoche présents.)
+const guideGridLegendary = (tg: TrainingGrid, run: number): WildEntry | undefined =>
+    !tg.legendary ? undefined : run === 2 ? { ...tg.legendary, speciesId: "ukognos" } : tg.legendary
+const guideGridTypePool = (pool: WildEntry[], run: number): WildEntry[] =>
+    run === 2 ? pool.filter((e) => e.speciesId !== "mottoche") : pool
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
 function entryYields(e: WildEntry, target: string): boolean {
     if (e.speciesId === target) return true
@@ -215,8 +228,9 @@ function guideMatchesRun(target: string, run: number, hideEndgame: boolean): Gui
         if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool); for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs) }) }
         const tg = z.trainingGrid
         if (tg) {
-            for (const [t, pool] of Object.entries(tg.typePools)) { const ps = sumBase(pool); for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t, pct: pctOf(e.base, ps) }) }
-            if (tg.legendary && entryYields(tg.legendary, target)) out.push({ mapId, e: tg.legendary, legend: true })
+            for (const [t, pool0] of Object.entries(tg.typePools)) { const pool = guideGridTypePool(pool0, run); const ps = sumBase(pool); for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t, pct: pctOf(e.base, ps) }) }
+            const leg = guideGridLegendary(tg, run)
+            if (leg && entryYields(leg, target)) out.push({ mapId, e: leg, legend: true })
             if (tg.dragonRare) for (const b of tg.dragonRare.bases) if (entryYields({ speciesId: b, base: VERY_RARE }, target)) out.push({ mapId, e: { speciesId: b, base: VERY_RARE }, dragon: true })
         }
     }
@@ -287,8 +301,9 @@ export function runSpawnableSpecies(run: number, hideEndgame: boolean = false): 
         z.rects?.forEach((r) => r.pool.forEach(add))
         const tg = z.trainingGrid
         if (tg) {
-            Object.values(tg.typePools).forEach((p) => p.forEach(add))
-            if (tg.legendary) add(tg.legendary)
+            Object.values(tg.typePools).forEach((p) => guideGridTypePool(p, run).forEach(add))
+            const leg = guideGridLegendary(tg, run)
+            if (leg) add(leg)
             tg.dragonRare?.bases.forEach((b) => add({ speciesId: b, base: VERY_RARE }))
         }
     }
