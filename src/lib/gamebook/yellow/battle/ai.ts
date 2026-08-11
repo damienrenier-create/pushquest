@@ -127,18 +127,17 @@ function bestSwitchIndex(team: BattleMon[], activeIndex: number, foe: BattleMon)
     return bestI >= 0 ? bestI : null
 }
 
-// ═══════════════ PILOTE SPÉCIAL : TONYTONY (mur spécial de Mools — PV 250 / DÉF 5 / SPC 105) ═══════════════
-// Stratégie voulue par le créateur : Tonytony ENTRE sur un attaquant SPÉCIAL (qu'il mure), monte l'ESQUIVE (Mirage,
-// +2/coup, plafond +6) pour survivre aux physiques qui l'OHKO (DÉF 5), et fait boule de neige avec ÉVEIL DIVIN
-// (dégâts + Spé +1/coup → et comme « spc » sert d'attaque ET de défense spéciale, il devient irrésistible), en
-// glissant un REPOS quand c'est SÛR. Il NE SORT JAMAIS de lui-même. Reproduit l'ESPRIT de la séquence demandée mais
-// RÉACTIF : saisit les KO, respecte le plafond d'esquive, détecte les coups « sûrs » qui ignorent l'esquive, se
-// soigne au bon moment. Le GARDE-FOU d'ENTRÉE (ne l'envoyer qu'une fois les physiques adverses KO) vit dans
-// chooseReplacementIndex + l'ordre d'équipe (buildHubTeam). PvE only (les vraies équipes IA des autres joueurs).
+// ═══════════════ PILOTES D'ARCHÉTYPE (mur-sweepers / stallers) — IA dédiée ═══════════════
+// Certains Daemons ont une identité « mise en place / usure / esquive / soin » que l'IA générique GÂCHE (tous ces
+// moves de statut/boost scorés ~18, jamais enchaînés). Ce pilote détecte les RÔLES depuis les moves ÉQUIPÉS (→ marche
+// pour les BOSS à kit fixe ET les REFLETS au kit du joueur) puis applique une échelle de priorités commune. Il NE SORT
+// JAMAIS de lui-même. Réservé à une WHITELIST d'espèces → n'altère QU'elles. PvE only (équipes IA). Le GARDE-FOU
+// d'ENTRÉE (Tonytony DÉF 5 : ne l'envoyer qu'une fois les physiques adverses KO) vit dans chooseReplacementIndex +
+// buildHubTeam. Tonytony est un CAS de ce pilote (Éveil Divin snowball + Mirage esquive + Repos).
 const TONYTONY_ID = "tonytony"
-const T_EVEIL = "eveil_divin", T_MIRAGE = "mirage", T_REPOS = "repos"
+const ARCHETYPE_PILOTS = new Set([TONYTONY_ID, "sylvebarbe", "torturoche", "omnhippo", "merorem", "ukognos", "megamonarx", "brookhante", "uzumaro", "karmaki"])
 
-/** Mon dont l'offensive est à dominante PHYSIQUE (ATK ≥ SPC) → menace mortelle pour Tonytony (DÉF 5). */
+/** Mon dont l'offensive est à dominante PHYSIQUE (ATK ≥ SPC) → menace pour un mur à faible DÉF physique. */
 function isPhysicalThreat(mon: BattleMon): boolean {
     const sp = getSpecies(mon.speciesId)
     if (!sp) return false
@@ -149,41 +148,119 @@ function isPhysicalThreat(mon: BattleMon): boolean {
 function foeHasSureHit(foe: BattleMon): boolean {
     return foe.moves.some((s) => { const mv = getMove(s.moveId); return !!mv && s.pp > 0 && mv.power > 0 && (mv.effect?.sureHit === true || mv.accuracy === 0) })
 }
-/** Index d'un move (PP > 0) chez `self`, ou -1. */
-function moveIndexOf(self: BattleMon, moveId: string): number {
-    return self.moves.findIndex((s) => s.moveId === moveId && s.pp > 0)
+/** Puissance EFFECTIVE d'un move (gère Patience : dynamicPower "lowHp" → 40 à pleins PV, ~150 quasi K.O.). */
+function effPower(self: BattleMon, moveId: string): number {
+    const mv = getMove(moveId); if (!mv) return 0
+    if (mv.effect?.dynamicPower === "lowHp") {
+        const sp = getSpecies(self.speciesId)
+        const maxHp = sp ? fullStats(self, sp).hp : Math.max(1, self.currentHp)
+        return Math.round(40 + 110 * (1 - self.currentHp / Math.max(1, maxHp)))
+    }
+    return mv.power
 }
-/** Éveil Divin met-il KO le foe CE tour ? (dégâts spéciaux conservateurs, sans crit). */
-function eveilDivinKOs(self: BattleMon, foe: BattleMon): boolean {
-    const mv = getMove(T_EVEIL), selfSp = getSpecies(self.speciesId), foeSp = getSpecies(foe.speciesId)
-    if (!mv || !selfSp || !foeSp) return false
+/** Dégâts estimés (conservateurs, sans crit) du move `moveId` de `self` sur `foe`. 0 si non-offensif/immunisé. */
+function estMoveDamage(self: BattleMon, foe: BattleMon, moveId: string): number {
+    const mv = getMove(moveId); if (!mv) return 0
+    const power = effPower(self, moveId)
+    if (power <= 0) return 0
+    const selfSp = getSpecies(self.speciesId), foeSp = getSpecies(foe.speciesId)
+    if (!selfSp || !foeSp) return 0
     const eff = typeEffectiveness(mv.type, foeSp.types)
-    if (eff === 0) return false
-    const off = fullStats(self, selfSp).spc
-    const def = foe.frozenSpd ?? fullStats(foe, foeSp).spc
-    const est = computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: selfSp.types.includes(mv.type), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
-    return est >= foe.currentHp
+    if (eff === 0) return 0
+    const phys = moveCategory(mv.type) === "PHYSICAL"
+    const off = phys ? fullStats(self, selfSp).atk : fullStats(self, selfSp).spc
+    const fs = fullStats(foe, foeSp)
+    const def = phys ? fs.def : (foe.frozenSpd ?? fs.spc)
+    return computeDamage({ level: self.level, power, attack: off, defense: def, stab: selfSp.types.includes(mv.type), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
 }
-/** Pilote de coup de Tonytony → moveIndex, ou null si son kit n'a pas la panoplie attendue (→ IA générique). */
-function chooseTonytonyMove(self: BattleMon, foe: BattleMon): number | null {
-    const iEveil = moveIndexOf(self, T_EVEIL), iMirage = moveIndexOf(self, T_MIRAGE), iRepos = moveIndexOf(self, T_REPOS)
-    if (iEveil < 0 && iMirage < 0) return null // pas la panoplie → laisse l'IA générique jouer
+/** Index du meilleur coup (PP > 0) qui MET KO le foe ce tour, ou -1. */
+function bestKoMove(self: BattleMon, foe: BattleMon): number {
+    let bi = -1, bd = 0
+    self.moves.forEach((s, i) => {
+        if (s.pp <= 0) return
+        const d = estMoveDamage(self, foe, s.moveId)
+        if (d >= foe.currentHp && d > bd) { bd = d; bi = i }
+    })
+    return bi
+}
+/** Index du meilleur coup OFFENSIF pour snowballer (évite un 2-tours si on peut mourir pendant la charge). */
+function bestDamageMove(self: BattleMon, foe: BattleMon, safe: boolean): number {
+    let bi = -1, bs = -1
+    self.moves.forEach((s, i) => {
+        if (s.pp <= 0) return
+        const mv = getMove(s.moveId); if (!mv || effPower(self, s.moveId) <= 0) return
+        let d = estMoveDamage(self, foe, s.moveId) * (mv.accuracy > 0 ? mv.accuracy / 100 : 1)
+        if (mv.effect?.twoTurn && !safe) d *= 0.1 // charge risquée si on peut mourir avant de frapper
+        if (mv.effect?.statChanges?.some((c) => c.target === "self" && c.stages > 0)) d *= 1.05 // boost-en-frappant (Éveil/Éclat) → snowball
+        if (d > bs) { bs = d; bi = i }
+    })
+    return bi
+}
+const boostsSelf = (moveId: string, stat: string): boolean => {
+    const mv = getMove(moveId)
+    return !!mv && mv.power <= 0 && !!mv.effect?.statChanges?.some((c) => c.target === "self" && c.stat === stat && c.stages > 0)
+}
+const findMove = (self: BattleMon, pred: (moveId: string) => boolean): number =>
+    self.moves.findIndex((s) => s.pp > 0 && pred(s.moveId))
+
+/** Pilote de coup d'ARCHÉTYPE → moveIndex, ou null si le kit ÉQUIPÉ n'a aucune mécanique spéciale (→ IA générique).
+ *  Échelle : finir > soin d'urgence > esquive > usure/statut > graine > neutraliser un physique > setup offensif >
+ *  soin d'entretien > snowball. NE renvoie JAMAIS de switch. */
+function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
+    const iHeal = findMove(self, (m) => (getMove(m)?.effect?.healPct ?? 0) > 0)
+    const iEva = findMove(self, (m) => boostsSelf(m, "eva"))
+    const iAtk = findMove(self, (m) => boostsSelf(m, "atk"))
+    const iSpc = findMove(self, (m) => boostsSelf(m, "spc"))
+    const iDef = findMove(self, (m) => boostsSelf(m, "def"))
+    const iToxic = findMove(self, (m) => getMove(m)?.power === 0 && getMove(m)?.effect?.inflictStatus === "TOXIC")
+    const iSleep = findMove(self, (m) => getMove(m)?.power === 0 && getMove(m)?.effect?.inflictStatus === "SLEEP")
+    const iSeed = findMove(self, (m) => getMove(m)?.effect?.inflictVolatile === "SEEDED")
+    const iDebuff = findMove(self, (m) => { const mv = getMove(m); return !!mv && mv.power <= 0 && !!mv.effect?.statChanges?.some((c) => c.target === "target" && c.stages < 0) })
+    if ([iHeal, iEva, iAtk, iSpc, iDef, iToxic, iSleep, iSeed, iDebuff].every((i) => i < 0)) return null // kit banal → IA générique
+
     const selfSp = getSpecies(self.speciesId)
-    const maxHp = selfSp ? fullStats(self, selfSp).hp : Math.max(1, self.currentHp)
+    const stats = selfSp ? fullStats(self, selfSp) : null
+    const maxHp = stats ? stats.hp : Math.max(1, self.currentHp)
     const frac = self.currentHp / Math.max(1, maxHp)
     const eva = self.stages?.eva ?? 0
+    const physAttacker = stats ? stats.atk >= stats.spc : false
     const foePhys = isPhysicalThreat(foe)
-    const canDodge = !foeHasSureHit(foe) // Mirage ne protège que si le foe n'a pas de coup « sûr »
-    // 1) FINIR : Éveil Divin qui met KO ce tour prime sur tout.
-    if (iEveil >= 0 && eveilDivinKOs(self, foe)) return iEveil
-    // 2) REPOS quand c'est SÛR (PV bas ET on encaisse : foe spécial muré, OU esquive déjà haute face à un physique).
-    if (iRepos >= 0 && frac < 0.5 && (!foePhys || (eva >= 4 && canDodge))) return iRepos
-    // 3) SURVIE physique : monter l'esquive tant qu'on n'est pas au plafond, face à un physique esquivable.
-    if (iMirage >= 0 && eva < 6 && foePhys && canDodge) return iMirage
-    // 4) SNOWBALL : Éveil Divin (dégâts + Spé). À défaut, Mirage encore utile ; sinon IA générique.
-    if (iEveil >= 0) return iEveil
-    if (iMirage >= 0 && eva < 6) return iMirage
-    return null
+    const canDodge = !foeHasSureHit(foe)
+    const foeSp = getSpecies(foe.speciesId)
+    const foeFresh = foe.currentHp >= (foeSp ? fullStats(foe, foeSp).hp : foe.currentHp) * 0.9
+    const foeTypes = foeSp?.types ?? []
+    const foeNeutralized = foe.status === "SLEEP" || foe.status === "FREEZE"
+    const safe = !foePhys || (eva >= 4 && canDodge) || foeNeutralized
+    // Win-con « bas PV » (Patience, dynamicPower lowHp) : NE PAS se soigner tant qu'un tel coup grimpe (PV bas = arme).
+    const hasLowHpNuke = self.moves.some((s) => s.pp > 0 && getMove(s.moveId)?.effect?.dynamicPower === "lowHp")
+
+    // 1) FINIR
+    const ko = bestKoMove(self, foe)
+    if (ko >= 0) return ko
+    // 2) SOIN d'urgence (PV bas ET tour sûr) — sauf win-con bas-PV vivante.
+    if (iHeal >= 0 && frac < 0.5 && safe && !hasLowHpNuke) return iHeal
+    // 3) SURVIE : monter l'esquive face à un physique esquivable, tant qu'on n'est pas au plafond.
+    if (iEva >= 0 && foePhys && canDodge && eva < 6) return iEva
+    // 4) USURE / DISABLE sur un foe FRAIS et sans statut : Toxik (si empoisonnable) > Sommeil.
+    if (foe.status === "NONE") {
+        if (iToxic >= 0 && !foeTypes.includes("POISON") && !foeTypes.includes("METAL")) return iToxic
+        if (iSleep >= 0 && foeFresh) return iSleep
+    }
+    // 5) VAMPIGRAINE (drain passif) si pas déjà posée et cible non-Plante.
+    if (iSeed >= 0 && !foe.volatiles?.SEEDED && !foeTypes.includes("PLANTE")) return iSeed
+    // 6) NEUTRALISER un physique : débuff (Voile) puis +DÉF.
+    if (iDebuff >= 0 && foePhys && foeFresh) return iDebuff
+    if (iDef >= 0 && foePhys && (self.stages?.def ?? 0) < 2) return iDef
+    // 7) MISE EN PLACE offensive quand c'est SÛR et pas au plafond (boost de la stat d'attaque dominante).
+    if (safe) {
+        if (physAttacker && iAtk >= 0 && (self.stages?.atk ?? 0) < 4) return iAtk
+        if (!physAttacker && iSpc >= 0 && (self.stages?.spc ?? 0) < 4) return iSpc
+    }
+    // 8) SOIN d'entretien (PV bas, hors win-con bas-PV) — mieux que mourir sans rien faire.
+    if (iHeal >= 0 && frac < 0.4 && !hasLowHpNuke) return iHeal
+    // 9) SNOWBALL : meilleur coup offensif.
+    const atk = bestDamageMove(self, foe, safe)
+    return atk >= 0 ? atk : null
 }
 
 /** Choix du REMPLAÇANT à envoyer après un KO (envoi FORCÉ, TOUS niveaux de dresseur). Renvoie l'index du banc
@@ -228,10 +305,10 @@ export function chooseAiAction(
     level: AiLevel,
     rng: Rng,
 ): AiChoice {
-    // PILOTE SPÉCIAL TONYTONY : stratégie dédiée (esquive + Éveil Divin + Repos), et JAMAIS de switch volontaire
-    //   (il reste en jeu jusqu'au KO). S'applique à tous les niveaux d'IA — Tonytony n'est piloté que côté IA.
-    if (self.speciesId === TONYTONY_ID) {
-        const ti = chooseTonytonyMove(self, foe)
+    // PILOTES D'ARCHÉTYPE (Tonytony, Sylvebarbe, Merorem, Ukognos, MégamonarX…) : stratégie dédiée (setup/usure/
+    //   esquive/soin) et JAMAIS de switch volontaire (restent en jeu). S'applique à tous les niveaux d'IA.
+    if (ARCHETYPE_PILOTS.has(self.speciesId)) {
+        const ti = chooseArchetypeMove(self, foe)
         if (ti !== null) return { kind: "move", moveIndex: ti }
     }
     const scored = scoreMoves(self, foe)
