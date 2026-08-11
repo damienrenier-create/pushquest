@@ -18,7 +18,7 @@ import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { isBlockingTile } from "../../mapEngine"
 
 /** Un Daemon tel que renvoyé par la registry. */
-export interface RegistryMon { speciesId: string; level: number; nickname: string | null }
+export interface RegistryMon { speciesId: string; level: number; nickname: string | null; shiny?: boolean }
 /** Un joueur tel que renvoyé par la registry (résumé public). */
 export interface RegistryPlayer {
     userId: string
@@ -130,7 +130,7 @@ export function buildHubTeam(player: RegistryPlayer): MonInstance[] {
     const fav = player.favoriteDaemon
     if (fav) { const i = ordered.findIndex((m) => m.speciesId === fav); if (i > 0) ordered.unshift(...ordered.splice(i, 1)) }
     return ordered.map((m) => {
-        const mon = createMonInstance(m.speciesId, m.level, { owned: false })
+        const mon = createMonInstance(m.speciesId, m.level, { owned: false, shiny: m.shiny })
         if (m.nickname) mon.nickname = m.nickname
         return mon
     })
@@ -221,6 +221,7 @@ export function buildMirrorTeam(player: RegistryPlayer): MonInstance[] {
         .map((m) => {
             const counterId = pickMirrorCounter(m.speciesId, used)
             used.add(counterId)
-            return createMonInstance(counterId, m.level, { owned: false })
+            // Le reflet d'un shiny est shiny lui aussi (le flag suit l'original, même si l'espèce-contre diffère).
+            return createMonInstance(counterId, m.level, { owned: false, shiny: m.shiny })
         })
 }

@@ -132,7 +132,7 @@ interface BattleStoreState {
     pvpCtx: PvpContext | null
     /** PREMIÈRE capture d'une espèce → popup post-combat (sprite + description + punchline +
      *  proposition de surnom). null sinon. Renseigné en fin de combat, consommé par l'UI. */
-    newDexEntry: { speciesId: string; uid: string; level: number } | null
+    newDexEntry: { speciesId: string; uid: string; level: number; shiny?: boolean } | null
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
     championRun: ChampionRun | null
     /** ARÈNE : victoire d'un boss de gym (badge gagné) → Hall of Fame par arène (équipe gelée). null sinon. */
@@ -533,7 +533,7 @@ export function submitPlayerAction(action: PlayerAction) {
     if (next.outcome === "caught") {
         const wild = next.enemy.team[next.enemy.activeIndex]
         if (wild && !getPokedex().caught.includes(wild.speciesId)) {
-            newEntry = { speciesId: wild.speciesId, uid: wild.uid, level: wild.level }
+            newEntry = { speciesId: wild.speciesId, uid: wild.uid, level: wild.level, shiny: wild.shiny }
         }
     }
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant

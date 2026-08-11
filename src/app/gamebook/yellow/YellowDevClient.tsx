@@ -2232,7 +2232,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         }}
                                         style={{ background: picked ? "#e0b020" : "transparent", border: "1px solid #b8941c", color: picked ? "#3a2a00" : "#b8941c", borderRadius: 4, cursor: "pointer", fontSize: 13, padding: "2px 6px", marginRight: 6, lineHeight: 1 }}
                                     >⇅</button>
-                                    <span onClick={() => setSelected(m)} title="Voir la fiche" style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}>{displayName(m)}</span>
+                                    <span onClick={() => setSelected(m)} title="Voir la fiche" style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}>{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                     <span style={{ width: 78, textAlign: "right", color: pct > 50 ? "#2a8a2a" : pct > 20 ? "#b88010" : "#c83030" }}>
@@ -4091,11 +4091,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             }}
                         >
                             <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-                                <span style={{ flex: 1, textAlign: "left" }}>{displayName(live).toUpperCase()} · N.{live.level}</span>
+                                <span style={{ flex: 1, textAlign: "left" }}>{displayName(live).toUpperCase()}{live.shiny ? " ✨" : ""} · N.{live.level}</span>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(-1)}>◀</button>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(1)}>▶</button>
                             </div>
-                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={ficheSpriteStyle} />}
+                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : ficheSpriteStyle} />}
                             <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
                                 N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `PC ${ficheIdx + 1}/${ficheList.length}`}
                             </div>
