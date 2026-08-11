@@ -733,7 +733,9 @@ function tryLaunchSylvebarbe(): ActiveDialogue | null {
         return { npcId: SYLVEBARBE_NPC_ID, npcName: "SYLVEBARBE", lineIndex: 0, lines: SYLVEBARBE_NO_TEAM_LINES }
     }
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startWildBattle(team, [buildSylvebarbe()], seed)
+    // UNIQUE (comme un légendaire) : si Sylvebarbe est DÉJÀ au Pokédex GLOBAL, le combat a lieu (rouvre le gate de
+    //   cette run) mais la re-capture est bloquée. Sinon, 1re rencontre → capturable.
+    startWildBattle(team, [buildSylvebarbe(getPokedex().caught.includes("sylvebarbe"))], seed)
     return null
 }
 

@@ -1412,6 +1412,13 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         events.push({ kind: "message", text: `La Fusio-Ball n'a aucune prise sur ${displayName(wild)} — elle n'agit QUE sur les Daemons fusionnés !` })
         return
     }
+    // UNIQUE déjà possédé (ex. Sylvebarbe capturé dans une run précédente) : INCAPTURABLE une 2ᵉ fois, comme un
+    //   légendaire. Le combat a bien lieu (re-vaincre pour rouvrir un gate d'une autre run) ; AUCUNE Ball ne shunte.
+    if (wild.captureBlockedOwned) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `${displayName(wild)} est UNIQUE — tu en possèdes déjà un exemplaire. Tu peux le vaincre pour ouvrir la voie, mais plus le capturer.` })
+        return
+    }
     // FUSIO-BALL sur une FUSION : capture GARANTIE (comme la Master) UNE FOIS le fusionné suffisamment AFFAIBLI.
     //   Le SEUIL de PV dépend de sa PUISSANCE (BST) : Ukognofy (BST max ~1710, l'ÉTALON) ne cède qu'au bord du K.O.
     //   (~10% PV) ; une fusion faible cède dès un peu entamée (~85%). Un STATUT majeur RELÈVE le seuil (capture plus

@@ -342,6 +342,10 @@ export interface BattleMon extends MonInstance {
     /** SAUVAGE : si présent avec captureMinBallBonus, un STATUT majeur SHUNTE l'exigence de Ball
      *  (capturable avec Super Ball+ OU sous statut, ex. Bouh). Runtime, non persisté. */
     captureStatusBypassesBall?: boolean
+    /** SAUVAGE : espèce UNIQUE déjà possédée sur ce compte (Pokédex global) → capture IMPOSSIBLE une 2ᵉ fois,
+     *  comme un légendaire (ex. Sylvebarbe). Le COMBAT reste possible (re-vaincre pour rouvrir un gate d'une autre
+     *  run) ; seule la re-capture est bloquée. Aucune Ball ne shunte. Runtime, non persisté. */
+    captureBlockedOwned?: boolean
 }
 
 export function neutralStages(): StatStages {

@@ -33,10 +33,15 @@ export const SYLVEBARBE_NO_TEAM_LINES = [
 
 /** Instance de combat de SYLVEBARBE : N85, capture DURE (×0.6) mais SANS statut requis (≠ légendaire).
  *  Kit EXPLICITE (au niv 85 il n'a pas encore Lance-Soleil, niv 90) : double STAB (Tempête Verte PLANTE spé +
- *  Faille Sismique SOL phys) + Focalisation (setup +Spé) + Repos (soin) → mur-sweeper redoutable. */
-export function buildSylvebarbe(): MonInstance {
+ *  Faille Sismique SOL phys) + Focalisation (setup +Spé) + Repos (soin) → mur-sweeper redoutable.
+ *  `alreadyOwned` (Sylvebarbe déjà dans le Pokédex GLOBAL) → UNIQUE : le combat a lieu (gate) mais la re-capture
+ *  est bloquée, comme un légendaire. */
+export function buildSylvebarbe(alreadyOwned = false): MonInstance {
     const mon = createMonInstance("sylvebarbe", SYLVEBARBE_LEVEL, { owned: false, moveIds: ["tempete_verte", "faille_sismique", "focalisation", "repos"] })
-    Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
+    // captureMult + captureBlockedOwned = flags RUNTIME (BattleMon) → posés via Object.assign (hors type MonInstance
+    //   persisté) ; ils voyagent jusqu'au combattant via toBattleMon (spread). captureBlockedOwned = UNIQUE (déjà
+    //   possédé) → capture bloquée, mais on peut le vaincre (gate per-run).
+    Object.assign(mon, { captureMult: 0.6, ...(alreadyOwned ? { captureBlockedOwned: true } : {}) })
     return mon
 }
 
