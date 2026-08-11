@@ -1823,6 +1823,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ arenaInfoOpen: "eau" })
             return
         }
+        // Panneau de la Tour Hertz (arène ÉLEC) : en RUN 1 il garde son antisèche RICHE codée en dur (Sol,
+        // Cailloutchi, Séisme — pertinente tant que l'arène est 100% Élec). En RUN 2/3 l'arène est RE-TYPÉE
+        // (Insecte/Spectre en run 2, Dragon en run 3) → cette antisèche serait PÉRIMÉE : on ouvre à la place
+        // le carrousel stratégique AUTO-CALCULÉ (arenaInfo/run3ArenaInfo, run-aware) comme les autres panneaux.
+        if (npc.id === "y_elecarena_sign" && (getActiveWorld() === "ngplus" || getActiveWorld() === "run3")) {
+            set({ arenaInfoOpen: "elec" })
+            return
+        }
 
         // Bibliothèque de l'infirmerie : ouvre le REGISTRE DES DRESSEURS.
         if (npc.id === "y_biblio") {

@@ -406,6 +406,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
     const [ghostFight, setGhostFight] = useState<{ ghost: Run2Ghost; enemy: MonInstance[] } | null>(null)
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
+    const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
+    const [confirmStartReplay, setConfirmStartReplay] = useState<"run2" | "run3" | null>(null) // « rejouer un run » : confirmation avant de lancer
     const [keepSel, setKeepSel] = useState<Set<string>>(new Set())
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
@@ -1918,6 +1920,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             : "🚪 Rejeu terminé — ton score² est figé au classement. De retour dans ton vrai monde !")
     }
 
+    // REJEU — SORTIE confirmée : lance la sortie (run 2 = additif → tout ramené, pas de modale de garde ; run 1/3 =
+    //   modale « ramener X Daemons » selon les badges gagnés).
+    const beginExitReplay = () => {
+        setConfirmExitReplay(false)
+        if (getReplayRun() === "run2") { void doExitReplay(); return } // run 2 additif : exitReplay ramène déjà tous les Daemons
+        const max = getPlayer().badges.length + (getPlayer().isChampion ? 1 : 0)
+        if (max <= 0) { void doExitReplay(); return }
+        setKeepSel(new Set()); setReplayKeep({ max, mons: [...getPlayer().team, ...getPlayer().pc] }); setMenu("none")
+    }
+    // REJEU RUN 2 — lancement confirmé (starter mémorisé niv 5, repli picker customDaemons pour les saves legacy).
+    const doStartReplayRun2 = () => {
+        setConfirmStartReplay(null)
+        const base = getPlayer().ngplusStarterBase
+        if (base) { let s; try { s = createMonInstance(base, 5, { owned: true }) } catch { setToast("Ton starter du run 2 est introuvable."); return } setReplayMenu(false); void doStartReplay("run2", s); return }
+        if ((getPlayer().customDaemons?.length ?? 0) === 0) { setToast("Ton starter du run 2 est introuvable — recommence le run 1 pour recréer un Daemon."); return }
+        setReplayMenu(false); setReplayPickRun("run2")
+    }
+
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
     // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
     // Pile de fermeture du bouton B : ferme l'overlay le PLUS HAUT et renvoie true ; false si
@@ -2117,12 +2137,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             SALLE DORÉE (porte droite du trône après le Maître, run 2). Plus de raccourci menu. */}
                         {/* REJEU (« run bis ») — rejouer un run terminé (bulle isolée) : sortir du rejeu, ou en lancer un. */}
                         {!battle && activeWorld === "replay" && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" }} onClick={() => {
-                                // Au moment de sortir, on ouvre la modale « ramener des Daemons » (X = badges gagnés dans le rejeu + 1 si Ligue battue).
-                                const max = getPlayer().badges.length + (getPlayer().isChampion ? 1 : 0)
-                                if (max <= 0) { doExitReplay(); return } // aucun badge gagné → rien à ramener, sortie directe
-                                setKeepSel(new Set()); setReplayKeep({ max, mons: [...getPlayer().team, ...getPlayer().pc] }); setMenu("none")
-                            }}>🚪 SORTIR DU REJEU (choisir mes Daemons à garder)</button>
+                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" }} onClick={() => setConfirmExitReplay(true)}>🚪 SORTIR DU REJEU</button>
                         )}
                         {!battle && activeWorld !== "replay" && resetStep === 0 && (getPlayer().ngplusUsed || getPlayer().run3Used || player.isChampion) && (
                             <button style={menuBtnDimStyle} onClick={() => setReplayMenu(true)}>🔁 REJOUER UN RUN</button>
@@ -3325,18 +3340,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setReplayMenu(false); setProfileView(true) }}>🏅 Rejouer le RUN 1 (nouveau profil){profileCount() > 1 ? ` · ${profileCount()} profils` : ""}</button>
                         {getPlayer().ngplusUsed && (
-                            <button style={menuBtnStyle} onClick={() => {
-                                // Starter du run 2 MÉMORISÉ (ngplusStarterBase) → rejeu direct avec lui, niv 5. Robuste à la
-                                //   CANONISATION (customDaemons peut être vide alors que la création est devenue une espèce canon).
-                                const base = getPlayer().ngplusStarterBase
-                                if (base) { let s; try { s = createMonInstance(base, 5, { owned: true }) } catch { setToast("Ton starter du run 2 est introuvable."); return } setReplayMenu(false); void doStartReplay("run2", s); return }
-                                // Repli (saves sans starter mémorisé) : ancien choix parmi les Daemons custom.
-                                if ((getPlayer().customDaemons?.length ?? 0) === 0) { setToast("Ton starter du run 2 est introuvable — recommence le run 1 pour recréer un Daemon."); return }
-                                setReplayMenu(false); setReplayPickRun("run2")
-                            }}>🏆 Rejouer le RUN 2</button>
+                            <button style={menuBtnStyle} onClick={() => setConfirmStartReplay("run2")}>🏆 Rejouer le RUN 2</button>
                         )}
                         {getPlayer().run3Used && (
-                            <button style={menuBtnStyle} onClick={() => { setReplayMenu(false); setReplayPickRun("run3") }}>🔥 Rejouer le RUN 3</button>
+                            <button style={menuBtnStyle} onClick={() => setConfirmStartReplay("run3")}>🔥 Rejouer le RUN 3</button>
                         )}
                         <button style={menuBtnDimStyle} onClick={() => setReplayMenu(false)}>← Retour</button>
                     </div>
@@ -4454,6 +4461,32 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* REJEU — MODALE « RAMENER DES DAEMONS » : à la sortie, garder jusqu'à X (= badges gagnés + 1 si Ligue)
                 Daemons choisis parmi l'équipe + le PC du rejeu ; le reste est perdu. */}
+            {/* REJEU — CONFIRMATION de SORTIE (anti-clic accidentel, cf. save Mools). « Rester » prominent, « Quitter » discret + rouge. */}
+            {confirmExitReplay && !battle && (
+                <div style={menuOverlayStyle} onClick={() => setConfirmExitReplay(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>⚠️ Quitter le rejeu ?</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
+                            Tu vas SORTIR de ton {getReplayRun() === "run2" ? "RUN 2²" : getReplayRun() === "run3" ? "RUN 3²" : "RUN 1²"} et revenir à ton monde principal. <b>Cette partie bis sera figée — tu ne pourras plus la reprendre.</b>{getReplayRun() === "run2" ? " (Tes Daemons rejoignent ta collection.)" : ""}
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => setConfirmExitReplay(false)}>← Non, RESTER dans le rejeu</button>
+                        <button style={{ ...menuBtnDimStyle, borderColor: "#c83030", color: "#c83030", marginTop: 6 }} onClick={beginExitReplay}>🚪 Oui, quitter (définitif)</button>
+                    </div>
+                </div>
+            )}
+            {/* REJEU — CONFIRMATION de LANCEMENT (rejouer un run). */}
+            {confirmStartReplay && !battle && (
+                <div style={menuOverlayStyle} onClick={() => setConfirmStartReplay(null)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>Lancer le rejeu du {confirmStartReplay === "run2" ? "RUN 2" : "RUN 3"} ?</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
+                            Tu vas entrer dans une partie bis. Ton vrai monde est mis de côté (INTACT) et restauré à la sortie.{confirmStartReplay === "run2" ? " Rejeu RUN 2 = ADDITIF (tes captures rejoignent ta collection)." : ""}
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => setConfirmStartReplay(null)}>← Annuler</button>
+                        <button style={{ ...menuBtnStyle, marginTop: 6 }} onClick={() => { if (confirmStartReplay === "run2") doStartReplayRun2(); else { setConfirmStartReplay(null); setReplayMenu(false); setReplayPickRun("run3") } }}>Oui, lancer</button>
+                    </div>
+                </div>
+            )}
             {replayKeep && !battle && (
                 <div style={menuOverlayStyle}>
                     <div style={{ ...menuBoxStyle, maxHeight: "88%", overflowY: "auto" }}>
