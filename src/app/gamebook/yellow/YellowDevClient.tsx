@@ -65,9 +65,9 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
-import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
+import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
@@ -480,6 +480,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     }, [replayMenu])
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     const [profileView, setProfileView] = useState(false) // MULTI-PROFILS : overlay « Mes profils » (nouveau profil + bascule)
+    const [genesisCraftStep, setGenesisCraftStep] = useState<number | null>(null) // MODE GENÈSE : étape de craft (0..5) ; null = pas en craft
+    const genesisSpecsRef = useRef<StoredCustomDaemon[]>([]) // specs Genèse accumulés (ref → pas de race async entre créations)
     // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
     // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
     const [resetHolding, setResetHolding] = useState(false)
@@ -1837,6 +1839,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!ok) { setToast("Bascule de profil impossible."); return }
         setProfileView(false); setReplayMenu(false); setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
+    }
+
+    // MODE GENÈSE — assistant de craft ×6 : chaque création alimente l'équipe ; à 6, on démarre le profil Genèse
+    //   (verrou de capture jusqu'à la Ligue de Fusion, fusion autorisée). Ref pour accumuler sans race async.
+    const GENESIS_TEAM = 6
+    const openGenesisCraft = () => { genesisSpecsRef.current = []; setProfileView(false); setGenesisCraftStep(0) }
+    const doGenesisCraftStep = async (spec: CustomSpec) => {
+        genesisSpecsRef.current = [...genesisSpecsRef.current, { ownerId: userId, spec }]
+        const n = genesisSpecsRef.current.length
+        if (n < GENESIS_TEAM) { setGenesisCraftStep(n); setToast(`Création ${n}/${GENESIS_TEAM} — encore ${GENESIS_TEAM - n} !`); return }
+        const specs = genesisSpecsRef.current
+        setGenesisCraftStep(null); genesisSpecsRef.current = []
+        let team: ReturnType<typeof createMonInstance>[]
+        try { team = specs.map((s) => createMonInstance(customStarterSpeciesId(s), 5, { owned: true })) } catch { setToast("Une création est corrompue — Genèse annulée."); return }
+        const ok = await startGenesisProfile(team, specs)
+        if (!ok) { setToast(`Mode Genèse impossible (maximum ${MAX_ALT_PROFILES + 1} profils ?).`); return }
+        specs.forEach((s) => void generateCustomSpritesInBackground(s)) // sprites générés en tâche de fond (non bloquant)
+        setMenu("none"); setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            "*Le Dieu Spaghetti contemple tes 6 créations, un sourire malicieux aux lèvres…*",
+            "« MODE GENÈSE ! Tu repars au tout début avec TES 6 créatures — et rien d'autre. »",
+            "« Interdiction de capturer le moindre Daemon jusqu'à ce que tu domptes la LIGUE DE FUSION. Tes chimères contre le monde ! »",
+            "« Tu peux les FUSIONNER entre elles en chemin. Montre-moi ce que valent tes créations, démiurge ! 🍝 »",
+        ])
     }
 
     // BOUCLE ENDGAME — lance le rejeu du run 1 GRATUITEMENT (récompense de fin de jeu) avec le Daemon custom
@@ -3341,6 +3367,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {getAltProfileSummaries().length < MAX_ALT_PROFILES
                             ? <button style={menuBtnStyle} onClick={() => void doNewProfileRun1()}>🆕 Nouveau profil (recommencer au Run 1)</button>
                             : <div style={{ fontSize: 10, opacity: 0.6, textAlign: "center", margin: "4px 0" }}>Maximum de {MAX_ALT_PROFILES + 1} profils atteint.</div>}
+                        {getAltProfileSummaries().length < MAX_ALT_PROFILES && <button style={menuBtnStyle} onClick={openGenesisCraft}>🌱 Mode GENÈSE — 6 craftés, zéro capture</button>}
                         {getAltProfileSummaries().length > 0 && <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.7, margin: "8px 0 2px" }}>BASCULER SUR :</div>}
                         {getAltProfileSummaries().map((p, i) => (
                             <button key={i} style={menuBtnStyle} onClick={() => void doSwitchProfile(i)}>
@@ -3422,6 +3449,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     mode="loop"
                     close={() => setLoopCreatorOpen(false)}
                     onCreated={(spec) => { setLoopCreatorOpen(false); void startLoopReplay({ ownerId: userId, spec }) }}
+                />
+            )}
+
+            {/* MODE GENÈSE — assistant de craft ×6 : un DaemonCreator FRAIS par étape (key), onCreated accumule via ref. */}
+            {genesisCraftStep !== null && (
+                <DaemonCreator
+                    key={`genesis-${genesisCraftStep}`}
+                    ownerId={userId} nickname={nickname}
+                    close={() => { setGenesisCraftStep(null); genesisSpecsRef.current = [] }}
+                    onCreated={(spec) => void doGenesisCraftStep(spec)}
                 />
             )}
 
