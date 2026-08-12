@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, isGalijahArmed, poseGalijahEncounter } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -1462,8 +1462,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
         if (moved && !!map.darkness && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
-        // 🐈‍⬛ GALIJAH : la chasse est armée (150 ESPÈCES DIFFÉRENTES au Pokédex) → après 3-4 pas EFFECTIFS, on pose la
-        //   rencontre forcée (niveau moyen d'équipe, capture légendaire). Elle surgira dans les prochaines hautes herbes.
+        // 🐈‍⬛ GALIJAH : à chaque pas hors rejeu, on (ré)arme la chasse dès 150 ESPÈCES DIFFÉRENTES au Pokédex — atteintes
+        //   par N'IMPORTE QUEL moyen (capture, ÉVOLUTION, fusion, cadeau, échange…), pas seulement une capture sauvage.
+        //   Idempotent (no-op si déjà armé / <150 / déjà capturé). Garde l'armement synchrone avec le décompte affiché.
+        if (moved && getActiveWorld() !== "replay") armGalijahByDex()
+        // Chasse armée → après 3-4 pas EFFECTIFS, on pose la rencontre forcée (niveau moyen d'équipe, capture légendaire).
         //   JAMAIS dans une bulle de rejeu (monde jetable → légendaire perdu) même si le marqueur y subsistait.
         if (moved && isGalijahArmed() && getActiveWorld() !== "replay") {
             if (galijahStepsLeft < 0) galijahStepsLeft = 3 + Math.floor(Math.random() * 2) // 3 ou 4 pas

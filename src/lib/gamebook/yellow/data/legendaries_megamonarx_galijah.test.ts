@@ -99,6 +99,15 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(isGalijahArmed()).toBe(false)
     })
 
+    it("Galijah — marqueur OBSOLÈTE (armé mais <150 espèces) → isGalijahArmed revalide le Pokédex", () => {
+        // Simule un vieux marqueur (ancien système « 150 captures/jour ») avec peu d'espèces distinctes.
+        hydratePlayer({ team: [], pc: [], reps: 0, defeatedTrainers: [GALIJAH_ARMED_MARKER], items: {} })
+        hydratePokedex(dexOf(80))
+        expect(isGalijahArmed()).toBe(false) // marqueur ignoré : <150 espèces → pas de spawn fantôme
+        hydratePokedex(dexOf(150))
+        expect(isGalijahArmed()).toBe(true)  // ≥150 espèces → le marqueur redevient valide
+    })
+
     it("Galijah — poseGalijahEncounter arme la rencontre forcée (légendaire) + désarme", () => {
         hydratePokedex(dexOf(150))
         armGalijahByDex()
@@ -113,6 +122,7 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
 
     it("Galijah — poseGalijahEncounter n'ÉCRASE PAS une rencontre déjà posée (vœu génie) et reste armé", () => {
         hydratePlayer({ team: [], pc: [], reps: 0, defeatedTrainers: [GALIJAH_ARMED_MARKER], items: {}, forcedEncounter: JSON.stringify({ speciesId: "draclet", level: 30, hard: false }) })
+        hydratePokedex(dexOf(150)) // ≥150 espèces → isGalijahArmed valide le marqueur
         poseGalijahEncounter(40)
         expect(JSON.parse(getPlayer().forcedEncounter!).speciesId).toBe("draclet") // slot génie préservé
         expect(isGalijahArmed()).toBe(true) // Galijah reste armé → réessaiera au pas suivant

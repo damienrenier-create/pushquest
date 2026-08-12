@@ -1222,8 +1222,14 @@ export function armGalijahByDex() {
         emit()
     }
 }
-/** GALIJAH — la chasse est-elle armée (150ᵉ atteint, pas encore apparu) ? Lu par gameStore pour poser le spawn forcé. */
-export function isGalijahArmed(): boolean { return st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER) }
+/** GALIJAH — la chasse est-elle armée ? = marqueur posé ET Pokédex ≥150 ESPÈCES ET Galijah pas encore capturé. La
+ *  double condition ignore un marqueur DEVENU invalide (ex. armé sous l'ancien système « 150 captures/jour » avec
+ *  <150 espèces, ou après capture de Galijah) et garde l'affichage (décompte) et le spawn parfaitement synchrones. */
+export function isGalijahArmed(): boolean {
+    if (!st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) return false
+    const caught = getPokedex().caught
+    return caught.length >= GALIJAH_CAPTURE_THRESHOLD && !caught.includes("galijah")
+}
 /** GALIJAH — désarme la chasse (une fois le spawn forcé posé, ou après capture/fuite). */
 export function disarmGalijah() {
     if (!st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) return
