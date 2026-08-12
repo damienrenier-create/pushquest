@@ -62,7 +62,7 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(getPlayer().team.length + getPlayer().pc.length).toBe(total) // pas de doublon
     })
 
-    it("Galijah — compteur du jour : la 150ᵉ capture ARME la chasse", () => {
+    it("Galijah — compteur cumulatif : la 150ᵉ capture ARME la chasse", () => {
         for (let i = 0; i < 149; i++) bumpCapturesToday()
         expect(isGalijahArmed()).toBe(false)
         bumpCapturesToday() // 150ᵉ
@@ -130,11 +130,11 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         for (const id of DEX_ULTRA_SECRET) expect(getSpecies(id)?.hiddenUntilCaught, id).toBe(true)
     })
 
-    it("creditDailyReps : nouveau jour → capturesToday remis à 0 + chasse désarmée", () => {
+    it("creditDailyReps : nouveau jour → capturesToday CUMULATIF (persiste) + chasse conservée", () => {
         for (let i = 0; i < 150; i++) bumpCapturesToday()
         expect(isGalijahArmed()).toBe(true)
         creditDailyReps("2026-08-08") // jour suivant
-        expect(getPlayer().capturesToday).toBe(0)
-        expect(getPlayer().defeatedTrainers).not.toContain(GALIJAH_ARMED_MARKER)
+        expect(getPlayer().capturesToday).toBe(150) // cumulatif à vie : PAS remis à 0 la nuit
+        expect(getPlayer().defeatedTrainers).toContain(GALIJAH_ARMED_MARKER) // la chasse reste armée au passage de minuit
     })
 })

@@ -86,7 +86,7 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
-    /** GALIJAH : captures sauvages RÉUSSIES aujourd'hui (reset au tick quotidien). À la 150ᵉ → Galijah s'arme. Optionnel (défaut 0). */
+    /** GALIJAH : captures sauvages RÉUSSIES, CUMULÉES à vie sur la run (PAS remises à 0 chaque nuit ; nom historique). À la 150ᵉ → Galijah s'arme. Optionnel (défaut 0). */
     capturesToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
     sbireWinsTotal: number
@@ -1199,7 +1199,7 @@ export function creditReps(n: number): number {
 export const GALIJAH_ARMED_MARKER = "galijah_armed"          // chasse Galijah en cours (150ᵉ atteint, spawn imminent)
 export const GALIJAH_OFFERED_MARKER = "galijah_offered"      // cadeau du 200ᵉ dex déjà donné (one-shot)
 export const MEGAMONARX_GRANTED_MARKER = "megamonarx_granted" // MégamonarX déjà octroyé (one-shot)
-export const GALIJAH_CAPTURE_THRESHOLD = 150 // 1re apparition : 150ᵉ capture du jour
+export const GALIJAH_CAPTURE_THRESHOLD = 150 // 1re apparition : 150ᵉ capture sauvage CUMULÉE (à vie, sur la run)
 export const GALIJAH_RETRY_STEP = 50 // ratée ? nouvelle apparition toutes les +50 captures (200, 250, …)
 const GALIJAH_DEX_GIFT_THRESHOLD = 200 // Daemons différents au Pokédex → cadeau de secours
 
@@ -1211,9 +1211,10 @@ export function galijahCountdown(capturesToday: number): number {
     return (GALIJAH_RETRY_STEP - ((c - GALIJAH_CAPTURE_THRESHOLD) % GALIJAH_RETRY_STEP)) % GALIJAH_RETRY_STEP
 }
 
-/** GALIJAH — +1 capture sauvage RÉUSSIE du jour. À la 150ᵉ (puis toutes les +50 si ratée, tant que Galijah n'est pas
- *  capturé), ARME la chasse : le spawn forcé (3-4 pas plus tard, niveau moyen d'équipe) est géré côté gameStore. À
- *  n'appeler QUE pour une vraie capture à la Ball d'un sauvage (jamais pour les cadeaux/piliers). */
+/** GALIJAH — +1 capture sauvage RÉUSSIE (compteur CUMULATIF à vie sur la run, jamais remis à 0 la nuit). À la 150ᵉ
+ *  (puis toutes les +50 si ratée, tant que Galijah n'est pas capturé), ARME la chasse : le spawn forcé (3-4 pas plus
+ *  tard, niveau moyen d'équipe) est géré côté gameStore. À n'appeler QUE pour une vraie capture à la Ball d'un
+ *  sauvage (jamais pour les cadeaux/piliers). */
 export function bumpCapturesToday() {
     const n = (st.capturesToday ?? 0) + 1
     st = { ...st, capturesToday: n }
@@ -1287,10 +1288,10 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
-        capturesToday: 0, // GALIJAH : nouveau jour → le compteur de captures repart de 0 (re-armable à la 150ᵉ)
+        // GALIJAH : capturesToday est CUMULATIF À VIE (décompte 150→0 sur toutes les captures de la run) → PAS de reset
+        //   quotidien ici, et la chasse armée n'est PAS désarmée à minuit (choix Sartay 12/08 : le décompte doit
+        //   « s'égrener » durablement, pas se recharger chaque nuit).
     }
-    // GALIJAH : un nouveau jour désarme une chasse non aboutie de la veille (repart proprement à la prochaine 150ᵉ).
-    st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== GALIJAH_ARMED_MARKER) }
     emit()
 }
 
