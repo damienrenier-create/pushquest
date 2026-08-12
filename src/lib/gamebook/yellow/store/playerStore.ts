@@ -86,7 +86,7 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
-    /** GALIJAH : captures sauvages RÉUSSIES, CUMULÉES à vie sur la run (PAS remises à 0 chaque nuit ; nom historique). À la 150ᵉ → Galijah s'arme. Optionnel (défaut 0). */
+    /** OBSOLÈTE depuis 12/08 (Galijah est désormais piloté par le nb d'ESPÈCES du Pokédex, cf. armGalijahByDex/galijahCountdown). Champ conservé pour compat de save, plus lu/écrit. Optionnel. */
     capturesToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
     sbireWinsTotal: number
@@ -1196,34 +1196,31 @@ export function creditReps(n: number): number {
  * du compteur de combats du sbire. Le CRÉDIT des reps est désormais géré par bankReps.
  */
 // ═══════ LÉGENDAIRES SECRETS — markers (vivent dans defeatedTrainers → persistés, pas de nouveau champ de save) ═══════
-export const GALIJAH_ARMED_MARKER = "galijah_armed"          // chasse Galijah en cours (150ᵉ atteint, spawn imminent)
+export const GALIJAH_ARMED_MARKER = "galijah_armed"          // chasse Galijah en cours (150 espèces atteintes, spawn imminent)
 export const GALIJAH_OFFERED_MARKER = "galijah_offered"      // cadeau du 200ᵉ dex déjà donné (one-shot)
 export const MEGAMONARX_GRANTED_MARKER = "megamonarx_granted" // MégamonarX déjà octroyé (one-shot)
-export const GALIJAH_CAPTURE_THRESHOLD = 150 // 1re apparition : 150ᵉ capture sauvage CUMULÉE (à vie, sur la run)
-export const GALIJAH_RETRY_STEP = 50 // ratée ? nouvelle apparition toutes les +50 captures (200, 250, …)
-const GALIJAH_DEX_GIFT_THRESHOLD = 200 // Daemons différents au Pokédex → cadeau de secours
+export const GALIJAH_CAPTURE_THRESHOLD = 150 // apparition : 150 ESPÈCES DIFFÉRENTES au Pokédex (GLOBAL, toute méthode/run)
+const GALIJAH_DEX_GIFT_THRESHOLD = 200 // Daemons différents au Pokédex → cadeau de secours (filet)
 
-/** GALIJAH — captures RESTANTES avant sa prochaine apparition (décompte énigmatique du Pokédex). 150→0 d'abord,
- *  puis 50→0 à chaque tentative ratée. 0 = imminent. (Pur, lisible aussi côté UI.) */
-export function galijahCountdown(capturesToday: number): number {
-    const c = Math.max(0, capturesToday)
-    if (c <= GALIJAH_CAPTURE_THRESHOLD) return GALIJAH_CAPTURE_THRESHOLD - c
-    return (GALIJAH_RETRY_STEP - ((c - GALIJAH_CAPTURE_THRESHOLD) % GALIJAH_RETRY_STEP)) % GALIJAH_RETRY_STEP
+/** GALIJAH — espèces DIFFÉRENTES restantes avant son apparition (décompte énigmatique du Pokédex) = 150 − nombre
+ *  d'espèces au Pokédex, planché à 0. À 0 (≥150 espèces), la chasse est active jusqu'à sa capture. (Pur, lisible UI.) */
+export function galijahCountdown(caughtCount: number): number {
+    return Math.max(0, GALIJAH_CAPTURE_THRESHOLD - Math.max(0, caughtCount))
 }
 
-/** GALIJAH — +1 capture sauvage RÉUSSIE (compteur CUMULATIF à vie sur la run, jamais remis à 0 la nuit). À la 150ᵉ
- *  (puis toutes les +50 si ratée, tant que Galijah n'est pas capturé), ARME la chasse : le spawn forcé (3-4 pas plus
- *  tard, niveau moyen d'équipe) est géré côté gameStore. À n'appeler QUE pour une vraie capture à la Ball d'un
- *  sauvage (jamais pour les cadeaux/piliers). */
-export function bumpCapturesToday() {
-    const n = (st.capturesToday ?? 0) + 1
-    st = { ...st, capturesToday: n }
-    // Palier atteint (150, 200, 250, …), Galijah pas encore capturé, pas déjà armé → arme la rencontre légendaire.
-    if (n >= GALIJAH_CAPTURE_THRESHOLD && (n - GALIJAH_CAPTURE_THRESHOLD) % GALIJAH_RETRY_STEP === 0
-        && !getPokedex().caught.includes("galijah") && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) {
+/** GALIJAH — à 150 ESPÈCES DIFFÉRENTES au Pokédex (compteur GLOBAL, cumulé sur tous les runs et TOUTE méthode — capture,
+ *  cadeau, fusion, rejeu… « au total, peu importe la manière »), ARME la chasse tant que Galijah n'est pas capturé :
+ *  le spawn forcé (3-4 pas plus tard, niveau moyen d'équipe) est posé côté gameStore, re-armable à la capture suivante
+ *  s'il a été manqué. À appeler après une capture, HORS bulle de rejeu (sinon le spawn surgirait dans une bulle jetable
+ *  → légendaire perdu). Le Pokédex global, lui, compte déjà les captures faites en rejeu (markCaught non gaté). */
+export function armGalijahByDex() {
+    const caught = getPokedex().caught
+    if (caught.length >= GALIJAH_CAPTURE_THRESHOLD
+        && !caught.includes("galijah")
+        && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) {
         st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] }
+        emit()
     }
-    emit()
 }
 /** GALIJAH — la chasse est-elle armée (150ᵉ atteint, pas encore apparu) ? Lu par gameStore pour poser le spawn forcé. */
 export function isGalijahArmed(): boolean { return st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER) }
@@ -1288,9 +1285,8 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
-        // GALIJAH : capturesToday est CUMULATIF À VIE (décompte 150→0 sur toutes les captures de la run) → PAS de reset
-        //   quotidien ici, et la chasse armée n'est PAS désarmée à minuit (choix Sartay 12/08 : le décompte doit
-        //   « s'égrener » durablement, pas se recharger chaque nuit).
+        // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
+        //   pas par un compteur quotidien. Le tick ne remet donc RIEN à zéro ni ne désarme la chasse (choix Sartay 12/08).
     }
     emit()
 }

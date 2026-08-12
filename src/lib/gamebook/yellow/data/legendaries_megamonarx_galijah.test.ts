@@ -5,7 +5,7 @@ import { getMove } from "./moves"
 import {
     hydratePlayer, getPlayer, creditDailyReps,
     grantMegamonarx, hasMegamonarx,
-    bumpCapturesToday, isGalijahArmed, disarmGalijah, grantGalijahIfDexMilestone, poseGalijahEncounter, galijahCountdown,
+    armGalijahByDex, isGalijahArmed, disarmGalijah, grantGalijahIfDexMilestone, poseGalijahEncounter, galijahCountdown,
     GALIJAH_ARMED_MARKER, GALIJAH_OFFERED_MARKER, MEGAMONARX_GRANTED_MARKER,
 } from "../store/playerStore"
 import { hydratePokedex, getPokedex } from "../store/pokedexStore"
@@ -62,41 +62,46 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         expect(getPlayer().team.length + getPlayer().pc.length).toBe(total) // pas de doublon
     })
 
-    it("Galijah — compteur cumulatif : la 150ᵉ capture ARME la chasse", () => {
-        for (let i = 0; i < 149; i++) bumpCapturesToday()
-        expect(isGalijahArmed()).toBe(false)
-        bumpCapturesToday() // 150ᵉ
-        expect(isGalijahArmed()).toBe(true)
-        expect(getPlayer().capturesToday).toBe(150)
+    // Pokédex de N espèces bidon (+ éventuelles espèces réelles en tête) — pilote le décompte/armement de Galijah.
+    const dexOf = (n: number, extra: string[] = []) => ({ seen: [], caught: [...extra, ...Array.from({ length: n }, (_, i) => `sp_${i}`)] })
+
+    it("Galijah — 150 ESPÈCES différentes au Pokédex → armGalijahByDex ARME la chasse", () => {
+        hydratePokedex(dexOf(149))
+        armGalijahByDex()
+        expect(isGalijahArmed()).toBe(false) // 149 < 150
+        hydratePokedex(dexOf(150))
+        armGalijahByDex()
+        expect(isGalijahArmed()).toBe(true) // 150ᵉ espèce différente → armé
     })
 
-    it("Galijah — décompte énigmatique : 150→0, puis 50→0 (re-armement)", () => {
+    it("Galijah — décompte énigmatique : 150 − espèces différentes, planché à 0", () => {
         expect(galijahCountdown(0)).toBe(150)
+        expect(galijahCountdown(100)).toBe(50)
         expect(galijahCountdown(149)).toBe(1)
         expect(galijahCountdown(150)).toBe(0)
-        expect(galijahCountdown(151)).toBe(49)
+        expect(galijahCountdown(151)).toBe(0) // ≥150 → imminent (0), plus de paliers +50
         expect(galijahCountdown(200)).toBe(0)
-        expect(galijahCountdown(201)).toBe(49)
-        expect(galijahCountdown(250)).toBe(0)
     })
 
-    it("Galijah — re-armement aux paliers +50 après une tentative ratée", () => {
-        resetAll()
-        for (let i = 0; i < 150; i++) bumpCapturesToday()
+    it("Galijah — re-armable après une tentative ratée (tant que ≥150 espèces & non capturé)", () => {
+        hydratePokedex(dexOf(150))
+        armGalijahByDex()
         expect(isGalijahArmed()).toBe(true)
         disarmGalijah() // tentative ratée (spawn posé + fui/KO → marker retiré, Galijah non capturé)
-        for (let i = 150; i < 200; i++) bumpCapturesToday()
-        expect(isGalijahArmed()).toBe(true) // re-armé à la 200ᵉ
+        expect(isGalijahArmed()).toBe(false)
+        armGalijahByDex() // capture suivante → re-arme (espèces toujours ≥150)
+        expect(isGalijahArmed()).toBe(true)
     })
 
-    it("Galijah — déjà capturé : la 150ᵉ n'arme PAS", () => {
-        hydratePokedex({ seen: ["galijah"], caught: ["galijah"] })
-        for (let i = 0; i < 151; i++) bumpCapturesToday()
+    it("Galijah — déjà capturé : n'arme PAS même à ≥150 espèces", () => {
+        hydratePokedex(dexOf(149, ["galijah"])) // 150 espèces DONT galijah
+        armGalijahByDex()
         expect(isGalijahArmed()).toBe(false)
     })
 
     it("Galijah — poseGalijahEncounter arme la rencontre forcée (légendaire) + désarme", () => {
-        for (let i = 0; i < 150; i++) bumpCapturesToday()
+        hydratePokedex(dexOf(150))
+        armGalijahByDex()
         expect(isGalijahArmed()).toBe(true)
         poseGalijahEncounter(42)
         expect(isGalijahArmed()).toBe(false) // désarmé
@@ -130,11 +135,11 @@ describe("MégamonarX & Galijah — espèces légendaires secrètes", () => {
         for (const id of DEX_ULTRA_SECRET) expect(getSpecies(id)?.hiddenUntilCaught, id).toBe(true)
     })
 
-    it("creditDailyReps : nouveau jour → capturesToday CUMULATIF (persiste) + chasse conservée", () => {
-        for (let i = 0; i < 150; i++) bumpCapturesToday()
+    it("creditDailyReps : n'affecte PLUS la chasse Galijah (pilotée par le Pokédex, aucun reset de minuit)", () => {
+        hydratePokedex(dexOf(150))
+        armGalijahByDex()
         expect(isGalijahArmed()).toBe(true)
         creditDailyReps("2026-08-08") // jour suivant
-        expect(getPlayer().capturesToday).toBe(150) // cumulatif à vie : PAS remis à 0 la nuit
-        expect(getPlayer().defeatedTrainers).toContain(GALIJAH_ARMED_MARKER) // la chasse reste armée au passage de minuit
+        expect(isGalijahArmed()).toBe(true) // la chasse reste armée (dex-driven ; le tick ne désarme rien)
     })
 })

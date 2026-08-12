@@ -85,7 +85,7 @@ export default function DexDetailClient({ id }: { id: string }) {
         const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
         const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
         const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
-        const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(player.capturesToday ?? 0) : null
+        const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(dex.caught.length) : null
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>

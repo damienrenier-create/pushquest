@@ -176,7 +176,7 @@ export default function PokedexClient() {
                     // Indice d'un ultra-secret non révélé : Galijah = décompte énigmatique ; MégamonarX = rumeur (2 paliers).
                     let secretHint: ReactNode = "Inconnu"
                     if (!seen) {
-                        if (sp.id === "galijah") { const rem = galijahCountdown(player.capturesToday ?? 0); secretHint = <span style={galijahCounterStyle(rem)}>{rem}</span> }
+                        if (sp.id === "galijah") { const rem = galijahCountdown(dex.caught.length); secretHint = <span style={galijahCounterStyle(rem)}>{rem}</span> }
                         else if (sp.id === "megamonarx") secretHint = megamonarxHint(reachedFusion, wonFusion) ?? "Inconnu"
                     }
                     return (

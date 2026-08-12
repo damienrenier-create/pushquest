@@ -1462,9 +1462,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
         if (moved && !!map.darkness && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
-        // 🐈‍⬛ GALIJAH : la chasse est armée (150ᵉ capture du jour) → après 3-4 pas EFFECTIFS, on pose la rencontre
-        //   forcée (niveau moyen d'équipe, capture légendaire). Elle surgira dans les prochaines hautes herbes.
-        if (moved && isGalijahArmed()) {
+        // 🐈‍⬛ GALIJAH : la chasse est armée (150 ESPÈCES DIFFÉRENTES au Pokédex) → après 3-4 pas EFFECTIFS, on pose la
+        //   rencontre forcée (niveau moyen d'équipe, capture légendaire). Elle surgira dans les prochaines hautes herbes.
+        //   JAMAIS dans une bulle de rejeu (monde jetable → légendaire perdu) même si le marqueur y subsistait.
+        if (moved && isGalijahArmed() && getActiveWorld() !== "replay") {
             if (galijahStepsLeft < 0) galijahStepsLeft = 3 + Math.floor(Math.random() * 2) // 3 ou 4 pas
             if (galijahStepsLeft > 0) galijahStepsLeft--
             if (galijahStepsLeft === 0) {

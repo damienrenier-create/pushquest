@@ -57,7 +57,7 @@ export interface YellowSave {
     sbireDefeatsToday: number
     /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
-    /** GALIJAH : captures sauvages réussies CUMULÉES à vie sur la run (PAS de reset quotidien ; nom historique ; 150ᵉ → arme Galijah). Optionnel (défaut 0). */
+    /** OBSOLÈTE depuis 12/08 (Galijah piloté par le nb d'ESPÈCES du Pokédex). Champ conservé pour compat de save, plus lu/écrit. Optionnel (défaut 0). */
     capturesToday?: number
     /** Nb total de victoires sur le sbire (cumulatif → cycle des explications). */
     sbireWinsTotal: number

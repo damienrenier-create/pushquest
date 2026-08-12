@@ -56,7 +56,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { bumpCapturesToday, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
+import { armGalijahByDex, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
@@ -610,10 +610,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
-            // 🐈‍⬛ GALIJAH : +1 capture du jour (à la 150ᵉ → arme sa chasse) ; puis cadeau de secours au 200ᵉ dex.
-            //   JAMAIS en bulle de REJEU (jetable) : sinon markCaught (dex GLOBAL) brûlerait le garde one-shot alors
-            //   que le Daemon est perdu à la sortie → légendaire à jamais inobtenable + entrée dex fantôme.
-            if (getActiveWorld() !== "replay") { bumpCapturesToday(); grantGalijahIfDexMilestone() }
+            // 🐈‍⬛ GALIJAH : à 150 ESPÈCES DIFFÉRENTES au Pokédex → arme sa chasse (spawn posé par gameStore) ; puis
+            //   cadeau de secours au 200ᵉ dex. Le SPAWN ne s'arme JAMAIS en bulle de REJEU (jetable) : sinon Galijah
+            //   surgirait dans un monde jeté à la sortie → légendaire perdu. (Le décompte, lui, compte quand même les
+            //   espèces vues en rejeu : markCaught marque le dex GLOBAL, non gaté — « au total, peu importe la manière ».)
+            if (getActiveWorld() !== "replay") { armGalijahByDex(); grantGalijahIfDexMilestone() }
         }
     }
 

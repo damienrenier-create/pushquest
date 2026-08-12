@@ -94,7 +94,7 @@ export default function DexClient() {
                 {entries.map((sp) => {
                     // ULTRA-SECRET non capturé : tout masqué (ombre, nom/types « ??? », BST « 5XX »). Galijah : décompte énigmatique.
                     const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
-                    const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(player.capturesToday ?? 0) : null
+                    const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
                     return (
                         <button
                             key={sp.id}
