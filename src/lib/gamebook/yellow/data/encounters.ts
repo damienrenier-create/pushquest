@@ -746,7 +746,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             // Communs — rocher + eau (lignée arène eau) — Lavapetit déplacé à la CENTRALE FEU run 2
             { speciesId: "cailloutchi", base: COMMON },
             // Peu communs
-            { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: UNCOMMON },
+            { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: 20 }, // limaroche allégé 45→20 (choix Sartay 13/08)
             { speciesId: "quadroc", base: UNCOMMON },
             { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
             // Rare — un spectre (Têtardoc/Marmoterre/Loutrille/Orcaline déplacés à la GROTTE GELÉE)
