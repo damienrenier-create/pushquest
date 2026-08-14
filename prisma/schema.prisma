@@ -506,6 +506,8 @@ model FrontierProfile {
   domeBest    Int      @default(0)    // meilleur résultat Dôme (rounds gagnés)
   symbols     Json     @default("[]") // symboles de prestige obtenus (cosmétique)
   replaysUsed Int      @default(0)    // nb de REJEUX (« run bis ») déjà lancés → coût JC croissant du prochain (global, cf. data/replayCost)
+  pushupDebtOwed     Int @default(0)  // VŒU GÉNIE (Mools) : total de POMPES dues (100 × nb de refus). 0 = aucune dette.
+  pushupDebtBaseline Int @default(0)  // cumul de pompes (all-time PUSHUP) figé quand la dette a été posée → dette restante = owed − (cumul_actuel − baseline).
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

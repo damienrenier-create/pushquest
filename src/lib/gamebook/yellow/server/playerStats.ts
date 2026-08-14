@@ -137,6 +137,19 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
         /* quota indisponible → on garde 1 (overshoot/quotaReached restent prudents) */
     }
 
+    // VŒU GÉNIE (Mools) : DETTE DE POMPES restante (server-authoritative → anti-triche). Défensif : profil/colonnes
+    //   absents, ou owed=0 → 0 dette (combats libres). On ne requête le cumul de pompes QUE si une dette existe (rare).
+    let pushupDebt = 0
+    try {
+        const fp = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { pushupDebtOwed: true, pushupDebtBaseline: true } })
+        const owed = fp?.pushupDebtOwed ?? 0
+        if (owed > 0) {
+            const agg = await (prisma as any).exerciseSet.aggregate({ where: { userId, exercise: "PUSHUP" }, _sum: { reps: true } })
+            const cumulative = agg?._sum?.reps ?? 0
+            pushupDebt = Math.max(0, owed - Math.max(0, cumulative - (fp?.pushupDebtBaseline ?? 0)))
+        }
+    } catch { /* profil / colonnes absents → pas de dette */ }
+
     return {
         pompes: Math.min(1, pushups / quota),
         squats: Math.min(1, squats / quota),
@@ -144,5 +157,6 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
         overshoot: Math.min(1, Math.max(0, (total - quota) / quota)),
         quotaRatio: Math.min(1, Math.max(0, total / quota)),
         quota, // valeur brute → scale le coût des attaques en combat
+        ...(pushupDebt > 0 ? { pushupDebt } : {}),
     }
 }
