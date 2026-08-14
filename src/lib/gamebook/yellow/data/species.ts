@@ -2329,23 +2329,23 @@ export const SPECIES: Record<string, SpeciesData> = {
     // 🪨🌑 GÉCKÈBRE — 4e membre de la famille Gek (clone de la GROTTE DU NEXUS). MÊME golem, RE-TYPÉ ROCHE/TÉNÈBRES,
     //   PERSONNALITÉ = MUR IMMUABLE (def 120, le plus lent). Masqué du dex jusqu'à capture. learnsAllCts.
     geckebre: {
-        id: "geckebre", dexNo: 180, name: "Géckèbre", types: ["ROCHE", "TENEBRES"],
+        id: "geckebre", dexNo: 180, name: "Géckèbre", types: ["SOL", "TENEBRES"],
         baseStats: { hp: 120, atk: 60, def: 125, spe: 35, spc: 70 }, // BST 410 — MUR PHYSIQUE INCREVABLE (HP+Déf extrêmes, ultra-lent)
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "morsure_sombre" },   // STAB TÉNÈBRES physique
-            { level: 1, moveId: "tunnel" },
+            { level: 1, moveId: "tunnel" },            // STAB SOL (creuse-invulnérable)
             { level: 1, moveId: "repos" },             // mur → auto-soin
-            { level: 1, moveId: "secousse" },
-            { level: 48, moveId: "eboulis" },          // STAB ROCHE physique
+            { level: 1, moveId: "secousse" },          // STAB SOL physique (dès le départ)
+            { level: 48, moveId: "eboulis" },          // couverture ROCHE (apeure)
             { level: 56, moveId: "onde_obscure" },     // TÉNÈBRES (peut apeurer)
-            { level: 66, moveId: "lame_roche" },       // STAB ROCHE
-            { level: 72, moveId: "seisme" },
+            { level: 66, moveId: "lame_roche" },       // couverture ROCHE
+            { level: 72, moveId: "seisme" },           // gros STAB SOL
             { level: 80, moveId: "devoreur_ombres" },  // gros STAB TÉNÈBRES (siphon)
-            { level: 88, moveId: "roc_titanesque" },   // capstone ROCHE
+            { level: 88, moveId: "roc_titanesque" },   // couverture ROCHE (capstone physique, tape le Vol)
         ],
         catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
-        role: "Gek de la Grotte — ROCHE/TÉNÈBRES, mur immuable, apprend TOUTES les CT",
+        role: "Gek de la Grotte — SOL/TÉNÈBRES, mur immuable, apprend TOUTES les CT",
         description: "Golem fossile jumeau de Gékroc, mais sa pierre a viré à l'obsidienne : un cœur d'ombre bat sous sa carapace impénétrable. Rien ne semble pouvoir l'ébranler.",
         sprite: "/yellow/sprites/dex/geckebre.png",
         learnsAllCts: true,
