@@ -58,7 +58,7 @@ const PNJ5_MEUTE: readonly GekSpec[] = [
     // 🔮 Gékosmic — sweeper spécial rapide (Spé+Vit).
     { speciesId: "gekosmic", moves: ["vague_mentale", "choc_mental", "onde_cerebrale", "repos"], ev: ["spc", "spe"] },
     // 🌑 Géckèbre — mur increvable (HP+Déf).
-    { speciesId: "geckebre", moves: ["devoreur_ombres", "onde_obscure", "eboulis", "repos"], ev: ["hp", "def"] },
+    { speciesId: "geckebre", moves: ["devoreur_ombres", "onde_obscure", "secousse", "repos"], ev: ["hp", "def"] },
 ]
 
 /** Fabrique la meute de PNJ 5 pour un nombre de victoires donné (niveau + Saiyan scalés ; EV maxées d'emblée).

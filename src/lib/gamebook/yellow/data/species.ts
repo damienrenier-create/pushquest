@@ -2342,7 +2342,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 66, moveId: "lame_roche" },       // couverture ROCHE
             { level: 72, moveId: "seisme" },           // gros STAB SOL
             { level: 80, moveId: "devoreur_ombres" },  // gros STAB TÉNÈBRES (siphon)
-            { level: 88, moveId: "roc_titanesque" },   // couverture ROCHE (capstone physique, tape le Vol)
+            { level: 88, moveId: "frappe_atlas" },     // capstone SOL : dégâts = NIVEAU (ignore son atk faible → parfait pour le mur)
         ],
         catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
         role: "Gek de la Grotte — SOL/TÉNÈBRES, mur immuable, apprend TOUTES les CT",
