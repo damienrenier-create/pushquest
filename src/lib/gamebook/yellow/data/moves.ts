@@ -93,7 +93,7 @@ export const MOVES: Record<string, MoveData> = {
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
     balayage: { id: "balayage", name: "Balayage", type: "COMBAT", power: 60, accuracy: 100, pp: 20, effect: { chance: 10, flinch: true }, description: "Peut apeurer." },
     crochet_maitre: { id: "crochet_maitre", name: "Crochet du Maître", type: "COMBAT", power: 80, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Crochet à fort taux de critique." },
-    coup_de_boutoir: { id: "coup_de_boutoir", name: "Coup de Boutoir", type: "COMBAT", power: 100, accuracy: 100, pp: 10, effect: { recoilPct: 25 }, description: "Le colosse charge tête baissée comme un bélier dévastateur ; énorme impact, au prix d'un léger contrecoup." },
+    coup_de_boutoir: { id: "coup_de_boutoir", name: "Coup de Boutoir", type: "COMBAT", power: 100, accuracy: 100, pp: 10, effect: { recoilPct: 25 }, description: "Le colosse charge tête baissée comme un bélier dévastateur ; énorme impact, au prix d'un contrecoup (25%)." },
     // CT28 (Champion) : nouveau move COMBAT multi-coups — frappe 2 à 5 fois (20/coup), distribution uniforme
     // du moteur (≈3,5 coups en moyenne → 40 à 100 dégâts). Distinct du « Crochet du Maître » simple (intact).
     deluge_crochets: { id: "deluge_crochets", name: "Rafale de Crochets", type: "COMBAT", power: 20, accuracy: 95, pp: 10, effect: { multiHit: [2, 5] }, description: "Déluge de crochets : frappe 2 à 5 fois (20 par coup)." },
@@ -119,7 +119,7 @@ export const MOVES: Record<string, MoveData> = {
     lame_roche: { id: "lame_roche", name: "Lame de Roche", type: "ROCHE", power: 90, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Gros move Roche ; fort taux de critique." },
     // === 6 nouveaux moves (refonte movesets lignées core) ===
     boutefeu: { id: "boutefeu", name: "Boutefeu", type: "FEU", power: 95, accuracy: 95, pp: 10, effect: { recoilPct: 33, chance: 10, inflictStatus: "BURN" }, description: "Charge enflammée tête baissée : gros dégâts, fort recul, peut brûler. Signature de Loupyre." },
-    miasme_corrosif: { id: "miasme_corrosif", name: "Miasme Corrosif", type: "POISON", power: 85, accuracy: 100, pp: 10, effect: { chance: 20, inflictStatus: "POISON" }, description: "Nuage toxique SPÉCIAL ; peut empoisonner." },
+    miasme_corrosif: { id: "miasme_corrosif", name: "Miasme Corrosif", type: "POISON", power: 85, accuracy: 100, pp: 10, effect: { chance: 20, inflictStatus: "POISON" }, description: "Nuage toxique corrosif ; peut empoisonner (20%)." },
     vol: { id: "vol", name: "Vol", type: "VOL", power: 90, accuracy: 95, pp: 15, effect: { fly: true }, description: "En 2 temps : tour 1 s'envole (intouchable sauf coup sûr, ex. Météores), tour 2 fond du ciel et frappe." },
     brume_sporale: { id: "brume_sporale", name: "Brume Sporale", type: "PLANTE", power: 0, accuracy: 0, pp: 10, costPower: 30, effect: { resetStats: true }, description: "Un voile de spores dissipe TOUS les changements de stats des deux camps (façon Buée Noire)." },
     aromatherapie: { id: "aromatherapie", name: "Aromathérapie", type: "PLANTE", power: 0, accuracy: 0, pp: 5, costPower: 40, effect: { healTeamStatus: true }, description: "Un parfum apaisant soigne TOUS les statuts (brûlure, gel, paralysie, poison, sommeil) de l'ÉQUIPE entière, banc compris (façon Glas de Soin)." },
