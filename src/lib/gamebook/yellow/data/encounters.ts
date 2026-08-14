@@ -95,6 +95,7 @@ export interface WildPlayerCtx {
     overshoot: number    // 0..1 (dépassement du quota)
     quotaRatio: number   // 0..1 (total du jour / quota, capé) → pilote le plancher d'IV
     quota?: number       // VALEUR BRUTE du quota du jour (cible reps IRL) → scale le coût des attaques (absent → étalon 150)
+    pushupDebt?: number  // DETTE DE POMPES encore due (vœu génie Mools) — server-authoritative. >0 ⇒ combats VERROUILLÉS. Absent/0 = libre.
 }
 
 export interface EncounterCtx {

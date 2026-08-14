@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -567,6 +567,13 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
         return {
             npcId: trainerId, npcName: trainer.name, lineIndex: 0,
             lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
+        }
+    }
+    // VŒU GÉNIE (Mools) : DETTE DE POMPES non épongée → le colosse endetté ne lève pas le poing (aucun combat).
+    if (combatLockedByDebt()) {
+        return {
+            npcId: trainerId, npcName: trainer.name, lineIndex: 0,
+            lines: ["Le génie a scellé tes poings…", `Éponge d'abord ta DETTE : encore ${pushupDebtRemaining()} pompes à faire. Aucun combat avant ça !`],
         }
     }
     // TON DOUBLE (salle dorée, run 2) : combat FINAL contre ton ANCIENNE équipe GELÉE (startNgPlusFinalBattle, SANS
@@ -1482,7 +1489,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ encounterCooldown: get().encounterCooldown - 1 })
         } else if (moved && get().repelSteps > 0) {
             set({ repelSteps: get().repelSteps - 1 }) // REPOUSSE active : ce pas est protégé (pas de rencontre) → on décompte
-        } else if (moved && isWildTile && !map.encountersPaused) {
+        } else if (moved && isWildTile && !map.encountersPaused && !combatLockedByDebt()) {
+            // VŒU GÉNIE (Mools) : tant que la dette de pompes n'est pas épongée, aucune rencontre sauvage ne se déclenche.
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {

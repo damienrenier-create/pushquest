@@ -747,6 +747,11 @@ export function setWildCtx(ctx: WildPlayerCtx | null) {
     emit()
 }
 
+/** VŒU GÉNIE (Mools) — pompes encore dues (server-authoritative, via wildCtx). 0 = rien. */
+export function pushupDebtRemaining(): number { return Math.max(0, Math.floor(st.wildCtx?.pushupDebt ?? 0)) }
+/** VŒU GÉNIE — combats VERROUILLÉS tant qu'une dette de pompes reste à éponger. Inerte tant que le serveur n'a pas posé de dette. */
+export function combatLockedByDebt(): boolean { return pushupDebtRemaining() > 0 }
+
 /** Marque un dresseur comme battu (idempotent). */
 export function markTrainerDefeated(trainerId: string) {
     if (st.defeatedTrainers.includes(trainerId)) return
