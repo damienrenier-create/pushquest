@@ -2581,14 +2581,14 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "charge" }, { level: 1, moveId: "secousse" },        // STAB SOL dès le départ
             { level: 6, moveId: "tir_boue" },                                        // SOL (peut baisser la précision)
-            { level: 12, moveId: "sables_voraces" },                                 // ★ SIGNATURE : drain SOL PHYSIQUE (rend la longévité perdue avec le type PLANTE)
+            { level: 12, moveId: "jet_de_sable" },                                   // SOL statut : baisse la précision de la cible (utilitaire)
             { level: 18, moveId: "carapace_diamant" },                              // Déf+2 (encaisse)
             { level: 24, moveId: "faille_sismique" },                              // SOL 90, Déf+1
             { level: 30, moveId: "danse_lames" },                                  // Atk+2 (setup)
             { level: 36, moveId: "seisme" },                                        // gros STAB SOL
-            { level: 44, moveId: "eboulis" },                                      // couverture ROCHE (le SOL ne touche pas le Vol)
+            { level: 44, moveId: "sables_voraces" },                              // ★ SIGNATURE 1 : drain SOL PHYSIQUE (longévité, ex-type PLANTE)
             { level: 52, moveId: "repos" },                                        // soin
-            { level: 62, moveId: "roc_titanesque" },                              // couverture ROCHE (nuke vs Vol)
+            { level: 62, moveId: "fracas_colosse" },                              // ★ SIGNATURE 2 : SOL 105, 25% de fissurer AU HASARD 1 stat de la cible
             { level: 74, moveId: "frappe_atlas" },                                // capstone SOL (dégâts = niveau)
         ],
         catchRate: 5, baseExp: 185, rarity: "RARE", growthRate: "fast", secretTalent: "sang_froid", postLeague: true,

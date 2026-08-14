@@ -25,6 +25,17 @@ describe("Crocavern (exclusif Grotte)", () => {
         expect(mv.effect?.drainPct).toBe(50) // rend la longévité perdue avec le type PLANTE (Vampigraine/Méga-Sangsue)
         expect(getSpecies("crocavern")!.learnset.some((l) => l.moveId === "sables_voraces")).toBe(true)
     })
+
+    it("signature Fracas du Colosse : SOL 105, 25% de baisser 1 stat AU HASARD (Atk/Déf/Vit/Spé), apprise par Crocavern", () => {
+        const mv = getMove("fracas_colosse")!
+        expect(mv).toBeTruthy()
+        expect(mv.type).toBe("SOL")
+        expect(mv.power).toBe(105)
+        expect(mv.accuracy).toBe(95)
+        expect(mv.effect?.chance).toBe(25)
+        expect(mv.effect?.randomStatDrop).toEqual(["atk", "def", "spe", "spc"]) // jamais acc/eva
+        expect(getSpecies("crocavern")!.learnset.some((l) => l.moveId === "fracas_colosse")).toBe(true)
+    })
 })
 
 describe("PNJ 6 — l'Échangeur", () => {

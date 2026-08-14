@@ -914,6 +914,11 @@ function maybeApplySecondary(state: BattleState, side: SideId, move: MoveData, e
             applyStatChange(state, tgtSide, sc.stat, sc.stages, events)
         }
     }
+    if (fx.randomStatDrop && fx.randomStatDrop.length > 0) {
+        // DÉBUFF ALÉATOIRE : une seule stat de la cible, tirée au hasard dans la liste, baissée d'1 cran.
+        const stat = fx.randomStatDrop[rng.int(0, fx.randomStatDrop.length - 1)]
+        applyStatChange(state, other(side), stat, -1, events)
+    }
     if (fx.flinch) {
         const foe = active(state[other(side)])
         foe.volatiles.FLINCH = 1

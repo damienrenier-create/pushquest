@@ -41,3 +41,20 @@ describe("Essaim Vorace — frénésie croissante (compteur swarmStacks)", () =>
         expect(s.player.team[0].swarmStacks).toBe(5)
     })
 })
+
+describe("Fracas du Colosse — débuff aléatoire (randomStatDrop)", () => {
+    it("baisse au HASARD une des 4 stats (Atk/Déf/Vit/Spé) de la cible, jamais Précision/Esquive", () => {
+        // Attaquant niv 1 (dégâts ~nuls) vs mur niv 100 qui se soigne (Repos) → la cible survit à ~40 coups, et
+        //   SEUL Fracas du Colosse peut toucher à ses paliers → on isole son effet (Repos ne change aucun palier).
+        let s = createBattle(
+            [createMonInstance("crocavern", 1, { moveIds: ["fracas_colosse"] })],
+            [createMonInstance("amadiam", 100, { moveIds: ["repos"] })],
+            { isWild: true, seed: 1 },
+        )
+        for (let i = 0; i < 40 && s.enemy.team[0].currentHp > 0; i++) s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        const st = s.enemy.team[0].stages
+        expect(st.atk + st.def + st.spe + st.spc).toBeLessThan(0) // ≥1 des 4 stats baissée (25% sur ~40 coups)
+        expect(st.acc).toBe(0) // jamais la précision
+        expect(st.eva).toBe(0) // jamais l'esquive
+    })
+})

@@ -44,6 +44,9 @@ export interface MoveEffect {
     inflictStatus?: Exclude<MajorStatus, "NONE">
     inflictVolatile?: VolatileStatus
     statChanges?: Array<{ target: "self" | "target"; stat: StageKey; stages: number }>
+    /** DÉBUFF ALÉATOIRE (ex. « Fracas du Colosse ») : si l'effet secondaire se déclenche (via `chance`), baisse d'UN
+     *  cran UNE stat de la CIBLE tirée AU HASARD parmi cette liste. Distinct de statChanges (stats fixes). */
+    randomStatDrop?: StageKey[]
     flinch?: boolean
     drainPct?: number
     recoilPct?: number
