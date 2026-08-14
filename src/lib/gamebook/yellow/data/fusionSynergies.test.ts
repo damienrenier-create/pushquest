@@ -39,7 +39,7 @@ describe("fusions INÉDITES nommées (type MONO forcé + boost)", () => {
         expect(f.name).toBe("Vaporêve"); expect(f.types).toEqual(["SPECTRE"]); expect(f.stats.hp).toBe(140)
     })
     it("Crocavern × Alirocaillus → Crocaroc, boosté, type CALCULÉ (pas forcé)", () => {
-        const f = computeFusion(P("crocavern", { types: ["SOL", "PLANTE"] }), P("alirocaillus", { types: ["VOL", "ROCHE"] }))
+        const f = computeFusion(P("crocavern", { types: ["SOL"] }), P("alirocaillus", { types: ["VOL", "ROCHE"] }))
         expect(f.name).toBe("Crocaroc"); expect(f.stats.hp).toBe(140)
         expect(f.types.length).toBeGreaterThanOrEqual(1) // type dérivé, non forcé
     })

@@ -1,20 +1,29 @@
 import { describe, it, expect } from "vitest"
 import { getSpecies } from "./species"
+import { getMove } from "./moves"
 import { createMonInstance } from "../battle/factory"
 import { buildPnj6Team, makeCrocavernGift, CROCAVERN_GIFT_LEVEL, PNJ6_TRADE_DONE_MARKER } from "./pnj6"
 import { buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, recordPnj10Cleared, resetPnj10Visit, PNJ10_LEVEL } from "./pnj10"
 import { GROTTE_SIGN_LINES } from "./grotteSign"
 
 describe("Crocavern (exclusif Grotte)", () => {
-    it("espèce valide : dex 190, SOL/PLANTE, mono-stade, learnset instanciable", () => {
+    it("espèce valide : dex 190, SOL (mono-type), mono-stade, learnset instanciable", () => {
         const sp = getSpecies("crocavern")!
         expect(sp).toBeTruthy()
         expect(sp.dexNo).toBe(190)
-        expect(sp.types).toEqual(["SOL", "PLANTE"])
+        expect(sp.types).toEqual(["SOL"])
         expect(sp.evolution).toBeUndefined() // mono-stade
         expect(sp.baseStats.atk).toBeGreaterThan(sp.baseStats.spe) // puissant mais lent
         const mon = createMonInstance("crocavern", 50, { owned: false })
         expect(mon.moves.length).toBeGreaterThan(0)
+    })
+
+    it("signature Sables Voraces : SOL, drain physique 50%, apprise par Crocavern", () => {
+        const mv = getMove("sables_voraces")!
+        expect(mv).toBeTruthy()
+        expect(mv.type).toBe("SOL")
+        expect(mv.effect?.drainPct).toBe(50) // rend la longévité perdue avec le type PLANTE (Vampigraine/Méga-Sangsue)
+        expect(getSpecies("crocavern")!.learnset.some((l) => l.moveId === "sables_voraces")).toBe(true)
     })
 })
 

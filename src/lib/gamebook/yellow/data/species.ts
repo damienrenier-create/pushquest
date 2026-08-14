@@ -2576,18 +2576,24 @@ export const SPECIES: Record<string, SpeciesData> = {
     //   ROCHE/PLANTE : lent, défense solide, ATTAQUE monstrueuse. Mono-stade (pas d'évolution). Courbe RAPIDE.
     //   ROCHE = physique (son arme, ATQ 128) ; PLANTE = spécial → thématique/défensif (Vampigraine, drains).
     crocavern: {
-        id: "crocavern", dexNo: 190, name: "Crocavern", types: ["SOL", "PLANTE"],
+        id: "crocavern", dexNo: 190, name: "Crocavern", types: ["SOL"],
         baseStats: { hp: 90, atk: 128, def: 102, spe: 40, spc: 62 }, // BST 422
         learnset: [
-            { level: 1, moveId: "charge" }, { level: 1, moveId: "secousse" }, { level: 1, moveId: "vampigraine" }, // secousse (SOL) : STAB physique dès le départ (ex-jet_pierres ROCHE)
-            { level: 6, moveId: "eboulis" }, { level: 12, moveId: "mega_sangsue" }, { level: 18, moveId: "carapace_diamant" },
-            { level: 24, moveId: "faille_sismique" }, { level: 30, moveId: "danse_lames" }, { level: 36, moveId: "seisme" }, // faille_sismique (SOL 90, +Déf) : STAB mid-game (ex-lame_roche ROCHE)
-            { level: 44, moveId: "tranche_feuille" }, { level: 52, moveId: "repos" }, { level: 62, moveId: "roc_titanesque" },
-            { level: 74, moveId: "lance_soleil" },
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "secousse" },        // STAB SOL dès le départ
+            { level: 6, moveId: "tir_boue" },                                        // SOL (peut baisser la précision)
+            { level: 12, moveId: "sables_voraces" },                                 // ★ SIGNATURE : drain SOL PHYSIQUE (rend la longévité perdue avec le type PLANTE)
+            { level: 18, moveId: "carapace_diamant" },                              // Déf+2 (encaisse)
+            { level: 24, moveId: "faille_sismique" },                              // SOL 90, Déf+1
+            { level: 30, moveId: "danse_lames" },                                  // Atk+2 (setup)
+            { level: 36, moveId: "seisme" },                                        // gros STAB SOL
+            { level: 44, moveId: "eboulis" },                                      // couverture ROCHE (le SOL ne touche pas le Vol)
+            { level: 52, moveId: "repos" },                                        // soin
+            { level: 62, moveId: "roc_titanesque" },                              // couverture ROCHE (nuke vs Vol)
+            { level: 74, moveId: "frappe_atlas" },                                // capstone SOL (dégâts = niveau)
         ],
         catchRate: 5, baseExp: 185, rarity: "RARE", growthRate: "fast", secretTalent: "sang_froid", postLeague: true,
-        role: "SOL/PLANTE — colosse physique lent (exclusif Grotte du Nexus)",
-        description: "Un crocodile des sables couvert de mousse, tapi dans les bancs de terre depuis des âges oubliés. Lent, mais d'une force qui remue le sol.",
+        role: "SOL — colosse physique lent, drain tellurique (exclusif Grotte du Nexus)",
+        description: "Un crocodile des sables, tapi dans les bancs de terre depuis des âges oubliés. Lent, mais d'une force qui engloutit ses proies sous le sol pour s'en repaître.",
         sprite: "/yellow/sprites/dex/crocavern.png",
     },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).

@@ -35,7 +35,7 @@ const PNJ6_TEAM: readonly TeamSpec[] = [
     { speciesId: "sonarque", ev: ["spc", "hp"] },     // EAU/ÉLEC — attaquant spécial encaisseur
     { speciesId: "tonytony", ev: ["atk", "spe"] },    // NORMAL — physique rapide
     { speciesId: "shadow", ev: ["atk", "spe"] },      // NORMAL/SPECTRE — glass cannon physique
-    { speciesId: "crocavern", ev: ["atk", "def"] },   // SOL/PLANTE — colosse physique
+    { speciesId: "crocavern", ev: ["atk", "def"] },   // SOL — colosse physique
 ]
 
 /** L'équipe de PNJ 6 (niv 70, Saiyan ~niveau réparti 60/40, EV maxées sur 2 stats). */
