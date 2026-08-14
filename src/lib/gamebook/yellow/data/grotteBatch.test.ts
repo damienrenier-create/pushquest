@@ -6,11 +6,11 @@ import { buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, recordPnj10Clear
 import { GROTTE_SIGN_LINES } from "./grotteSign"
 
 describe("Crocavern (exclusif Grotte)", () => {
-    it("espèce valide : dex 190, ROCHE/PLANTE, mono-stade, learnset instanciable", () => {
+    it("espèce valide : dex 190, SOL/PLANTE, mono-stade, learnset instanciable", () => {
         const sp = getSpecies("crocavern")!
         expect(sp).toBeTruthy()
         expect(sp.dexNo).toBe(190)
-        expect(sp.types).toEqual(["ROCHE", "PLANTE"])
+        expect(sp.types).toEqual(["SOL", "PLANTE"])
         expect(sp.evolution).toBeUndefined() // mono-stade
         expect(sp.baseStats.atk).toBeGreaterThan(sp.baseStats.spe) // puissant mais lent
         const mon = createMonInstance("crocavern", 50, { owned: false })
