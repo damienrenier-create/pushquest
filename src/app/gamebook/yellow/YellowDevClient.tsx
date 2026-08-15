@@ -32,6 +32,7 @@ import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import RunScoreboardPanel from "./RunScoreboardPanel"
 import RunBadgesPanel from "./RunBadgesPanel"
+import FusionEpiloguePanel, { type EpilogueRosterMon } from "./FusionEpiloguePanel"
 import RustyLampModal from "./RustyLampModal"
 import GeniePanel from "./GeniePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
@@ -81,7 +82,9 @@ import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/game
 import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
-import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { AUTEL_VISITED_MARKER, historyFusions } from "@/lib/gamebook/yellow/data/fusiodex"
+import { EPILOGUE_INTRO_LINES, fusionEpilogueQuests } from "@/lib/gamebook/yellow/data/fusionEpilogue"
+import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
@@ -117,7 +120,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
     })
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
-import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -494,6 +497,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
     const [loopModal, setLoopModal] = useState(false) // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (accepter/refuser)
     const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation
+    // ÉPILOGUE « Maître de la Chimère » (fin de Ligue de Fusion) : snapshot du roster vainqueur figé au sacre (fusionSacre
+    //   est effacé dans la foulée), + drapeau « intro jouée → monter le panneau » (showDialogue n'a pas de callback de fin).
+    const [fusionEpilogue, setFusionEpilogue] = useState<{ tier: string; roster: EpilogueRosterMon[] } | null>(null)
+    const [epiloguePending, setEpiloguePending] = useState(false)
     const fusioBuyingRef = useRef(false) // verrou anti-double-tap sur l'achat (mobile) : 1 débit / 1 balle max
     const fusioReofferShownRef = useRef(false) // Fusio-Ball : re-proposition montrée UNE fois par session (anti-nag)
     const [pnj6Modal, setPnj6Modal] = useState(false) // offre d'échange PNJ 6 (post-victoire)
@@ -1403,6 +1410,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tier: fusionSacre.tier, team: fusionSacre.team }),
         }).catch(() => { /* hors-ligne : silencieux */ })
+        // ÉPILOGUE : on FIGE le roster vainqueur AVANT le clear (fusionSacre disparaît juste après). Le panneau (Acte II)
+        //   le rejoue ; bst calculé ici car absent de FusionChampionMon (sert au marquage « le plus puissant »).
+        setFusionEpilogue({
+            tier: fusionSacre.tier,
+            roster: fusionSacre.team.map((m) => ({
+                name: m.name, sprite: m.sprite, types: m.types, level: m.level,
+                bst: m.stats.hp + m.stats.atk + m.stats.def + m.stats.spe + m.stats.spc,
+            })),
+        })
         clearFusionSacre()
     }, [fusionSacre])
 
@@ -1463,6 +1479,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearLoopOffer()
         }
     }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre])
+
+    // ÉPILOGUE « MAÎTRE DE LA CHIMÈRE » — après le sacre, EN DERNIER (une fois toutes les modales/cinématiques du sacre
+    //   consommées : Fusio-Ball, boucle, Mégamonarx…), le Dieu Spaghetti prononce son laïus (EPILOGUE_INTRO_LINES) ;
+    //   à la fermeture du dialogue, le panneau riche (3 actes) se monte via epiloguePending && !dialogue (cf. JSX).
+    //   Gardes !loopCreatorOpen && world != "replay" : au sacre OR, si le joueur ACCEPTE la boucle (créateur ouvert →
+    //   bascule en monde "replay"), l'épilogue ne doit PAS recouvrir le créateur ni surgir dans la bulle de rejeu (où
+    //   player/pokedex refléteraient l'état replay). L'état épilogue est aussi vidé à l'acceptation de la boucle.
+    useEffect(() => {
+        if (fusionEpilogue && !epiloguePending && !battle && evolutions.length === 0 && !dialogue && !newDexEntry
+            && !pendingLearn && !championRun && !fusionParentReward && !fusioBallOffer && !fusioBallModal
+            && !loopOffer && !loopModal && !loopCreatorOpen && !megamonarxReveal && getActiveWorld() !== "replay") {
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, EPILOGUE_INTRO_LINES)
+            setEpiloguePending(true)
+        }
+    }, [fusionEpilogue, epiloguePending, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, loopOffer, loopModal, loopCreatorOpen, megamonarxReveal, showDialogue])
 
     // FUSIO-BALL — RE-PROPOSITION : offre EN ATTENTE (non achetée au sacre, marker fusioball_owed) + reps ≥ seuil →
     //   le Dieu Spaghetti la re-propose au MAX 1×/JOUR (marker daté persisté = anti-spam ; avant : 1×/session → re-pop à
@@ -3862,7 +3893,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 Ton vrai monde reste <b>intact</b> (simple bulle de rejeu). Tu refuses ? Il te le re-proposera à ta prochaine victoire à la Ligue de Fusion.
                             </div>
                         </div>
-                        <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>
+                        <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setFusionEpilogue(null); setEpiloguePending(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>
                         <button style={menuBtnDimStyle} onClick={() => setLoopModal(false)}>Plus tard</button>
                     </div>
                 </div>
@@ -4607,6 +4638,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     ])
                     setPendingForcedCreator(true) // ouvre le créateur forcé dès la fin du dialogue
                 }} />
+            )}
+
+            {/* ÉPILOGUE « Maître de la Chimère » (fin de Ligue de Fusion) : monté APRÈS le laïus du Dieu Spaghetti
+                (epiloguePending && !dialogue). Acte I = les 6 dresseurs, Acte II = le roster vainqueur figé,
+                Acte III = la checklist des secrets restants (teasers sans spoiler). Overlay propre zIndex 9600. */}
+            {!battle && evolutions.length === 0 && !dialogue && !loopCreatorOpen && epiloguePending && fusionEpilogue && getActiveWorld() !== "replay" && (
+                <FusionEpiloguePanel
+                    tierLabel={fusionEpilogue.tier.toUpperCase()}
+                    roster={fusionEpilogue.roster}
+                    quests={fusionEpilogueQuests({
+                        // NB : markers = defeatedTrainers du monde ACTIF (donc en run 2/3 « Nexus revisité » l'Acte III
+                        //   reflète ce run, pas la vie entière) ; dexCount exclut les espèces custom (fusions/Ukognofy)
+                        //   pour s'aligner sur le compteur dex visible du jeu (cf. pokedexCompletion).
+                        markers: player.defeatedTrainers,
+                        caught: getPokedex().caught,
+                        dexCount: getPokedex().caught.filter((id) => !isCustomSpeciesId(id)).length,
+                        domeChampionships: player.domeChampionships,
+                        fusionsDiscovered: historyFusions(player.fusionHistory).length,
+                        shinyCount: [...player.team, ...player.pc].filter((m) => m.shiny).length,
+                    })}
+                    onClose={() => { setFusionEpilogue(null); setEpiloguePending(false) }}
+                />
             )}
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en
