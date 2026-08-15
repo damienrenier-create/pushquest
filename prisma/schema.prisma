@@ -494,6 +494,25 @@ model GenieWish {
   @@index([status])
 }
 
+// VŒU GÉNIE « offre partagée » (Mools) — campagne UNIQUE par source : le génie propose `amount`⚡ aux `maxResponders`
+// premiers autres joueurs qui répondent. ACCEPTER → +amount pour eux ; REFUSER → +pushupPerRefusal pompes à la dette
+// de la source. `responses` = journal JSON [{userId,nickname,response,at}]. Se ferme à maxResponders réponses.
+// Additif (db:push), pattern gaté `(prisma as any).genieOffer` (compile avant db:push).
+model GenieOffer {
+  id               String   @id @default(cuid())
+  sourceUserId     String   @unique  // le demandeur (une seule campagne active par source)
+  sourceNickname   String
+  amount           Int      @default(1000)  // énergie offerte à chaque ACCEPTANT
+  pushupPerRefusal Int      @default(100)   // pompes ajoutées à la dette de la source par REFUS
+  maxResponders    Int      @default(5)     // ferme après N réponses (accept + refus)
+  status           String   @default("OPEN") // OPEN | CLOSED
+  responses        Json     @default("[]")  // [{ userId, nickname, response: "ACCEPTED"|"REFUSED", at }]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.

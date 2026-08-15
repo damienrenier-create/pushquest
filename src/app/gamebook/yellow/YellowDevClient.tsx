@@ -408,6 +408,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
     const [confirmStartReplay, setConfirmStartReplay] = useState<"run2" | "run3" | null>(null) // « rejouer un run » : confirmation avant de lancer
+    const [genieOffer, setGenieOffer] = useState<{ sourceNickname: string; amount: number; pushupPerRefusal: number } | null>(null) // VŒU GÉNIE « offre partagée » : prompt reçu d'un autre joueur
     const [keepSel, setKeepSel] = useState<Set<string>>(new Set())
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
@@ -895,6 +896,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         }
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
+            }
+            // VŒU GÉNIE « offre partagée » : un joueur (ex. Mools) offre de l'énergie aux 5 premiers connectés →
+            //   prompt interactif accepter/refuser. Le serveur filtre l'éligibilité (pas la source, pas déjà répondu,
+            //   quota libre, monde live/ngplus). Non-réponse = on ne POST rien → l'offre passe au joueur suivant.
+            if (!cancelled) {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/genie-offer")
+                    const j = r.ok ? await r.json() : null
+                    if (!cancelled && j?.offer) setGenieOffer({ sourceNickname: j.offer.sourceNickname, amount: j.offer.amount, pushupPerRefusal: j.offer.pushupPerRefusal })
+                } catch { /* neutre */ }
             }
             // LIGUE — RÉCOMPENSE CROISÉE : un autre joueur est devenu Champion → +1/3 de MON quota
             // énergétique (1 don par sacre, calculé sur MON repsCap). Appliqué après loadYellowSave.
@@ -1928,6 +1939,26 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const max = getPlayer().badges.length + (getPlayer().isChampion ? 1 : 0)
         if (max <= 0) { void doExitReplay(); return }
         setKeepSel(new Set()); setReplayKeep({ max, mons: [...getPlayer().team, ...getPlayer().pc] }); setMenu("none")
+    }
+    // VŒU GÉNIE « offre partagée » — réponse au prompt. ACCEPTER → +énergie créditée localement (grantReps + persist,
+    //   modèle d'énergie du jeu). REFUSER → +pompes à la dette de la SOURCE (côté serveur). Le serveur reste
+    //   authoritative sur l'éligibilité + la dette ; le client ne crédite QUE sur un accept validé.
+    const respondGenieOffer = async (choice: "accept" | "refuse") => {
+        const offer = genieOffer
+        setGenieOffer(null)
+        try {
+            const r = await fetch("/api/gamebook/yellow/genie-offer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ response: choice }) })
+            const j = r.ok ? await r.json() : null
+            if (j?.ok && choice === "accept" && (j.amount ?? 0) > 0) {
+                grantReps(j.amount); persistYellowSave()
+                setToast(`🎁 Le génie de ${offer?.sourceNickname ?? "?"} t'offre +${j.amount}⚡ !`)
+            } else if (j?.ok && choice === "refuse") {
+                setToast(`Tu as décliné l'offre du génie de ${offer?.sourceNickname ?? "?"}.`)
+            } else if (j?.reason === "wrong-world") {
+                setGenieOffer(offer) // reviens en jeu normal (live/ngplus) pour répondre → on garde le prompt
+                setToast("Reviens dans ton monde principal pour répondre à l'offre du génie.")
+            }
+        } catch { /* neutre */ }
     }
     // REJEU RUN 2 — lancement confirmé (starter mémorisé niv 5, repli picker customDaemons pour les saves legacy).
     const doStartReplayRun2 = () => {
@@ -4484,6 +4515,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </div>
                         <button style={menuBtnDimStyle} onClick={() => setConfirmStartReplay(null)}>← Annuler</button>
                         <button style={{ ...menuBtnStyle, marginTop: 6 }} onClick={() => { if (confirmStartReplay === "run2") doStartReplayRun2(); else { setConfirmStartReplay(null); setReplayMenu(false); setReplayPickRun("run3") } }}>Oui, lancer</button>
+                    </div>
+                </div>
+            )}
+            {/* VŒU GÉNIE « offre partagée » : prompt reçu d'un autre joueur (accepter l'énergie / refuser au prix de sa dette). */}
+            {genieOffer && !battle && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle}>
+                        <div style={menuTitleStyle}>🧞 Un vœu de {genieOffer.sourceNickname}</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
+                            Le génie de <b>{genieOffer.sourceNickname}</b> te tend la main : <b>+{genieOffer.amount}⚡</b> pour toi, cadeau !
+                            <br />⚠️ Si tu refuses, <b>{genieOffer.sourceNickname}</b> devra faire <b>{genieOffer.pushupPerRefusal} pompes</b> de plus (l'orgueil du génie).
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => respondGenieOffer("accept")}>✅ Accepter {genieOffer.amount}⚡</button>
+                        <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={() => respondGenieOffer("refuse")}>✋ Refuser</button>
                     </div>
                 </div>
             )}
