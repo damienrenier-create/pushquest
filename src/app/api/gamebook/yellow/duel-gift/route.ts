@@ -77,15 +77,15 @@ export async function POST(req: NextRequest) {
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const toUserId = typeof body.toUserId === "string" ? body.toUserId : ""
     if (!toUserId || toUserId === auth.userId) return NextResponse.json({ error: "Bad target" }, { status: 400 })
-    // Énergie reversée au joueur mirouté = énergie dépensée par le vainqueur (bornée anti-triche). Fallback = ancien
-    //   montant fixe si le client ne l'envoie pas (rétro-compat). Plancher GIFT_ENERGY pour que ça reste un vrai cadeau.
-    // BOOST « rattrapage » (Sartay 02/08) : le joueur dont le miroir IA est battu touche ×2 l'énergie dépensée par
-    //   le vainqueur, SANS plafond de gameplay (plancher 60). Le garde-fou ci-dessous est purement ANTI-TRICHE
-    //   (valeur absurde, jamais atteinte en jeu légitime) pour bloquer une énergie injectée par un client falsifié.
+    // Énergie reversée au joueur mirouté = ×2 l'énergie dépensée par le vainqueur (boost « rattrapage », Sartay 02/08),
+    //   SANS PLANCHER (choix Sartay 15/08) : purement proportionnel — un micro-duel = un micro-cadeau, un gros duel un
+    //   gros cadeau. Fallback = montant fixe GIFT_ENERGY si le client n'envoie pas la dépense (rétro-compat vieux clients).
+    //   Le garde-fou ci-dessous est purement ANTI-TRICHE (valeur absurde, jamais atteinte en jeu légitime) contre une
+    //   énergie injectée par un client falsifié.
     const ANTI_CHEAT_MAX = 50000
     const energy = typeof body.energy === "number" && isFinite(body.energy) && body.energy > 0
-        ? Math.max(60, Math.min(ANTI_CHEAT_MAX, Math.floor(body.energy * 2)))
-        : Math.max(60, GIFT_ENERGY)
+        ? Math.min(ANTI_CHEAT_MAX, Math.floor(body.energy * 2))
+        : GIFT_ENERGY
 
     try {
         const dg = (prisma as any).duelGift // table gated (cf. advisor/), créée par db:push
