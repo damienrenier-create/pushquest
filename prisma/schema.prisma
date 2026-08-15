@@ -513,6 +513,17 @@ model GenieOffer {
   @@index([status])
 }
 
+// 🥇 « 1er DU GROUPE » — grave le PREMIER joueur à accomplir un FAIT phare (course au premier). featId UNIQUE →
+// premier arrivé, premier (et SEUL) servi : une seule ligne par featId. Additif (db:push), gated côté code.
+// Cf. /api/gamebook/yellow/feat-first. Faits suivis : "champion", "fusion_champion", "catch_ukognofy".
+model FeatFirst {
+  id       String   @id @default(cuid())
+  featId   String   @unique
+  userId   String
+  nickname String
+  at       DateTime @default(now())
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.

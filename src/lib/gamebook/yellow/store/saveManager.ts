@@ -101,6 +101,25 @@ export function shouldCreditEnergyGrant(pending: number | undefined, activeWorld
     return (pending ?? 0) > 0 && (activeWorld === "live" || activeWorld === "ngplus")
 }
 
+/** 🥇 « 1er du groupe » : revendique (idempotent, fire-and-forget) les FAITS phares accomplis dans le monde ACTIF.
+ *  Le serveur ne grave que le PREMIER joueur (featId @unique). Se relance à chaque chargement, sans effet si déjà
+ *  revendiqué. Non bloquant : les erreurs réseau sont ignorées (réessai au prochain chargement). */
+async function claimFirstFeats(): Promise<void> {
+    const p = getPlayer()
+    const dt = p.defeatedTrainers ?? []
+    const feats: string[] = []
+    if (p.isChampion) feats.push("champion")
+    if (dt.includes("fusleague_bronze") || dt.includes("fusleague_argent") || dt.includes("fusleague_or")) feats.push("fusion_champion")
+    if (dt.includes("ukognofy_caught")) feats.push("catch_ukognofy")
+    for (const featId of feats) {
+        try {
+            await fetch("/api/gamebook/yellow/feat-first", {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ featId }),
+            })
+        } catch { /* neutre : réessai au prochain chargement */ }
+    }
+}
+
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {
     if (loaded) return // idempotent : déjà chargé (ex. on arrive sur la page Pokédex en nav interne) → on garde l'état mémoire À JOUR au lieu de réécraser avec la DB (qui peut être en retard du débounce).
@@ -162,6 +181,7 @@ export async function loadYellowSave(): Promise<void> {
     // Persiste l'état chargé — surtout les cadeaux one-shot crédités ci-dessus (welcomeGift/spagGift)
     // → le flag est sauvé même si le joueur ne fait rien d'autre ensuite (anti double-don).
     persistYellowSave()
+    void claimFirstFeats() // 🥇 « 1er du groupe » : revendique les faits phares accomplis (idempotent, non bloquant)
 }
 
 /** Sérialise le MONDE ACTIF (celui des stores) en YellowSave « nue » (méta NG+ aux défauts). */

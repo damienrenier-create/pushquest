@@ -41,6 +41,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
     const [fusion, setFusion] = useState<FusionChamp[]>([]) // RUN 4 / LIGUE : sacres de la Ligue de Fusion (Hall of Fame partagé)
+    const [firsts, setFirsts] = useState<Record<string, { userId: string; nickname: string }>>({}) // 🥇 1ers du groupe (feat-first)
     const [tab, setTab] = useState<TabId>("run1")
     const [expanded, setExpanded] = useState<string | null>(null) // RUN 2 : userId de l'entrée dépliée (détail des axes)
     const [profile, setProfile] = useState<{ userId: string; nickname: string } | null>(null)
@@ -49,15 +50,18 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
         let cancelled = false
         ;(async () => {
             try {
-                const [r, rf] = await Promise.all([
+                const [r, rf, rff] = await Promise.all([
                     fetch("/api/gamebook/yellow/run-scores"),
                     fetch("/api/gamebook/yellow/fusion-hall-of-fame"),
+                    fetch("/api/gamebook/yellow/feat-first"),
                 ])
                 const j = r.ok ? await r.json() : null
                 const jf = rf.ok ? await rf.json() : null
+                const jff = rff.ok ? await rff.json() : null
                 if (cancelled) return
                 setData({ run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], run3energy: j?.run3energy ?? [], duels: j?.duels ?? [] })
                 setFusion(Array.isArray(jf?.champions) ? jf.champions : [])
+                setFirsts(jff?.holders && typeof jff.holders === "object" ? jff.holders : {})
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -164,8 +168,8 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                 {/* Onglet DUELS : réputation PvP (local) + top-5 + classement duelliste (serveur) */}
                 {state === "ok" && tab === "duels" && <DuelsTab duels={data.duels} />}
 
-                {/* Onglet RUN 4 / LIGUE : Maîtres de la Chimère (Hall of Fame Fusion) */}
-                {state === "ok" && tab === "run4" && <Run4Tab champs={fusion} />}
+                {/* Onglet RUN 4 / LIGUE : 🥇 premières du groupe + Maîtres de la Chimère (Hall of Fame Fusion) */}
+                {state === "ok" && tab === "run4" && <Run4Tab champs={fusion} firsts={firsts} />}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
             </div>
@@ -235,22 +239,40 @@ function DuelsTab({ duels }: { duels: { nickname: string; wins: number }[] }) {
     )
 }
 
-/** Onglet RUN 4 / LIGUE : Maîtres de la Chimère (Ligue de Fusion), classés par palier (Or>Argent>Bronze) puis
- *  par ANCIENNETÉ du sacre (le 1er vainqueur en tête). Vide tant que personne n'a battu le Dieu Spaghetti. */
-function Run4Tab({ champs }: { champs: FusionChamp[] }) {
+const FEAT_FIRST_META: { id: string; label: string }[] = [
+    { id: "champion", label: "👑 1er Champion de la Ligue" },
+    { id: "fusion_champion", label: "🐉 1er Maître de la Chimère" },
+    { id: "catch_ukognofy", label: "✨ 1er à choper Ukognofy" },
+]
+
+/** Onglet RUN 4 / LIGUE : 🥇 PREMIÈRES DU GROUPE (course au premier, gravé à vie) + Maîtres de la Chimère classés
+ *  par palier (Or>Argent>Bronze) puis par ANCIENNETÉ du sacre (le 1er vainqueur en tête). */
+function Run4Tab({ champs, firsts }: { champs: FusionChamp[]; firsts: Record<string, { userId: string; nickname: string }> }) {
     const ranked = champs.slice().sort((a, b) =>
         (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0) || (Date.parse(a.wonAt) - Date.parse(b.wonAt)))
-    if (ranked.length === 0)
-        return <div style={muted}>Personne n&apos;a encore vaincu la LIGUE DE FUSION.<br />Sois le PREMIER Maître de la Chimère ! 🐉</div>
     return (
         <div style={scroll}>
-            {ranked.slice(0, 20).map((c, i) => (
-                <div key={`${c.userId}-${i}`} style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)" }}>
-                    <span style={rank}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
-                    <span style={name}>{c.nickname}</span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#ffe36b", whiteSpace: "nowrap" }}>{TIER_LABEL[c.tier] ?? c.tier}</span>
-                </div>
-            ))}
+            <div style={sectionTitle}>🥇 PREMIÈRES DU GROUPE</div>
+            <div style={{ marginBottom: 12 }}>
+                {FEAT_FIRST_META.map((f) => (
+                    <div key={f.id} style={miniRow}>
+                        <span style={{ flex: 1, fontSize: 11.5 }}>{f.label}</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: firsts[f.id] ? "#ffe36b" : "rgba(255,255,255,0.35)" }}>
+                            {firsts[f.id] ? `🥇 ${firsts[f.id].nickname}` : "à conquérir…"}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            <div style={{ ...sectionTitle, borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 8 }}>🏆 MAÎTRES DE LA CHIMÈRE</div>
+            {ranked.length === 0
+                ? <div style={{ fontSize: 11, opacity: 0.65, textAlign: "center", padding: "8px 4px", lineHeight: 1.6 }}>Personne n&apos;a encore vaincu la LIGUE DE FUSION.<br />Sois le PREMIER ! 🐉</div>
+                : ranked.slice(0, 20).map((c, i) => (
+                    <div key={`${c.userId}-${i}`} style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)" }}>
+                        <span style={rank}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                        <span style={name}>{c.nickname}</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#ffe36b", whiteSpace: "nowrap" }}>{TIER_LABEL[c.tier] ?? c.tier}</span>
+                    </div>
+                ))}
         </div>
     )
 }
