@@ -1376,6 +1376,9 @@ export function bumpStat(key: keyof YellowStats, n = 1) {
     st = { ...st, stats: { ...st.stats, [key]: (st.stats[key] ?? 0) + Math.floor(n) } }
 }
 export function getStats(): YellowStats { return st.stats }
+/** Compte un ÉCHANGE entre JOUEURS (Casino) — alimente le haut-fait trade_player. À appeler UNIQUEMENT au point
+ *  d'échange joueur↔joueur (jamais les échanges PNJ). Forward-only : les échanges passés ne sont pas reconstituables. */
+export function recordPlayerTrade() { bumpStat("playerTrades") }
 /** Met à jour un compteur de stats en gardant le MAXIMUM observé (ex. meilleur score /1000 du run 2, car la note
  *  n'est pas monotone). Comme bumpStat : pas d'emit ; la valeur est embarquée dans la prochaine écriture de save.
  *  Renvoie true si un nouveau record vient d'être posé (pour déclencher une sauvegarde immédiate au besoin). */

@@ -26,4 +26,9 @@ describe("badges légendaires ultimes + fusions (rétroactifs)", () => {
         const inp = badgeInputFromSave({ pokedex: { caught: [], seen: ["ukognofy", "megamonarx", "id_inexistant"] } })
         expect(inp.fusionsDiscovered).toBe(1) // seul ukognofy (505) compte ; megamonarx=203, id inconnu=0
     })
+
+    it("trade_player : gagné quand stats.playerTrades >= 1 (câblage forward-only)", () => {
+        expect(earned({ stats: { playerTrades: 1 } as any, pokedex: { caught: [], seen: [] } }, "trade_player")).toBe(true)
+        expect(earned({ pokedex: { caught: [], seen: [] } }, "trade_player")).toBe(false)
+    })
 })

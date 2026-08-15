@@ -244,6 +244,7 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         isChampion: s.isChampion === true,
         trainersBeaten: (s.defeatedTrainers ?? []).length,
         mirrorWins: s.stats?.duelWinsTotal ?? 0,
+        playerTrades: s.stats?.playerTrades ?? 0, // ÉCHANGE joueur↔joueur (Casino) → haut-fait trade_player (forward-only)
         pvpWins: s.pvpStats?.wins ?? 0,
         aceWins: s.aceWins ?? 0,
         domeChampionships: s.domeChampionships ?? 0,
