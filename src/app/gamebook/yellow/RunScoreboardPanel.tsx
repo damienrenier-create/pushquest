@@ -13,7 +13,8 @@ import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import PlayerBadgesModal from "./PlayerBadgesModal"
 
 interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
-type TabId = "run1" | "run2" | "run3" | "run3energy" | "duels"
+interface FusionChamp { userId: string; nickname: string; wonAt: string; tier: string }
+type TabId = "run1" | "run2" | "run3" | "run3energy" | "duels" | "run4"
 type Data = { run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
@@ -22,7 +23,11 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
     { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
+    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier (Or > Argent > Bronze) puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
 ]
+
+const TIER_RANK: Record<string, number> = { or: 3, argent: 2, bronze: 1 }
+const TIER_LABEL: Record<string, string> = { or: "🥇 OR", argent: "🥈 ARGENT", bronze: "🥉 BRONZE" }
 
 const topN = (rec: Record<string, number> | undefined, n: number): [string, number][] =>
     Object.entries(rec ?? {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n)
@@ -32,9 +37,10 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     //   Les onglets RUN 2 / RUN 3 / SURVIE n'apparaissent qu'une fois le run correspondant atteint — sinon leur seule
     //   présence révélerait l'existence des runs suivants. Le serveur renvoie de toute façon ces listes vides ici.
     const tabs = RUN_META.filter((m) =>
-        m.id === "run1" || m.id === "duels" || (m.id === "run2" && hasRun2) || ((m.id === "run3" || m.id === "run3energy") && hasRun3))
+        m.id === "run1" || m.id === "duels" || (m.id === "run2" && hasRun2) || ((m.id === "run3" || m.id === "run3energy") && hasRun3) || (m.id === "run4" && hasRun3))
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
+    const [fusion, setFusion] = useState<FusionChamp[]>([]) // RUN 4 / LIGUE : sacres de la Ligue de Fusion (Hall of Fame partagé)
     const [tab, setTab] = useState<TabId>("run1")
     const [expanded, setExpanded] = useState<string | null>(null) // RUN 2 : userId de l'entrée dépliée (détail des axes)
     const [profile, setProfile] = useState<{ userId: string; nickname: string } | null>(null)
@@ -43,10 +49,15 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
         let cancelled = false
         ;(async () => {
             try {
-                const r = await fetch("/api/gamebook/yellow/run-scores")
+                const [r, rf] = await Promise.all([
+                    fetch("/api/gamebook/yellow/run-scores"),
+                    fetch("/api/gamebook/yellow/fusion-hall-of-fame"),
+                ])
                 const j = r.ok ? await r.json() : null
+                const jf = rf.ok ? await rf.json() : null
                 if (cancelled) return
                 setData({ run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], run3energy: j?.run3energy ?? [], duels: j?.duels ?? [] })
+                setFusion(Array.isArray(jf?.champions) ? jf.champions : [])
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -136,7 +147,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
 
                 {/* Onglets de RUN : top 10 + ta ligne */}
-                {state === "ok" && tab !== "duels" && (
+                {state === "ok" && tab !== "duels" && tab !== "run4" && (
                     fullList.length === 0
                         ? <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à briller ! {tab === "run1" ? "🥇" : tab === "run3" ? "🏆" : tab === "run3energy" ? "🔋" : "🏅"}</div>
                         : <div style={scroll}>
@@ -152,6 +163,9 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
 
                 {/* Onglet DUELS : réputation PvP (local) + top-5 + classement duelliste (serveur) */}
                 {state === "ok" && tab === "duels" && <DuelsTab duels={data.duels} />}
+
+                {/* Onglet RUN 4 / LIGUE : Maîtres de la Chimère (Hall of Fame Fusion) */}
+                {state === "ok" && tab === "run4" && <Run4Tab champs={fusion} />}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
             </div>
@@ -217,6 +231,26 @@ function DuelsTab({ duels }: { duels: { nickname: string; wins: number }[] }) {
                         </div>
                     ))}
             </div>
+        </div>
+    )
+}
+
+/** Onglet RUN 4 / LIGUE : Maîtres de la Chimère (Ligue de Fusion), classés par palier (Or>Argent>Bronze) puis
+ *  par ANCIENNETÉ du sacre (le 1er vainqueur en tête). Vide tant que personne n'a battu le Dieu Spaghetti. */
+function Run4Tab({ champs }: { champs: FusionChamp[] }) {
+    const ranked = champs.slice().sort((a, b) =>
+        (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0) || (Date.parse(a.wonAt) - Date.parse(b.wonAt)))
+    if (ranked.length === 0)
+        return <div style={muted}>Personne n&apos;a encore vaincu la LIGUE DE FUSION.<br />Sois le PREMIER Maître de la Chimère ! 🐉</div>
+    return (
+        <div style={scroll}>
+            {ranked.slice(0, 20).map((c, i) => (
+                <div key={`${c.userId}-${i}`} style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)" }}>
+                    <span style={rank}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                    <span style={name}>{c.nickname}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#ffe36b", whiteSpace: "nowrap" }}>{TIER_LABEL[c.tier] ?? c.tier}</span>
+                </div>
+            ))}
         </div>
     )
 }
