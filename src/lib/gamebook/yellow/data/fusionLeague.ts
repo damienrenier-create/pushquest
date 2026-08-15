@@ -137,11 +137,22 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
     { a: "goshendofy", b: "aquapanthe", name: "Aquendofy", moves: ["souffle_primordial", "hydrocanon", "seisme", "repos"] },        // DRAGON/EAU — ACE (BST 1750)
 ]
 
-/** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat. */
+// NÉMÉSIS anti-Ténè-iwat (DRAGON/TÉNÈBRES) : un mur qui encaisse TOUT Ténè-iwat (Ténèbres/Feu/Élec ×0,5, Psy
+//   IMMUNISÉ) et le frappe ×4 via Dévoreur d'Ombres (STAB Ténèbres + DRAIN → auto-soin, donc pas de Repos).
+//   Kangoudead a sa signature en PV → il amène TOUJOURS le type Ténèbres (cf. règle de type). Remplace Dracakoss
+//   (FEU/DRAGON, neutre face aux fusions Spectre/Psy) aux paliers ARGENT/OR ; le Bronze garde Dracakoss (1er sacre).
+// Moveset PHYSIQUE (Atk 421 >> Spé 234) : Ball'Ombre = SPECTRE physique → ×4 sur Ténè-iwat (Spectre/Psy) tapé avec
+//   la GROSSE Atk (les STAB Ténèbres/Dragon sont spéciaux/mous → on les shunte). Danse-Lames booste l'Atk (nuke),
+//   Séisme = coverage physique, Dévoreur d'Ombres = drain/sustain (pas de Repos). Ball'Ombre = move forcé (curé).
+const BOSS_NEMESIS_ARGENT_OR: FusionPairDef = { a: "kangoudead", b: "draconarque", name: "Kangonarque", moves: ["ball_ombre", "danse_lames", "seisme", "devoreur_ombres"] }
+
+/** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat.
+ *  Dès ARGENT, Dracakoss cède la place au némésis Kangonarque (DRAGON/TÉNÈBRES, anti-fusions Spectre/Psy). */
 export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0): BuiltFusion[] {
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    return FUSION_BOSS_PAIRS.map((p) =>
+    const pairs = tier === "bronze" ? FUSION_BOSS_PAIRS : FUSION_BOSS_PAIRS.map((p) => (p.name === "Dracakoss" ? BOSS_NEMESIS_ARGENT_OR : p))
+    return pairs.map((p) =>
         buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
 }
