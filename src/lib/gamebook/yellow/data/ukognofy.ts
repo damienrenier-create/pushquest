@@ -84,13 +84,13 @@ export const UKOGNOFY_CAUGHT_MARKER = "ukognofy_caught"
 export const UKOGNOFY_FAIL_MARKERS = ["ukognofy_fail_1", "ukognofy_fail_2", "ukognofy_fail_3"] as const
 export const UKOGNOFY_MAX_FAILS = 3
 
-/** Ukognofy SAUVAGE niv 100. Espèce permanente + frozenStats = profil FUSIONNÉ (Spé scindée SpA 320 / SpD 290 →
- *  aussi le seuil de capture ~10 % via BST 1710). Idempotent : (ré)enregistre l'espèce pour être résolvable partout. */
+/** Ukognofy SAUVAGE niv 100. Espèce permanente + frozenStats = profil FUSIONNÉ (Spé scindée SpA 320 / SpD 290).
+ *  Le seuil de capture Fusio-Ball est FIXÉ à 50% côté engine (cas spécial Ukognofy). Idempotent : (ré)enregistre l'espèce. */
 export function buildUkognofy(): { instance: MonInstance; speciesId: string } {
     registerCustomSpecies([UKOGNOFY_SPECIES])
     const inst = createMonInstance(UKOGNOFY_ID, UKOGNOFY_LEVEL, { owned: false, moveIds: [...UKOGNOFY_MOVES] })
     // Profil de FUSIONNÉ pour le combat (Spéciale scindée) — droppé à la sérialisation → l'exemplaire capturé
-    //   retombe sur les baseStats permanents. Donne aussi le BON seuil de capture (BST 1710 → ~10 % PV).
+    //   retombe sur les baseStats permanents. Le seuil de capture Fusio-Ball est FIXÉ à 50% (cas spécial, cf. engine).
     inst.frozenStats = { hp: 462, atk: 216, def: 180, spe: 242, spc: 320 }
     inst.frozenSpd = 290
     inst.currentHp = 462

@@ -1425,15 +1425,17 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         return
     }
     // FUSIO-BALL sur une FUSION : capture GARANTIE (comme la Master) UNE FOIS le fusionné suffisamment AFFAIBLI.
-    //   Le SEUIL de PV dépend de sa PUISSANCE (BST) : Ukognofy (BST max ~1710, l'ÉTALON) ne cède qu'au bord du K.O.
-    //   (~10% PV) ; une fusion faible cède dès un peu entamée (~85%). Un STATUT majeur RELÈVE le seuil (capture plus
-    //   facile) : sommeil/gel ×1,6 ; brûlure/poison/toxik/paralysie ×1,3. Au-dessus du seuil → la Ball ne prend pas.
+    //   Le SEUIL de PV dépend de sa PUISSANCE (BST) : une fusion faible cède dès un peu entamée (~85%), une puissante
+    //   bien plus bas. CAS SPÉCIAL UKOGNOFY (choix Sartay) : seuil FIXE à 50% (au lieu du ~10% dérivé de son BST 1710)
+    //   → dur mais accessible dès la moitié de ses PV. Un STATUT majeur RELÈVE le seuil (capture plus facile) :
+    //   sommeil/gel ×1,6 ; brûlure/poison/toxik/paralysie ×1,3. Au-dessus du seuil → la Ball ne prend pas.
     if (isFusioBall) {
         const fs = wild.frozenStats
         const bst = fs ? fs.hp + fs.atk + fs.def + fs.spe + fs.spc + (wild.frozenSpd ?? fs.spc)
             : Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
         const statusMult = (wild.status === "SLEEP" || wild.status === "FREEZE") ? 1.6 : (wild.status !== "NONE") ? 1.3 : 1.0
-        const threshold = Math.min(0.90, Math.max(0.1, Math.min(0.85, 1 - bst / 1900)) * statusMult) // BST↑ → seuil↓ ; statut → seuil↑
+        const baseThresh = wild.speciesId === "ukognofy" ? 0.5 : Math.max(0.1, Math.min(0.85, 1 - bst / 1900)) // Ukognofy = 50% fixe
+        const threshold = Math.min(0.90, baseThresh * statusMult) // sinon BST↑ → seuil↓ ; statut → seuil↑
         if (wild.currentHp > maxHpOf(wild) * threshold) {
             events.push({ kind: "ball", action: "miss" })
             const statusHint = wild.status === "NONE" ? " Un STATUT (sommeil/gel surtout) faciliterait la prise." : ""
