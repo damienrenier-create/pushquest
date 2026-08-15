@@ -416,7 +416,11 @@ export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: Mo
     //   (XP différé). Sans effet sur le fusionné lui-même (frozenStats figées, learnset à 1 niveau, pas d'évo).
     // aiLevel : "elite" (Conseil des Chimères = gauntlet, ne switch JAMAIS) vs "hof" (LANCE/Dieu Spaghetti = boss,
     //   PEUVENT switcher). Les deux partagent scoreMovesHof (gère la Déf Spé séparée des fusions).
-    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel, noItems: true, expMult: 1, playerBadgeCount: getPlayer().badges.length })
+    // SAC AUTORISÉ (comme la Ligue des runs 1/2/3) : noItems=false → le joueur peut soigner/désenvoûter ses fusions
+    //   en combat (potion/antidote/antigel…). Indispensable car le gauntlet transporte HP+STATUT de salle en salle et
+    //   il n'existe aucun autre soin (onglet Équipe fusion = lecture seule) → sinon gel/toxik = wipe garanti. Le défi
+    //   reste entier : objets FINIS, aucun soin gratuit entre salles. applyItem cible le mon actif (= la fusion).
+    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel, noItems: false, expMult: 1, playerBadgeCount: getPlayer().badges.length })
     setStore({ battle, evolutions: [], trainer: { trainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
