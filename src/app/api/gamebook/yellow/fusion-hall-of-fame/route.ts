@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 
 export const dynamic = "force-dynamic"
 
@@ -67,6 +67,18 @@ export async function POST(req: NextRequest) {
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
         await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team), world: `fusion:${tier}` } })
+        // RÉCOMPENSE CROISÉE (calquée sur la Ligue classique, cf. hall-of-fame/) : tous les AUTRES joueurs reçoivent
+        //   un don d'énergie (+1/3 de LEUR quota, appliqué à la réclamation via hall-of-fame/energy — table partagée).
+        //   Anti-stacking : pas de 2e don NON réclamé de MOI vers la même cible (la Ligue de Fusion est rejouable →
+        //   évite le spam de dons en re-gagnant les paliers). Best-effort, neutre si la table n'existe pas.
+        try {
+            const eg = (prisma as any).leagueEnergyGrant
+            const others = (await (prisma as any).gamebookProgress.findMany({ where: { chapterId: YELLOW_CHAPTER_ID, userId: { not: auth.userId } }, select: { userId: true } })) as { userId: string }[]
+            const pending = (await eg.findMany({ where: { fromUserId: auth.userId, claimed: false }, select: { toUserId: true } })) as { toUserId: string }[]
+            const blocked = new Set(pending.map((p) => p.toUserId))
+            const targets = others.map((o) => o.userId).filter((id) => !blocked.has(id))
+            if (targets.length > 0) await eg.createMany({ data: targets.map((toUserId) => ({ toUserId, fromUserId: auth.userId, fromNickname: me.nickname })) })
+        } catch { /* table absente → neutre */ }
         return NextResponse.json({ ok: true })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // table pas encore créée → neutre
