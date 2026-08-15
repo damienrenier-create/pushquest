@@ -345,9 +345,11 @@ export function chooseAiAction(
     level: AiLevel,
     rng: Rng,
 ): AiChoice {
-    // PILOTES D'ARCHÉTYPE (Tonytony, Sylvebarbe, Merorem, Ukognos, MégamonarX…) : stratégie dédiée (setup/usure/
-    //   esquive/soin) et JAMAIS de switch volontaire (restent en jeu). S'applique à tous les niveaux d'IA.
-    if (ARCHETYPE_PILOTS.has(self.speciesId)) {
+    // PILOTES D'ARCHÉTYPE (setup / usure / esquive / soin / graine) : stratégie dédiée, JAMAIS de switch volontaire.
+    //   La WHITELIST s'applique à TOUS les niveaux ; EN PLUS, tout MIROIR/boss « hof » au kit spécial en bénéficie
+    //   désormais (un stall/sweeper joue enfin son plan complet). chooseArchetypeMove renvoie null pour un kit BANAL
+    //   → repli sur le scorer générique → AUCUNE régression des attaquants purs (ni des sauvages/dresseurs, non-hof).
+    if (ARCHETYPE_PILOTS.has(self.speciesId) || level === "hof") {
         const ti = chooseArchetypeMove(self, foe)
         if (ti !== null) return { kind: "move", moveIndex: ti }
     }
