@@ -3179,8 +3179,21 @@ export function unregisterCustomSpecies(ids: string[]): void { for (const id of 
 export function isCustomSpeciesId(id: string): boolean { return CUSTOM_SPECIES.has(id) }
 export function customSpeciesCount(): number { return CUSTOM_SPECIES.size }
 
+// ALIAS des créations CANONISÉES : un joueur qui possède l'ANCIEN Daemon custom (id `custom_<batch>_<nom>_sN`, créé
+//   AVANT la canonisation de sa lignée) → on le résout vers l'espèce CANONIQUE finale. Repli utilisé quand l'espèce
+//   custom n'est PAS enregistrée : côté SERVEUR (ex. génération de sprite de fusion → fin du `unknown-species`) et
+//   pour les SPECTATEURS qui n'ont pas les customDaemons du joueur. Côté client owner, CUSTOM_SPECIES prime (même
+//   créature). Les 5 stades finaux (_s3) réellement présents dans les saves (cf. scan) ; extensible si besoin.
+export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
+    custom_cmsat15v80001wvy_joeyrrant_s3: "kangoudead",   // Jacanon
+    custom_cmq950jkh000071u_phoechaud_s3: "phoechaudiii", // Guillaume
+    custom_cmpgu4uq5000069d_shady_s3: "shadow",           // Franss
+    custom_cmml4dogn00005n1_bidouzen_s3: "karatame",      // Embi
+    custom_cmq5gbo5g0000g6m_guizer_s3: "mobyd",           // Task1
+}
+
 export function getSpecies(id: string): SpeciesData | null {
-    return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? null // statique d'abord, puis custom runtime
+    return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? SPECIES[CANONIZED_CUSTOM_ALIAS[id] ?? ""] ?? null // statique → custom runtime → alias canonisé (repli serveur/spectateur)
 }
 
 /** LÉGENDAIRES ULTRA-SECRETS : ne se révèlent au Pokédex QUE par CAPTURE RÉELLE — JAMAIS par « vu », ni par le
