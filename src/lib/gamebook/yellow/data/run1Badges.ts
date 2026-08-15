@@ -14,6 +14,7 @@
 // des champs OPTIONNELS de BadgeInput — le badge reste simplement non-gagné tant qu'ils valent 0/false.
 
 import { getSpecies, visibleDexSpecies, SPECIES, DEX_ULTRA_SECRET } from "./species"
+import { FUSION_BASE_IDS } from "./fusionBaseSpecies"
 import type { YellowSave } from "../storage/save"
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
@@ -72,6 +73,8 @@ export interface BadgeInput {
     markers?: readonly string[]   // save.defeatedTrainers (marqueurs d'événement + ids de dresseurs battus)
     pnj5Wins?: number             // victoires sur le Gardien du Nexus (descente de la Grotte)
     fusionsCreated?: number       // fusionHistory.length (fusions créées à l'Autel)
+    caughtFusion?: boolean        // a capturé une fusion SAUVAGE (espèce dexNo >= 500) via Fusio-Ball
+    fusionsDiscovered?: number    // fusions distinctes APERÇUES au Fusiodex (seen ∩ dexNo >= 500)
     // ── side quests « plaisir » (dérivés DIRECTS de la save → rétroactifs, aucun nouveau champ save) ──
     pokerPlayed?: boolean         // pokerFirstGameDone (a joué au moins une partie de poker)
     heldItemEquipped?: boolean    // un Daemon (équipe ou PC) porte un objet tenu
@@ -83,6 +86,13 @@ const distinctTypes = (i: BadgeInput) => new Set(i.caught.flatMap((id) => getSpe
 const has = (i: BadgeInput, id: string) => i.caught.includes(id)
 const sawAny = (i: BadgeInput, ...ids: string[]) => ids.some((id) => i.seen.includes(id) || i.caught.includes(id))
 
+// FUSIONS : détection FIABLE d'une espèce-fusion par son id. Source canonique = FUSION_BASE_IDS (les fusions
+//   cataloguées) + Ukognofy (fusion légendaire, registre séparé). Repli dexNo>=500 pour d'éventuelles fusions
+//   dynamiques résolubles côté client. getSpecies NE résout PAS les fusions côté serveur (registre séparé) → le set
+//   d'ids est indispensable pour que le leaderboard PULL crédite correctement.
+const FUSION_ID_SET: ReadonlySet<string> = new Set<string>([...FUSION_BASE_IDS, "ukognofy"])
+const isFusionId = (id: string) => FUSION_ID_SET.has(id) || (getSpecies(id)?.dexNo ?? 0) >= 500
+
 // Marqueurs de save.defeatedTrainers, inlinés en LITTÉRAUX pour garder ce module PUR (pas d'import de stores/data
 // lourds). Sources : gameStore (MERCHANT/B2F), fusiodex.ts (AUTEL_VISITED_MARKER), fusionLeague.ts (FUSION_UNLOCK/
 // FUSION_TIER), trainers.ts + battleStore.GLACON_BROTHERS, trainers.ts (plage y_plage_*, aqua y_aqua_*).
@@ -92,6 +102,7 @@ const MK_AUTEL = "autel_visited"
 const MK_FUSION_UNLOCK = "fusion_unlocked"
 const MK_FUSION_OR = "fusleague_or"
 const MK_FUSION_TIERS: readonly string[] = ["fusleague_bronze", "fusleague_argent", "fusleague_or"]
+const MK_UKOGNOFY = "ukognofy_caught" // marqueur posé à la capture d'Ukognofy (ukognofy.ts UKOGNOFY_CAUGHT_MARKER)
 const FRERES_GLACON: readonly string[] = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"]
 const PLAGE_TRAINERS: readonly string[] = ["y_plage_pecheur", "y_plage_nageuse", "y_plage_marin"]
 const AQUA_MOBS: readonly string[] = ["y_aqua_n1", "y_aqua_n2", "y_aqua_n3", "y_aqua_n4"]
@@ -146,6 +157,10 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "masterball", label: "Choper la Master Ball", tier: "gold", secret: true, cat: "special", earned: (i) => i.hasMasterBall, reveal: (i) => i.hasMasterBall },
     { id: "tonytony", label: "Choper Tonytony", tier: "diamond", secret: true, cat: "special", earned: (i) => has(i, "tonytony"), reveal: (i) => sawAny(i, "tonytony") },
     { id: "goshendofy", label: "Choper Goshendofy", tier: "legend", secret: true, cat: "special", earned: (i) => has(i, "goshendofy"), reveal: (i) => sawAny(i, "goshendofy") },
+    // Légendaires ULTIMES de l'endgame (obtention hors-normes → tier légende/diamant, révélés à la RENCONTRE) :
+    { id: "catch_megamonarx", label: "Choper MégamonarX (le dragon-dieu)", tier: "legend", secret: true, cat: "special", earned: (i) => has(i, "megamonarx"), reveal: (i) => sawAny(i, "megamonarx") },
+    { id: "catch_galijah", label: "Choper Galijah (l'être-mystère)", tier: "diamond", secret: true, cat: "special", earned: (i) => has(i, "galijah"), reveal: (i) => sawAny(i, "galijah") },
+    { id: "catch_ukognofy", label: "Choper Ukognofy (la fusion légendaire)", tier: "legend", secret: true, cat: "special", earned: (i) => hasMk(i, MK_UKOGNOFY), reveal: (i) => sawAny(i, "ukognofy") || hasMk(i, MK_UKOGNOFY) },
     { id: "sylvebarbe", label: "Réveiller & battre Sylvebarbe", tier: "gold", secret: true, cat: "special", earned: (i) => i.sylvebarbeAwake, reveal: (i) => i.sylvebarbeAwake },
     { id: "sbire", label: "Battre le Sbire", tier: "bronze", secret: true, cat: "special", earned: (i) => i.sbireWins >= 1, reveal: (i) => i.sbireWins >= 1 },
     { id: "ace1", label: "Battre l'ACE (ton rival)", tier: "silver", secret: true, cat: "special", earned: (i) => i.aceWins >= 1, reveal: (i) => i.aceWins >= 1 },
@@ -178,6 +193,9 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "fusion_league", label: "Débloquer la Ligue de Fusion", tier: "gold", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_UNLOCK), reveal: (i) => (i.fusionsCreated ?? 0) >= 1 || hasMk(i, MK_AUTEL) || hasMk(i, MK_FUSION_UNLOCK) },
     { id: "fusion_champion", label: "Maître de la Chimère (Ligue de Fusion vaincue)", tier: "diamond", secret: true, cat: "fusion", earned: (i) => hasAnyMk(i, MK_FUSION_TIERS), reveal: (i) => hasMk(i, MK_FUSION_UNLOCK) || hasAnyMk(i, MK_FUSION_TIERS) },
     { id: "fusion_gold", label: "Champion OR de la Ligue de Fusion", tier: "legend", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_OR), reveal: (i) => hasAnyMk(i, MK_FUSION_TIERS) },
+    { id: "catch_fusion", label: "Capturer une fusion SAUVAGE (Fusio-Ball)", tier: "gold", secret: true, cat: "fusion", earned: (i) => i.caughtFusion === true, reveal: (i) => i.caughtFusion === true || hasMk(i, MK_FUSION_UNLOCK) },
+    { id: "fusiodex5", label: "Découvrir 5 fusions au Fusiodex", tier: "silver", secret: true, cat: "fusion", earned: (i) => (i.fusionsDiscovered ?? 0) >= 5, reveal: (i) => (i.fusionsDiscovered ?? 0) >= 1 || hasMk(i, MK_AUTEL) },
+    { id: "fusiodex15", label: "Découvrir 15 fusions au Fusiodex", tier: "gold", secret: true, cat: "fusion", earned: (i) => (i.fusionsDiscovered ?? 0) >= 15, reveal: (i) => (i.fusionsDiscovered ?? 0) >= 5 },
 
     // ── ⑨ SIDE QUESTS « plaisir » (🔒 révélées à la réalisation) : baies, poker, objet tenu, CT-cadeau ──
     { id: "berries", label: "Percer le secret des baies", tier: "silver", secret: true, cat: "exploration", earned: (i) => i.berrySecretKnown, reveal: (i) => i.berrySecretKnown },
@@ -215,9 +233,11 @@ export function badgeScore(i: BadgeInput): number {
  *  de rejeu ou un run-1 gelé passent caughtThisRun ; sinon le pokédex global sert de défaut). Champs manquants tolérés. */
 export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly string[]): BadgeInput {
     const mons = [...(s.team ?? []), ...(s.pc ?? [])]
+    const caughtIds = caught ?? s.pokedex?.caught ?? []
+    const seenIds = s.pokedex?.seen ?? []
     return {
-        caught: caught ?? s.pokedex?.caught ?? [],
-        seen: s.pokedex?.seen ?? [],
+        caught: caughtIds,
+        seen: seenIds,
         mons: mons.map((m) => ({ level: m.level, shiny: m.shiny, speciesId: m.speciesId })),
         teamSize: (s.team ?? []).length,
         arenaBadges: (s.badges ?? []).length,
@@ -252,5 +272,8 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         pokerPlayed: s.pokerFirstGameDone === true,
         heldItemEquipped: mons.some((m) => !!m.heldItem),
         giftCts: (s.ownedCts ?? []).length,
+        // FUSIONS (dérivés DIRECTS via isFusionId : set canonique d'ids) → rétroactifs, aucun nouveau champ save
+        caughtFusion: caughtIds.some(isFusionId),
+        fusionsDiscovered: seenIds.filter(isFusionId).length,
     }
 }
