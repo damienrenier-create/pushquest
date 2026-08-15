@@ -48,7 +48,15 @@ export async function GET() {
                 userId: r.userId,
                 nickname: r.user?.nickname ?? "?",
                 isGuest: r.user?.isGuest === true,
-                team: activeTeam.map((m) => ({ speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null, shiny: m.shiny })),
+                // MIROIR à PLEINE PUISSANCE : on expose la VRAIE force du joueur (EV entraînés, points Saiyan `allocated`,
+                //   IV, moveset/CT réels, objets tenus) — pas seulement espèce+niveau — pour que son reflet IA soit au
+                //   niveau du joueur (et active ses pilotes d'archétype via les moves équipés). Lecture seule, contexte fermé.
+                team: activeTeam.map((m) => ({
+                    speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null, shiny: m.shiny,
+                    ev: m.ev, allocated: m.allocated, ivs: m.ivs,
+                    moves: m.moves.map((x) => x.moveId),
+                    heldItem: m.heldItem, heldItem2: m.heldItem2,
+                })),
                 // DAEMONS CUSTOM du joueur (specs) → le SPECTATEUR les enregistre pour RÉSOUDRE l'espèce (sprite +
                 //   combat du reflet) au lieu de la jeter. Sans ça, un Daemon custom/canonisé d'un autre joueur = MISSINGNO.
                 customDaemons: s.customDaemons ?? [],

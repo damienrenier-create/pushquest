@@ -327,12 +327,15 @@ export function chooseAiAction(
             const foeTypes = getSpecies(foe.speciesId)?.types ?? []
             const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
             const myBestEff = Math.max(0, ...scoredHof.map((s) => s.eff))
-            if (incomingOnMe >= 4 && myBestEff < 2) {
+            // Se replie dès un matchup PERDANT (faiblesse ×2, plus seulement ×4) qu'on ne peut pas punir en retour,
+            //   vers un banc STRICTEMENT plus résistant. DÉTERMINISTE : plus de rng.chance(75) — le miroir ne « rate »
+            //   plus jamais son repli (fini le sweep facile). L'anti yo-yo (incomingOnCand < incomingOnMe) borne le va-et-vient.
+            if (incomingOnMe >= 2 && myBestEff < 2) {
                 const sw = bestSwitchIndex(team, activeIndex, foe)
                 if (sw !== null) {
                     const candTypes = getSpecies(team[sw].speciesId)?.types ?? []
                     const incomingOnCand = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, candTypes), 1)
-                    if (incomingOnCand < incomingOnMe && rng.chance(75)) return { kind: "switch", teamIndex: sw }
+                    if (incomingOnCand < incomingOnMe) return { kind: "switch", teamIndex: sw }
                 }
             }
         }

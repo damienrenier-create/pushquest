@@ -11,14 +11,23 @@
 import { createMonInstance } from "../battle/factory"
 import { getSpecies, SPECIES, registerCustomSpecies } from "./species"
 import { buildCustomSpecies, buildNemesis, type StoredCustomDaemon } from "../create/customSpecies"
-import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
+import { POKE_TYPES, type PokeType, type MonInstance, type StatKey } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
 import { YELLOW_MAPS } from "../maps"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { isBlockingTile } from "../../mapEngine"
 
-/** Un Daemon tel que renvoyé par la registry. */
-export interface RegistryMon { speciesId: string; level: number; nickname: string | null; shiny?: boolean }
+/** Un Daemon tel que renvoyé par la registry. Champs de PUISSANCE (ev/allocated/ivs/moves/heldItem) exposés pour que
+ *  le reflet IA reproduise la VRAIE force du joueur (sinon = espèce+niveau+IV15+shiny seulement). Optionnels (rétro-compat). */
+export interface RegistryMon {
+    speciesId: string; level: number; nickname: string | null; shiny?: boolean
+    ev?: Partial<Record<StatKey, number>>
+    allocated?: Partial<Record<StatKey, number>>
+    ivs?: Record<StatKey, number>
+    moves?: string[]
+    heldItem?: string
+    heldItem2?: string
+}
 /** Un joueur tel que renvoyé par la registry (résumé public). */
 export interface RegistryPlayer {
     userId: string
@@ -135,8 +144,18 @@ export function buildHubTeam(player: RegistryPlayer): MonInstance[] {
     const ti = ordered.findIndex((m) => m.speciesId === "tonytony")
     if (ti >= 0 && ti < ordered.length - 1) ordered.push(...ordered.splice(ti, 1))
     return ordered.map((m) => {
-        const mon = createMonInstance(m.speciesId, m.level, { owned: false, shiny: m.shiny })
+        // PLEINE PUISSANCE : on reconstruit le reflet avec les EV entraînés, points Saiyan (allocated), IV et le
+        //   MOVESET/CT RÉELS du joueur (au lieu des 4 derniers coups du learnset). Active aussi les pilotes d'archétype
+        //   (qui lisent les moves équipés). Champs optionnels → rétro-compat (ancienne registry = comportement d'avant).
+        const mon = createMonInstance(m.speciesId, m.level, {
+            owned: false, shiny: m.shiny,
+            ev: m.ev, allocated: m.allocated,
+            ivsByStat: m.ivs,
+            moveIds: m.moves && m.moves.length > 0 ? m.moves : undefined,
+        })
         if (m.nickname) mon.nickname = m.nickname
+        if (m.heldItem) mon.heldItem = m.heldItem       // objets tenus (+10/20% stats via fullStats)
+        if (m.heldItem2) mon.heldItem2 = m.heldItem2
         return mon
     })
 }
