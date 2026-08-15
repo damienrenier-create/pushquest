@@ -58,7 +58,7 @@ describe("fusion — types & divers", () => {
         ]
         for (const [ta, tb] of cases) {
             const a = mk({ types: ta, moves: [] }), b = mk({ types: tb, moves: [] })
-            const f = fuseTypes(a, b, fuseStats(a, b))
+            const f = fuseTypes(a, b)
             expect(f.length, `[${ta}]×[${tb}] : 1-2 types`).toBeGreaterThanOrEqual(1)
             expect(f.length).toBeLessThanOrEqual(2)
             expect(f.some((t) => ta.includes(t)), `≥1 type de A [${ta}]`).toBe(true)
@@ -70,8 +70,8 @@ describe("fusion — types & divers", () => {
         // Égalité de repValue sur le 2e type (Plante vs Eau, même déf) → jadis order-dependent, désormais stable.
         const A: FusionParent = { name: "Alpha", types: ["COMBAT", "PLANTE"], stats: { hp: 50, atk: 90, def: 60, spe: 50, spc: 50 }, level: 50, moves: [] }
         const B: FusionParent = { name: "Beta", types: ["COMBAT", "EAU"], stats: { hp: 50, atk: 90, def: 60, spe: 50, spc: 50 }, level: 50, moves: [] }
-        const ab = fuseTypes(A, B, fuseStats(A, B))
-        const ba = fuseTypes(B, A, fuseStats(B, A))
+        const ab = fuseTypes(A, B)
+        const ba = fuseTypes(B, A)
         expect([...ab].sort()).toEqual([...ba].sort()) // même SET quel que soit l'ordre d'appel
     })
 
@@ -81,7 +81,7 @@ describe("fusion — types & divers", () => {
     })
 
     it("2 mono-types distincts → bi-type", () => {
-        expect(fuseTypes(P("divinpate"), P("razmaree"), fuseStats(P("divinpate"), P("razmaree")))).toEqual(["PSY", "EAU"])
+        expect(fuseTypes(P("divinpate"), P("razmaree"))).toEqual(["PSY", "EAU"])
     })
 
     it("stats INDÉPENDANTES de l'ordre des parents (le split par vitesse est symétrique)", () => {

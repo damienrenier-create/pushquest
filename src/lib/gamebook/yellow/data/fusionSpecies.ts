@@ -205,21 +205,25 @@ function bestType(types: readonly PokeType[], fused: FusionStats): PokeType {
     return arr.reduce((best, t) => (repValue(t, fused) > repValue(best, fused) ? t : best), arr[0])
 }
 
-/** Typage du fusionné (RÈGLE Sartay) : UN type de CHAQUE parent = son type le plus stat-fidèle. JAMAIS 2 types
- *  d'un parent + 0 de l'autre. Si les deux parents pointent vers le MÊME type S (partagé), on garde S + le 2e type
- *  le plus stat-fidèle du couple (reste bi-type ; S représente déjà les DEUX parents → aucun parent à 0). Mono
- *  uniquement si aucun autre type. types[0] = type du parent TÊTE (a) ; ordre cosmétique (STAB agnostique à l'ordre).
- *  Le SET de types est INDÉPENDANT de l'ordre des parents (PvP déterministe) : dans la branche partagée, les types
- *  sont départagés (égalités de repValue) via un ordre CANONIQUE des parents (par nom), pas via l'ordre d'appel. */
-export function fuseTypes(a: FusionParent, b: FusionParent, fused: FusionStats): PokeType[] {
-    const aType = bestType(a.types, fused)
-    const bType = bestType(b.types, fused)
-    if (aType !== bType) return [aType, bType] // 1 type distinct de chaque parent (SET déjà indépendant de l'ordre)
-    // Type partagé S : S + le meilleur AUTRE type. Parents classés par NOM (canonique) → le départage des égalités de
-    // repValue ne dépend PAS de l'ordre d'appel → SET stable (déterministe pour le PvP + identité Fusiodex).
-    const [p1, p2] = a.name <= b.name ? [a, b] : [b, a]
-    const others = [...new Set([...p1.types, ...p2.types])].filter((t) => t !== aType)
-    return others.length ? [aType, bestType(others, fused)] : [aType]
+/** Typage du fusionné (RÈGLE Sartay, CORRIGÉE 16/08) : CHAQUE parent amène le type le plus fidèle à SES PROPRES
+ *  stats RÉELLES (pas celles du fusionné) → une même espèce peut amener un type DIFFÉRENT selon son build (ex. un
+ *  Ténébrir gonflé en PV amène TÉNÈBRES ; gonflé en Spé, son autre type). JAMAIS 2 types d'un parent + 0 de l'autre.
+ *  Si les DEUX parents pointent vers le MÊME type S (partagé), on garde S + le meilleur AUTRE type du couple (chaque
+ *  type jugé sur les stats de SON parent ; reste bi-type ; mono seulement s'il n'existe aucun autre type). types[0] =
+ *  type du parent TÊTE (a) ; ordre cosmétique (STAB agnostique). SET indépendant de l'ordre des parents (départage des
+ *  égalités par NOM de type → PvP/Fusiodex déterministes). */
+export function fuseTypes(a: FusionParent, b: FusionParent): PokeType[] {
+    const aType = bestType(a.types, a.stats) // ← stats du PARENT A (plus du fusionné)
+    const bType = bestType(b.types, b.stats) // ← stats du PARENT B
+    if (aType !== bType) return [aType, bType]
+    // Type partagé S : S + le meilleur AUTRE type du couple (chaque candidat jugé sur les stats de SON parent),
+    //   égalités départagées par nom de type → SET stable et indépendant de l'ordre d'appel.
+    const cand: { t: PokeType; v: number }[] = []
+    for (const t of new Set(a.types)) if (t !== aType) cand.push({ t, v: repValue(t, a.stats) })
+    for (const t of new Set(b.types)) if (t !== bType) cand.push({ t, v: repValue(t, b.stats) })
+    if (!cand.length) return [aType]
+    cand.sort((x, y) => (y.v - x.v) || (x.t < y.t ? -1 : 1))
+    return [aType, cand[0].t]
 }
 
 /** Nom mot-valise : 1re moitié du 1er parent (dominant) + « - » + 2e moitié du 2e. Simple, déterministe, cosmétique. */
@@ -236,7 +240,7 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const special = specialFusionFor(a, b)
     return {
         name: special?.name ?? fusionName(a, b),
-        types: special?.forcedType ? [special.forcedType] : fuseTypes(a, b, stats),
+        types: special?.forcedType ? [special.forcedType] : fuseTypes(a, b),
         stats,
         level: Math.max(a.level, b.level),
         moves: fuseMoves(a, b),
