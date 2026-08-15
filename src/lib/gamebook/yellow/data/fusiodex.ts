@@ -26,6 +26,7 @@ export const DOME_SPAGHETTI_LINES = [
     "« Bienvenue au DÔME DE LA FUSION, jeune Dresseur. Ici, deux Daemons n'en font plus qu'UN. »",
     "« Dépose deux créatures sur l'Autel de la Chimère : elles fusionnent en un construct de combat unique — et se retrouvent intactes ensuite. »",
     "« Remporte les épreuves de l'autel, puis défie la LIGUE DE FUSION quand la porte à dragons s'ouvrira. »",
+    "« Le marchand te l'a vendue comme la “Ligue Ultime” ? C'est un seul et même défi : la LIGUE DE FUSION EST l'ultime épreuve du Nexus. »",
     "« Et tiens : je débloque pour toi le FUSIODEX ! Les règles de la fusion, les chimères que tu croiseras, celles que TU créeras. Il t'attend dans ton menu. »",
 ]
 

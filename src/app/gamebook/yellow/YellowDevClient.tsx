@@ -3345,7 +3345,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     "🖥️ Fonce au PC d'un Centre Daemon : TOUTES tes équipes, tes captures et tes fusions des TROIS runs y sont réunies — et tes objets & CT dans ton sac. Compose ta team ULTIME en piochant le meilleur de chaque vie.",
                                     "🗺️ Ensuite, cap au SUD de Ville Jaune : là veille SYLVEBARBE. Une fois la voie franchie, la ZONE DE COMBAT s'ouvre à toi.",
                                     "⚔️ Un conseil : décroche d'abord l'OR au DÔME DE COMBAT — sans ce titre, le gardien de la grotte te refoulera.",
-                                    "🌀 Alors le passeur t'ouvrira la GROTTE DU NEXUS — ta Grotte Victoire — et tout au fond t'attendent l'ULTIME Ligue et les secrets qu'elle scelle. Va, Maître ! 🍝",
+                                    "💰 Dans la ZONE DE COMBAT, trouve le MARCHAND : lui SEUL ouvre la GROTTE DU NEXUS, pour 50 Jetons de Combat (gagnés à la Tour, l'Usine et le Dôme).",
+                                    "🌀 Traverse son dédale — ta Grotte Victoire — et tout au fond t'attend l'ULTIME Ligue, avec les secrets qu'elle scelle. Va, Maître ! 🍝",
                                 ])
                             })
                         }}>🌀 MÉGA-FUSION</button>
