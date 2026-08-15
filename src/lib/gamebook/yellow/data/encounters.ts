@@ -96,6 +96,7 @@ export interface WildPlayerCtx {
     quotaRatio: number   // 0..1 (total du jour / quota, capé) → pilote le plancher d'IV
     quota?: number       // VALEUR BRUTE du quota du jour (cible reps IRL) → scale le coût des attaques (absent → étalon 150)
     pushupDebt?: number  // DETTE DE POMPES encore due (vœu génie Mools) — server-authoritative. >0 ⇒ combats VERROUILLÉS. Absent/0 = libre.
+    energyGrantPending?: number // CADEAU d'énergie en attente (vœu génie / admin) à créditer 1× au chargement — server-authoritative, anti-écrasement. Absent/0 = rien.
 }
 
 export interface EncounterCtx {

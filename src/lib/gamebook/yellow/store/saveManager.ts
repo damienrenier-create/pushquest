@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -94,6 +94,13 @@ export function hasNgPlusWorld(): boolean { return getActiveWorld() === "ngplus"
 /** Un monde RUN 3 existe-t-il (actif ou stashé) ? */
 export function hasRun3World(): boolean { return getActiveWorld() === "run3" || run3Stash !== null }
 
+/** CADEAU d'énergie (vœu génie / admin) : ne se crédite QU'EN live/ngplus. run3 = énergie source-unique (interdit) ;
+ *  replay = bulle jetable (gaspillage). Ailleurs on laisse le cadeau EN ATTENTE côté serveur (pas de consommation).
+ *  Pur → testable. */
+export function shouldCreditEnergyGrant(pending: number | undefined, activeWorld: string): boolean {
+    return (pending ?? 0) > 0 && (activeWorld === "live" || activeWorld === "ngplus")
+}
+
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {
     if (loaded) return // idempotent : déjà chargé (ex. on arrive sur la page Pokédex en nav interne) → on garde l'état mémoire À JOUR au lieu de réécraser avec la DB (qui peut être en retard du débounce).
@@ -120,6 +127,33 @@ export async function loadYellowSave(): Promise<void> {
             // Reps INSTANTANÉES : banque le delta (aujourd'hui en direct + jours non joués).
             if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
                 bankReps(j.repsTotalToDate, j.repsThroughYesterday, typeof j?.today === "string" ? j.today : undefined)
+            }
+            // CADEAU D'ÉNERGIE EN ATTENTE (vœu génie / admin) — canal serveur→client anti-écrasement : le montant vit
+            //   dans FrontierProfile (hors save → jamais clobberé). ORDRE ANTI-PERTE : on (1) crédite en mémoire, (2)
+            //   PERSISTE et n'avance QUE si la persistance est confirmée, (3) consomme le cadeau côté serveur EN DERNIER.
+            //   Ainsi le crédit est déjà sauvé avant la consommation → même si la réponse de consommation se perd, aucune
+            //   perte. Si la persistance échoue, on RESTAURE l'état reps+cap (restoreRepsState) et on NE consomme PAS → le cadeau
+            //   reste en attente serveur, re-crédité au prochain chargement. Uniquement en LIVE/NG+ (run3 = source
+            //   unique ; replay = bulle jetable).
+            const grantAmt = Math.max(0, Math.floor(j?.ctx?.energyGrantPending ?? 0))
+            if (shouldCreditEnergyGrant(grantAmt, getActiveWorld())) {
+                const pBefore = getPlayer()
+                const prevReps = pBefore.reps, prevCap = pBefore.repsCap // capturé AVANT crédit → rollback exact (reps+cap)
+                const credited = creditReps(grantAmt) // live/ngplus garanti → renvoie grantAmt
+                if (credited > 0) {
+                    const saved = await persistNow() // persistance CONFIRMÉE avant toute consommation
+                    if (saved) {
+                        // Consommation en DERNIER (CAS sur le montant côté serveur → n'efface pas un cadeau plus récent).
+                        try {
+                            await fetch("/api/gamebook/yellow/energy-grant", {
+                                method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ amount: credited }),
+                            })
+                        } catch { /* consommation ratée : cadeau non effacé → au pire un re-crédit inoffensif au prochain load */ }
+                    } else {
+                        restoreRepsState(prevReps, prevCap) // persistance ratée → rollback EXACT (reps + cap) pour ne pas figer un crédit non consommé
+                    }
+                }
             }
         }
     } catch { /* neutre si indisponible */ }
@@ -193,16 +227,17 @@ async function persistIntentionalReset(): Promise<void> {
 /** Sauvegarde IMMÉDIATE (non débouncée) : annule l'autosave en attente et POSTe tout de suite. Utilisée par
  *  les transitions NG+ (démarrage / bascule de monde) pour éviter qu'un autosave concurrent parte AVANT. Le
  *  garde-fou anti-wipe reste actif (les champs plats = monde LIVE inchangés → jamais de fausse régression). */
-async function persistNow(): Promise<void> {
-    if (!loaded) return
+async function persistNow(): Promise<boolean> {
+    if (!loaded) return false
     if (timer) { clearTimeout(timer); timer = null }
     try {
         const r = await fetch("/api/gamebook/yellow/save", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ save: snapshot() }),
         })
-        if (r.status === 409) { try { const j = await r.json(); if (j?.save) applyServerSave(parseSave(j.save)) } catch { /* ignore */ } }
-    } catch { /* hors-ligne : réessai au prochain autosave */ }
+        if (r.status === 409) { try { const j = await r.json(); if (j?.save) applyServerSave(parseSave(j.save)) } catch { /* ignore */ } ; return false }
+        return r.ok // true = la save a bien été écrite côté serveur (utilisé par le canal energyGrant pour ne consommer qu'après persistance confirmée)
+    } catch { return false /* hors-ligne : réessai au prochain autosave */ }
 }
 
 /** Sauvegarde IMMÉDIATE exportée (POST tout de suite, non débouncé). À utiliser pour les événements CRITIQUES

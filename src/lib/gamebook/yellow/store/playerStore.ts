@@ -1196,6 +1196,15 @@ export function creditReps(n: number): number {
     return amt
 }
 
+/** ROLLBACK d'un crédit de cadeau NON persisté (canal energyGrant uniquement) : restaure reps ET repsCap à leurs
+ *  valeurs EXACTES d'avant le crédit, SANS effet de bord (pas de stat, ballLock, recharge). On restaure l'état
+ *  capturé plutôt que de soustraire un montant → correct même si le store a été re-hydraté entre-temps (chemin
+ *  409) et restaure aussi le plafond élevé par creditReps. Sert au rollback si la persistance immédiate échoue. */
+export function restoreRepsState(prevReps: number, prevCap: number): void {
+    st = { ...st, reps: Math.max(0, Math.floor(prevReps)), repsCap: Math.max(0, Math.floor(prevCap)) }
+    emit()
+}
+
 /**
  * Tick quotidien (1×/jour) : reset des achats Super Pasta (+3 au prix plancher) et
  * du compteur de combats du sbire. Le CRÉDIT des reps est désormais géré par bankReps.

@@ -527,6 +527,7 @@ model FrontierProfile {
   replaysUsed Int      @default(0)    // nb de REJEUX (« run bis ») déjà lancés → coût JC croissant du prochain (global, cf. data/replayCost)
   pushupDebtOwed     Int @default(0)  // VŒU GÉNIE (Mools) : total de POMPES dues (100 × nb de refus). 0 = aucune dette.
   pushupDebtBaseline Int @default(0)  // cumul de pompes (all-time PUSHUP) figé quand la dette a été posée → dette restante = owed − (cumul_actuel − baseline).
+  energyGrantPending Int @default(0)  // CADEAU / VŒU GÉNIE : énergie à créditer UNE FOIS au chargement. Canal serveur→client ANTI-ÉCRASEMENT (comme pushupDebt) : vit hors de la save, donc un autosave ne peut pas l'effacer. Le client la consomme via /energy-grant (atomique) puis crédite. 0 = rien.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
