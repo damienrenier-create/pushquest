@@ -5,7 +5,7 @@
 // computeFusion) — donc « potentiel de base » ; au combat, les stats se recalculent sur tes vrais Daemons.
 
 import { useState } from "react"
-import { computeFusion, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, fusionSynergy, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
@@ -31,6 +31,7 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
     if (!spA || !spB) return null
 
     const res = computeFusion(parentFromSpecies(spA), parentFromSpecies(spB))
+    const synergy = fusionSynergy(aId, bId) // BONUS de synergie (clan / paire / inédite) → génétique boostée. null sinon.
     const official = officialFusionForParents(aId, bId)
     const name = official?.name ?? res.name
     const sprite = official?.sprite ?? gen ?? undefined
@@ -55,6 +56,7 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
                 <div style={S.name}>{name.toUpperCase()}</div>
                 <div style={S.chips}>{res.types.map((t) => <span key={t} style={{ ...S.chip, background: tc(t) }}>{t}</span>)}</div>
                 <div style={S.bst}>Total des stats : <b style={{ color: bst >= 500 ? "#f0c840" : "#d9b8ff" }}>{bst}</b></div>
+                {synergy && <div style={S.bonusBadge}>✨ BONUS DE SYNERGIE — génétique boostée (stats renforcées) : {synergy.label}</div>}
 
                 <div style={S.stats}>
                     {STAT_ROWS.map(([k, lbl]) => {
@@ -95,6 +97,7 @@ const S: Record<string, React.CSSProperties> = {
     chips: { display: "flex", gap: 6, justifyContent: "center", marginTop: 7, flexWrap: "wrap" },
     chip: { fontSize: 11, fontWeight: 800, letterSpacing: 0.5, color: "#161018", padding: "3px 12px", borderRadius: 999, textShadow: "0 1px 0 rgba(255,255,255,0.25)" },
     bst: { textAlign: "center", fontSize: 12.5, marginTop: 8, opacity: 0.95 },
+    bonusBadge: { textAlign: "center", fontSize: 11, fontWeight: 800, marginTop: 8, padding: "6px 10px", borderRadius: 9, color: "#3a2a06", background: "linear-gradient(180deg,#ffe08a,#f0c033)", boxShadow: "0 0 14px #f0c84066", letterSpacing: 0.3 },
     stats: { marginTop: 10, display: "flex", flexDirection: "column", gap: 5 },
     statLine: { display: "flex", alignItems: "center", gap: 8, fontSize: 12 },
     statLbl: { width: 62, opacity: 0.8, fontWeight: 700 },

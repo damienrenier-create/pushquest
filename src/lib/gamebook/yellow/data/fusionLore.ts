@@ -16,5 +16,7 @@ export const FUSION_RULES: string[] = [
     "⑥ OBJETS TENUS — il hérite des objets tenus de ses parents (0, 1 ou 2). Pour l'instant, le 1er objet est actif en combat.",
     "⑦ Un parent EN FUSION est indisponible : il ne combat pas et ne peut pas re-fusionner tant qu'il est engagé dans une fusion.",
     "⑧ AUCUN plafond de stats : une fusion peut surpasser ses deux parents. À toi de trouver les meilleures combinaisons (souvent des stats COMPLÉMENTAIRES).",
+    "✨ BONUS SECRET — CERTAINES fusions cachent une génétique BOOSTÉE (dominantes ×0,7 / récessives ×0,5 au lieu de 0,6/0,45) → des stats nettement plus hautes. Lesquelles ? Le génie ne le dira pas… mais une fusion qui possède ce bonus l'AFFICHE sur sa FICHE COMPLÈTE. À toi de les débusquer !",
+    "✨✨ FUSION DORÉE — fais fusionner DEUX Daemons SHINY : c'est le bonus ULTIME. Génétique MAXIMALE (dominantes ×0,8 / récessives ×0,6) ET la fusion naît elle-même SHINY.",
     "🐣 À l'état sauvage, deux âmes affines qui surgissent l'une juste après l'autre peuvent fusionner d'elles-mêmes… mais on ne capture une fusion qu'avec une FUSIO-BALL.",
 ]
