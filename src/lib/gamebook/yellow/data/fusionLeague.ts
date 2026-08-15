@@ -146,12 +146,21 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
 //   Séisme = coverage physique, Dévoreur d'Ombres = drain/sustain (pas de Repos). Ball'Ombre = move forcé (curé).
 const BOSS_NEMESIS_ARGENT_OR: FusionPairDef = { a: "kangoudead", b: "draconarque", name: "Kangonarque", moves: ["ball_ombre", "danse_lames", "seisme", "devoreur_ombres"] }
 
+// NÉMÉSIS RAPIDE anti-Ténè-iwat (SPECTRE/ELEC) : un sweeper FULL SPEED (Vit 578, via la signature Vitesse des 2
+//   panthères) qui DEVANCE Ténè-iwat (même en 536 speed-max) et l'exécute d'un Ball'Ombre ×4 (Spectre sur Spectre/Psy).
+//   Complément « vitesse » du mur Kangonarque. Remplace Chronobyd aux paliers ARGENT/OR ; le Bronze garde Chronobyd.
+// Il tape en SPÉ (308) : Ball'Ombre (Spectre = physique, off Atk 204) sert au ×4-revenge ; Fulgurance = son gros STAB
+//   spécial ; Souffle Polaire (Glace) + Lance-Flammes = coverage vs Sol/Dragon/Acier/Plante qui murent l'Élec.
+const BOSS_NEMESIS_SPEED_ARGENT_OR: FusionPairDef = { a: "ombrapanthe", b: "voltapanthe", name: "Panthéclombre", moves: ["ball_ombre", "fulgurance", "souffle_polaire", "lance_flammes"] }
+
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat.
- *  Dès ARGENT, Dracakoss cède la place au némésis Kangonarque (DRAGON/TÉNÈBRES, anti-fusions Spectre/Psy). */
+ *  Dès ARGENT : Dracakoss → némésis-mur Kangonarque (DRAGON/TÉNÈBRES) ; Chronobyd → némésis-vitesse Panthéclombre
+ *  (SPECTRE/ELEC). Le Bronze garde l'équipe d'origine (1er sacre accessible). */
 export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0): BuiltFusion[] {
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    const pairs = tier === "bronze" ? FUSION_BOSS_PAIRS : FUSION_BOSS_PAIRS.map((p) => (p.name === "Dracakoss" ? BOSS_NEMESIS_ARGENT_OR : p))
+    const pairs = tier === "bronze" ? FUSION_BOSS_PAIRS : FUSION_BOSS_PAIRS.map((p) =>
+        p.name === "Dracakoss" ? BOSS_NEMESIS_ARGENT_OR : p.name === "Chronobyd" ? BOSS_NEMESIS_SPEED_ARGENT_OR : p)
     return pairs.map((p) =>
         buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )

@@ -6,15 +6,15 @@ import { getMove } from "./moves"
 // BOSS FINAL — Dieu Spaghetti forme ultime : équipe « max-0.6 » de 6 fusions, 12 parents DISTINCTS. UKOGNOFY est
 //   réservée pour la VRAIE fin (goshendofy+ukognos jamais fusionnés ici). ACE = Aquendofy (DRAGON/EAU, BST 1750).
 describe("Boss final (Dieu Spaghetti) — équipe", () => {
-    it("6 fusions dans l'ordre ; Dracakoss (Bronze) → Kangonarque (Argent/Or) ; Aquendofy en ace (DRAGON/EAU)", () => {
+    it("6 fusions ; Bronze d'origine → Argent/Or : Chronobyd→Panthéclombre & Dracakoss→Kangonarque ; ace Aquendofy (DRAGON/EAU)", () => {
         // Bronze : composition d'origine (accessible pour le 1er sacre).
         const bronze = buildFusionBossTeam("bronze").map((f) => getSpecies(f.speciesId)!.name)
         expect(bronze).toEqual(["Chronobyd", "Dracakoss", "Magnébrir", "Cryotony", "Ukoviathonn", "Aquendofy"])
-        // Argent/Or : Dracakoss (neutre) remplacé par le némésis Kangonarque (DRAGON/TÉNÈBRES).
+        // Argent/Or : Chronobyd (neutre) → némésis-vitesse Panthéclombre ; Dracakoss (neutre) → némésis-mur Kangonarque.
         const team = buildFusionBossTeam("or")
         expect(team).toHaveLength(6)
         const names = team.map((f) => getSpecies(f.speciesId)!.name)
-        expect(names).toEqual(["Chronobyd", "Kangonarque", "Magnébrir", "Cryotony", "Ukoviathonn", "Aquendofy"])
+        expect(names).toEqual(["Panthéclombre", "Kangonarque", "Magnébrir", "Cryotony", "Ukoviathonn", "Aquendofy"])
         // ACE = Aquendofy (goshendofy × aquapanthe) → DRAGON/EAU
         const ace = getSpecies(team[5].speciesId)!
         expect(ace.types.sort()).toEqual(["DRAGON", "EAU"])
