@@ -111,7 +111,7 @@ export const MOVES: Record<string, MoveData> = {
     // === Pool SPECTRE étendu (maison hantée) : soin/drain/statut/signature qui manquaient au type ===
     malediction: { id: "malediction", name: "Malédiction", type: "SPECTRE", power: 0, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }, { target: "target", stat: "spe", stages: -1 }] }, description: "Le spectre se barricade (+1 Défense) en jetant un sort qui ralentit la cible (-1 Vitesse)." },
     drain_ame: { id: "drain_ame", name: "Drain d'Âme", type: "SPECTRE", power: 60, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Aspire la force vitale : rend 50% des dégâts en PV." },
-    linceul: { id: "linceul", name: "Linceul", type: "SPECTRE", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { healPct: 50 }, description: "Le spectre se drape dans un linceul régénérant : restaure la moitié des PV." },
+    linceul: { id: "linceul", name: "Linceul", type: "SPECTRE", power: 0, accuracy: 0, pp: 10, costPower: 100, effect: { healPct: 50, statChanges: [{ target: "self", stat: "spe", stages: -1 }] }, description: "Le spectre se drape dans un linceul régénérant : restaure la moitié des PV, mais le rituel l'alourdit (-1 Vitesse)." },
     voile_effroi: { id: "voile_effroi", name: "Voile d'Effroi", type: "SPECTRE", power: 0, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "atk", stages: -1 }, { target: "target", stat: "acc", stages: -1 }] }, description: "La peur fige la cible : -1 Attaque ET -1 Précision." },
     griffe_spectrale: { id: "griffe_spectrale", name: "Griffe Spectrale", type: "SPECTRE", power: 70, accuracy: 100, pp: 15, effect: { highCrit: true }, description: "Lacération d'outre-tombe à fort taux de critique." },
     frappe_audela: { id: "frappe_audela", name: "Frappe de l'Au-delà", type: "SPECTRE", power: 85, accuracy: 100, pp: 10, effect: { chance: 20, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Gros coup spectral ; peut briser la Défense adverse (-1)." },
@@ -165,8 +165,9 @@ export const MOVES: Record<string, MoveData> = {
     // ULTIME (Normal physique) : puissance colossale, mais le contrecoup épuise le lanceur (pas de mécanique
     // de « recharge » dans le moteur → le recul tient lieu de drawback). Apprise très tard (move de prestige).
     ultralaser: { id: "ultralaser", name: "Ultralaser", type: "NORMAL", power: 150, accuracy: 90, pp: 5, effect: { recoilPct: 25 }, description: "Le rayon ultime : des dégâts dévastateurs, mais le contrecoup blesse violemment le lanceur." },
-    // Soin volant (Roost) — Normal pur, SANS sommeil (contrairement à Repos). Signature de soin d'Aquilord.
-    reprise_ailes: { id: "reprise_ailes", name: "Reprise d'Ailes", type: "NORMAL", power: 0, accuracy: 0, pp: 10, costPower: 60, effect: { healPct: 50 }, description: "Le Daemon replie ses ailes et récupère : restaure la moitié de ses PV (sans s'endormir)." },
+    // Soin volant (Roost) — Normal pur, SANS sommeil (contrairement à Repos). Signature de soin d'Aquilord. Contrepartie :
+    //   -1 Vitesse au lanceur (comme Linceul) → un soin 50% n'est jamais gratuit (Repos = sommeil, ces 2-là = vitesse).
+    reprise_ailes: { id: "reprise_ailes", name: "Reprise d'Ailes", type: "NORMAL", power: 0, accuracy: 0, pp: 10, costPower: 100, effect: { healPct: 50, statChanges: [{ target: "self", stat: "spe", stages: -1 }] }, description: "Le Daemon replie ses ailes et récupère la moitié de ses PV, mais reste au sol un instant (-1 Vitesse)." },
 
     // === 5 SIGNATURES EXCLUSIVES AU RUN 2 (ct53→ct57 — cadeaux des boss d'arène en New Game+) ===
     // Serres de l'Aube (Druide/Vol) : 1re PRIORITÉ STAB volante — frappe toujours en premier.
