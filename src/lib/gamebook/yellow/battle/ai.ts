@@ -67,6 +67,7 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
     const foeFresh = fStats ? foe.currentHp >= fStats.hp : false
     const selfFrac = sStats ? self.currentHp / Math.max(1, sStats.hp) : 1
     const missingFrac = Math.max(0, 1 - selfFrac)
+    const selfSlower = !!(sStats && fStats && sStats.spe < fStats.spe) // plus lent que le foe → arbitre priorité / 2-tours
     const out: ScoredHof[] = []
     self.moves.forEach((slot, index) => {
         const mv = getMove(slot.moveId)
@@ -87,8 +88,16 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
                 const mismatched = (boostsAtk && !boostsSpc && !isPhysAttacker) || (boostsSpc && !boostsAtk && isPhysAttacker)
                 score = selfFrac < 0.4 || mismatched ? 2 : 18
             }
-            // Ouverture : sur une cible FRAÎCHE et SAINE, mener par un statut (sommeil/para…) est fort.
-            else { const inflicts = mv.effect?.inflictStatus; score = inflicts && foe.status === "NONE" && foeFresh ? 80 : 18 }
+            // STATUT offensif : la PARALYSIE est forte à TOUT niveau de PV (ampute la vitesse + 25 % full-para) ;
+            //   SOMMEIL/GEL neutralisent une menace vivante ; POISON/BRÛLURE = usure (meilleure tôt). Ne dépend plus
+            //   uniquement d'une cible « fraîche » → le miroir statute AUSSI en cours de combat, pas qu'au 1ᵉʳ tour.
+            else {
+                const st = mv.effect?.inflictStatus
+                if (!st || foe.status !== "NONE") score = 18
+                else if (st === "PARALYSIS") score = 90
+                else if (st === "SLEEP" || st === "FREEZE") score = (foeFresh || (fStats ? foe.currentHp > fStats.hp * 0.4 : false)) ? 85 : 20
+                else score = foeFresh ? 60 : 25 // POISON / BURN / TOXIC (usure)
+            }
         } else {
             const stab = selfTypes.includes(mv.type) ? 1.5 : 1
             const phys = moveCategory(mv.type) === "PHYSICAL"
@@ -99,10 +108,14 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             if (eff === 0) score = -1 // IMMUNISÉ (ex. NORMAL→SPECTRE, SOL→VOL) : ne JAMAIS choisir tant qu'un autre coup existe
             else {
                 // KO : le coup TUE la cible ce tour (dégâts RÉELS estimés, sans crit, aléa moyen 0,9 → conservateur)
-                //   ≥ PV restants → priorité ABSOLUE (finir le travail plutôt que sur-optimiser). Pondéré par la
-                //   précision → un KO fiable prime sur un KO risqué.
+                //   ≥ PV restants → priorité ABSOLUE (finir le travail). Pondéré par la précision (KO fiable > KO risqué).
                 const est = computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: stab > 1, typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
-                if (est >= foe.currentHp) score += 1e6 * acc
+                const isKO = est >= foe.currentHp
+                if (isKO) score += 1e6 * acc
+                // PRIORITÉ : un KO PRIORITAIRE sécurise le kill même en étant plus lent → préféré à un KO non-prioritaire.
+                if (isKO && (mv.priority ?? 0) > 0 && selfSlower) score += 5e5
+                // 2-TOURS : plus lent et pas de KO → le foe frappe pendant la charge (risque fatal avant de libérer) → fort malus.
+                if (!isKO && mv.effect?.twoTurn && selfSlower) score *= 0.15
             }
             // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
@@ -123,6 +136,33 @@ function bestSwitchIndex(team: BattleMon[], activeIndex: number, foe: BattleMon)
         // "resist" = à quel point les types adverses sont peu efficaces contre moi (plus bas = mieux).
         const incoming = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
         if (incoming < bestResist) { bestResist = incoming; bestI = i }
+    })
+    return bestI >= 0 ? bestI : null
+}
+
+/** SWITCH VOLONTAIRE (hof / miroirs) : parmi le banc STRICTEMENT plus résistant que l'actif face au foe, le meilleur
+ *  compromis ENCAISSER + PUNIR (même heuristique que chooseReplacementIndex) → un repli à la fois solide ET menaçant
+ *  (fini le switch sur un mur inoffensif). null si aucun banc n'est plus résistant que l'actif. */
+function bestVoluntarySwitch(team: BattleMon[], activeIndex: number, foe: BattleMon): number | null {
+    const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+    const activeTypes = getSpecies(team[activeIndex]?.speciesId ?? "")?.types ?? []
+    const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, activeTypes), 1)
+    let bestI = -1
+    let bestScore = -Infinity
+    team.forEach((m, i) => {
+        if (i === activeIndex || m.currentHp <= 0) return
+        const myTypes = getSpecies(m.speciesId)?.types ?? []
+        const incoming = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
+        if (incoming >= incomingOnMe) return // uniquement vers STRICTEMENT plus résistant (anti yo-yo)
+        let bestOff = 0
+        for (const slot of m.moves) {
+            const mv = getMove(slot.moveId)
+            if (!mv || slot.pp <= 0 || mv.power <= 0) continue
+            const stab = myTypes.includes(mv.type) ? 1.5 : 1
+            bestOff = Math.max(bestOff, mv.power * typeEffectiveness(mv.type, foeTypes) * stab)
+        }
+        const score = (1 / Math.max(0.25, incoming)) * 100 + bestOff // encaisser PRIME + punir en secondaire
+        if (score > bestScore) { bestScore = score; bestI = i }
     })
     return bestI >= 0 ? bestI : null
 }
@@ -331,12 +371,8 @@ export function chooseAiAction(
             //   vers un banc STRICTEMENT plus résistant. DÉTERMINISTE : plus de rng.chance(75) — le miroir ne « rate »
             //   plus jamais son repli (fini le sweep facile). L'anti yo-yo (incomingOnCand < incomingOnMe) borne le va-et-vient.
             if (incomingOnMe >= 2 && myBestEff < 2) {
-                const sw = bestSwitchIndex(team, activeIndex, foe)
-                if (sw !== null) {
-                    const candTypes = getSpecies(team[sw].speciesId)?.types ?? []
-                    const incomingOnCand = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, candTypes), 1)
-                    if (incomingOnCand < incomingOnMe) return { kind: "switch", teamIndex: sw }
-                }
+                const sw = bestVoluntarySwitch(team, activeIndex, foe) // banc strictement + résistant ET le + menaçant (off+déf)
+                if (sw !== null) return { kind: "switch", teamIndex: sw }
             }
         }
         let best = scoredHof[0]
