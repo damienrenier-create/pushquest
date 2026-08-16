@@ -236,6 +236,28 @@ export function allFusionLeaguePairs(): FusionPairDef[] {
     return FUSION_LEAGUE.flatMap((t) => t.pairs)
 }
 
+/** Fusions ENNEMIES sans PNG statique (boss ULTRA Argent/Or + murs anti-trio Argent/Or) → à GÉNÉRER (Gemini) à
+ *  l'entrée de Ligue pour ne laisser AUCUN trou (elles s'affichaient en placeholder composite faute de sprite dédié).
+ *  Toutes les AUTRES fusions ennemies (Conseil bronze, KAREN, LANCE, boss bronze) ont déjà leur sprite dans public/
+ *  (ou un `sprite:` override, ex. Zenclumind). Dé-doublonné par paire côté requestFusionSprites ; types omis
+ *  (optionnels — le générateur les déduit des parents). Pré-chauffé dès le Bronze : prêts quand on atteint Argent/Or. */
+export function enemyFusionSpriteItems(): Array<{ aId: string; bId: string; name: string }> {
+    const defs: FusionPairDef[] = [
+        ...FUSION_BOSS_ULTRA,
+        ...Object.values(ANTITRIO_ARGENT_OR).flatMap((ovs) => ovs.map((o) => o.with)),
+    ]
+    const seen = new Set<string>()
+    const out: Array<{ aId: string; bId: string; name: string }> = []
+    for (const p of defs) {
+        if (p.sprite) continue // sprite statique/override → aucune génération
+        const key = `${p.a}__${p.b}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({ aId: p.a, bId: p.b, name: p.name })
+    }
+    return out
+}
+
 // ==================== FLUX DE LA LIGUE (dresseurs + paliers) ====================
 // Les dresseurs vivent dans data/trainers.ts sous ces ids. `y_fusion_1..4` + `y_fusion_maitre` mappent 1:1 sur
 // FUSION_LEAGUE (dans l'ordre) ; `y_fusion_miroir` est le combat final DYNAMIQUE (reflet du joueur, bâti ailleurs).

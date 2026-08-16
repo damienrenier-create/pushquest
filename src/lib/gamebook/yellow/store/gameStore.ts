@@ -27,7 +27,7 @@ import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -503,7 +503,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
         //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
         //   Dé-doublonné côté client + serveur (paires déjà READY/en mémoire ignorées) → aucun coût en double.
-        const spriteItems = fusionSpriteItemsFromRoster()
+        const spriteItems = [...fusionSpriteItemsFromRoster(), ...enemyFusionSpriteItems()]
         if (spriteItems.length) void requestFusionSprites(spriteItems)
     }
     // Wipe défensif : si toutes les fusions sont K.O. (état incohérent post-reload), on renvoie à l'Autel.
@@ -1649,7 +1649,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (moved && next.mapId === "yellow_combat_autel"
             && FUSION_PROLOGUE_TILES.some((t) => t.x === next.posX && t.y === next.posY)
             && getPlayerSave().fusionRoster.length > 0) {
-            const items = fusionSpriteItemsFromRoster()
+            const items = [...fusionSpriteItemsFromRoster(), ...enemyFusionSpriteItems()]
             if (items.length) void requestFusionSprites(items)
             // Message À CHAQUE PASSAGE (plus one-time) : c'est cette pause de lecture qui laisse la génération finir
             //   avant le 1er combat. 1re fois = félicitations complètes ; ensuite = variante courte « encore toi ».
