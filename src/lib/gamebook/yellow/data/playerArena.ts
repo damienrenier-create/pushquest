@@ -122,11 +122,18 @@ export function teamMaxLevel(team: RegistryMon[]): number {
     return team.reduce((m, x) => Math.max(m, x.level), 0)
 }
 
-/** Les N joueurs (hors soi, équipe non vide) dont le niveau est le PLUS PROCHE du nôtre. */
-export function rankClosest(players: RegistryPlayer[], myUserId: string, myLevel: number, n = ARENA_OPPONENTS): RegistryPlayer[] {
+/** Écart de niveau MAX (±) entre un joueur et le reflet affiché : au-delà, le reflet est EXCLU (pas seulement « pas
+ *  dans le top-N »). Sinon un débutant SEUL parmi des vétérans se prend le « plus proche »… qui reste niv 80 → OHKO
+ *  au 1er badge. Avec cette borne, il ne voit AUCUN reflet tant qu'aucun pair n'est à sa portée (feature dormante,
+ *  pas frustrante ; se réveille en montant de niveau). Tunable. */
+export const ARENA_LEVEL_GAP_CAP = 15
+
+/** Les N joueurs (hors soi, équipe non vide) dont le niveau est le PLUS PROCHE du nôtre, ET dans la borne d'écart. */
+export function rankClosest(players: RegistryPlayer[], myUserId: string, myLevel: number, n = ARENA_OPPONENTS, maxGap = ARENA_LEVEL_GAP_CAP): RegistryPlayer[] {
     return players
         .filter((p) => p.userId !== myUserId && p.team.length > 0)
         .map((p) => ({ p, d: Math.abs(teamMaxLevel(p.team) - myLevel) }))
+        .filter((x) => x.d <= maxGap) // BORNE : exclut les reflets trop loin de notre niveau (anti-OHKO du débutant)
         .sort((a, b) => a.d - b.d || a.p.userId.localeCompare(b.p.userId)) // tie-break déterministe
         .slice(0, n)
         .map((x) => x.p)

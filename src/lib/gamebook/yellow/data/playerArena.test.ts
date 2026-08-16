@@ -31,7 +31,16 @@ describe("Arène joueurs — classement par niveau", () => {
         expect(r.some((p) => p.userId === "me")).toBe(false)   // pas soi
         expect(r.some((p) => p.userId === "vide")).toBe(false) // pas d'équipe vide
         expect(r[0].userId).toBe("g")  // d=0
-        expect(r.some((p) => p.userId === "d")).toBe(false)    // d=30 → trop loin, hors du top 6
+        expect(r.some((p) => p.userId === "d")).toBe(false)    // d=30 → hors borne (et hors top 6)
+    })
+
+    it("rankClosest : BORNE d'écart — un débutant seul parmi des vétérans ne voit AUCUN reflet (anti-OHKO)", () => {
+        const players = [player("me", 10), player("veteran", 80), player("pro", 92)]
+        expect(rankClosest(players, "me", 10, ARENA_OPPONENTS).length).toBe(0) // gaps 70/82 > 15 → tous exclus
+        // dès qu'un pair est à portée (±15), il réapparaît :
+        const withPeer = [player("me", 10), player("peer", 22), player("veteran", 80)]
+        const r2 = rankClosest(withPeer, "me", 10, ARENA_OPPONENTS)
+        expect(r2.map((p) => p.userId)).toEqual(["peer"]) // seul le pair (gap 12) ; le vétéran (gap 70) reste exclu
     })
 })
 
