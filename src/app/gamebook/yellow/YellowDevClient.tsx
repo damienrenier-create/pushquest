@@ -84,7 +84,7 @@ import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFus
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER, historyFusions } from "@/lib/gamebook/yellow/data/fusiodex"
 import { EPILOGUE_INTRO_LINES, fusionEpilogueQuests } from "@/lib/gamebook/yellow/data/fusionEpilogue"
-import { shopPrice } from "@/lib/gamebook/yellow/data/shopPricing"
+import { shopPrice, BOURSE_INTRO_LINES, BOURSE_SHOP_LINES, BOURSE_INTRO_MARKER, BOURSE_SHOP_MARKER } from "@/lib/gamebook/yellow/data/shopPricing"
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
@@ -496,11 +496,25 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => () => { if (resetHoldTimer.current) clearTimeout(resetHoldTimer.current) }, [])
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
     // BOURSE — heure SERVEUR (Europe/Paris, anti-triche horloge) récupérée à l'ouverture du magasin → prix dynamiques.
+    //   + dialogue ② one-shot du Dieu Spaghetti au 1er retour au magasin en run 3 (marker BOURSE_SHOP_MARKER).
     const [bourseHour, setBourseHour] = useState<number | null>(null)
     useEffect(() => {
         if (!shopOpen) return
         fetch("/api/gamebook/yellow/shop-time").then((r) => r.json()).then((d) => { if (typeof d?.hour === "number") setBourseHour(d.hour) }).catch(() => { /* hors-ligne : repli heure client */ })
-    }, [shopOpen])
+        if (getPlayer().run3Used && !getPlayer().defeatedTrainers.includes(BOURSE_SHOP_MARKER)) {
+            closeShop() // le Dieu Spaghetti t'interpelle À l'entrée (sinon le dialogue passe derrière la modale) → tu rouvres après
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, BOURSE_SHOP_LINES)
+            markTrainerDefeated(BOURSE_SHOP_MARKER); persistYellowSave()
+        }
+    }, [shopOpen, showDialogue])
+    // BOURSE — dialogue ① one-shot : le Dieu Spaghetti explique l'économie vivante après la 1re arène du run 3.
+    useEffect(() => {
+        if (getActiveWorld() === "run3" && player.run3Defeated.length >= 1 && !player.defeatedTrainers.includes(BOURSE_INTRO_MARKER)
+            && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun && !shopOpen) {
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, BOURSE_INTRO_LINES)
+            markTrainerDefeated(BOURSE_INTRO_MARKER); persistYellowSave()
+        }
+    }, [player.run3Defeated, player.defeatedTrainers, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, shopOpen, showDialogue])
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
     const [loopModal, setLoopModal] = useState(false) // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (accepter/refuser)
     const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation

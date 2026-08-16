@@ -40,3 +40,17 @@ export function shopPrice(base: number, category: string, ctx: ShopPriceCtx): nu
     }
     return Math.max(1, Math.round(p))
 }
+
+// ==================== DIALOGUES DU DIEU SPAGHETTI — la Bourse expliquée (run 3) ====================
+// Deux one-shot (markers ci-dessous, dans defeatedTrainers) : ① après la 1re arène du run 3, ② au 1er retour au magasin.
+export const BOURSE_INTRO_MARKER = "bourse_intro"
+export const BOURSE_SHOP_MARKER = "bourse_shop_intro"
+export const BOURSE_INTRO_LINES: string[] = [
+    "« Ah, Maître de la Chimère… dans ce Nexus revisité, l'économie est VIVANTE. »",
+    "« Au magasin, les prix montent de 10 % CHAQUE HEURE, de 8h à 20h — puis retombent dans la nuit. Achète TÔT le matin, c'est mon conseil ! »",
+    "« Et gare aux potions : plus tu en achètes dans la journée, plus TON prix grimpe. La Bourse du Nexus ne fait pas de cadeaux. 🍝 »",
+]
+export const BOURSE_SHOP_LINES: string[] = [
+    "« Bienvenue à la BOURSE DU NEXUS, champion ! Ici les prix dansent avec l'horloge : bas le matin, au sommet à 20h, remis à zéro chaque nuit. »",
+    "« Ton compteur perso grimpe aussi à chaque potion achetée. Achète malin — l'heure, c'est de l'énergie. 🍝 »",
+]
