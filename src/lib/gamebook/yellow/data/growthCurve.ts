@@ -43,6 +43,17 @@ const TIER_MULT: Record<GrowthTier, number> = {
  *  Mais le BST peut pousser plus haut → un exclusif colossal (Goshendofy 590) prend ×1.25. */
 const EXCLUSIVE_FLOOR = 1.1
 
+/** OVERRIDE de courbe par ESPÈCE (prime sur le tier-BST) — pour les « late-bloomers » voulus dont le BST ne reflète
+ *  pas la lenteur souhaitée. Ex. Jerbiwat (BST 435 = "solide") est un canon psy tardif → forcé à ×1.25 (= colosses). */
+const GROWTH_MULT_OVERRIDE: Record<string, number> = {
+    jerbiwat: 1.25,
+}
+
+/** Tier correspondant à un multiplicateur (reverse-lookup pour le libellé d'une espèce à courbe forcée). */
+function tierFromMult(m: number): GrowthTier {
+    return (Object.keys(TIER_MULT) as GrowthTier[]).find((t) => TIER_MULT[t] === m) ?? "solide"
+}
+
 function bstOf(sp: SpeciesData): number {
     const b = sp.baseStats
     return b.hp + b.atk + b.def + b.spe + b.spc
@@ -82,9 +93,11 @@ export function growthInfo(speciesId: string): GrowthInfo {
     const byStage = sp.growthByStage === true
     // Par stade courant (lignées golem) ou par stade final (défaut).
     const b = byStage ? bstOf(sp) : finalBst(sp)
-    const tier = tierFromBst(b)
     const exclusive = sp.exclusive === true
-    const mult = exclusive ? Math.max(EXCLUSIVE_FLOOR, TIER_MULT[tier]) : TIER_MULT[tier]
+    // OVERRIDE par espèce (prime sur tout) → sinon tier-BST (+ plancher exclusif).
+    const override = GROWTH_MULT_OVERRIDE[speciesId]
+    const tier = override != null ? tierFromMult(override) : tierFromBst(b)
+    const mult = override ?? (exclusive ? Math.max(EXCLUSIVE_FLOOR, TIER_MULT[tier]) : TIER_MULT[tier])
     const info: GrowthInfo = { tier, mult, bst: b, exclusive, byStage }
     CACHE.set(speciesId, info)
     return info

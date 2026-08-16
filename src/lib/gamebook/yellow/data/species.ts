@@ -1687,10 +1687,10 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "charge" }, { level: 1, moveId: "choc_mental" },
             { level: 12, moveId: "etincelle" }, { level: 24, moveId: "focalisation" },
-            { level: 36, moveId: "vague_mentale" }, { level: 48, moveId: "fulgurance" },
-            { level: 52, moveId: "onde_folie" }, { level: 70, moveId: "ultra_foudre" },
+            { level: 46, moveId: "vague_mentale" }, { level: 52, moveId: "onde_folie" }, // LATE-BLOOMER : STAB psy décalés (36→46)
+            { level: 58, moveId: "fulgurance" }, { level: 70, moveId: "ultra_foudre" },   //   + Fulgurance décalée (48→58) → inoffensif jusqu'à ~58
         ],
-        catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "slow", role: "Psy/Élec — gerbille late-bloomer",
+        catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "slow", role: "Psy/Élec — gerbille late-bloomer (croissance ×1.25)",
         description: "Petite gerbille électrostatique ; lente à mûrir, mais un canon psychique une fois adulte.",
         sprite: "/yellow/sprites/dex/jerbiwat.png",
     },
