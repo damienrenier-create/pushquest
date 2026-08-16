@@ -214,6 +214,8 @@ export interface YellowSave {
     potionBuysToday?: number
     /** BOURSE — nb de recharges d'énergie payées en JC ce jour (+10 %/achat sur tout le shop ; reset quotidien). */
     jcEnergyBuysToday?: number
+    /** VŒU DU GÉNIE (cap casino) — plafond de mise QUOTIDIEN progressif (50 → +10/jour → 1000). Optionnel/additif. */
+    casinoCapToday?: number
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -664,6 +666,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         curseFreeItemDate: typeof o.curseFreeItemDate === "string" ? o.curseFreeItemDate : undefined,
         potionBuysToday: typeof o.potionBuysToday === "number" ? Math.max(0, Math.floor(o.potionBuysToday)) : undefined,
         jcEnergyBuysToday: typeof o.jcEnergyBuysToday === "number" ? Math.max(0, Math.floor(o.jcEnergyBuysToday)) : undefined,
+        casinoCapToday: typeof o.casinoCapToday === "number" ? Math.max(0, Math.floor(o.casinoCapToday)) : undefined,
     }
 }
 
