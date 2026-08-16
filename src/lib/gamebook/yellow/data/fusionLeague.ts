@@ -45,7 +45,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["vague_mentale", "tempete_verte", "vampigraine", "repos"] },        // PSY/PLANTE ~Noadkoko (mur drain)
         { a: "flamaspic", b: "razmaree", name: "Flamarée", moves: ["hydrocanon", "choc_mental", "blizzard", "repos"] },                  // PSY/EAU ~Flagadoss (tank ; ex-Hippomarée, omnhippo libéré pour Hippofer)
         { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["coup_d_givre", "eveil_divin", "hypnose", "focalisation"] },          // GLACE/PSY ~Lippoutou (glass-cannon) — coup_d_givre = STAB Glace légal (morrow)
-        { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf)
+        { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf) — REMPLACÉ en Argent/Or (cf. ANTITRIO_ARGENT_OR)
         { a: "jerbiwat", b: "archibouh", name: "Jerbibouh", moves: ["vague_mentale", "ball_ombre", "fulgurance", "hypnose"] },           // PSY/SPECTRE — sweeper spé + hypnose (moves 100% jerbiwat/archibouh)
     ] },
     { key: "koga", name: "KOGA", theme: "POISON", icon: "☠️", pairs: [
@@ -53,7 +53,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "necrolopendre", b: "merorem", name: "Mérolopendre", moves: ["dard_fatal", "bombe_beurk", "toxik", "repos"] },              // INSECTE/POISON ~Migalos
         { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["vague_mentale", "bombe_beurk", "spores_dodo", "onde_folie"] }, // PSY/POISON ~Aéromite — vague_mentale + spores_dodo légaux (mycédruide/regnantaur)
         { a: "coccimperatrice", b: "colosfer", name: "Impérafer", moves: ["crochet_maitre", "poing_meteore", "seisme", "danse_lames"] }, // COMBAT/METAL ~impératrice de fer (bruiser physique : 2 STAB + séisme + danse-lames)
-        { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller)
+        { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller) — REMPLACÉ en Argent/Or (cf. ANTITRIO_ARGENT_OR)
         { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "pique_fatal", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide) — pique_fatal = STAB Vol légal (les 2)
         { a: "sylvapuce", b: "merorem", name: "Cerforem", moves: ["spores_dodo", "tempete_verte", "bombe_beurk", "toxik"] },            // PLANTE/POISON — staller végétal empoisonné (moves 100% cerfeuillu/merorem)
     ] },
@@ -62,7 +62,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "maitrezenc", b: "enclumind", name: "Zenclumind", moves: ["crochet_maitre", "vague_mentale", "seisme", "danse_lames"], sprite: "/yellow/sprites/dex/fusion/maitreclume.png" }, // COMBAT/PSY ~Mackogneur — RÉUTILISE le sprite existant (même paire = ex-Maîtreclume)
         { a: "maitrezenc", b: "hebulmin", name: "Maîtrelmin", moves: ["crochet_maitre", "fulgurance", "seisme", "danse_lames"] },        // COMBAT/ELEC ~Tygnon — Maîtrezenc (final) au lieu de Frappard (stade 2) = paire de l'épreuve → réutilise maitrelmin.png
         { a: "druidours", b: "aquilord", name: "Aquidruide", moves: ["crochet_maitre", "fonce_bec", "seisme", "lance_flammes"] },        // COMBAT/VOL ~Kicklee — Druidours (au lieu de Maîtrezenc, qui passe à 2×) ; moves 100% druidours/aquilord
-        { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera
+        { a: "coccimperatrice", b: "karatame", name: "Coccikara", moves: ["crochet_maitre", "eveil_divin", "essaim_vorace", "danse_lames"] }, // COMBAT/PSY ~Kapoera — REMPLACÉ en Argent/Or (cf. ANTITRIO_ARGENT_OR)
         { a: "megalithe", b: "rochison", name: "Rocholithe", moves: ["lame_roche", "seisme", "carapace_diamant", "repos"] },             // ROCHE/SOL ~Onix (mur set-up)
         { a: "merorem", b: "karatame", name: "Mérokara", moves: ["eveil_divin", "bombe_beurk", "toxik", "repos"] },                     // POISON/PSY — garde anti-FÉE (résiste + tape ×2 la Fée qui balaie les 4 Combat)
     ] },
@@ -109,6 +109,23 @@ function buildParent(speciesId: string, level: number, saiyan: number): MonInsta
     return createMonInstance(speciesId, level, { ev, allocated: { [primary]: saiyan } })
 }
 
+// ==================== RENFORTS ANTI-TRIO (Spectre/Psy/Ténèbres) — ARGENT/OR SEULEMENT ====================
+// Le trio Spectre/Psy/Ténèbres du joueur balayait le Conseil : à l'audit, WILL pliait 6/6, KOGA 5/6, BRUNO 5/6 (aucun
+//   mur). On donne à chacune de ces 3 « passoires » UN mur THÉMATIQUE qui immunise/résiste le trio ET le RIPOSTE, mais
+//   seulement dès le palier ARGENT — le Bronze garde son équipe d'origine (1er sacre accessible, cohérent avec le boss).
+//   Un même parent (kangoudead) peut nourrir plusieurs murs : invisible au joueur (cf. en-tête). Noms de fusion uniques.
+const ANTITRIO_ARGENT_OR: Record<string, { replace: string; with: FusionPairDef }> = {
+    will: { replace: "Hippofer", with: { a: "omnhippo", b: "kangoudead", name: "Omnikang", moves: ["vague_mentale", "devoreur_ombres", "repos", "hypnose"] } },        // PSY/TÉNÈBRES — immune Psy ×0 ; Dévoreur d'Ombres tape ton Spectre/Psy ×2 + draine
+    koga: { replace: "Mérovortal", with: { a: "kangoudead", b: "merorem", name: "Mérodead", moves: ["toxik", "devoreur_ombres", "repos", "bombe_beurk"] } },            // TÉNÈBRES/POISON — staller PV882, immune Psy, résiste Spectre/Ténèbres ×0.5
+    bruno: { replace: "Coccikara", with: { a: "maitrezenc", b: "condombre", name: "Condozenc", moves: ["crochet_maitre", "morsure_sombre", "seisme", "danse_lames"] } }, // COMBAT/TÉNÈBRES — Atk502, immune Psy ; Crochet ×2 ton Ténèbres, Morsure ×2 ton Spectre/Psy
+}
+
+/** Paires effectives d'un dresseur au palier donné : Bronze = d'origine ; Argent/Or = mur anti-trio substitué (si défini). */
+export function tierPairs(trainerKey: string, tier: FusionTier, pairs: FusionPairDef[]): FusionPairDef[] {
+    const ov = tier === "bronze" ? undefined : ANTITRIO_ARGENT_OR[trainerKey]
+    return ov ? pairs.map((p) => (p.name === ov.replace ? ov.with : p)) : pairs
+}
+
 /** Équipe de FUSIONS d'un dresseur pour un palier. Renvoie des BuiltFusion (espèces éphémères ENREGISTRÉES →
  *  à DÉTRUIRE après le combat via disposeFusionLeagueTeam). Les parents ne sont jamais persistés. */
 export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, levelBonus = 0): BuiltFusion[] {
@@ -117,7 +134,7 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, leve
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     // levelBonus (ex. vœu du génie « Ligue +3 ») → tous les fusionnés montent d'autant, plafonné à 100.
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    return tr.pairs.map((p) =>
+    return tierPairs(tr.key, tier, tr.pairs).map((p) =>
         buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
 }

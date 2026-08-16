@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { FUSION_LEAGUE, buildFusionLeagueTeam } from "./fusionLeague"
+import { FUSION_LEAGUE, buildFusionLeagueTeam, tierPairs } from "./fusionLeague"
 import { getMove } from "./moves"
 import { getSpecies } from "./species"
 import { moveCategory } from "../battle/typeChart"
@@ -22,8 +22,9 @@ describe("Ligue de Fusion — movesets curés", () => {
     it("chaque fusion : moveset appliqué, ≥2 attaques offensives, ≤2 statuts, ≥1 STAB offensif", () => {
         for (const tr of FUSION_LEAGUE) {
             const team = buildFusionLeagueTeam(tr.key, "or")
+            const pairs = tierPairs(tr.key, "or", tr.pairs) // Argent/Or : murs anti-trio substitués (Omnikang/Mérodead/Condozenc)
             team.forEach((f, i) => {
-                const p = tr.pairs[i]
+                const p = pairs[i]
                 const sp = getSpecies(f.speciesId)!
                 // moveset CURÉ bien appliqué à l'instance de combat
                 expect(f.instance.moves.map((m) => m.moveId)).toEqual(p.moves)
