@@ -206,7 +206,7 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
 // anti-Ténè-iwat Kangonarque est conservé. UKOGNOFY reste réservée (goshendofy/ukognos jamais ensemble).
 // MégamonarX/Galijah EXCLUS comme parents (récompenses légendaires du joueur). Bronze = l'équipe d'origine.
 export const FUSION_BOSS_ULTRA: FusionPairDef[] = [
-    { a: "pyropanthe", b: "voltapanthe", name: "Pyrovolt", role: "sweep_spc", moves: ["fulgurance", "lance_flammes", "souffle_polaire", "vague_mentale"] },        // FEU/ELEC — SWEEPER SPÉ (Vit585/Spé428) : 2 STAB + Glace/Psy coverage
+    { a: "pyropanthe", b: "voltapanthe", name: "Pyrovolt", role: "sweep_spc", moves: ["pyrotechnie", "fulgurance", "lance_flammes", "souffle_polaire"] },        // FEU/ELEC — SWEEPER SPÉ (Vit585/Spé428) : OUVRE sur Pyrotechnie (−2 Spé cible → nos STAB explosent) puis 2 STAB + Glace
     { a: "alirocaillus", b: "coccimperatrice", name: "Alicocci", role: "tank_atk", moves: ["pique_fatal", "crochet_maitre", "seisme", "danse_lames"] },            // VOL/COMBAT — BRUISER bulky (tank_atk : PV+Atk) : ex-maillon faible (trop frêle en sweep_atk), solidifié
     { a: "kangoudead", b: "draconarque", name: "Kangonarque", role: "wall_def", moves: ["ball_ombre", "draco_charge", "seisme", "devoreur_ombres"] },              // TÉN/DRAGON — MUR anti-Ténè-iwat (immune Psy) ; Ball'Ombre ×4, Dévoreur draine
     { a: "merorem", b: "tonytony", name: "Mérotony", role: "wall_spc", moves: ["toxik", "bombe_beurk", "blizzard", "repos"] },                                     // POISON/NORMAL — STALLER (PV795/Spé522) : Toxik + Repos + gros coups spé

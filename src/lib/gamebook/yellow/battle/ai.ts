@@ -116,6 +116,11 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
                 if (isKO && (mv.priority ?? 0) > 0 && selfSlower) score += 5e5
                 // 2-TOURS : plus lent et pas de KO → le foe frappe pendant la charge (risque fatal avant de libérer) → fort malus.
                 if (!isKO && mv.effect?.twoTurn && selfSlower) score *= 0.15
+                // DÉBUFF OFFENSIF D'OUVERTURE (Pyrotechnie −2 Spé…) : sur une cible PLEINE qu'on ne peut pas OHKO, amputer
+                //   sa Spé/Déf (spc/def) rend TOUS nos coups suivants nettement plus mortels → on OUVRE avec. Bonus décisif
+                //   au-dessus d'un coup normal mais TOUJOURS sous un KO (on finit d'abord). Actif seulement cible fraîche
+                //   (le débuff a le temps de rentabiliser ; retombe dès qu'elle est entamée → on enchaîne les nukes).
+                if (!isKO && foeFresh && mv.effect?.statChanges?.some((c) => c.target === "target" && c.stages < 0 && (c.stat === "spc" || c.stat === "def"))) score += 5e4
             }
             // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
