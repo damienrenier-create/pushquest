@@ -2909,8 +2909,8 @@ export const SPECIES: Record<string, SpeciesData> = {
     tenebrir: {
         id: "tenebrir", dexNo: 173, name: "Ténèbrir", types: ["TENEBRES", "SPECTRE"],
         // BOURREAU de Shadow (Vit 130) : Vit 138 (outspeed garanti) + Spé 140 (OHKO au coup Ténèbres ×2 sur sa
-        // Spé-déf 28). Déf 70/PV 80 suffisent : il n'encaisse QUE la Griffe Spectrale ×1 (le reste = ×0). BST 466.
-        baseStats: { hp: 80, atk: 38, def: 70, spe: 138, spc: 140 }, // BST 466
+        // Spé-déf 28). NERF (16/08) : −5 PV / −5 Déf → survie réduite (Ténè-iwat plus facile à revenge-KO), offense INTACTE.
+        baseStats: { hp: 75, atk: 38, def: 65, spe: 138, spc: 140 }, // BST 456 (ex-466 : −5 PV/−5 Déf, rétroactif car stats calculées à la volée)
         learnset: [
             { level: 5, moveId: "flammeche" }, { level: 5, moveId: "ombre_furtive" },
             { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
