@@ -28,7 +28,7 @@ export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; l
 
 // moves = moveset CURÉ (4 attaques) ; sinon dérivé. sprite = PNG dédié de la fusion (à remplir quand les 21
 // sprites arrivent, ex. "/yellow/sprites/dex/fusion/morcaline.png") ; sinon le sprite du parent dominant.
-export interface FusionPairDef { a: string; b: string; name: string; moves?: string[]; sprite?: string }
+export interface FusionPairDef { a: string; b: string; name: string; moves?: string[]; sprite?: string; role?: FusionRole }
 export interface FusionLeagueTrainer {
     key: string
     name: string    // nom du dresseur
@@ -97,16 +97,37 @@ function secondStat(speciesId: string, excl: StatKey): StatKey {
     return best
 }
 
-/** Parent optimisé « au mieux » : 252 EV sur sa stat-signature + 252 EV en PV, tous les points Saiyan sur la signature.
- *  Boire la stat-signature → nourrit optimalement le rôle de la fusion (le split spécial suit les parents). */
-function buildParent(speciesId: string, level: number, saiyan: number): MonInstance {
+// RÔLES DE COMBAT — spreads EV/Saiyan dédiés pour donner à une fusion une IDENTITÉ nette (au lieu du build unique
+//   « 252 signature + 252 PV » qui rendait tout le monde bulky). Chaque rôle = 2 stats EV + la stat Saiyan.
+export type FusionRole = "sweep_atk" | "sweep_spc" | "wall_def" | "wall_spc" | "tank_atk" | "tank_spc"
+const ROLE_EV: Record<FusionRole, { ev: [StatKey, StatKey]; saiyan: StatKey }> = {
+    sweep_atk: { ev: ["atk", "spe"], saiyan: "spe" }, // sweeper physique : frappe + vitesse
+    sweep_spc: { ev: ["spc", "spe"], saiyan: "spe" }, // sweeper spécial : Spé + vitesse
+    wall_def: { ev: ["hp", "def"], saiyan: "def" },   // mur physique : PV + Déf
+    wall_spc: { ev: ["hp", "spc"], saiyan: "spc" },   // mur/staller spécial : PV + Spé (= déf spé + attaque spé)
+    tank_atk: { ev: ["hp", "atk"], saiyan: "atk" },   // tank offensif physique : PV + Atk
+    tank_spc: { ev: ["hp", "spc"], saiyan: "spc" },   // tank offensif spécial : PV + Spé
+}
+
+/** IV PARFAITS (15 partout) — pour l'ultra-team du boss « au max ». Pas le flag shiny (pas de +10% ni de visuel chromatique). */
+const PERFECT_IVS: Record<StatKey, number> = { hp: 15, atk: 15, def: 15, spe: 15, spc: 15 }
+
+/** Parent optimisé. Sans `role` : build « au mieux » historique (252 signature + 252 PV, Saiyan signature). Avec `role` :
+ *  spread EV/Saiyan du rôle → la fusion (moyenne des 2 parents bâtis avec le même rôle) hérite d'une identité claire.
+ *  `perfectIv` : IV 15 partout (ultra-team du boss). */
+function buildParent(speciesId: string, level: number, saiyan: number, role?: FusionRole, perfectIv = false): MonInstance {
     const sp = getSpecies(speciesId)
     if (!sp) throw new Error(`Ligue Fusion : espèce inconnue ${speciesId}`)
+    const iv = perfectIv ? { ivsByStat: PERFECT_IVS } : {}
+    if (role) {
+        const { ev: [e1, e2], saiyan: sy } = ROLE_EV[role]
+        return createMonInstance(speciesId, level, { ev: { [e1]: 252, [e2]: 252 }, allocated: { [sy]: saiyan }, ...iv })
+    }
     const primary = signatureStat(sp)
     const ev: Partial<Record<StatKey, number>> = {}
     if (primary === "hp") { ev.hp = 252; ev[secondStat(speciesId, "hp")] = 252 }
     else { ev[primary] = 252; ev.hp = 252 }
-    return createMonInstance(speciesId, level, { ev, allocated: { [primary]: saiyan } })
+    return createMonInstance(speciesId, level, { ev, allocated: { [primary]: saiyan }, ...iv })
 }
 
 // ==================== RENFORTS ANTI-TRIO (Spectre/Psy/Ténèbres) — ARGENT/OR SEULEMENT ====================
@@ -157,32 +178,30 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
     { a: "goshendofy", b: "aquapanthe", name: "Aquendofy", moves: ["souffle_primordial", "hydrocanon", "seisme", "repos"] },        // DRAGON/EAU — ACE (BST 1750)
 ]
 
-// NÉMÉSIS anti-Ténè-iwat (DRAGON/TÉNÈBRES) : un mur qui encaisse TOUT Ténè-iwat (Ténèbres/Feu/Élec ×0,5, Psy
-//   IMMUNISÉ) et le frappe ×4 via Dévoreur d'Ombres (STAB Ténèbres + DRAIN → auto-soin, donc pas de Repos).
-//   Kangoudead a sa signature en PV → il amène TOUJOURS le type Ténèbres (cf. règle de type). Remplace Dracakoss
-//   (FEU/DRAGON, neutre face aux fusions Spectre/Psy) aux paliers ARGENT/OR ; le Bronze garde Dracakoss (1er sacre).
-// Moveset PHYSIQUE (Atk 421 >> Spé 234) : Ball'Ombre = SPECTRE physique → ×4 sur Ténè-iwat (Spectre/Psy) tapé avec
-//   la GROSSE Atk (les STAB Ténèbres/Dragon sont spéciaux/mous → on les shunte). Danse-Lames booste l'Atk (nuke),
-//   Séisme = coverage physique, Dévoreur d'Ombres = drain/sustain (pas de Repos). Ball'Ombre = move forcé (curé).
-const BOSS_NEMESIS_ARGENT_OR: FusionPairDef = { a: "kangoudead", b: "draconarque", name: "Kangonarque", moves: ["ball_ombre", "danse_lames", "seisme", "devoreur_ombres"] }
-
-// NÉMÉSIS RAPIDE anti-Ténè-iwat (SPECTRE/ELEC) : un sweeper FULL SPEED (Vit 578, via la signature Vitesse des 2
-//   panthères) qui DEVANCE Ténè-iwat (même en 536 speed-max) et l'exécute d'un Ball'Ombre ×4 (Spectre sur Spectre/Psy).
-//   Complément « vitesse » du mur Kangonarque. Remplace Chronobyd aux paliers ARGENT/OR ; le Bronze garde Chronobyd.
-// Il tape en SPÉ (308) : Ball'Ombre (Spectre = physique, off Atk 204) sert au ×4-revenge ; Fulgurance = son gros STAB
-//   spécial ; Souffle Polaire (Glace) + Lance-Flammes = coverage vs Sol/Dragon/Acier/Plante qui murent l'Élec.
-const BOSS_NEMESIS_SPEED_ARGENT_OR: FusionPairDef = { a: "ombrapanthe", b: "voltapanthe", name: "Panthéclombre", moves: ["ball_ombre", "fulgurance", "souffle_polaire", "lance_flammes"] }
+// ==================== ULTRA-TEAM (ARGENT/OR) — le Dieu Spaghetti à SON APOGÉE ====================
+// Dès le palier ARGENT, le boss présente une équipe REPENSÉE À FOND : la meilleure fusion dans CHAQUE rôle, large
+// couverture de types (10), movesets optimaux (learnsets parents + CT), et surtout des BUILDS PAR RÔLE (EV/Saiyan
+// dédiés via `role`) au lieu du build unique. 12 parents DISTINCTS (même contrainte que les joueurs). Le mur
+// anti-Ténè-iwat Kangonarque est conservé. UKOGNOFY reste réservée (goshendofy/ukognos jamais ensemble).
+// MégamonarX/Galijah EXCLUS comme parents (récompenses légendaires du joueur). Bronze = l'équipe d'origine.
+export const FUSION_BOSS_ULTRA: FusionPairDef[] = [
+    { a: "pyropanthe", b: "voltapanthe", name: "Pyrovolt", role: "sweep_spc", moves: ["fulgurance", "lance_flammes", "souffle_polaire", "vague_mentale"] },        // FEU/ELEC — SWEEPER SPÉ (Vit585/Spé428) : 2 STAB + Glace/Psy coverage
+    { a: "alirocaillus", b: "coccimperatrice", name: "Alicocci", role: "sweep_atk", moves: ["pique_fatal", "crochet_maitre", "seisme", "danse_lames"] },           // VOL/COMBAT — SWEEPER PHYS (Atk415/Vit518) : 2 STAB + Séisme + set-up
+    { a: "kangoudead", b: "draconarque", name: "Kangonarque", role: "wall_def", moves: ["ball_ombre", "draco_charge", "seisme", "devoreur_ombres"] },              // TÉN/DRAGON — MUR anti-Ténè-iwat (immune Psy) ; Ball'Ombre ×4, Dévoreur draine
+    { a: "merorem", b: "tonytony", name: "Mérotony", role: "wall_spc", moves: ["toxik", "bombe_beurk", "blizzard", "repos"] },                                     // POISON/NORMAL — STALLER (PV795/Spé522) : Toxik + Repos + gros coups spé
+    { a: "ukognos", b: "leviathonn", name: "Ukoviathonn", role: "wall_spc", moves: ["cataclysme_lunaire", "hydrocanon", "fulgurance", "repos"] },                  // FÉE/EAU — MUR SPÉ (PV526/Spé508)
+    { a: "brookhante", b: "gloutanoir", name: "Gloutanté", role: "tank_spc", moves: ["tempete_verte", "devoreur_ombres", "lance_flammes", "repos"] },               // SPECTRE/PLANTE — ACE mur-nuke (encaisse 1767, Spé643 ; immunisé Normal/Combat ; Dévoreur tape ton Psy/Spectre ×2 + draine ; Repos = increvable)
+]
 
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat.
- *  Dès ARGENT : Dracakoss → némésis-mur Kangonarque (DRAGON/TÉNÈBRES) ; Chronobyd → némésis-vitesse Panthéclombre
- *  (SPECTRE/ELEC). Le Bronze garde l'équipe d'origine (1er sacre accessible). */
+ *  Bronze = équipe d'origine (1er sacre accessible) ; ARGENT/OR = l'ULTRA-TEAM (rôles dédiés, best-in-role, 12 parents distincts). */
 export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0): BuiltFusion[] {
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    const pairs = tier === "bronze" ? FUSION_BOSS_PAIRS : FUSION_BOSS_PAIRS.map((p) =>
-        p.name === "Dracakoss" ? BOSS_NEMESIS_ARGENT_OR : p.name === "Chronobyd" ? BOSS_NEMESIS_SPEED_ARGENT_OR : p)
+    const ultra = tier !== "bronze"
+    const pairs = ultra ? FUSION_BOSS_ULTRA : FUSION_BOSS_PAIRS
     return pairs.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
+        buildFusion(buildParent(p.a, level, saiyan, p.role, ultra), buildParent(p.b, level, saiyan, p.role, ultra), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
 }
 
