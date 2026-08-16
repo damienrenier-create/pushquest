@@ -101,8 +101,10 @@ function secondStat(speciesId: string, excl: StatKey): StatKey {
 //   « 252 signature + 252 PV » qui rendait tout le monde bulky). Chaque rôle = 2 stats EV + la stat Saiyan.
 export type FusionRole = "sweep_atk" | "sweep_spc" | "wall_def" | "wall_spc" | "tank_atk" | "tank_spc"
 const ROLE_EV: Record<FusionRole, { ev: [StatKey, StatKey]; saiyan: StatKey }> = {
-    sweep_atk: { ev: ["atk", "spe"], saiyan: "spe" }, // sweeper physique : frappe + vitesse
-    sweep_spc: { ev: ["spc", "spe"], saiyan: "spe" }, // sweeper spécial : Spé + vitesse
+    // NB : le point Saiyan d'un sweeper va sur son OFFENSE (pas la Vitesse — déjà à 252 EV) : ça tape plus fort ET évite
+    //   qu'un boost de Vitesse ne FLIPPE le type contribué (ex. Jerbiwat PSY→ELEC si sa Vit dépasse sa Spé).
+    sweep_atk: { ev: ["atk", "spe"], saiyan: "atk" }, // sweeper physique : Atk (Saiyan) + vitesse
+    sweep_spc: { ev: ["spc", "spe"], saiyan: "spc" }, // sweeper spécial : Spé (Saiyan) + vitesse
     wall_def: { ev: ["hp", "def"], saiyan: "def" },   // mur physique : PV + Déf
     wall_spc: { ev: ["hp", "spc"], saiyan: "spc" },   // mur/staller spécial : PV + Spé (= déf spé + attaque spé)
     tank_atk: { ev: ["hp", "atk"], saiyan: "atk" },   // tank offensif physique : PV + Atk
@@ -150,17 +152,36 @@ export function tierPairs(trainerKey: string, tier: FusionTier, pairs: FusionPai
     return ovs.length ? pairs.map((p) => ovs.find((o) => o.replace === p.name)?.with ?? p) : pairs
 }
 
+// RÔLES DES FUSIONS DU CONSEIL (nom → rôle) : chaque équipe reçoit un SPREAD de rôles distincts (au lieu du build
+//   unique bulky), tout en respectant la tendance NATURELLE de chaque fusion (moveset + stats). VARIÉTÉ cross-dresseur
+//   assurée : le 1er slot n'est jamais le même rôle (WILL=sweeper, KOGA=mur, BRUNO=sweeper, KAREN=tank, LANCE=mur), et
+//   le Psy (WILL) n'est pas QUE des sweepers. Inclut les murs anti-trio (Omnikang/Géckang/Mérodead/Condozenc).
+const CONSEIL_ROLES: Record<string, FusionRole> = {
+    // WILL (Psy) — attaquants spé + stallers + 1 mur.
+    Divinaquil: "sweep_spc", Gloutamaki: "wall_spc", Flamarée: "wall_spc", Morrinpâte: "sweep_spc", Hippofer: "wall_def", Jerbibouh: "sweep_spc", Omnikang: "wall_spc", Géckang: "wall_def",
+    // KOGA (Poison) — stallers + 1 bruiser physique + 1 sweeper élec.
+    Mérolopendre: "wall_def", Regnadruide: "wall_spc", Impérafer: "sweep_atk", Mérovortal: "wall_spc", Supacorbe: "sweep_spc", Cerforem: "wall_spc", Mérodead: "wall_spc",
+    // BRUNO (Combat) — cogneurs physiques + 1 mur roche + 1 garde spé.
+    Zenclumind: "sweep_atk", Maîtrelmin: "tank_atk", Aquidruide: "sweep_atk", Coccikara: "sweep_atk", Rocholithe: "wall_def", Mérokara: "wall_spc", Condozenc: "tank_atk",
+    // KAREN (Ténèbres) — le + varié : tank/mur/sweeper phys + staller spé + 2 sweepers spé rapides (ACE Ténépanthe).
+    Bouhdruide: "tank_atk", Géckombre: "wall_def", Magnépanthe: "sweep_atk", Abyssathonn: "wall_spc", Thundèbre: "sweep_spc", Ténépanthe: "sweep_spc",
+    // LANCE (Dragon) — mur spé + 2 sweepers phys + mur roche + sweeper spé + ACE tank.
+    Aquilathonn: "wall_spc", Dracarnarque: "sweep_atk", Chronosidhe: "sweep_atk", Dracolithe: "wall_def", Lunagron: "sweep_spc", Goshendarque: "tank_atk",
+}
+
 /** Équipe de FUSIONS d'un dresseur pour un palier. Renvoie des BuiltFusion (espèces éphémères ENREGISTRÉES →
- *  à DÉTRUIRE après le combat via disposeFusionLeagueTeam). Les parents ne sont jamais persistés. */
+ *  à DÉTRUIRE après le combat via disposeFusionLeagueTeam). Les parents ne sont jamais persistés.
+ *  Chaque fusion est bâtie avec SON rôle (CONSEIL_ROLES) → archétypes nets (sweeper frêle, mur bulky…). */
 export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, levelBonus = 0): BuiltFusion[] {
     const tr = FUSION_LEAGUE.find((t) => t.key === trainerKey)
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     // levelBonus (ex. vœu du génie « Ligue +3 ») → tous les fusionnés montent d'autant, plafonné à 100.
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    return tierPairs(tr.key, tier, tr.pairs).map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
-    )
+    return tierPairs(tr.key, tier, tr.pairs).map((p) => {
+        const role = CONSEIL_ROLES[p.name]
+        return buildFusion(buildParent(p.a, level, saiyan, role), buildParent(p.b, level, saiyan, role), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) })
+    })
 }
 
 // ==================== BOSS FINAL — LE DIEU SPAGHETTI (forme ultime) ====================
