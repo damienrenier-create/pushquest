@@ -17,6 +17,12 @@ describe("Pilote d'archétype — setup / usure / win-con", () => {
         expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))).toEqual({ kind: "move", moveIndex: 0 })
     })
 
+    it("MégamonarX à BAS PV (<50 %) : NE se met PLUS en place → attaque au lieu de Danse-Lames (fix plainte reflet)", () => {
+        const self = mon("megamonarx", 80, ["danse_lames", "charge"]); self.currentHp = 50 // frac très < 0.5
+        const foe = mon(SPEC, 80, ["charge"]); foe.currentHp = 9999
+        expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))).toEqual({ kind: "move", moveIndex: 1 }) // Charge, PAS Danse-Lames
+    })
+
     it("Ukognos (spécial) face à un spécial sûr : monte le Spécial (Focalisation)", () => {
         const self = mon("ukognos", 80, ["focalisation", "eclat_lunaire"])
         const foe = mon(SPEC, 80, ["charge"]); foe.currentHp = 9999

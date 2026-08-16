@@ -291,8 +291,10 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
     // 6) NEUTRALISER un physique : débuff (Voile) puis +DÉF.
     if (iDebuff >= 0 && foePhys && foeFresh) return iDebuff
     if (iDef >= 0 && foePhys && (self.stages?.def ?? 0) < 2) return iDef
-    // 7) MISE EN PLACE offensive quand c'est SÛR et pas au plafond (boost de la stat d'attaque dominante).
-    if (safe) {
+    // 7) MISE EN PLACE offensive quand c'est SÛR, au-dessus de 50 % PV, et pas au plafond (boost de la stat dominante).
+    //    GARDE BAS-PV : sous 50 % on ne se met PLUS en place (Danse-Lames/Focalisation) — on meurt avant d'en profiter
+    //    (plainte joueur : le reflet buffait à ~40 % puis se faisait OHKO). On enchaîne alors sur soin (8) ou attaque (9).
+    if (safe && frac >= 0.5) {
         if (physAttacker && iAtk >= 0 && (self.stages?.atk ?? 0) < 4) return iAtk
         if (!physAttacker && iSpc >= 0 && (self.stages?.spc ?? 0) < 4) return iSpc
     }
