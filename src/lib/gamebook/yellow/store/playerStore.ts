@@ -198,6 +198,8 @@ interface PlayerState {
     curseAbundanceStart?: number
     curseFreeItemsTaken?: number
     curseFreeItemDate?: string
+    /** BOURSE — inflation perso des SOINS : nb d'achats de potions AUJOURD'HUI (reset quotidien via creditDailyReps). */
+    potionBuysToday?: number
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -525,6 +527,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         curseAbundanceStart: "curseAbundanceStart" in p ? p.curseAbundanceStart : st.curseAbundanceStart,
         curseFreeItemsTaken: "curseFreeItemsTaken" in p ? p.curseFreeItemsTaken : st.curseFreeItemsTaken,
         curseFreeItemDate: "curseFreeItemDate" in p ? p.curseFreeItemDate : st.curseFreeItemDate,
+        potionBuysToday: "potionBuysToday" in p ? p.potionBuysToday : st.potionBuysToday,
     }
     emit()
 }
@@ -1301,6 +1304,7 @@ export function creditDailyReps(today: string) {
         ...st,
         creditedThrough: today,
         pastaBoughtToday: 0,
+        potionBuysToday: 0, // BOURSE : l'inflation perso des soins se recharge chaque jour
         casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : le plafond de mise 200/jour se recharge chaque jour
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
@@ -1308,6 +1312,14 @@ export function creditDailyReps(today: string) {
         // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
         //   pas par un compteur quotidien. Le tick ne remet donc RIEN à zéro ni ne désarme la chasse (choix Sartay 12/08).
     }
+    emit()
+}
+
+/** BOURSE — nb d'achats de soins du joueur AUJOURD'HUI (inflation perso ; reset quotidien via creditDailyReps). */
+export function getPotionBuysToday(): number { return st.potionBuysToday ?? 0 }
+/** BOURSE — enregistre un achat de soins (par LOT, quelle que soit la quantité) → +1 au compteur d'inflation perso. */
+export function recordPotionBuy() {
+    st = { ...st, potionBuysToday: (st.potionBuysToday ?? 0) + 1 }
     emit()
 }
 

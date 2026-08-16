@@ -69,7 +69,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -84,6 +84,7 @@ import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFus
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER, historyFusions } from "@/lib/gamebook/yellow/data/fusiodex"
 import { EPILOGUE_INTRO_LINES, fusionEpilogueQuests } from "@/lib/gamebook/yellow/data/fusionEpilogue"
+import { shopPrice } from "@/lib/gamebook/yellow/data/shopPricing"
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
@@ -494,6 +495,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const resetHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => { if (resetHoldTimer.current) clearTimeout(resetHoldTimer.current) }, [])
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
+    // BOURSE — heure SERVEUR (Europe/Paris, anti-triche horloge) récupérée à l'ouverture du magasin → prix dynamiques.
+    const [bourseHour, setBourseHour] = useState<number | null>(null)
+    useEffect(() => {
+        if (!shopOpen) return
+        fetch("/api/gamebook/yellow/shop-time").then((r) => r.json()).then((d) => { if (typeof d?.hour === "number") setBourseHour(d.hour) }).catch(() => { /* hors-ligne : repli heure client */ })
+    }, [shopOpen])
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
     const [loopModal, setLoopModal] = useState(false) // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (accepter/refuser)
     const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation
@@ -3752,6 +3759,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(() => {
                             const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
                             const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
+                            // BOURSE (endgame run 3) : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Avant run 3 = prix de base.
+                            const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), active: player.run3Used }
+                            const priceOf = (it: { price: number; category: string }) => shopPrice(it.price, it.category, bourseCtx)
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
                             const SECOND_TOWN_BALLS = new Set(["super_ball_plus", "hyper_ball", "hyper_ball_plus"])
@@ -3767,7 +3777,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             const ballLocked = it.category === "BALL" && player.ballLockRemaining > 0 // VŒU DU GÉNIE : achat de Ball verrouillé
                                             const curse = isAbundanceCurseActive() // VŒU MAUDIT (Jacanon) : achat payant coupé, 1 objet gratuit/jour (hors CT)
                                             const freeAvail = curse && abundanceFreeItemAvailableToday()
-                                            const afford = player.reps >= it.price
+                                            const price = priceOf(it) // BOURSE : prix dynamique (base hors run 3)
+                                            const afford = player.reps >= price
                                             const usable = curse ? freeAvail : (afford && !ballLocked) // maudit → seul l'objet gratuit du jour est cliquable
                                             return (
                                                 <button
@@ -3776,12 +3787,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                     disabled={!usable}
                                                     onClick={() => {
                                                         if (curse) { if (takeFreeShopItem(it.id)) { persistYellowSave(); setToast(`🎁 Objet gratuit du jour : ${it.name} ! (vœu maudit)`) } return }
-                                                        setBuyConfirm({ id: it.id, name: it.name, price: it.price }); setBuyQty(1)
+                                                        setBuyConfirm({ id: it.id, name: it.name, price }); setBuyQty(1)
                                                     }}
                                                 >
                                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
-                                                        <span>{curse ? "GRATUIT" : `${it.price} reps`}</span>
+                                                        <span>{curse ? "GRATUIT" : `${price} reps`}</span>
                                                     </span>
                                                     <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}</span>
                                                 </button>
@@ -3847,7 +3858,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
-                                onClick={() => { if (getItem(buyConfirm.id)?.category === "BALL" && player.ballLockRemaining > 0) { setBuyConfirm(null); return } if (spendReps(total)) addItem(buyConfirm.id, buyQty); setBuyConfirm(null) }}
+                                onClick={() => { if (getItem(buyConfirm.id)?.category === "BALL" && player.ballLockRemaining > 0) { setBuyConfirm(null); return } if (spendReps(total)) { addItem(buyConfirm.id, buyQty); if (getItem(buyConfirm.id)?.category === "HEAL") recordPotionBuy(); persistYellowSave() } setBuyConfirm(null) }}
                             >✅ Acheter</button>
                             <button style={menuBtnDimStyle} onClick={() => setBuyConfirm(null)}>← Annuler</button>
                         </div>
