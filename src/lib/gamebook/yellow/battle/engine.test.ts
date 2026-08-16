@@ -91,6 +91,17 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(after.turn).toBe(start.turn + 1)    // le tour est bien passé
     })
 
+    it("une POTION cible un Daemon du BANC (stratégie « je tanke devant, je soigne les autres »)", () => {
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank actif encaisse le coup
+        const b = createMonInstance("plumiot", 30)
+        b.currentHp = 5 // blessé au banc
+        const start = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 9 })
+        const after = resolveTurn(start, { kind: "item", itemId: "potion", targetIndex: 1 })
+        expect(after.player.team[1].currentHp).toBe(25) // 5 + 20 PV (soin direct au banc, jamais touché par l'ennemi)
+        expect(after.player.activeIndex).toBe(0)        // l'actif (le tank) n'a pas changé
+        expect(after.turn).toBe(start.turn + 1)         // le soin consomme le tour (l'ennemi frappe le tank)
+    })
+
     it("un RAPPEL ranime un Daemon K.O. au banc à 1/10 de ses PV (et consomme le tour)", () => {
         const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank actif : survit au sauvage
         const b = createMonInstance("plumiot", 30)

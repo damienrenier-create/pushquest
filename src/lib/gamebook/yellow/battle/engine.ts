@@ -1539,21 +1539,27 @@ function applyItem(state: BattleState, itemId: string, events: BattleEvent[], ta
         return
     }
 
-    // Soin de PV
+    // Soin de PV — CIBLABLE : par défaut l'actif, mais targetIndex permet de soigner un Daemon du BANC
+    //   (state.player.team porte toute l'équipe) → la stratégie « je tanke devant, je soigne les autres » marche.
+    //   Un Daemon K.O. n'est PAS soignable par une potion (il faut un Rappel).
     if (it.category === "HEAL") {
-        const amount = it.healHp && it.healHp > 0 ? it.healHp : maxHpOf(mon)
-        applyHeal(state, "player", amount, events)
-        events.push({ kind: "message", text: `${displayName(mon)} récupère des PV !` })
+        const tgt = targetIndex != null ? state.player.team[targetIndex] : mon
+        if (!tgt || tgt.currentHp <= 0) { events.push({ kind: "message", text: "Mais ça n'a aucun effet…" }); return }
+        const amount = it.healHp && it.healHp > 0 ? it.healHp : maxHpOf(tgt)
+        if (tgt === mon) applyHeal(state, "player", amount, events) // actif → via le moteur (garde les effets/anim de barre)
+        else tgt.currentHp = Math.min(maxHpOf(tgt), tgt.currentHp + amount) // banc → soin direct (comme le Rappel)
+        events.push({ kind: "message", text: `${displayName(tgt)} récupère des PV !` })
         return
     }
-    // Anti-statut
+    // Anti-statut — CIBLABLE aussi (soigner le gel/poison d'un Daemon au banc).
     if (it.category === "STATUS_HEAL") {
+        const tgt = targetIndex != null ? state.player.team[targetIndex] : mon
         const cures = it.cures ?? []
-        const heals = cures.includes("ALL") || cures.includes(mon.status as never)
-        if (mon.status !== "NONE" && heals) {
-            mon.status = "NONE"
-            mon.statusCounter = 0
-            events.push({ kind: "message", text: `${displayName(mon)} n'a plus de problème de statut !` })
+        const heals = !!tgt && tgt.currentHp > 0 && (cures.includes("ALL") || cures.includes(tgt.status as never))
+        if (tgt && tgt.status !== "NONE" && heals) {
+            tgt.status = "NONE"
+            tgt.statusCounter = 0
+            events.push({ kind: "message", text: `${displayName(tgt)} n'a plus de problème de statut !` })
         } else {
             events.push({ kind: "message", text: "Mais ça n'a aucun effet…" })
         }

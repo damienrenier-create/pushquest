@@ -32,7 +32,7 @@ import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
-type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun" | "reviveTarget"
+type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun" | "reviveTarget" | "itemTarget"
 
 interface DispHp { p: number; pMax: number; e: number; eMax: number }
 
@@ -57,6 +57,7 @@ export default function BattleScreen() {
     const [step, setStep] = useState(0)
     const [menu, setMenu] = useState<Menu>("root")
     const [reviveItemId, setReviveItemId] = useState<string | null>(null) // RAPPEL : objet en attente d'une cible K.O.
+    const [itemTargetId, setItemTargetId] = useState<string | null>(null) // SOIN/ANTI-STATUT : objet en attente d'une cible (actif OU banc)
     const [disp, setDisp] = useState<DispHp | null>(null)
     // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
     // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
@@ -255,7 +256,7 @@ export default function BattleScreen() {
     // Fenêtre d'envoi adverse : GARDER son Daemon (l'ennemi annoncé entre ensuite, sans coup offert).
     const doStay = () => tryAct(() => { submitPlayerAction({ kind: "stay" }); setMenu("root") })
     const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
-    const doItem = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") })
+    const doItem = (itemId: string, targetIndex?: number) => tryAct(() => { submitPlayerAction({ kind: "item", itemId, targetIndex }); setItemTargetId(null); setMenu("root") })
     const doRevive = (itemId: string, targetIndex: number) => tryAct(() => { submitPlayerAction({ kind: "item", itemId, targetIndex }); setReviveItemId(null); setMenu("root") })
     const run = () => tryAct(() => submitPlayerAction({ kind: "run" }))
 
@@ -354,12 +355,12 @@ export default function BattleScreen() {
             canBack = true
         } else if (menu === "bag") {
             const owned = (id: string) => (items[id] ?? 0) > 0
-            // Soins de PV (désactivés à PV pleins)
+            // Soins de PV → choisir la cible (actif OU banc). Grisé si AUCUN Daemon vivant n'est blessé.
             Object.values(ITEMS).filter((it) => it.category === "HEAL" && owned(it.id))
-                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id), disabled: player.currentHp >= maxHpOf(player) }))
-            // Anti-statut (désactivés si aucun statut)
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setItemTargetId(it.id); setMenu("itemTarget") }, disabled: !battle.player.team.some((m) => m.currentHp > 0 && m.currentHp < maxHpOf(m)) }))
+            // Anti-statut → choisir la cible (actif OU banc). Grisé si aucun Daemon vivant n'a de statut.
             Object.values(ITEMS).filter((it) => it.category === "STATUS_HEAL" && owned(it.id))
-                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id), disabled: player.status === "NONE" }))
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setItemTargetId(it.id); setMenu("itemTarget") }, disabled: !battle.player.team.some((m) => m.currentHp > 0 && m.status !== "NONE") }))
             // Objets X (boost de stat)
             Object.values(ITEMS).filter((it) => it.category === "BOOST" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id) }))
@@ -385,6 +386,16 @@ export default function BattleScreen() {
                 onSelect: () => { if (reviveItemId) doRevive(reviveItemId, i) }, disabled: m.currentHp > 0,
             }))
             options.push({ label: "← RETOUR", onSelect: () => { setReviveItemId(null); setMenu("bag") } })
+            canBack = true
+        } else if (menu === "itemTarget") {
+            // SOIN / ANTI-STATUT : choisir le Daemon à soigner (actif OU banc). Grisé si le membre ne peut pas en profiter.
+            const ti = itemTargetId ? ITEMS[itemTargetId] : null
+            const cantBenefit = (m: (typeof battle.player.team)[number]) => m.currentHp <= 0 || (ti?.category === "STATUS_HEAL" ? m.status === "NONE" : m.currentHp >= maxHpOf(m))
+            battle.player.team.forEach((m, i) => options.push({
+                label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}${m.status !== "NONE" ? ` (${m.status})` : ""}`,
+                onSelect: () => { if (itemTargetId) doItem(itemTargetId, i) }, disabled: cantBenefit(m),
+            }))
+            options.push({ label: "← RETOUR", onSelect: () => { setItemTargetId(null); setMenu("bag") } })
             canBack = true
         } else {
             battle.player.team.forEach((m, i) => options.push({
