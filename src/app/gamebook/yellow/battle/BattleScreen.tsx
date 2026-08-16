@@ -814,7 +814,10 @@ function moveEffectTag(mv: MoveData): string | null {
     if (e.statChanges?.length) {
         const c = e.statChanges[0]
         const sign = c.stages > 0 ? `+${c.stages}` : `${c.stages}`
-        return `${sign} ${STAGE_FR[c.stat] ?? c.stat}${c.target === "self" ? "" : " adv."}`
+        const base = `${sign} ${STAGE_FR[c.stat] ?? c.stat}${c.target === "self" ? "" : " adv."}`
+        // FIABILITÉ : sur un coup OFFENSIF (puissance > 0), le changement est un effet SECONDAIRE (chance = e.chance ?? 100)
+        //   → on précise « (10%) » ou « (à coup sûr) ». Sur un move de STATUT pur, il est toujours garanti (c'est son but).
+        return mv.power > 0 ? `${base}${e.chance && e.chance < 100 ? ` (${e.chance}%)` : " (à coup sûr)"}` : base
     }
     if (e.highCrit) return "Taux de critique élevé"
     if (e.twoTurn || e.dig || e.fly) return "Charge sur 2 tours"
