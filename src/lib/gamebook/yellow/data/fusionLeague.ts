@@ -114,16 +114,19 @@ function buildParent(speciesId: string, level: number, saiyan: number): MonInsta
 //   mur). On donne à chacune de ces 3 « passoires » UN mur THÉMATIQUE qui immunise/résiste le trio ET le RIPOSTE, mais
 //   seulement dès le palier ARGENT — le Bronze garde son équipe d'origine (1er sacre accessible, cohérent avec le boss).
 //   Un même parent (kangoudead) peut nourrir plusieurs murs : invisible au joueur (cf. en-tête). Noms de fusion uniques.
-const ANTITRIO_ARGENT_OR: Record<string, { replace: string; with: FusionPairDef }> = {
-    will: { replace: "Hippofer", with: { a: "omnhippo", b: "kangoudead", name: "Omnikang", moves: ["vague_mentale", "devoreur_ombres", "repos", "hypnose"] } },        // PSY/TÉNÈBRES — immune Psy ×0 ; Dévoreur d'Ombres tape ton Spectre/Psy ×2 + draine
-    koga: { replace: "Mérovortal", with: { a: "kangoudead", b: "merorem", name: "Mérodead", moves: ["toxik", "devoreur_ombres", "repos", "bombe_beurk"] } },            // TÉNÈBRES/POISON — staller PV882, immune Psy, résiste Spectre/Ténèbres ×0.5
-    bruno: { replace: "Coccikara", with: { a: "maitrezenc", b: "condombre", name: "Condozenc", moves: ["crochet_maitre", "morsure_sombre", "seisme", "danse_lames"] } }, // COMBAT/TÉNÈBRES — Atk502, immune Psy ; Crochet ×2 ton Ténèbres, Morsure ×2 ton Spectre/Psy
+const ANTITRIO_ARGENT_OR: Record<string, { replace: string; with: FusionPairDef }[]> = {
+    will: [
+        { replace: "Hippofer", with: { a: "omnhippo", b: "kangoudead", name: "Omnikang", moves: ["vague_mentale", "devoreur_ombres", "repos", "hypnose"] } },            // PSY/TÉNÈBRES — immune Psy ×0 ; Dévoreur d'Ombres tape ton Spectre/Psy ×2 + draine
+        { replace: "Morrinpâte", with: { a: "geckebre", b: "kangoudead", name: "Géckang", moves: ["morsure_sombre", "seisme", "repos", "toxik"] } },                     // SOL/TÉNÈBRES — mur anti-Jerbiwat increvable (PV699/Déf305 ; immune Psy ×0 ET Élec ×0, résiste Spectre ; seul le Feu passe neutre)
+    ],
+    koga: [{ replace: "Mérovortal", with: { a: "kangoudead", b: "merorem", name: "Mérodead", moves: ["toxik", "devoreur_ombres", "repos", "bombe_beurk"] } }],            // TÉNÈBRES/POISON — staller PV882, immune Psy, résiste Spectre/Ténèbres ×0.5
+    bruno: [{ replace: "Coccikara", with: { a: "maitrezenc", b: "condombre", name: "Condozenc", moves: ["crochet_maitre", "morsure_sombre", "seisme", "danse_lames"] } }], // COMBAT/TÉNÈBRES — Atk502, immune Psy ; Crochet ×2 ton Ténèbres, Morsure ×2 ton Spectre/Psy
 }
 
-/** Paires effectives d'un dresseur au palier donné : Bronze = d'origine ; Argent/Or = mur anti-trio substitué (si défini). */
+/** Paires effectives d'un dresseur au palier donné : Bronze = d'origine ; Argent/Or = murs anti-trio substitués (si définis). */
 export function tierPairs(trainerKey: string, tier: FusionTier, pairs: FusionPairDef[]): FusionPairDef[] {
-    const ov = tier === "bronze" ? undefined : ANTITRIO_ARGENT_OR[trainerKey]
-    return ov ? pairs.map((p) => (p.name === ov.replace ? ov.with : p)) : pairs
+    const ovs = tier === "bronze" ? [] : (ANTITRIO_ARGENT_OR[trainerKey] ?? [])
+    return ovs.length ? pairs.map((p) => ovs.find((o) => o.replace === p.name)?.with ?? p) : pairs
 }
 
 /** Équipe de FUSIONS d'un dresseur pour un palier. Renvoie des BuiltFusion (espèces éphémères ENREGISTRÉES →
