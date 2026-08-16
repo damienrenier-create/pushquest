@@ -200,6 +200,8 @@ interface PlayerState {
     curseFreeItemDate?: string
     /** BOURSE — inflation perso des SOINS : nb d'achats de potions AUJOURD'HUI (reset quotidien via creditDailyReps). */
     potionBuysToday?: number
+    /** BOURSE — nb de recharges d'énergie payées en JC aujourd'hui → +10 %/achat sur TOUT le shop (reset quotidien). */
+    jcEnergyBuysToday?: number
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -528,6 +530,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         curseFreeItemsTaken: "curseFreeItemsTaken" in p ? p.curseFreeItemsTaken : st.curseFreeItemsTaken,
         curseFreeItemDate: "curseFreeItemDate" in p ? p.curseFreeItemDate : st.curseFreeItemDate,
         potionBuysToday: "potionBuysToday" in p ? p.potionBuysToday : st.potionBuysToday,
+        jcEnergyBuysToday: "jcEnergyBuysToday" in p ? p.jcEnergyBuysToday : st.jcEnergyBuysToday,
     }
     emit()
 }
@@ -1305,6 +1308,7 @@ export function creditDailyReps(today: string) {
         creditedThrough: today,
         pastaBoughtToday: 0,
         potionBuysToday: 0, // BOURSE : l'inflation perso des soins se recharge chaque jour
+        jcEnergyBuysToday: 0, // BOURSE : l'inflation « recharge JC » se recharge chaque jour
         casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : le plafond de mise 200/jour se recharge chaque jour
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
@@ -1320,6 +1324,13 @@ export function getPotionBuysToday(): number { return st.potionBuysToday ?? 0 }
 /** BOURSE — enregistre un achat de soins (par LOT, quelle que soit la quantité) → +1 au compteur d'inflation perso. */
 export function recordPotionBuy() {
     st = { ...st, potionBuysToday: (st.potionBuysToday ?? 0) + 1 }
+    emit()
+}
+/** BOURSE — nb de recharges d'énergie payées en JC aujourd'hui (chacune +10 % sur tout le shop ; reset quotidien). */
+export function getJcEnergyBuysToday(): number { return st.jcEnergyBuysToday ?? 0 }
+/** BOURSE — enregistre une recharge d'énergie payée en JC → +1 (le shop entier prend +10 % aujourd'hui). */
+export function recordJcEnergyBuy() {
+    st = { ...st, jcEnergyBuysToday: (st.jcEnergyBuysToday ?? 0) + 1 }
     emit()
 }
 

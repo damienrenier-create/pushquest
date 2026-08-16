@@ -8,7 +8,7 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps, recordJcEnergyBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -60,6 +60,7 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
     const [confirmGrotte, setConfirmGrotte] = useState(false) // ⚠️ confirmation avant l'entrée grotte (téléport IMMÉDIAT)
+    const [confirmEnergy, setConfirmEnergy] = useState<{ amount: number; price: number } | null>(null) // ⚠️ confirm recharge énergie (fait monter le shop +10 %)
 
     useEffect(() => { fetchFrontierProfile().then((p) => { setJc(p.jc); setSymbols(p.symbols) }) }, [])
 
@@ -108,9 +109,10 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                     )}
 
                     <Section title="⚡ Recharge d'énergie">
+                        {player.run3Used && <div style={{ fontSize: 10, opacity: 0.75, color: INK, marginBottom: 6, lineHeight: 1.3 }}>⚠️ Chaque recharge fait grimper les prix du MAGASIN de +10 % aujourd'hui (cumulatif, remis à zéro chaque nuit).</div>}
                         {ENERGY.map((e) => (
                             <Row key={e.amount} label={`+${e.amount} énergie`} price={e.price} disabled={busy || (jc ?? 0) < e.price}
-                                onBuy={() => spend(e.price, { grant: () => grantReps(e.amount), toast: `✅ +${e.amount} énergie !` })} />
+                                onBuy={() => setConfirmEnergy(e)} />
                         ))}
                     </Section>
 
@@ -177,6 +179,23 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={() => setConfirmGrotte(false)} style={cancelBtn}>Annuler</button>
                             <button disabled={busy} onClick={() => { setConfirmGrotte(false); spend(grotteEntryCost(), { grant: () => onEnterGrotte?.(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Entrer ({grotteEntryCost()} 💠)</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ⚠️ CONFIRMATION recharge d'énergie : acheter de l'énergie en JC fait grimper les prix du MAGASIN de +10 % (Bourse, run 3). */}
+            {confirmEnergy && (
+                <div onClick={(e) => { e.stopPropagation(); setConfirmEnergy(null) }} style={confirmOverlay}>
+                    <div onClick={(e) => e.stopPropagation()} style={confirmBox}>
+                        <div style={{ fontWeight: 800, fontSize: 14, color: INK, marginBottom: 8 }}>⚡ Recharger {confirmEnergy.amount} énergie ?</div>
+                        <div style={{ fontSize: 12, color: INK, lineHeight: 1.45, marginBottom: 14 }}>
+                            Coût : <b>{confirmEnergy.price} 💠</b> pour <b>+{confirmEnergy.amount} énergie</b>.
+                            {player.run3Used && <><br /><b>⚠️ Attention :</b> cet achat fait <b>grimper les prix du magasin de +10 %</b> pour aujourd'hui{getJcEnergyBuysToday() > 0 ? ` (déjà +${Math.round((Math.pow(1.1, getJcEnergyBuysToday()) - 1) * 100)}% ce jour)` : ""}. La Bourse du Nexus n'aime pas l'argent facile…</>}
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => setConfirmEnergy(null)} style={cancelBtn}>Annuler</button>
+                            <button disabled={busy} onClick={() => { const e = confirmEnergy; setConfirmEnergy(null); spend(e.price, { grant: () => { grantReps(e.amount); recordJcEnergyBuy() }, toast: `✅ +${e.amount} énergie !${player.run3Used ? " (prix du magasin +10 %)" : ""}` }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Recharger ({confirmEnergy.price} 💠)</button>
                         </div>
                     </div>
                 </div>

@@ -212,6 +212,8 @@ export interface YellowSave {
     curseFreeItemDate?: string
     /** BOURSE — nb d'achats de soins du jour (inflation perso ; reset quotidien). Optionnel/additif → save-safe. */
     potionBuysToday?: number
+    /** BOURSE — nb de recharges d'énergie payées en JC ce jour (+10 %/achat sur tout le shop ; reset quotidien). */
+    jcEnergyBuysToday?: number
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -661,6 +663,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         curseFreeItemsTaken: typeof o.curseFreeItemsTaken === "number" ? Math.max(0, Math.floor(o.curseFreeItemsTaken)) : undefined,
         curseFreeItemDate: typeof o.curseFreeItemDate === "string" ? o.curseFreeItemDate : undefined,
         potionBuysToday: typeof o.potionBuysToday === "number" ? Math.max(0, Math.floor(o.potionBuysToday)) : undefined,
+        jcEnergyBuysToday: typeof o.jcEnergyBuysToday === "number" ? Math.max(0, Math.floor(o.jcEnergyBuysToday)) : undefined,
     }
 }
 

@@ -16,6 +16,7 @@ export const BOURSE_END_HOUR = 20    // après : figé au max de la journée jus
 export const BOURSE_HOURLY = 1.10    // +10 % composé par heure
 export const SYLVEBARBE_POTION_MULT = 1.5
 export const POTION_INFLATION_PER_BUY = 0.01 // +1 % par achat (lot), reset quotidien
+export const JC_ENERGY_INFLATION_PER_BUY = 0.10 // +10 % sur TOUT le shop à chaque recharge d'énergie payée en JC (reset quotidien)
 
 /** Multiplicateur « bourse » à une heure donnée (0-23, heure SERVEUR). 8h→×1 … 20h→×1,10^12. Hors 8-20h : bornes. */
 export function bourseMultiplier(hour: number): number {
@@ -27,13 +28,15 @@ export interface ShopPriceCtx {
     hour: number                // heure serveur (0-23)
     sylvebarbeAwake: boolean    // Sylvebarbe battu/capturé → potions ×1,5
     potionBuysToday: number     // nb d'achats de soins du joueur AUJOURD'HUI (inflation perso), reset quotidien
+    jcEnergyBuysToday: number   // nb de recharges d'énergie payées en JC aujourd'hui → +10 %/achat sur TOUT le shop, reset quotidien
     active: boolean             // la bourse est-elle ACTIVE ? (débloquée au run 3). Sinon → prix de base immuables.
 }
 
 /** Prix effectif d'un objet du magasin (arrondi, plancher 1). `category` = ITEMS[id].category. */
 export function shopPrice(base: number, category: string, ctx: ShopPriceCtx): number {
     if (!ctx.active || base <= 0) return base // bourse pas encore débloquée (avant run 3) → prix d'origine
-    let p = base * bourseMultiplier(ctx.hour) // BOURSE : tous les objets
+    let p = base * bourseMultiplier(ctx.hour) // BOURSE horaire : tous les objets
+    p *= Math.pow(1 + JC_ENERGY_INFLATION_PER_BUY, Math.max(0, ctx.jcEnergyBuysToday)) // +10 %/recharge JC : tous les objets
     if (category === "HEAL") {                // SOINS : Sylvebarbe + inflation perso (cumulés)
         if (ctx.sylvebarbeAwake) p *= SYLVEBARBE_POTION_MULT
         p *= Math.pow(1 + POTION_INFLATION_PER_BUY, Math.max(0, ctx.potionBuysToday))
