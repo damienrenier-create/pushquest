@@ -1440,7 +1440,7 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "🔮", color: "#8a63d2" },
         mapId: "yellow_fusion_glace", x: 10, y: 2,
         team: [{ speciesId: "divinpate", level: 80 }],
-        reward: 0, aiLevel: "elite", // WILL — Conseil des Chimères (gauntlet) : combat jusqu'au KO, ne change jamais de Daemon
+        reward: 0, aiLevel: "hof", //WILL — Conseil des Chimères (gauntlet) : IA "hof" — joue au mieux (KO/statut/setup), CHANGE face à un mauvais matchup
         intro: [
             "*Une lueur mauve flotte dans l'air.* Bienvenue à la Ligue de Fusion, challenger. Je suis WILL, premier gardien du Conseil des Chimères.",
             "Le Dieu Spaghetti t'a laissé franchir la porte à dragons ? Alors tu as déjà prouvé quelque chose… jusqu'ici.",
@@ -1455,7 +1455,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_fusion_combat", x: 10, y: 2,
         requiresTrainers: ["y_fusion_1"],
         team: [{ speciesId: "necrolopendre", level: 80 }],
-        reward: 0, aiLevel: "elite", // KOGA — Conseil des Chimères (gauntlet) : combat jusqu'au KO, ne change jamais de Daemon
+        reward: 0, aiLevel: "hof", //KOGA — Conseil des Chimères (gauntlet) : IA "hof" — joue au mieux (KO/statut/setup), CHANGE face à un mauvais matchup
         intro: [
             "Fwahaha ! WILL t'a laissé filer ? Tu ne fileras pas entre MES mailles, challenger.",
             "Je suis KOGA, maître ninja du POISON. Mes chimères t'empoisonnent, t'endorment, et attendent que le venin fasse le reste.",
@@ -1469,7 +1469,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_fusion_spectre", x: 10, y: 2,
         requiresTrainers: ["y_fusion_2"],
         team: [{ speciesId: "maitrezenc", level: 80 }],
-        reward: 0, aiLevel: "elite", // BRUNO — Conseil des Chimères (gauntlet) : combat jusqu'au KO, ne change jamais de Daemon
+        reward: 0, aiLevel: "hof", //BRUNO — Conseil des Chimères (gauntlet) : IA "hof" — joue au mieux (KO/statut/setup), CHANGE face à un mauvais matchup
         intro: [
             "Hi-yah ! Le poison de KOGA ne t'a pas achevé ? Voyons si tu tiens face à la FORCE brute fusionnée.",
             "Je suis BRUNO. Mes chimères de COMBAT frappent deux fois plus fort qu'un Daemon seul — muscle et acier soudés en une bête.",
@@ -1483,7 +1483,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_fusion_dragon", x: 10, y: 2,
         requiresTrainers: ["y_fusion_3"],
         team: [{ speciesId: "ombrapanthe", level: 80 }],
-        reward: 0, aiLevel: "elite", // KAREN — Conseil des Chimères (gauntlet) : combat jusqu'au KO, ne change jamais de Daemon
+        reward: 0, aiLevel: "hof", //KAREN — Conseil des Chimères (gauntlet) : IA "hof" — joue au mieux (KO/statut/setup), CHANGE face à un mauvais matchup
         intro: [
             "*Une silhouette élégante émerge de la pénombre.* Je suis KAREN, dernière du Conseil.",
             "Un vrai Dresseur combat avec les chimères qu'il aime, sans se soucier des types. Les miennes ne se ressemblent en rien — sauf par leur âme sombre.",

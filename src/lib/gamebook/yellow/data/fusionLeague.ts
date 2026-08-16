@@ -100,7 +100,7 @@ function secondStat(speciesId: string, excl: StatKey): StatKey {
 // RÔLES DE COMBAT — spreads EV/Saiyan dédiés pour donner à une fusion une IDENTITÉ nette (au lieu du build unique
 //   « 252 signature + 252 PV » qui rendait tout le monde bulky). Chaque rôle = 2 stats EV + la stat Saiyan.
 export type FusionRole = "sweep_atk" | "sweep_spc" | "wall_def" | "wall_spc" | "tank_atk" | "tank_spc"
-const ROLE_EV: Record<FusionRole, { ev: [StatKey, StatKey]; saiyan: StatKey }> = {
+export const ROLE_EV: Record<FusionRole, { ev: [StatKey, StatKey]; saiyan: StatKey }> = {
     // NB : le point Saiyan d'un sweeper va sur son OFFENSE (pas la Vitesse — déjà à 252 EV) : ça tape plus fort ET évite
     //   qu'un boost de Vitesse ne FLIPPE le type contribué (ex. Jerbiwat PSY→ELEC si sa Vit dépasse sa Spé).
     sweep_atk: { ev: ["atk", "spe"], saiyan: "atk" }, // sweeper physique : Atk (Saiyan) + vitesse
@@ -156,7 +156,7 @@ export function tierPairs(trainerKey: string, tier: FusionTier, pairs: FusionPai
 //   unique bulky), tout en respectant la tendance NATURELLE de chaque fusion (moveset + stats). VARIÉTÉ cross-dresseur
 //   assurée : le 1er slot n'est jamais le même rôle (WILL=sweeper, KOGA=mur, BRUNO=sweeper, KAREN=tank, LANCE=mur), et
 //   le Psy (WILL) n'est pas QUE des sweepers. Inclut les murs anti-trio (Omnikang/Géckang/Mérodead/Condozenc).
-const CONSEIL_ROLES: Record<string, FusionRole> = {
+export const CONSEIL_ROLES: Record<string, FusionRole> = {
     // WILL (Psy) — attaquants spé + stallers + 1 mur.
     Divinaquil: "sweep_spc", Gloutamaki: "wall_spc", Flamarée: "wall_spc", Morrinpâte: "sweep_spc", Hippofer: "wall_def", Jerbibouh: "sweep_spc", Omnikang: "wall_spc", Géckang: "wall_def",
     // KOGA (Poison) — stallers + 1 bruiser physique + 1 sweeper élec.
@@ -207,7 +207,7 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
 // MégamonarX/Galijah EXCLUS comme parents (récompenses légendaires du joueur). Bronze = l'équipe d'origine.
 export const FUSION_BOSS_ULTRA: FusionPairDef[] = [
     { a: "pyropanthe", b: "voltapanthe", name: "Pyrovolt", role: "sweep_spc", moves: ["fulgurance", "lance_flammes", "souffle_polaire", "vague_mentale"] },        // FEU/ELEC — SWEEPER SPÉ (Vit585/Spé428) : 2 STAB + Glace/Psy coverage
-    { a: "alirocaillus", b: "coccimperatrice", name: "Alicocci", role: "sweep_atk", moves: ["pique_fatal", "crochet_maitre", "seisme", "danse_lames"] },           // VOL/COMBAT — SWEEPER PHYS (Atk415/Vit518) : 2 STAB + Séisme + set-up
+    { a: "alirocaillus", b: "coccimperatrice", name: "Alicocci", role: "tank_atk", moves: ["pique_fatal", "crochet_maitre", "seisme", "danse_lames"] },            // VOL/COMBAT — BRUISER bulky (tank_atk : PV+Atk) : ex-maillon faible (trop frêle en sweep_atk), solidifié
     { a: "kangoudead", b: "draconarque", name: "Kangonarque", role: "wall_def", moves: ["ball_ombre", "draco_charge", "seisme", "devoreur_ombres"] },              // TÉN/DRAGON — MUR anti-Ténè-iwat (immune Psy) ; Ball'Ombre ×4, Dévoreur draine
     { a: "merorem", b: "tonytony", name: "Mérotony", role: "wall_spc", moves: ["toxik", "bombe_beurk", "blizzard", "repos"] },                                     // POISON/NORMAL — STALLER (PV795/Spé522) : Toxik + Repos + gros coups spé
     { a: "ukognos", b: "leviathonn", name: "Ukoviathonn", role: "wall_spc", moves: ["cataclysme_lunaire", "hydrocanon", "fulgurance", "repos"] },                  // FÉE/EAU — MUR SPÉ (PV526/Spé508)

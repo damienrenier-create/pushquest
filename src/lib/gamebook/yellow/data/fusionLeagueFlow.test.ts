@@ -52,11 +52,9 @@ describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
             expect(t!.mapId.startsWith("yellow_fusion_"), id).toBe(true)
             expect(YELLOW_MAPS[t!.mapId], `map ${t!.mapId}`).toBeDefined() // la salle existe
         }
-        // SPLIT du switch : Conseil des Chimères = "elite" (gauntlet, ne change JAMAIS de Daemon) ; LANCE (Champion)
-        //   + DIEU SPAGHETTI (boss final, miroir) = "hof" (boss ultimes → PEUVENT changer de Daemon).
-        for (const id of ["y_fusion_1", "y_fusion_2", "y_fusion_3", "y_fusion_4"]) expect(getTrainer(id)!.aiLevel, id).toBe("elite")
-        expect(getTrainer("y_fusion_maitre")!.aiLevel).toBe("hof")
-        expect(getTrainer("y_fusion_miroir")!.aiLevel).toBe("hof")
+        // LIGUE HARDCORE : TOUS les dresseurs (Conseil des Chimères + LANCE + DIEU SPAGHETTI) = "hof" → l'IA la plus
+        //   intelligente (joue au mieux : KO/statut/setup + pilotes d'archétype) ET change face à un mauvais matchup.
+        for (const id of ["y_fusion_1", "y_fusion_2", "y_fusion_3", "y_fusion_4", "y_fusion_maitre", "y_fusion_miroir"]) expect(getTrainer(id)!.aiLevel, id).toBe("hof")
         // chaîne de gating
         expect(getTrainer("y_fusion_1")!.requiresTrainers).toBeUndefined()
         expect(getTrainer("y_fusion_2")!.requiresTrainers).toEqual(["y_fusion_1"])

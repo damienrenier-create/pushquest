@@ -1093,6 +1093,23 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         }
     }
 
+    // 🎰 RÉCOMPENSE CASINO — LIGUE DE FUSION (Conseil des Chimères + LANCE, hors boss miroir) : comme le Conseil 4, chaque
+    //   dresseur vaincu file de l'énergie de casino selon le nb de TES Daemons K.O. (5 ⚡/K.O. ; sans-faute 0 K.O. → 50 ⚡
+    //   « autographe »). grantRouletteCredit est no-op en run 3 (source d'énergie unique). Le boss miroir est exclu (son enjeu = le sacre).
+    if (b.outcome === "win" && lid && lid.startsWith("y_fusion_") && lid !== "y_fusion_miroir") {
+        const ko = b.player.team.filter((m) => m.currentHp <= 0).length
+        const tName = getTrainer(lid)?.name ?? "Conseil des Chimères"
+        if (ko === 0) {
+            grantRouletteCredit(LEAGUE_AUTOGRAPH_CREDIT)
+            rematchReward = { npcId: lid, npcName: tName, lines: ["Aucun de tes Daemons à terre face à mes chimères… du grand art, Maître.", `Tiens, ${LEAGUE_AUTOGRAPH_CREDIT} ⚡ à claquer au casino — tu l'as amplement mérité.`] }
+        } else {
+            const credit = ko * LEAGUE_ROULETTE_PER_KO
+            grantRouletteCredit(credit)
+            const taunt = ko <= 2 ? "Pas mal manœuvré… mes chimères t'ont quand même égratigné." : ko <= 4 ? "Ouf, tu en as bavé contre mes fusions ! *sourire en coin*" : "Tu as failli y rester face à mes chimères… mais l'audace paie."
+            rematchReward = { npcId: lid, npcName: tName, lines: [taunt, `Il te lâche ${credit} ⚡ à jouer au casino (${ko} Daemon${ko > 1 ? "s" : ""} K.O. × ${LEAGUE_ROULETTE_PER_KO}).`] }
+        }
+    }
+
     // LIGUE DE FUSION — SACRE : battre ton REFLET (y_fusion_miroir) BOUCLE le palier actif → on pose son marqueur
     //   `fusleague_<tier>` (échelle Bronze→Argent→Or, persisté dans defeatedTrainers) → débloque le palier suivant
     //   + décroche le titre « Maître de la Chimère ». RÉCOMPENSE = titre SEUL (aucun lot matériel). Le dialogue
