@@ -70,6 +70,7 @@ import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, 
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -1595,7 +1596,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const atFrontier = dome.tier === maxUnlockedTier(getPlayer().domeChampionships)
                 // Nouveau titre : à son tier-frontière ET seulement tant que tous les tiers ne sont pas déjà vaincus (Maître = plafond).
                 const gainedTitle = next.status === "won" && atFrontier && getPlayer().domeChampionships < DOME_TIERS.length
-                if (gainedTitle) recordDomeChampionship()
+                if (gainedTitle) {
+                    recordDomeChampionship()
+                    // PANTHÉON DU DÔME : grave l'équipe gagnante + le palier (partagé, consultable au Hall of Fame → onglet
+                    //   DÔME). Best-effort ; JAMAIS en REJEU (bulle jetable) pour ne pas polluer le palmarès. Cf. dome-hall-of-fame/.
+                    if (getActiveWorld() !== "replay") {
+                        void fetch("/api/gamebook/yellow/dome-hall-of-fame", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ team: freezeChampionTeam(getPlayer().team), tier: dome.tier }),
+                        }).catch(() => { /* hors-ligne : silencieux */ })
+                    }
+                }
                 recordDomeResult(won) // bilan DÔME (tournoi remporté / perdu) — stats Dôme dédiées
                 void persistYellowSaveNow() // IMMÉDIAT (non débouncé) : le titre/JC/⚡ atteint le serveur AVANT que le joueur puisse quitter l'app (fini la perte de palier)
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round
