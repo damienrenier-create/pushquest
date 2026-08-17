@@ -10,6 +10,7 @@
 // quickClawPct, flinchPct, incomingAccMult, negateStatDrop, expMult.
 
 import type { PokeType, StatKey } from "../battle/types"
+import { getSpecies } from "./species"
 
 export type HeldItemCategory = "type" | "soin" | "combat" | "signature" | "baie"
 
@@ -141,7 +142,13 @@ export function isHeldItem(id?: string): boolean {
 /** L'effet de l'objet s'applique-t-il à ce Daemon ? (respecte le verrou espèce signature). */
 function applies(it: HeldItemData, speciesId: string | undefined): boolean {
     if (!it.species) return true
-    return Array.isArray(it.species) ? (!!speciesId && it.species.includes(speciesId)) : it.species === speciesId
+    const lock = Array.isArray(it.species) ? it.species : [it.species]
+    if (speciesId && lock.includes(speciesId)) return true
+    // FUSION : le verrou d'espèce s'applique AUSSI si l'un des PARENTS de la fusion correspond → un objet signature
+    //   profite à la fusion qui contient son espèce (ex. Coquille Tonytony sur Cryotony/Mérotony). Les vraies espèces
+    //   n'ont pas de `fusionParents` → aucun effet de bord.
+    const parents = speciesId ? getSpecies(speciesId)?.fusionParents : undefined
+    return !!parents && (lock.includes(parents[0]) || lock.includes(parents[1]))
 }
 
 type MonRef = { speciesId?: string; heldItem?: string; heldItem2?: string }

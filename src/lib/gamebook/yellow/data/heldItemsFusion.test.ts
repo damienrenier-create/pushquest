@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { HELD_ITEMS, heldStatMult, heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "./heldItems"
+import { buildFusion, disposeFusion } from "./fusionMon"
+import { createMonInstance } from "../battle/factory"
 
 // OBJETS TENUS — un FUSIONNÉ hérite des 2 objets de ses parents (heldItem + heldItem2). Les helpers les COMBINENT
 // (le moteur les lit → engine.ts inchangé). Un Daemon normal (1 objet) reste byte-identique.
@@ -51,5 +53,17 @@ describe("Objets tenus — fusion à 2 objets", () => {
         const shell = all.find((i) => i.physDmgTakenMult !== undefined && !i.species)
         if (!shell) return
         expect(heldIncomingDmgMult({ heldItem: shell.id, heldItem2: shell.id }, true)).toBeCloseTo(shell.physDmgTakenMult! ** 2)
+    })
+
+    it("SIGNATURE via PARENT : la Coquille Tonytony s'applique à une fusion CONTENANT tonytony", () => {
+        const f = buildFusion(createMonInstance("tonytony", 50), createMonInstance("cryotyran", 50))
+        f.instance.heldItem = "coquille_tony"
+        expect(heldEffect(f.instance)?.id).toBe("coquille_tony") // verrou « tonytony » satisfait par le PARENT
+        disposeFusion(f.speciesId)
+        // Contre-preuve : sur une fusion SANS tonytony, l'objet signature ne s'applique pas.
+        const g = buildFusion(createMonInstance("cryotyran", 50), createMonInstance("magnetor", 50))
+        g.instance.heldItem = "coquille_tony"
+        expect(heldEffect(g.instance)).toBeUndefined()
+        disposeFusion(g.speciesId)
     })
 })
