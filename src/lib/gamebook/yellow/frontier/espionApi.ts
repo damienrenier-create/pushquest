@@ -27,14 +27,17 @@ export async function fetchEspionPlayers(): Promise<EspionPlayer[]> {
     } catch { return [] }
 }
 
-export async function fetchEspionVitrine(target: string): Promise<{ nickname: string; mons: EspionVitrineMon[] } | null> {
+export async function fetchEspionVitrine(target: string): Promise<{ nickname: string; mons: EspionVitrineMon[]; spyCount: number } | null> {
     try {
         const r = await fetch(`${BASE}?target=${encodeURIComponent(target)}`)
         const j = await r.json()
         if (!j?.ok) return null
-        return { nickname: String(j.nickname ?? "Dresseur"), mons: Array.isArray(j.mons) ? (j.mons as EspionVitrineMon[]) : [] }
+        return { nickname: String(j.nickname ?? "Dresseur"), mons: Array.isArray(j.mons) ? (j.mons as EspionVitrineMon[]) : [], spyCount: Math.max(0, Math.floor(Number(j.spyCount) || 0)) }
     } catch { return null }
 }
+
+/** Coût d'une révélation : 1 JC par NIVEAU + frais de dossier 10×(spyCount+1). (Doit refléter le calcul serveur.) */
+export const espionRevealCost = (level: number, spyCount: number) => Math.max(1, Math.floor(level || 1)) + 10 * (Math.max(0, spyCount) + 1)
 
 export async function postEspionReveal(target: string, uid: string): Promise<EspionReveal> {
     try {

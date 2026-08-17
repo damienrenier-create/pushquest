@@ -888,7 +888,7 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
         emit()
         return "team"
     }
-    st = { ...st, pc: [...st.pc, owned] }
+    st = { ...st, pc: [...st.pc, healedForPc(owned)] } // capturé mais équipe pleine → arrive SOIGNÉ au PC
     emit()
     return "pc"
 }
@@ -2410,12 +2410,20 @@ export function reorderMove(uid: string, from: number, to: number) {
 // PC / boîtes — dépôt, retrait, renommage, soin hors combat
 // ============================================================
 
-/** Dépose un Daemon de l'équipe vers le PC. Refuse de vider entièrement l'équipe. */
+/** Copie SOIGNÉE d'un Daemon (PV pleins + statut effacé + PP refaits) — appliquée à tout Daemon ENTRANT au PC.
+ *  Le PC agit comme un « repos » : plus besoin de sortir un Daemon blessé + passer au Centre. */
+function healedForPc(m: MonInstance): MonInstance {
+    const sp = getSpecies(m.speciesId)
+    const max = sp ? fullStats(m, sp).hp : m.currentHp
+    return { ...m, currentHp: max, status: "NONE", statusCounter: 0, moves: m.moves.map((mv) => ({ ...mv, pp: mv.ppMax })) }
+}
+
+/** Dépose un Daemon de l'équipe vers le PC (SOIGNÉ à l'arrivée). Refuse de vider entièrement l'équipe. */
 export function depositToPc(uid: string): { ok: boolean; reason?: "introuvable" | "last" } {
     const idx = st.team.findIndex((m) => m.uid === uid)
     if (idx < 0) return { ok: false, reason: "introuvable" }
     if (st.team.length <= 1) return { ok: false, reason: "last" }
-    const mon = st.team[idx]
+    const mon = healedForPc(st.team[idx])
     st = { ...st, team: st.team.filter((_, i) => i !== idx), pc: [...st.pc, mon] }
     emit()
     return { ok: true }
@@ -2431,6 +2439,26 @@ export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvabl
     st = { ...st, pc: st.pc.filter((_, i) => i !== idx), team: [...st.team, mon] }
     emit()
     return { ok: true }
+}
+
+/** SWAP 1-ACTION équipe↔PC en une seule écriture. `pcUid` entre dans l'équipe ; si l'équipe est PLEINE, `teamUid` en
+ *  sort (à la MÊME position → lead/ordre préservé) et part au PC SOIGNÉ. Si l'équipe a de la place, `teamUid` est ignoré. */
+export function swapTeamPc(pcUid: string, teamUid?: string): { ok: boolean; reason?: "introuvable" | "listed" | "full" } {
+    const pcIdx = st.pc.findIndex((m) => m.uid === pcUid)
+    if (pcIdx < 0) return { ok: false, reason: "introuvable" }
+    if (st.pc[pcIdx].tradeState === "listed") return { ok: false, reason: "listed" } // engagé sur l'étal → verrouillé
+    const incoming = st.pc[pcIdx]
+    if (st.team.length < TEAM_MAX) { // place libre → simple retrait
+        st = { ...st, pc: st.pc.filter((_, i) => i !== pcIdx), team: [...st.team, incoming] }
+        emit(); return { ok: true }
+    }
+    if (!teamUid) return { ok: false, reason: "full" } // équipe pleine → il faut choisir qui sort
+    const teamIdx = st.team.findIndex((m) => m.uid === teamUid)
+    if (teamIdx < 0) return { ok: false, reason: "introuvable" }
+    const outgoing = healedForPc(st.team[teamIdx])   // le sortant part au PC → soigné (cohérent avec depositToPc)
+    const team = [...st.team]; team[teamIdx] = incoming // l'entrant prend la place EXACTE du sortant
+    st = { ...st, team, pc: st.pc.filter((_, i) => i !== pcIdx).concat(outgoing) }
+    emit(); return { ok: true }
 }
 
 /** RELÂCHE définitivement un Daemon de la RÉSERVE (PC) — retiré du jeu, ne revient pas. On ne relâche QUE depuis

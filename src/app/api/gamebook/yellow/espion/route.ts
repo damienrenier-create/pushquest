@@ -18,7 +18,7 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 
 export const dynamic = "force-dynamic"
 
-const SPY_BASE_COST = 60 // JC de la 1re révélation ; ×(spyCount+1) ensuite → 60, 120, 180… (croissant, sans cap)
+const FEE_STEP = 10 // « frais de dossier » : 10 JC à la 1re révélation, +10 à chaque suivante (10, 20, 30…), en plus du niveau du Daemon
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -52,12 +52,13 @@ export async function GET(req: NextRequest) {
                 select: { flags: true, user: { select: { nickname: true } } },
             })
             if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
-            const { team, pc } = flagsOf(row.flags)
-            const mons = [
-                ...team.map((m) => vitrineMon(m, "team")),
-                ...pc.slice(0, 60).map((m) => vitrineMon(m, "pc")),
-            ].filter((m) => m.uid && m.speciesId)
-            return NextResponse.json({ ok: true, nickname: row.user?.nickname ?? "Dresseur", mons })
+            // On n'espionne QUE ce que le joueur a SUR LUI (son équipe), jamais sa réserve (PC).
+            const { team } = flagsOf(row.flags)
+            const mons = team.map((m) => vitrineMon(m, "team")).filter((m) => m.uid && m.speciesId)
+            // spyCount du SPECTATEUR → le client calcule le prix de chaque fiche : niveau + frais de dossier 10×(spyCount+1).
+            let spyCount = 0
+            try { const p = await (prisma as any).frontierProfile.findUnique({ where: { userId: auth.userId } }); spyCount = Math.max(0, Math.floor(Number(p?.spyCount) || 0)) } catch { /* table absente → 0 */ }
+            return NextResponse.json({ ok: true, nickname: row.user?.nickname ?? "Dresseur", mons, spyCount })
         } catch {
             return NextResponse.json({ error: "Read failed" }, { status: 500 })
         }
@@ -99,8 +100,8 @@ export async function POST(req: NextRequest) {
             select: { flags: true, user: { select: { nickname: true } } },
         })
         if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
-        const { team, pc } = flagsOf(row.flags)
-        mon = [...team, ...pc].find((m) => String(m.uid ?? "") === uid) ?? null
+        const { team } = flagsOf(row.flags)
+        mon = team.find((m) => String(m.uid ?? "") === uid) ?? null // équipe seulement (pas le PC)
         nickname = row.user?.nickname ?? "Dresseur"
     } catch {
         return NextResponse.json({ error: "Read failed" }, { status: 500 })
@@ -114,7 +115,9 @@ export async function POST(req: NextRequest) {
         const existing = await fp.findUnique({ where: { userId: auth.userId } })
         spyCount = Math.max(0, Math.floor(Number(existing?.spyCount) || 0))
         jc = Math.max(0, Math.floor(Number(existing?.jc) || 0))
-        cost = SPY_BASE_COST * (spyCount + 1)
+        // Coût = 1 JC par NIVEAU du Daemon + FRAIS DE DOSSIER croissants (10, 20, 30… = 10×(spyCount+1)).
+        const monLevel = Math.max(1, Math.floor(Number((mon as any).level) || 1))
+        cost = monLevel + FEE_STEP * (spyCount + 1)
         if (jc < cost) return NextResponse.json({ ok: false, reason: "insufficient", jc, cost }, { status: 200 })
         await fp.update({ where: { userId: auth.userId }, data: { jc: jc - cost } })
         jc = jc - cost

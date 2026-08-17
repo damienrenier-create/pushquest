@@ -480,6 +480,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => { setRun2Snap(readRun2Snapshot()) }, [])
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
+    const ficheTouchY = useRef<number | null>(null) // + axe Y : un swipe ne compte que s'il DOMINE le scroll vertical
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
@@ -4338,12 +4339,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div
                             style={menuBoxStyle}
                             onClick={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => { ficheTouchX.current = e.touches[0]?.clientX ?? null }}
+                            onTouchStart={(e) => { ficheTouchX.current = e.touches[0]?.clientX ?? null; ficheTouchY.current = e.touches[0]?.clientY ?? null }}
                             onTouchEnd={(e) => {
-                                const sx = ficheTouchX.current; ficheTouchX.current = null
-                                if (sx == null) return
+                                const sx = ficheTouchX.current, sy = ficheTouchY.current; ficheTouchX.current = null; ficheTouchY.current = null
+                                if (sx == null || sy == null) return
                                 const dx = (e.changedTouches[0]?.clientX ?? sx) - sx
-                                if (Math.abs(dx) > 45) slide(dx < 0 ? 1 : -1) // swipe gauche = suivant
+                                const dy = (e.changedTouches[0]?.clientY ?? sy) - sy
+                                // swipe horizontal SEULEMENT : doit dépasser 60px ET dominer nettement le vertical (sinon = scroll de la fiche)
+                                if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) slide(dx < 0 ? 1 : -1) // swipe gauche = suivant
                             }}
                         >
                             <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
@@ -4351,7 +4354,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(-1)}>◀</button>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(1)}>▶</button>
                             </div>
-                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: SHINY_FILTER } : ficheSpriteStyle} />}
+                            {sp?.sprite && <img key={live.uid + ":" + live.speciesId} src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: SHINY_FILTER } : ficheSpriteStyle} />}
                             <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
                                 N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `PC ${ficheIdx + 1}/${ficheList.length}`}
                             </div>
