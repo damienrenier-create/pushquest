@@ -5,6 +5,7 @@
 
 import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
+import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
 import type { MonInstance } from "../battle/types"
@@ -75,9 +76,19 @@ export function applyServerSave(save: YellowSave): void {
     hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
+    // RÉCONCILIATION Pokédex ← Daemons POSSÉDÉS : un Daemon DONNÉ (starter, échange) ne passe pas par la capture
+    //   sauvage → il n'entrait JAMAIS dans caught[] (bug historique : Gavillus starter run 2 possédé mais absent du dex).
+    //   On ré-dérive donc le dex depuis team+pc de TOUS les mondes, borné aux VRAIES espèces numérotées : getSpecies
+    //   résout les alias canon (custom canonisé → espèce réelle) et SPECIES[] exclut custom/fusions/Ukognofy → n'enfle
+    //   PAS le compteur Galijah (150 espèces). Purement ADDITIF (union, jamais de retrait) → rétroactif + save-safe.
+    const ownedCanon = [...new Set(
+        pdxWorlds.flatMap((w) => [...(w.team ?? []), ...(w.pc ?? [])])
+            .map((m) => getSpecies(m.speciesId)?.id)
+            .filter((id): id is string => !!id && !!SPECIES[id]),
+    )]
     hydratePokedex({
-        seen: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []))],
-        caught: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []))],
+        seen: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []), ...ownedCanon])],
+        caught: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []), ...ownedCanon])],
     })
     // BAIES : le secret des baies est GLOBAL (connaissance acquise « une fois pour toutes ») → OR sur tous les
     // mondes. Appris en run 1/2 → reste connu en run 2/3. snapshot() le réécrit ensuite dans tous les mondes.

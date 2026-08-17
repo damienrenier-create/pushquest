@@ -13,7 +13,7 @@
 //   (hauts faits, cf. data/run1Badges) et n'appelle plus ce module — la branche `run1` ci-dessous est conservée
 //   par prudence mais n'est plus câblée.
 
-import { visibleDexSpecies } from "../data/species"
+import { visibleDexSpecies, SPECIES } from "../data/species"
 
 // Références de normalisation (les « max » de chaque jauge) — tunables en un chiffre.
 export const ENERGY_BUDGET = 10000  // énergie offerte au départ du run 2 (NGPLUS_START_ENERGY)
@@ -64,7 +64,10 @@ export function computeGrade(inp: GradeInputs, opts?: { run1?: boolean }): { gra
 
     // 📖 % de complétion du Pokédex. run 2 = tout révélé (~144) ; run 1 = roster run 1 uniquement (isRun2=false).
     const dexTotal = visibleDexSpecies(inp.caught, true, !run1).length
-    const distinctCaught = new Set(inp.caught).size
+    // Numérateur BORNÉ à l'univers du dénominateur (espèces NUMÉROTÉES) : inp.caught (= caughtThisRun) inclut aussi les
+    //   fusions de base + Ukognofy (ajoutés par syncPokedex), jamais comptés dans dexTotal → sans filtre, distinctCaught
+    //   pouvait DÉPASSER dexTotal (« 146/144 espèces », pct saturé trop tôt). SPECIES[] exclut fusions/Ukognofy/custom.
+    const distinctCaught = new Set(inp.caught.filter((id) => !!SPECIES[id])).size
     const speciesPct = dexTotal > 0 ? clamp01(distinctCaught / dexTotal) : 0
 
     // 💪 somme des niveaux de l'équipe (sur 600 = 6 × 100).

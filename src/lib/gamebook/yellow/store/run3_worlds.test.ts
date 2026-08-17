@@ -121,7 +121,9 @@ describe("pokédex global (cumulatif, persiste run→run)", () => {
         const run3 = world({ team: [mon("r3", "magnetor", 60)], pokedex: { seen: ["c"], caught: ["c"] }, run3Used: true, ngplusUsed: true })
         const top = world({ team: [mon("r1", "cerfeuillu", 63)], pokedex: { seen: ["a"], caught: ["a"] }, activeWorld: "run3", ngplusWorld: run2, run3World: run3, run3Used: true, ngplusUsed: true })
         applyServerSave(top)
-        expect(getPokedex().caught.sort()).toEqual(["a", "b", "c"]) // union des 3 mondes divergents
+        // Union des pokédex des 3 mondes (a,b,c) + RÉCONCILIATION des Daemons POSSÉDÉS (cerfeuillu/magnetor/razmaree,
+        //   vraies espèces) → un starter/échange donné (jamais capturé) entre enfin au dex. Cf. saveManager applyServerSave.
+        expect(getPokedex().caught.sort()).toEqual(["a", "b", "c", "cerfeuillu", "magnetor", "razmaree"])
     })
 
     it("snapshot : le pokédex global est écrit à l'IDENTIQUE dans TOUS les mondes", () => {
@@ -130,7 +132,8 @@ describe("pokédex global (cumulatif, persiste run→run)", () => {
         applyServerSave(top)   // pokédex global = {a, b}
         markCaught("d")        // nouvelle capture pendant la session
         const snap = snapshot()
-        expect(snap.pokedex.caught.sort()).toEqual(["a", "b", "d"])              // monde live (champs plats)
-        expect(snap.ngplusWorld?.pokedex.caught.sort()).toEqual(["a", "b", "d"]) // monde run 2 = MÊME set global
+        // {a,b} + possédés {cerfeuillu (live), razmaree (run 2)} + capture de session {d}, écrit à l'IDENTIQUE partout.
+        expect(snap.pokedex.caught.sort()).toEqual(["a", "b", "cerfeuillu", "d", "razmaree"])              // monde live (champs plats)
+        expect(snap.ngplusWorld?.pokedex.caught.sort()).toEqual(["a", "b", "cerfeuillu", "d", "razmaree"]) // monde run 2 = MÊME set global
     })
 })

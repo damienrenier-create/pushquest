@@ -59,7 +59,7 @@ describe("Multi-profils — création (Rejouer run 1) & bascule (NON-destructif)
         const a = getAltProfileSummaries()[0]
         expect(a.isChampion).toBe(true)
         expect(a.badges).toBe(5)
-        expect(a.dex).toBe(1)
+        expect(a.dex).toBe(2) // cerfeuillu (équipe) + pyrokoss (PC) : les Daemons POSSÉDÉS comptent au dex (réconciliation applyServerSave)
     })
 
     it("switchProfile : rebascule sur l'ancien profil → tout restauré (badges, champion, Pokédex)", async () => {
