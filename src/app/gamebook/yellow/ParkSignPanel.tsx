@@ -65,7 +65,7 @@ function TypesPage() {
     )
 }
 
-const TOPICS: { t: string; body: ReactNode }[] = [
+export const TOPICS: { t: string; body: ReactNode }[] = [
     { t: "🎯 Capturer un Daemon", body: <CapturePage /> },
     {
         t: "⚡ Reps → Énergie", body: <>
