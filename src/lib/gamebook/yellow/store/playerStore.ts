@@ -2442,6 +2442,19 @@ export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable
     return { ok: true }
 }
 
+/** ÉCHANGE ASYNCHRONE (Grand Marchand) — ajoute au PC un Daemon reçu via une livraison serveur. On lui pose un
+ *  uid FRAIS (anti-collision) et on le range dans la réserve. Renvoie false si le blob est invalide (espèce inconnue). */
+let tradeMonSeq = 0
+export function addTradedMonToPc(raw: unknown): boolean {
+    if (!raw || typeof raw !== "object") return false
+    const m = raw as MonInstance
+    if (typeof m.speciesId !== "string" || !getSpecies(m.speciesId)) return false
+    const mon: MonInstance = { ...m, uid: `trade-${m.speciesId}-${Date.now()}-${++tradeMonSeq}` }
+    st = { ...st, pc: [...st.pc, mon] }
+    emit()
+    return true
+}
+
 /** Échange la position de deux Daemons de l'équipe (réordonnancement manuel). */
 export function swapTeam(uidA: string, uidB: string): boolean {
     if (uidA === uidB) return false

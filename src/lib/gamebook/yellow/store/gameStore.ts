@@ -320,6 +320,8 @@ interface GameStore {
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
     domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
+    espionOpen: boolean // USINE — L'ESPION : consulter (payant) les rosters d'autres joueurs
+    trocOpen: boolean // USINE — LE GRAND MARCHAND : échange asynchrone de Daemons
     fusionMenuOpen: boolean // AUTEL DE LA CHIMÈRE : choisir 2 Daemons → fusion → combat-épreuve
     fusionAtelierOpen: boolean // ORDINATEUR DE FUSION : atelier (boîte/équipe + les 6 slots de fusion)
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
@@ -390,6 +392,8 @@ interface GameStore {
     closeMoveReminder: () => void
     closeCombatShop: () => void
     closeDomeMenu: () => void
+    closeEspion: () => void
+    closeTroc: () => void
     closeFusionMenu: () => void
     closeFusionAtelier: () => void
     openPc: () => void
@@ -994,6 +998,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     moveReminderOpen: false,
     combatShopOpen: false,
     domeMenuOpen: false,
+    espionOpen: false,
+    trocOpen: false,
     fusionMenuOpen: false,
     fusionAtelierOpen: false,
     signOpen: null,
@@ -1035,7 +1041,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -1849,6 +1855,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ domeMenuOpen: true })
             return
         }
+        // USINE — L'ESPION : ouvre le panneau d'espionnage (rosters d'autres joueurs, payant).
+        if (npc.id === "y_usine_espion") {
+            set({ espionOpen: true })
+            return
+        }
+        // USINE — LE GRAND MARCHAND : ouvre l'étal d'échange asynchrone.
+        if (npc.id === "y_usine_marchand") {
+            set({ trocOpen: true })
+            return
+        }
         // AUTEL DE LA CHIMÈRE : ouvre le flux de fusion (choisir 2 Daemons → aperçu → combat-épreuve).
         if (npc.id === "y_autel_chimere") {
             set({ fusionMenuOpen: true })
@@ -2548,6 +2564,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
     closeDomeMenu: () => set({ domeMenuOpen: false }),
+    closeEspion: () => set({ espionOpen: false }),
+    closeTroc: () => set({ trocOpen: false }),
     closeFusionMenu: () => set({ fusionMenuOpen: false }),
     closeFusionAtelier: () => set({ fusionAtelierOpen: false }),
     openPc: () => set({ pcOpen: true, fusionAtelierOpen: false }),

@@ -760,6 +760,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_dome_maitre: { url: "/yellow/sprites/npc_dome_mage.png", frames: 1, h: 2.0 },
     // DAEMOMANIAQUE (guide de capture, Cendreville post-run-3) — sprite fourni par Sartay.
     y_daemomaniaque: { url: "/yellow/sprites/npc/daemomaniaque.png", frames: 1, h: 1.5 },
+    // L'ESPION de l'Usine réutilise le sprite du maniaque (jumeau, choix de Sartay).
+    y_usine_espion: { url: "/yellow/sprites/npc/daemomaniaque.png", frames: 1, h: 1.5 },
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
     // Sbire = portrait de la Nymphe Nouille (image unique).
     y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1, h: 1.9 },

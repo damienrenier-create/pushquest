@@ -536,11 +536,45 @@ model FrontierProfile {
   domeBest    Int      @default(0)    // meilleur résultat Dôme (rounds gagnés)
   symbols     Json     @default("[]") // symboles de prestige obtenus (cosmétique)
   replaysUsed Int      @default(0)    // nb de REJEUX (« run bis ») déjà lancés → coût JC croissant du prochain (global, cf. data/replayCost)
+  spyCount    Int      @default(0)    // ESPION (Usine) : nb d'espionnages payants effectués → coût JC croissant, PERSO, jamais reset
   pushupDebtOwed     Int @default(0)  // VŒU GÉNIE (Mools) : total de POMPES dues (100 × nb de refus). 0 = aucune dette.
   pushupDebtBaseline Int @default(0)  // cumul de pompes (all-time PUSHUP) figé quand la dette a été posée → dette restante = owed − (cumul_actuel − baseline).
   energyGrantPending Int @default(0)  // CADEAU / VŒU GÉNIE : énergie à créditer UNE FOIS au chargement. Canal serveur→client ANTI-ÉCRASEMENT (comme pushupDebt) : vit hors de la save, donc un autosave ne peut pas l'effacer. Le client la consomme via /energy-grant (atomique) puis crédite. 0 = rien.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ÉCHANGE ASYNCHRONE (Grand Marchand de l'Usine). ESCROW : un Daemon déposé/proposé est RETIRÉ de la save de son
+//   propriétaire (le client ne le retire qu'APRÈS confirmation serveur) et stocké ici en JSON → jamais de duplication.
+//   La livraison au destinataire passe par TradeDelivery (canal serveur→client HORS save, anti-écrasement, comme
+//   energyGrantPending) : le client la réclame au chargement, l'ajoute à son PC, puis l'acquitte (suppression).
+model TradeListing {
+  id            String   @id @default(cuid())
+  ownerId       String                       // dépositaire
+  ownerNickname String   @default("Dresseur")
+  monJson       Json                          // Daemon en escrow (retiré de la save de l'owner)
+  createdAt     DateTime @default(now())
+  @@index([ownerId])
+}
+model TradeOffer {
+  id              String   @id @default(cuid())
+  listingId       String                       // la listing (étal) ciblée
+  ownerId         String                       // propriétaire de la listing (pour lister ses offres reçues)
+  offererId       String                       // proposeur
+  offererNickname String   @default("Dresseur")
+  monJson         Json                          // Daemon proposé, en escrow (retiré de la save du proposeur)
+  createdAt       DateTime @default(now())
+  @@index([listingId])
+  @@index([ownerId])
+  @@index([offererId])
+}
+model TradeDelivery {
+  id          String   @id @default(cuid())
+  recipientId String                       // destinataire qui réclamera le Daemon au chargement
+  monJson     Json
+  note        String   @default("")        // ex. « Échange avec X » / « Retour d'étal »
+  createdAt   DateTime @default(now())
+  @@index([recipientId])
 }
 
 model UserStatus {

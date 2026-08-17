@@ -105,6 +105,50 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["« Champion du Dôme… la Coupe est à toi. Choisis la CT du Maître que tu graveras à ton nom. »"],
     },
 
+    // === USINE DE COMBAT — 3 PNJ (haut de la salle). Le launcher de série reste au centre. ===
+    // (a) MAÎTRE DE L'USINE (haut-gauche) : explique la salle + le palier CHAMPION (série ≥ 46 → CT du Maître). Dialogue pur.
+    {
+        id: "y_usine_maitre",
+        name: "MAÎTRE DE L'USINE",
+        mapId: "yellow_combat_usine",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🔧", color: "#6aa0ec" },
+        initialX: 3,
+        initialY: 2,
+        dialoguesAfter: [
+            "« Bienvenue à l'Usine, pilote. Ici tu combats avec une équipe de LOCATION — draftée à chaque série. »",
+            "Tiens la série le plus loin possible. Franchis la 46ᵉ victoire — l'équivalent du 4ᵉ Dan du Dôme — et tu deviens CHAMPION DE L'USINE.",
+            "« Le Champion grave son nom et choisit UNE des CT du Maître. Une récompense qu'on ne décroche qu'ici, à la Tour ou au Dôme. »",
+        ],
+    },
+    // (b) L'ESPION (haut-milieu, sprite du maniaque) : paie des JC pour consulter la FICHE COMPLÈTE d'un Daemon d'un
+    //     autre joueur (IV/EV/Saiyan/moveset). Interception gameStore (npc.id === "y_usine_espion" → espionOpen).
+    {
+        id: "y_usine_espion",
+        name: "L'ESPION",
+        mapId: "yellow_combat_usine",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🕵️", color: "#8e7cc3" },
+        initialX: 8,
+        initialY: 2,
+        dialoguesAfter: ["« Psst… tu veux voir les secrets des autres dresseurs ? Leurs stats, leurs IV, leurs attaques… Ça se paie en Jetons. »"],
+    },
+    // (c) LE GRAND MARCHAND (haut-droite) : échange ASYNCHRONE de Daemons (l'étal + offres + confirmations).
+    //     Interception gameStore (npc.id === "y_usine_marchand" → trocOpen).
+    {
+        id: "y_usine_marchand",
+        name: "LE GRAND MARCHAND",
+        mapId: "yellow_combat_usine",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛒", color: "#e0a458" },
+        initialX: 12,
+        initialY: 2,
+        dialoguesAfter: ["« Dépose tes Daemons sur mon étal. D'autres dresseurs viendront proposer les leurs — et quand vous serez d'accord, j'échange. »"],
+    },
+
     // === VILLE — ACE (rival quotidien, IA "ace", équipe évolutive par joueur) ===
     // Se tient en (0,16) ; interpelle aussi le joueur sur la bande (0,17-19).
     {

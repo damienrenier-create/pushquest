@@ -73,6 +73,8 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed } from "@/lib/gamebook/yellow/store/playerStore"
 import DomeMasters from "./DomeMasters"
+import EspionPanel from "./EspionPanel"
+import TrocPanel from "./TrocPanel"
 import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
@@ -279,6 +281,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closePc = useGameStore((s) => s.closePc)
     const domeMenuOpen = useGameStore((s) => s.domeMenuOpen)   // carrousel du Maître du Dôme
     const closeDomeMenu = useGameStore((s) => s.closeDomeMenu)
+    const espionOpen = useGameStore((s) => s.espionOpen)
+    const closeEspion = useGameStore((s) => s.closeEspion)
+    const trocOpen = useGameStore((s) => s.trocOpen)
+    const closeTroc = useGameStore((s) => s.closeTroc)
     const fusionMenuOpen = useGameStore((s) => s.fusionMenuOpen) // AUTEL DE LA CHIMÈRE (salle de fusion)
     const closeFusionMenu = useGameStore((s) => s.closeFusionMenu)
     const fusionAtelierOpen = useGameStore((s) => s.fusionAtelierOpen) // ORDINATEUR DE FUSION (atelier 6 slots)
@@ -3538,6 +3544,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <LabPanel />
             <MoveReminderPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 39) }} />}
+            {espionOpen && <EspionPanel onClose={closeEspion} onCharged={(m) => setToast(m)} />}
+            {trocOpen && <TrocPanel onClose={closeTroc} onToast={(m) => setToast(m)} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
             {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
