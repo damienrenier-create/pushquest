@@ -204,6 +204,9 @@ interface PlayerState {
     potionBuysToday?: number
     /** BOURSE — nb de recharges d'énergie payées en JC aujourd'hui → +10 %/achat sur TOUT le shop (reset quotidien). */
     jcEnergyBuysToday?: number
+    /** HAUT FAIT — défaites CUMULÉES par palier de la Ligue de Fusion (bronze/argent/or). Fige naturellement à la
+     *  complétion d'un palier (les défaites suivantes comptent pour le palier actif suivant). + de défaites = badge - cher. */
+    fusionLeagueDefeats?: Record<string, number>
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -533,6 +536,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         curseFreeItemDate: "curseFreeItemDate" in p ? p.curseFreeItemDate : st.curseFreeItemDate,
         potionBuysToday: "potionBuysToday" in p ? p.potionBuysToday : st.potionBuysToday,
         jcEnergyBuysToday: "jcEnergyBuysToday" in p ? p.jcEnergyBuysToday : st.jcEnergyBuysToday,
+        fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
     }
     emit()
@@ -1346,6 +1350,14 @@ export function getJcEnergyBuysToday(): number { return st.jcEnergyBuysToday ?? 
 /** BOURSE — enregistre une recharge d'énergie payée en JC → +1 (le shop entier prend +10 % aujourd'hui). */
 export function recordJcEnergyBuy() {
     st = { ...st, jcEnergyBuysToday: (st.jcEnergyBuysToday ?? 0) + 1 }
+    emit()
+}
+/** HAUT FAIT Ligue de Fusion — défaites cumulées sur un palier (bronze/argent/or). */
+export function getFusionLeagueDefeats(tier: string): number { return st.fusionLeagueDefeats?.[tier] ?? 0 }
+/** Enregistre une DÉFAITE en Ligue de Fusion sur le palier donné (barème du badge de complétion : + de défaites = - de points). */
+export function recordFusionLeagueDefeat(tier: string) {
+    const cur = st.fusionLeagueDefeats ?? {}
+    st = { ...st, fusionLeagueDefeats: { ...cur, [tier]: (cur[tier] ?? 0) + 1 } }
     emit()
 }
 

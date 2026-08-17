@@ -216,6 +216,8 @@ export interface YellowSave {
     jcEnergyBuysToday?: number
     /** VŒU DU GÉNIE (cap casino) — plafond de mise QUOTIDIEN progressif (50 → +10/jour → 1000). Optionnel/additif. */
     casinoCapToday?: number
+    /** HAUT FAIT — défaites cumulées par palier de la Ligue de Fusion (barème du badge de complétion). Optionnel/additif. */
+    fusionLeagueDefeats?: Record<string, number>
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -667,6 +669,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         potionBuysToday: typeof o.potionBuysToday === "number" ? Math.max(0, Math.floor(o.potionBuysToday)) : undefined,
         jcEnergyBuysToday: typeof o.jcEnergyBuysToday === "number" ? Math.max(0, Math.floor(o.jcEnergyBuysToday)) : undefined,
         casinoCapToday: typeof o.casinoCapToday === "number" ? Math.max(0, Math.floor(o.casinoCapToday)) : undefined,
+        fusionLeagueDefeats: o.fusionLeagueDefeats && typeof o.fusionLeagueDefeats === "object" && !Array.isArray(o.fusionLeagueDefeats)
+            ? Object.fromEntries(Object.entries(o.fusionLeagueDefeats as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
+            : undefined,
     }
 }
 

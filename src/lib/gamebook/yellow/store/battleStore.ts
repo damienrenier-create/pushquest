@@ -58,6 +58,7 @@ import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
+import { recordFusionLeagueDefeat } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -1229,6 +1230,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // KO en LIGUE DE FUSION (y_fusion_*) : on FORCE un whiteout → la carte renvoie au DÔME DE FUSION (Autel). L'épreuve
     //   de l'AUTEL (fusion:TRIAL), elle, ne whiteout PAS (on y est déjà — on reste pour re-fusionner). Scopé y_fusion_*.
     const isFusionLeague = isFusionLeagueTrainer(storeState.trainer?.trainerId)
+    // HAUT FAIT — DÉFAITE en Ligue de Fusion : on l'impute au palier ACTIF (bronze/argent/or). Le badge de complétion
+    //   de ce palier vaudra d'autant MOINS de points. La défaite fige le palier (une fois bronze bouclé, les défaites
+    //   comptent pour argent). Scopé y_fusion_* ; le miroir/boss inclus (c'est bien une tentative ratée du palier).
+    if (isLose && isFusionLeague) recordFusionLeagueDefeat(activeFusionTier((m) => isTrainerDefeated(m)))
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
     setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 

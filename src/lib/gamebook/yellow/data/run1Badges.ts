@@ -75,6 +75,7 @@ export interface BadgeInput {
     fusionsCreated?: number       // fusionHistory.length (fusions créées à l'Autel)
     caughtFusion?: boolean        // a capturé une fusion SAUVAGE (espèce dexNo >= 500) via Fusio-Ball
     fusionsDiscovered?: number    // fusions distinctes APERÇUES au Fusiodex (seen ∩ dexNo >= 500)
+    fusionLeagueDefeats?: Record<string, number> // défaites par palier Ligue de Fusion (barème DÉGRESSIF des hauts faits de complétion)
     // ── side quests « plaisir » (dérivés DIRECTS de la save → rétroactifs, aucun nouveau champ save) ──
     pokerPlayed?: boolean         // pokerFirstGameDone (a joué au moins une partie de poker)
     heldItemEquipped?: boolean    // un Daemon (équipe ou PC) porte un objet tenu
@@ -100,8 +101,14 @@ const MK_MERCHANT = "y_combat_merchant_intro"
 const MK_NEXUS_B2F = "y_pnj3_grotte_b2f"
 const MK_AUTEL = "autel_visited"
 const MK_FUSION_UNLOCK = "fusion_unlocked"
+const MK_FUSION_BRONZE = "fusleague_bronze"
+const MK_FUSION_ARGENT = "fusleague_argent"
 const MK_FUSION_OR = "fusleague_or"
 const MK_FUSION_TIERS: readonly string[] = ["fusleague_bronze", "fusleague_argent", "fusleague_or"]
+/** Barème DÉGRESSIF d'un haut fait de complétion de palier (Ligue de Fusion) : run PARFAIT (0 défaite) = max ;
+ *  chaque défaite subie sur CE palier retire `step` points, plancher `floor`. Cf. recordFusionLeagueDefeat. */
+const fusionTierPoints = (tier: string, max: number, step: number, floor: number) => (i: BadgeInput) =>
+    Math.max(floor, max - step * (i.fusionLeagueDefeats?.[tier] ?? 0))
 const MK_UKOGNOFY = "ukognofy_caught" // marqueur posé à la capture d'Ukognofy (ukognofy.ts UKOGNOFY_CAUGHT_MARKER)
 const FRERES_GLACON: readonly string[] = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"]
 const PLAGE_TRAINERS: readonly string[] = ["y_plage_pecheur", "y_plage_nageuse", "y_plage_marin"]
@@ -121,6 +128,9 @@ export interface BadgeDef {
     earned: (i: BadgeInput) => boolean
     /** SECRET uniquement : révélé (grisé apparaît) quand vrai. Défaut = earned() (apparaît en même temps qu'obtenu). */
     reveal?: (i: BadgeInput) => boolean
+    /** POINTS VARIABLES (optionnel) : remplace TIER_POINTS[tier] par un calcul (ex. barème DÉGRESSIF selon les défaites).
+     *  Le `tier` ne sert alors qu'à l'affichage (emoji/couleur). Renvoie un entier ≥ 0. Ignoré si le badge n'est pas gagné. */
+    points?: (i: BadgeInput) => number
 }
 
 export const BADGES: readonly BadgeDef[] = [
@@ -192,7 +202,10 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "fusion_first", label: "Créer ta 1ʳᵉ fusion", tier: "silver", secret: true, cat: "fusion", earned: (i) => (i.fusionsCreated ?? 0) >= 1, reveal: (i) => hasMk(i, MK_AUTEL) || (i.fusionsCreated ?? 0) >= 1 },
     { id: "fusion_league", label: "Débloquer la Ligue de Fusion", tier: "gold", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_UNLOCK), reveal: (i) => (i.fusionsCreated ?? 0) >= 1 || hasMk(i, MK_AUTEL) || hasMk(i, MK_FUSION_UNLOCK) },
     { id: "fusion_champion", label: "Maître de la Chimère (Ligue de Fusion vaincue)", tier: "diamond", secret: true, cat: "fusion", earned: (i) => hasAnyMk(i, MK_FUSION_TIERS), reveal: (i) => hasMk(i, MK_FUSION_UNLOCK) || hasAnyMk(i, MK_FUSION_TIERS) },
-    { id: "fusion_gold", label: "Champion OR de la Ligue de Fusion", tier: "legend", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_OR), reveal: (i) => hasAnyMk(i, MK_FUSION_TIERS) },
+    // HAUTS FAITS DE COMPLÉTION (points DÉGRESSIFS selon les défaites du palier — le run PARFAIT, 0 défaite, vaut le max) :
+    { id: "fusleague_bronze_run", label: "Boucler le palier BRONZE de la Ligue de Fusion", tier: "gold", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_BRONZE), reveal: (i) => hasMk(i, MK_AUTEL) || hasMk(i, MK_FUSION_UNLOCK), points: fusionTierPoints("bronze", 40, 5, 10) },
+    { id: "fusleague_argent_run", label: "Boucler le palier ARGENT de la Ligue de Fusion", tier: "diamond", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_ARGENT), reveal: (i) => hasMk(i, MK_FUSION_BRONZE), points: fusionTierPoints("argent", 80, 8, 20) },
+    { id: "fusion_gold", label: "Champion OR de la Ligue de Fusion", tier: "legend", secret: true, cat: "fusion", earned: (i) => hasMk(i, MK_FUSION_OR), reveal: (i) => hasAnyMk(i, MK_FUSION_TIERS), points: fusionTierPoints("or", 150, 12, 30) },
     { id: "catch_fusion", label: "Capturer une fusion SAUVAGE (Fusio-Ball)", tier: "gold", secret: true, cat: "fusion", earned: (i) => i.caughtFusion === true, reveal: (i) => i.caughtFusion === true || hasMk(i, MK_FUSION_UNLOCK) },
     { id: "fusiodex5", label: "Découvrir 5 fusions au Fusiodex", tier: "silver", secret: true, cat: "fusion", earned: (i) => (i.fusionsDiscovered ?? 0) >= 5, reveal: (i) => (i.fusionsDiscovered ?? 0) >= 1 || hasMk(i, MK_AUTEL) },
     { id: "fusiodex15", label: "Découvrir 15 fusions au Fusiodex", tier: "gold", secret: true, cat: "fusion", earned: (i) => (i.fusionsDiscovered ?? 0) >= 15, reveal: (i) => (i.fusionsDiscovered ?? 0) >= 5 },
@@ -217,7 +230,7 @@ export function evaluateBadges(i: BadgeInput): BadgeResult {
     const badges = BADGES.map((b) => {
         const earned = b.earned(i)
         const revealed = !b.secret || earned || (b.reveal ? b.reveal(i) : false)
-        const points = TIER_POINTS[b.tier]
+        const points = b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS[b.tier]
         if (earned) { totalPoints += points; earnedCount++ }
         return { id: b.id, tier: b.tier, points, earned, revealed }
     })
@@ -269,6 +282,7 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         markers: s.defeatedTrainers ?? [],
         pnj5Wins: s.pnj5Wins ?? 0,
         fusionsCreated: (s.fusionHistory ?? []).length,
+        fusionLeagueDefeats: s.fusionLeagueDefeats,
         // ── side quests « plaisir » : dérivés DIRECTS de la save (rétroactifs, aucun nouveau champ) ──
         pokerPlayed: s.pokerFirstGameDone === true,
         heldItemEquipped: mons.some((m) => !!m.heldItem),
