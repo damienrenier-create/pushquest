@@ -1102,6 +1102,27 @@ function buildUkognofyChamber(): TileType[][] {
     return m
 }
 
+// === DÔME DE COMBAT — LES 3 SALLES PHYSIQUES (parcours du champion). Toutes 16×12, sprites 1200×896 (tileSize 75).
+//   1) TOURNOI (yellow_combat_dome) : porte SUD→hub + porte EST (15,6)→salle Dan (gatée MAÎTRE).
+//   2) DAN (yellow_dome_dan) : porte OUEST (0,6)→retour Tournoi + porte NORD (8,0)→Finale (gatée 4 Dan).
+//   3) FINALE (yellow_dome_final) : porte SUD (8,11)→retour Dan + PNJ coupe (reward). Gates dans gameStore.
+function buildDomeTournamentRoom(): TileType[][] {
+    const m = buildZoneRoom(16, 12) // porte SUD (8,11) → hub déjà ouverte
+    m[6][15] = "path" // porte EST → salle Dan
+    return m
+}
+function buildDomeDanRoom(): TileType[][] {
+    const m = fillRoom(16, 12, "path") // murs périphériques, AUCUNE porte sud
+    m[6][0] = "path"  // porte OUEST → retour Tournoi
+    m[0][8] = "path"  // porte NORD → salle Finale (gatée 4 Dan)
+    return m
+}
+function buildDomeFinalRoom(): TileType[][] {
+    const m = fillRoom(16, 12, "path") // murs périphériques
+    m[11][8] = "path" // porte SUD → retour salle Dan
+    return m
+}
+
 // GROTTE DU NEXUS — 1er étage (casse-tête Mt. Moon endgame). Collision v1 AUTO-échantillonnée depuis
 // grotte_casse_tete.png (void + gros rochers bloquants) → à CALER finement en jeu via debugGrid. 49×42.
 // Grille de COLLISION des 3 étages, AUTO-GÉNÉRÉE depuis grotte_casse_tete.png (cf. GROTTE_NEXUS_ART / scripts/_gen-grotte-art.mjs).
@@ -1228,10 +1249,31 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/combat_usine.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
         exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }],
     },
+    // SALLE 1/3 — TOURNOI (salle d'accueil du Dôme). Porte SUD → hub Zone de Combat, porte EST → salle Dan (gatée MAÎTRE).
     yellow_combat_dome: {
-        id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
-        backgroundImage: "/yellow/sprites/combat_dome.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150,
-        exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
+        id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildDomeTournamentRoom(), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/dome_tournoi.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75, // 1200/16 = 75
+        exits: [
+            { x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 },
+            { x: 15, y: 6, targetMapId: "yellow_dome_dan", targetSpawnX: 1, targetSpawnY: 6 }, // porte EST → Dan (gate domeChampionships>=7 dans gameStore)
+        ],
+    },
+    // SALLE 2/3 — DAN (bracket des 4 Dan). Porte OUEST → Tournoi, porte NORD → Finale (gatée 4 Dan). Maître Dan pour le lore.
+    yellow_dome_dan: {
+        id: "yellow_dome_dan", name: "SALLE DES DAN", tiles: buildDomeDanRoom(), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/dome_dan.jpg", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
+        exits: [
+            { x: 0, y: 6, targetMapId: "yellow_combat_dome", targetSpawnX: 14, targetSpawnY: 6 }, // OUEST → Tournoi
+            { x: 8, y: 0, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // NORD → Finale (gate domeChampionships>=11 dans gameStore)
+        ],
+    },
+    // SALLE 3/3 — FINALE (le Maître à la coupe est peint dans le décor). PNJ invisible `y_dome_coupe` → reward. Porte SUD → Dan.
+    yellow_dome_final: {
+        id: "yellow_dome_final", name: "SACRE DU DÔME", tiles: buildDomeFinalRoom(), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/dome_final.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
+        exits: [
+            { x: 8, y: 11, targetMapId: "yellow_dome_dan", targetSpawnX: 8, targetSpawnY: 1 }, // SUD → retour Dan
+        ],
     },
     // SALLE DE FUSION « Autel de la Chimère » : fusionner 2 Daemons pour un combat-épreuve (cf. data/fusionMon).
     //   Pièce 18×10 (murs périphériques), sprite plein cadre. PNJ autel DEVANT la plateforme en (9,6), sortie bas-centre (9,9).

@@ -1347,6 +1347,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(next)
                 return
             }
+            // GATE SALLE DES DAN : la porte EST du Tournoi ne s'ouvre qu'au MAÎTRE du Dôme (7 paliers = jusqu'à MAÎTRE).
+            //   Sinon message + on reste sur place.
+            if (targetMapId === "yellow_dome_dan" && getPlayerSave().domeChampionships < 7) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "y_dome_gate", npcName: "PORTE DES DAN", lineIndex: 0,
+                        lines: [
+                            "*La porte de l'Est est scellée par le sceau du Maître.*",
+                            "« La Salle des Dan n'accueille que les MAÎTRES du Dôme. Remporte d'abord le palier MAÎTRE. »",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
+            // GATE SALLE DU SACRE : la porte NORD de la Salle des Dan ne s'ouvre qu'au CHAMPION (les 4 Dan remportés = 11 paliers).
+            if (targetMapId === "yellow_dome_final" && getPlayerSave().domeChampionships < 11) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "y_dome_gate", npcName: "PORTE DU SACRE", lineIndex: 0,
+                        lines: [
+                            "*Une lumière dorée scelle la porte du Nord.*",
+                            "« La Salle du Sacre n'est ouverte qu'au CHAMPION. Franchis d'abord les QUATRE DAN. »",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
             // GARDIEN DE LA GROTTE (PNJ 5) — DESCENTE SCELLÉE : la 1re descente (1F → B1F par une échelle) est
             // bloquée tant que le gardien n'a pas été vaincu CETTE visite. Verrou ROBUSTE : même si le joueur
             // contourne physiquement le gardien (collision WIP), il ne peut pas atteindre le casse-tête sans combattre.
@@ -1810,6 +1841,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // MAÎTRE DU DÔME (mage central) : ouvre le carrousel (S'inscrire / Règles / Stats).
         if (npc.id === "y_dome_maitre") {
+            set({ domeMenuOpen: true })
+            return
+        }
+        // COUPE DU DÔME (Salle du Sacre) : ouvre le même panneau → le champion y choisit sa CT du Maître (bannière reward).
+        if (npc.id === "y_dome_coupe") {
             set({ domeMenuOpen: true })
             return
         }

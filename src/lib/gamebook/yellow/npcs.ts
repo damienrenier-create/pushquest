@@ -74,6 +74,36 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 6,
         dialoguesAfter: ["« Bienvenue au Dôme, aspirant. »"],
     },
+    // SALLE DES DAN — MAÎTRE DAN (gardien du bracket). Explique le palier (devenir MAÎTRE ouvre cette salle) et le
+    //   cadeau final (les 4 Dan → le Sacre → une CT du Maître). Simple dialogue (aucune interception gameStore).
+    {
+        id: "y_dome_dan_maitre",
+        name: "GARDIEN DES DAN",
+        mapId: "yellow_dome_dan",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥋", color: "#b5651d" },
+        initialX: 8,
+        initialY: 6,
+        dialoguesAfter: [
+            "« Te voilà MAÎTRE du Dôme… mais la légende ne fait que commencer. »",
+            "Devant toi, les QUATRE DAN — les défis les plus féroces du Dôme. Chaque Dan remporté te rapproche du Sacre.",
+            "« Franchis les 4 Dan, et la porte du Nord s'ouvrira sur la salle du Sacre. Là t'attend une récompense unique : une CT du Maître, gravée à ton nom. »",
+        ],
+    },
+    // SALLE DU SACRE — LA COUPE (le Maître à la coupe est PEINT dans dome_final.png → PNJ invisible, point d'interaction).
+    //   Interception gameStore (npc.id === "y_dome_coupe" → domeMenuOpen) : ouvre le panneau où le champion choisit sa CT.
+    {
+        id: "y_dome_coupe",
+        name: "COUPE DU DÔME",
+        mapId: "yellow_dome_final",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#ffd54a" },
+        initialX: 8,
+        initialY: 5,
+        dialoguesAfter: ["« Champion du Dôme… la Coupe est à toi. Choisis la CT du Maître que tu graveras à ton nom. »"],
+    },
 
     // === VILLE — ACE (rival quotidien, IA "ace", équipe évolutive par joueur) ===
     // Se tient en (0,16) ; interpelle aussi le joueur sur la bande (0,17-19).

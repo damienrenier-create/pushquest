@@ -58,11 +58,11 @@ export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     y_rocharena_g3: [{ speciesId: "nouillon", level: 15 }, { speciesId: "blaziper", level: 15 }, { speciesId: "limaroche", level: 17 }],
     y_rocharena_g4: [{ speciesId: "escaroche", level: 18 }, { speciesId: "vermisaint", level: 17 }],
     y_rocharena_boss: [
-        { speciesId: "vermisaint", level: 21, moves: ["onde_cerebrale", "vague_mentale", "choc_mental", "onde_folie"], opening: ["onde_cerebrale"] }, // AS
         { speciesId: "flamaspic", level: 21 },
         { speciesId: "escaroche", level: 20 },
         { speciesId: "jerbiwat", level: 21 },
         { speciesId: "escaroche", level: 18 },
+        { speciesId: "vermisaint", level: 21, moves: ["onde_cerebrale", "vague_mentale", "choc_mental", "onde_folie"], opening: ["onde_cerebrale"] }, // AS = DERNIER (Psy) → le panneau affiche le bon thème PSY
     ],
 
     // ===== ARÈNE FEU → CABINET INÉDIT (Pyra) =====
