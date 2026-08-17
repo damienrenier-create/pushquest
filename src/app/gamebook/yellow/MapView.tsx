@@ -762,9 +762,7 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_daemomaniaque: { url: "/yellow/sprites/npc/daemomaniaque.png", frames: 1, h: 1.5 },
     // L'ESPION de l'Usine réutilise le sprite du maniaque (jumeau, choix de Sartay).
     y_usine_espion: { url: "/yellow/sprites/npc/daemomaniaque.png", frames: 1, h: 1.5 },
-    // MAÎTRE DE L'USINE + GRAND MARCHAND — sprites fournis par Sartay (npc 71 / npc 68).
-    y_usine_maitre: { url: "/yellow/sprites/npc_usine_maitre.png", frames: 1, h: 1.9 },
-    y_usine_marchand: { url: "/yellow/sprites/npc_usine_marchand.png", frames: 1, h: 1.9 },
+    // (Maître de l'Usine + Grand Marchand = planches Gen 3 760×160 → dans NPC_GEN3_IDLE, pas ici.)
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
     // Sbire = portrait de la Nymphe Nouille (image unique).
     y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1, h: 1.9 },
@@ -841,6 +839,9 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_cave_trader: { url: "/yellow/sprites/npc_cave_trader_gen3.png" },
     // Autel de la Chimère (DÔME FUSION, 9-6) : PNJ qui lance la fusion. Face au joueur (row 0 par défaut).
     y_autel_chimere: { url: "/yellow/sprites/npc_autel_chimere_gen3.png" },
+    // USINE DE COMBAT — Maître (3,3) + Grand Marchand (12,3) : planches Gen 3 760×160 fournies par Sartay (npc 71 / 68).
+    y_usine_maitre: { url: "/yellow/sprites/npc_usine_maitre.png" },
+    y_usine_marchand: { url: "/yellow/sprites/npc_usine_marchand.png" },
     // LIGUE DE FUSION Johto — Conseil des Chimères (planches Gen 3 dédiées). Chacun face au joueur (row Sud).
     y_fusion_1: { url: "/yellow/sprites/npc_fusion_will_gen3.png" },   // WILL (Psy)
     y_fusion_2: { url: "/yellow/sprites/npc_fusion_koga_gen3.png" },   // KOGA (Poison)
