@@ -19,6 +19,14 @@ export function setGauntletBerries(v: boolean): void { gauntletBerries = v }
 /** Les baies ennemies sont-elles actives pour la run en cours ? */
 export function getGauntletBerries(): boolean { return gauntletBerries }
 
+// SALLE ULTIME — le Dieu Spaghetti a-t-il été vaincu DANS CETTE run (argent/or) ? → ouvre la porte droite du miroir
+//   vers la salle ultime (ton reflet). TRANSIENT (reload → run redémarre → flag remis à false).
+let gauntletBossBeaten = false
+/** Marque le Dieu Spaghetti vaincu cette run (ouvre la salle ultime). */
+export function setGauntletBossBeaten(v: boolean): void { gauntletBossBeaten = v }
+/** Le Dieu Spaghetti est-il vaincu dans la run en cours ? (porte du miroir → salle ultime) */
+export function getGauntletBossBeaten(): boolean { return gauntletBossBeaten }
+
 /** L'équipe-gauntlet courante (null = pas de Ligue de Fusion en cours). */
 export function getGauntletTeam(): BuiltFusion[] | null { return team }
 /** Pose l'équipe-gauntlet (à l'entrée) ou la vide (fin de run — le dispose des espèces est fait par l'appelant). */

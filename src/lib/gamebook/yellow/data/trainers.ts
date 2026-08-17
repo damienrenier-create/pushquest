@@ -1524,6 +1524,26 @@ export const TRAINERS: TrainerData[] = [
         defeat: [
             "« …Inouï. Tu as terrassé ma chimère ultime. »",
             "*Le Dieu Spaghetti s'incline dans un tourbillon de vapeur dorée.*",
+            "« Mais nul n'est vraiment sacré Maître de la Chimère sans s'être dépassé LUI-MÊME. Le Nexus jugera. »",
+        ],
+    },
+    {
+        // SALLE ULTIME — TON REFLET (argent/or). Après le Dieu Spaghetti, la porte droite s'ouvre : affronte l'équipe
+        //   de fusion avec laquelle tu as bouclé le palier PRÉCÉDENT (reflet GELÉ). Équipe DYNAMIQUE bâtie à l'exécution
+        //   (getFusionChampionRoster → buildFusion, gameStore launchFusionLeague/y_fusion_reflet). Le VRAI dernier test.
+        id: "y_fusion_reflet", name: "TON REFLET", title: "L'Ultime Épreuve",
+        sprite: { emoji: "🪞", color: "#c77dff" },
+        mapId: "yellow_fusion_ultime", x: 10, y: 2,
+        team: [{ speciesId: "morrow", level: 80 }], // placeholder (jamais fieldé : équipe dynamique = ton roster gelé)
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*Au bout de la salle embrasée se dresse une silhouette que tu connais mieux que quiconque — la TIENNE.*",
+            "« L'équipe EXACTE avec laquelle tu as forgé ta légende se tient devant toi. Pour être sacré, dépasse ton ancien toi. »",
+            "« Bats ton reflet… ou renonce au titre. EN GARDE ! »",
+        ],
+        defeat: [
+            "*Ton reflet s'efface dans une gerbe d'étincelles dorées.*",
+            "« Tu n'es plus celui qui a franchi ce seuil. Tu es DAVANTAGE. »",
             "« Le titre de MAÎTRE DE LA CHIMÈRE t'appartient, pour de bon. Le Nexus est à toi. »",
         ],
     },

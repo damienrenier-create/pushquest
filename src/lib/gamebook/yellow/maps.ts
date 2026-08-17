@@ -1558,11 +1558,19 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/fusion_room_lance.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // décor Johto dédié — LANCE (Dragon, Champion)
     },
     yellow_fusion_miroir: {
-        id: "yellow_fusion_miroir", name: "LIGUE FUSION — LE MIROIR", tiles: buildLigueRoom(), width: 22, height: 12,
-        // Porte droite = SORTIE (après avoir vaincu ton reflet) → Autel. Porte gauche = retraite → Autel.
-        exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }))
+        id: "yellow_fusion_miroir", name: "LIGUE FUSION — DIEU SPAGHETTI", tiles: buildLigueRoom(), width: 22, height: 12,
+        // Salle du Dieu Spaghetti. Porte DROITE (x:19) → SALLE ULTIME (ton reflet) : GATÉE dans gameStore (ne s'ouvre
+        //   qu'après avoir battu le Dieu Spaghetti EN ARGENT/OR, sinon renvoie à l'Autel). Porte gauche (x:2) = retraite Autel.
+        exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_ultime", targetSpawnX: 3, targetSpawnY: 6 }))
             .concat([{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }]),
-        backgroundImage: "/yellow/sprites/ligue_final.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64, // décor réutilisé de la Salle Ultime dorée
+        backgroundImage: "/yellow/sprites/fusion_dome_champion.jpg", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // salle du Dieu Spaghetti (porte droite → salle ultime)
+    },
+    // SALLE ULTIME — « bats ton reflet » (argent/or) : après le Dieu Spaghetti, affronte l'équipe de fusion avec laquelle
+    //   tu as bouclé le palier PRÉCÉDENT (reflet gelé). Le trainer y_fusion_reflet barre le fond. Porte gauche → retour miroir.
+    yellow_fusion_ultime: {
+        id: "yellow_fusion_ultime", name: "LIGUE FUSION — SALLE ULTIME", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [{ x: 2, y: 6, targetMapId: "yellow_fusion_miroir", targetSpawnX: 18, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/fusion_salle_ultime.jpg", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128,
     },
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
     yellow_arena_eau: {

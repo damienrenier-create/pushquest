@@ -66,7 +66,11 @@ describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
         const autel = YELLOW_MAPS["yellow_combat_autel"]
         expect(autel.exits?.some((e) => e.targetMapId === "yellow_fusion_glace")).toBe(true)
         const miroir = YELLOW_MAPS["yellow_fusion_miroir"]
-        expect(miroir.exits?.every((e) => e.targetMapId === "yellow_combat_autel")).toBe(true) // sortie + retraite → Autel
+        // Porte GAUCHE (x:2) = retraite → Autel ; porte DROITE (x:19) → SALLE ULTIME (ton reflet, gatée dans gameStore).
+        expect(miroir.exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_combat_autel")).toBe(true)
+        expect(miroir.exits?.some((e) => e.x === 19 && e.targetMapId === "yellow_fusion_ultime")).toBe(true)
+        // La salle ultime retraite vers le miroir (donc vers l'Autel) → jamais bloqué.
+        expect(YELLOW_MAPS["yellow_fusion_ultime"].exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_fusion_miroir")).toBe(true)
         // chaque salle a une RETRAITE vers l'Autel (jamais bloqué)
         for (const id of ["yellow_fusion_glace", "yellow_fusion_combat", "yellow_fusion_spectre", "yellow_fusion_dragon", "yellow_fusion_maitre"]) {
             expect(YELLOW_MAPS[id].exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_combat_autel"), id).toBe(true)

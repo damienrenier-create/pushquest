@@ -53,12 +53,12 @@ import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
-import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry } from "./fusionGauntlet"
+import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
-import { recordFusionLeagueDefeat, snapshotFusionChampionRoster } from "./playerStore"
+import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -1115,42 +1115,47 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   `fusleague_<tier>` (échelle Bronze→Argent→Or, persisté dans defeatedTrainers) → débloque le palier suivant
     //   + décroche le titre « Maître de la Chimère ». RÉCOMPENSE = titre SEUL (aucun lot matériel). Le dialogue
     //   de défaite du reflet (trainers.ts) fait l'annonce. markTrainerDefeated est idempotent.
-    if (b.outcome === "win" && lid === "y_fusion_miroir") {
+    // SALLE ULTIME — SACRE. Bronze : le Dieu Spaghetti (y_fusion_miroir) sacre directement. Argent/or : le boss
+    //   n'accorde PLUS le titre — il OUVRE la salle ultime, et c'est la victoire sur TON REFLET (y_fusion_reflet) qui
+    //   sacre. FALLBACK anti-soft-lock : sans roster gelé (save d'avant la feature), le boss sacre quand même.
+    const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir"
+    const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet"
+    if (wonFusionBoss || wonFusionReflet) {
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
-        markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
-        // SALLE ULTIME (brique 1) — GÈLE le roster de fusion vainqueur de CE palier → servira à reconstruire TON reflet
-        //   dans la salle ultime du palier SUIVANT (argent affronte ton bronze, or affronte ton argent).
-        snapshotFusionChampionRoster(sacredTier)
-        // BOUCLE ENDGAME : le palier ULTIME (OR) propose de recréer son Daemon perso & rejouer le run 1. Re-proposé
-        //   à CHAQUE sacre OR (événementiel) → refus = re-tenté au prochain. Jamais en bulle de rejeu.
-        if (sacredTier === "or" && getActiveWorld() !== "replay") loopOffer = true
-        // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) au sacre (offre transitoire, modale côté client).
-        //   On pose AUSSI le marker `fusioball_owed` (persistant) : si le joueur ne l'achète pas maintenant (souvent
-        //   < 1000 reps après la Ligue), il la RE-proposera dès que le joueur atteindra 1200 reps. Retiré à l'achat.
-        fusioBallOffer = true
-        markTrainerDefeated(FUSIOBALL_OWED_MARKER)
-        // HALL OF FAME FUSION : fige le roster GAUNTLET vainqueur (nom/sprite/types/stats — pas un speciesId, éphémère).
-        const gt = getGauntletTeam()
-        if (gt && gt.length) {
-            fusionSacre = {
-                tier: sacredTier,
-                team: gt.map((f) => ({
-                    name: f.result.name,
-                    sprite: getSpecies(f.speciesId)?.sprite ?? "",
-                    types: [...f.result.types],
-                    level: f.result.level,
-                    stats: { ...f.result.stats },
-                    moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
-                })),
+        const prevTier = sacredTier === "or" ? "argent" : "bronze"
+        if (wonFusionBoss && sacredTier !== "bronze" && getFusionChampionRoster(prevTier).length >= 2) {
+            // Boss battu en argent/or AVEC un reflet disponible → on DIFFÈRE le sacre : la porte droite du miroir s'ouvre
+            //   sur la salle ultime. Le titre s'obtient en battant ton reflet (y_fusion_reflet).
+            setGauntletBossBeaten(true)
+        } else {
+            // SACRE effectif : bronze (au boss), argent/or (au reflet), ou fallback boss-sans-reflet.
+            markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
+            snapshotFusionChampionRoster(sacredTier) // gèle le roster vainqueur → reflet du palier SUIVANT
+            // BOUCLE ENDGAME (OR) : recréer son Daemon perso & rejouer le run 1. Jamais en bulle de rejeu.
+            if (sacredTier === "or" && getActiveWorld() !== "replay") loopOffer = true
+            // Fusio-Ball (1000 reps) offerte au sacre + marker `fusioball_owed` (re-proposée dès 1200 reps).
+            fusioBallOffer = true
+            markTrainerDefeated(FUSIOBALL_OWED_MARKER)
+            // HALL OF FAME FUSION : fige le roster GAUNTLET vainqueur (nom/sprite/types/stats — espèce éphémère).
+            const gt = getGauntletTeam()
+            if (gt && gt.length) {
+                fusionSacre = {
+                    tier: sacredTier,
+                    team: gt.map((f) => ({
+                        name: f.result.name,
+                        sprite: getSpecies(f.speciesId)?.sprite ?? "",
+                        types: [...f.result.types],
+                        level: f.result.level,
+                        stats: { ...f.result.stats },
+                        moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                    })),
+                }
             }
-        }
-        // 🐉🪨 MÉGAMONARX : si un DRACOLITHE niv 100 (Draconarque×Megalithe) était dans l'équipe-gauntlet vainqueur,
-        //   il TRANSCENDE en MégamonarX — octroi one-shot d'un vrai légendaire gardable + cinématique côté client.
-        //   getSpecies(f.speciesId).name = le nom OFFICIEL « Dracolithe » (via officialFusionForParents), pas le mot-valise.
-        //   JAMAIS en bulle de REJEU (jetable) : l'octroi grave le dex GLOBAL mais le Daemon est perdu à la sortie.
-        if (getActiveWorld() !== "replay" && !hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
-            if (grantMegamonarx()) megamonarxReveal = true
+            // 🐉🪨 MÉGAMONARX : un DRACOLITHE niv 100 dans l'équipe vainqueur TRANSCENDE (octroi one-shot). Jamais en rejeu.
+            if (getActiveWorld() !== "replay" && !hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
+                if (grantMegamonarx()) megamonarxReveal = true
+            }
         }
     }
 
