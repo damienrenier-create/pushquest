@@ -137,6 +137,11 @@ export const CTS: CtData[] = [
     // -- POISON (en plus de ct32 miasme_corrosif) --
     { id: "ct48", label: "CT48", moveId: "crachat_acide", price: 0, labOnly: true },     // 40 → 4 000
     { id: "ct49", label: "CT49", moveId: "bombe_beurk", price: 0, labOnly: true },       // 90 → 9 000
+    // -- CT DU MAÎTRE (Dôme / Usine / Tour) : récompense de champion, 1 choix par facilité, jamais 2× la même. --
+    { id: "ct62", label: "CT62", moveId: "pique_voile", price: 0, gift: true, alsoTypes: ["VOL"] },       // VOL 110, -Préc
+    { id: "ct63", label: "CT63", moveId: "hypercut", price: 0, gift: true, alsoTypes: ["COMBAT"] },       // COMBAT 110, -Déf
+    { id: "ct64", label: "CT64", moveId: "vif_dard", price: 0, gift: true, alsoTypes: ["INSECTE"] },      // INSECTE 90, priorité, -Déf Spé
+    { id: "ct65", label: "CT65", moveId: "poing_fusion", price: 0, gift: true, alsoTypes: ["METAL"] },    // MÉTAL 100, 50% brûlure
     // -- PSY (en plus de ct16 vague_mentale) ; eveil_divin laissé en signature de Divinpâte --
     { id: "ct50", label: "CT50", moveId: "choc_mental", price: 0, labOnly: true },       // 50 → 5 000
     // -- SPECTRE (en plus de ct26 frappe_audela 85, un cadeau de boss) : 2e tier distinct --
