@@ -5,7 +5,7 @@
 
 const BASE = "/api/gamebook/yellow/troc"
 
-export interface TrocListing { id: string; ownerId: string; ownerNickname: string; monJson: unknown; createdAt: string }
+export interface TrocListing { id: string; ownerId: string; ownerNickname: string; monJson: unknown; wantNote?: string; createdAt: string }
 export interface TrocOffer { id: string; listingId: string; ownerId: string; offererId: string; offererNickname: string; monJson: unknown; createdAt: string }
 export interface TrocDelivery { id: string; recipientId: string; monJson: unknown; note: string; createdAt: string }
 export interface TrocState {
@@ -33,7 +33,7 @@ async function post(body: Record<string, unknown>): Promise<any> {
     } catch { return { ok: false, reason: "unavailable" } }
 }
 
-export const postTrocDeposit = (mon: unknown) => post({ action: "deposit", mon })
+export const postTrocDeposit = (mon: unknown, wantNote?: string) => post({ action: "deposit", mon, wantNote: wantNote ?? "" })
 export const postTrocWithdraw = (listingId: string) => post({ action: "withdraw", listingId })
 export const postTrocOffer = (listingId: string, mon: unknown) => post({ action: "offer", listingId, mon })
 export const postTrocCancelOffer = (offerId: string) => post({ action: "cancelOffer", offerId })

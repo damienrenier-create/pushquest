@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
 import { getPlayer, releaseFromPc, addTradedMonToPc } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -18,7 +19,8 @@ function monLabel(raw: unknown): { name: string; sub: string } {
     const sp = getSpecies(m?.speciesId)
     if (!sp) return { name: "Daemon", sub: "" }
     const iv = m.ivs ? ivTotal(m.ivs) : 0
-    return { name: `${m.shiny ? "✨ " : ""}${m.nickname || sp.name}`, sub: `Niv ${m.level} · ${sp.types.join("/")} · IV ${iv}` }
+    const it = getHeldItem(m.heldItem) // l'objet tenu part avec le Daemon échangé
+    return { name: `${m.shiny ? "✨ " : ""}${m.nickname || sp.name}`, sub: `Niv ${m.level} · ${sp.types.join("/")} · IV ${iv}/75${it ? ` · 🎒 ${it.name}` : ""}` }
 }
 
 function MonChip({ raw }: { raw: unknown }) {
@@ -34,11 +36,13 @@ function MonChip({ raw }: { raw: unknown }) {
 const box: React.CSSProperties = { background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }
 const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#15151f", border: "none", borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontWeight: 800, fontSize: 11 })
 const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: "#e0a458", margin: "10px 0 5px", textTransform: "uppercase", letterSpacing: 0.4 }
+const wantStyle: React.CSSProperties = { fontSize: 10, color: "#8ab6c9", marginTop: 4, fontStyle: "italic" }
 
 export default function TrocPanel({ onClose, onToast }: { onClose: () => void; onToast?: (m: string) => void }) {
     const [st, setSt] = useState<TrocState | null>(null)
     const [busy, setBusy] = useState(false)
     const [picker, setPicker] = useState<null | { kind: "deposit" } | { kind: "offer"; listingId: string; ownerNickname: string }>(null)
+    const [wantNote, setWantNote] = useState("") // « ce que je cherche » (optionnel) — attaché au dépôt
 
     const refresh = async () => {
         const s = await fetchTroc()
@@ -57,8 +61,8 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
     const guard = async (fn: () => Promise<void>) => { if (busy) return; setBusy(true); try { await fn() } finally { setBusy(false) } }
 
     const doDeposit = (mon: MonInstance) => guard(async () => {
-        const r = await postTrocDeposit(mon)
-        if (r?.ok) { releaseFromPc(mon.uid); persistYellowSave(); setPicker(null); onToast?.("🛒 Daemon déposé sur l'étal."); await refresh() }
+        const r = await postTrocDeposit(mon, wantNote)
+        if (r?.ok) { releaseFromPc(mon.uid); persistYellowSave(); setPicker(null); setWantNote(""); onToast?.("🛒 Daemon déposé sur l'étal."); await refresh() }
         else if (r?.reason === "full") onToast?.("Étal plein (3 max).")
         else onToast?.("Échange indisponible pour l'instant.")
     })
@@ -90,6 +94,11 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                 {picker ? (
                     <>
                         <div style={sectionTitle}>{picker.kind === "deposit" ? "Choisis un Daemon à déposer" : `Proposer à ${(picker as any).ownerNickname}`}</div>
+                        {picker.kind === "deposit" && (
+                            <input value={wantNote} onChange={(e) => setWantNote(e.target.value)} maxLength={120}
+                                placeholder="Ce que tu cherches (optionnel) — ex. « un EAU niv 50 »"
+                                style={{ width: "100%", boxSizing: "border-box", background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: "7px 9px", color: "#fff", fontFamily: "inherit", fontSize: 11, marginBottom: 8 }} />
+                        )}
                         {pc.length === 0 ? (
                             <div style={{ fontSize: 12, opacity: 0.7 }}>Ta réserve (PC) est vide. Dépose d&apos;abord un Daemon au PC d&apos;un Centre.</div>
                         ) : (
@@ -118,6 +127,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                         <MonChip raw={l.monJson} />
                                         <button disabled={busy} onClick={() => doWithdraw(l.id)} style={btn("#c98a8a")}>Retirer</button>
                                     </div>
+                                    {l.wantNote ? <div style={wantStyle}>🔎 cherche : {l.wantNote}</div> : null}
                                     {offers.length > 0 && <div style={{ fontSize: 9, opacity: 0.6, margin: "6px 0 3px" }}>Offres reçues :</div>}
                                     {offers.map((o) => (
                                         <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, background: "#191922", borderRadius: 6, padding: "5px 7px", marginTop: 4 }}>
@@ -146,6 +156,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                             ? <span style={{ fontSize: 10, opacity: 0.6 }}>offre envoyée</span>
                                             : <button disabled={busy} onClick={() => setPicker({ kind: "offer", listingId: l.id, ownerNickname: l.ownerNickname })} style={btn("#8ab6c9")}>Proposer</button>}
                                     </div>
+                                    {l.wantNote ? <div style={wantStyle}>🔎 cherche : {l.wantNote}</div> : null}
                                 </div>
                             )
                         })}

@@ -6,9 +6,10 @@
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
-import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
-import { evTotal } from "@/lib/gamebook/yellow/data/evConfig"
+import { ivTotal, ivTier, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
+import { evTotal, evTotalCap } from "@/lib/gamebook/yellow/data/evConfig"
 import { fetchEspionPlayers, postEspionReveal, type EspionPlayer } from "@/lib/gamebook/yellow/frontier/espionApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
@@ -19,26 +20,44 @@ function MonSheet({ raw }: { raw: unknown }) {
     const sp = getSpecies(m.speciesId)
     if (!sp) return null
     const st = fullStats(m, sp)
-    const iv = m.ivs ? ivTotal(m.ivs) : 0
+    const tier = m.ivs ? ivTier(m.ivs) : null
+    const iv = m.ivs ? ivTotal(m.ivs) : 0                       // total sur 5 stats Gen 1 (DV 0..15) → max 75
     const ev = m.ev ? evTotal(m.ev) : 0
-    const saiyan = m.allocated ? Object.values(m.allocated).reduce((a, b) => a + (Number(b) || 0), 0) : 0
+    const evCap = evTotalCap(m)                                  // plafond individuel (510 → 561 shiny/late-bloomer/evCapBoost)
+    const saiyan = m.allocated ? Object.values(m.allocated).reduce((a, b) => a + (Number(b) || 0), 0) : 0 // points DÉPENSÉS
+    const unspent = m.statPoints ?? 0                            // points Saiyan gagnés NON encore répartis
+    const it1 = getHeldItem(m.heldItem), it2 = getHeldItem(m.heldItem2) // heldItem2 = 2e objet des fusionnés
     const moves = (m.moves ?? []).map((slot) => getMove(slot.moveId)).filter(Boolean)
+    const statused = !!m.status && m.status !== "NONE"
+    const badges = statused || m.disobedient || (m.traded && m.originalTrainerName)
     return (
         <div style={{ background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 6 }}>
                 <div style={{ fontWeight: 800, fontSize: 12 }}>{m.shiny ? "✨ " : ""}{m.nickname || sp.name} <span style={{ opacity: 0.6, fontWeight: 400 }}>Niv {m.level}</span></div>
                 <div style={{ fontSize: 9, opacity: 0.7 }}>{sp.types.join(" / ")}</div>
             </div>
+            {badges && (
+                <div style={{ display: "flex", gap: 8, fontSize: 9, marginTop: 2, flexWrap: "wrap" }}>
+                    {statused && <span style={{ color: "#ff9e6b" }}>⚠️ {m.status}</span>}
+                    {m.disobedient && <span style={{ color: "#d17be0" }}>😈 maudit (désobéit)</span>}
+                    {m.traded && m.originalTrainerName && <span style={{ opacity: 0.55 }}>OT : {m.originalTrainerName}</span>}
+                </div>
+            )}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 10, marginTop: 4, opacity: 0.9 }}>
                 {STAT_LABELS.map(([k, lbl]) => (
                     <span key={k} style={{ fontVariantNumeric: "tabular-nums" }}>{lbl} <b>{(st as any)[k]}</b></span>
                 ))}
             </div>
-            <div style={{ display: "flex", gap: 10, fontSize: 9, marginTop: 4, color: "#ffd54a" }}>
-                <span>IV {iv}/186</span><span>EV {ev}</span><span>Saiyan {saiyan}</span>
+            <div style={{ display: "flex", gap: 10, fontSize: 9, marginTop: 4, color: "#ffd54a", flexWrap: "wrap" }}>
+                <span style={{ color: tier ? ivTierColor(tier) : "#ffd54a" }}>IV {iv}/75{tier ? ` · ${tier}` : ""}</span>
+                <span>EV {ev}/{evCap}</span>
+                <span>Saiyan {saiyan}{unspent ? ` (+${unspent} à répartir)` : ""}</span>
             </div>
+            {(it1 || it2) && (
+                <div style={{ fontSize: 9, opacity: 0.85, marginTop: 3 }}>🎒 {[it1, it2].filter(Boolean).map((it) => `${it!.emoji} ${it!.name}`).join(" · ")}</div>
+            )}
             {moves.length > 0 && (
-                <div style={{ fontSize: 9, opacity: 0.75, marginTop: 3 }}>⚔️ {moves.map((mv) => mv!.name).join(" · ")}</div>
+                <div style={{ fontSize: 9, opacity: 0.75, marginTop: 3 }}>⚔️ {moves.map((mv) => `${mv!.name} (${mv!.type})`).join(" · ")}</div>
             )}
         </div>
     )

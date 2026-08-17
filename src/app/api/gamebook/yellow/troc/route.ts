@@ -74,7 +74,8 @@ export async function POST(req: NextRequest) {
             if (!validMon(body.mon)) return NextResponse.json({ error: "Bad mon" }, { status: 400 })
             const count = await L.count({ where: { ownerId: auth.userId } })
             if (count >= MAX_LISTINGS) return NextResponse.json({ ok: false, reason: "full" }, { status: 200 })
-            const listing = await L.create({ data: { ownerId: auth.userId, ownerNickname: auth.nickname, monJson: body.mon } })
+            const wantNote = (typeof body.wantNote === "string" ? body.wantNote : "").slice(0, 120).trim()
+            const listing = await L.create({ data: { ownerId: auth.userId, ownerNickname: auth.nickname, monJson: body.mon, wantNote } })
             return NextResponse.json({ ok: true, listing })
         }
 

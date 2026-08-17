@@ -553,6 +553,7 @@ model TradeListing {
   ownerId       String                       // dépositaire
   ownerNickname String   @default("Dresseur")
   monJson       Json                          // Daemon en escrow (retiré de la save de l'owner)
+  wantNote      String   @default("")         // « ce que je cherche » (optionnel) — indicatif, l'étal reste ouvert à toute proposition
   createdAt     DateTime @default(now())
   @@index([ownerId])
 }
