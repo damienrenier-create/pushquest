@@ -69,7 +69,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed } from "@/lib/gamebook/yellow/store/playerStore"
 import DomeMasters from "./DomeMasters"
@@ -482,6 +482,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const ficheTouchY = useRef<number | null>(null) // + axe Y : un swipe ne compte que s'il DOMINE le scroll vertical
     const [selected, setSelected] = useState<MonInstance | null>(null)
+    const [pcSwapMon, setPcSwapMon] = useState<MonInstance | null>(null) // SWAP 1-action PC→équipe : équipe pleine → qui remplacer par ce Daemon PC
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
@@ -4324,7 +4325,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const sp = getSpecies(live.speciesId)
                 const stats = sp ? fullStats(live, sp) : null
                 const toNext = expForLevel(live.level + 1, live.speciesId) - Math.max(live.exp, expForLevel(live.level, live.speciesId))
-                const closeFiche = () => { setSelected(null); setRenaming(false) }
+                const closeFiche = () => { setSelected(null); setRenaming(false); setPcSwapMon(null) }
                 // Slide ◀ ▶ / swipe entre les Daemons de la MÊME liste (équipe ou PC).
                 const ficheList = inTeam ? player.team : player.pc
                 const ficheIdx = ficheList.findIndex((m) => m.uid === live.uid)
@@ -4539,7 +4540,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
                                                 const r = withdrawFromPc(live.uid)
                                                 if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
-                                                else if (r.reason === "full") setToast("Équipe pleine (6 max).")
+                                                else if (r.reason === "full") setPcSwapMon(live) // équipe pleine → SWAP 1-action : choisir qui sort
                                                 else if (r.reason === "listed") setToast("Ce Daemon est sur l'étal du Marchand.")
                                             }}>➡️ Équipe</button>
                                             {/* RELÂCHER : définitif (irréversible) → confirmation. Seulement depuis le PC (jamais l'équipe). */}
@@ -4551,6 +4552,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             }}>🕊️ Relâcher</button>
                                         </>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* SWAP 1-ACTION : équipe pleine → on choisit d'un tap qui remplacer par le Daemon PC (le sortant part au PC soigné). */}
+                            {pcSwapMon && pcSwapMon.uid === live.uid && (
+                                <div style={{ marginTop: 8, padding: 8, border: "2px solid #1c1408", borderRadius: 6, background: "rgba(255,255,255,.03)" }}>
+                                    <div style={{ fontSize: 11, marginBottom: 6 }}>Équipe pleine — qui remplacer par <b>{displayName(pcSwapMon)}</b> ?</div>
+                                    {player.team.map((tm) => (
+                                        <button key={tm.uid} style={{ ...menuBtnStyle, width: "100%", marginBottom: 4, textAlign: "left" }} onClick={() => {
+                                            const r = swapTeamPc(pcSwapMon.uid, tm.uid)
+                                            if (r.ok) { setToast(`${displayName(tm)} ↔ ${displayName(pcSwapMon)}`); persistYellowSave(); setPcSwapMon(null); closeFiche() }
+                                            else if (r.reason === "listed") setToast("Ce Daemon est sur l'étal du Marchand.")
+                                        }}>{displayName(tm)} <span style={{ opacity: 0.6 }}>N.{tm.level}</span></button>
+                                    ))}
+                                    <button style={{ ...menuBtnDimStyle, width: "100%" }} onClick={() => setPcSwapMon(null)}>Annuler</button>
                                 </div>
                             )}
 

@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react"
 import type { TeamEvolution } from "@/lib/gamebook/yellow/progression/evolveTeam"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getMove } from "@/lib/gamebook/yellow/data/moves"
 
 export default function EvolutionScreen({ evolutions, onCancel, onDone }: {
     evolutions: TeamEvolution[]
@@ -79,7 +80,10 @@ export default function EvolutionScreen({ evolutions, onCancel, onDone }: {
                     {phase === 1 && <span style={{ opacity: 0.85 }}>…</span>}
                     {phase === 2 && (isCancelled
                         ? <>Hein&nbsp;? <b>{evo.fromName}</b> a <b style={{ color: "#7ee0ff" }}>stoppé</b> son évolution&nbsp;!</>
-                        : <>Félicitations&nbsp;! <b>{evo.fromName}</b> a évolué en <b style={{ color: "#f5d020" }}>{evo.toName}</b>&nbsp;!</>)}
+                        : <>Félicitations&nbsp;! <b>{evo.fromName}</b> a évolué en <b style={{ color: "#f5d020" }}>{evo.toName}</b>&nbsp;!
+                            {(evo.learnedMoveIds ?? []).map((mid) => (
+                                <span key={mid} style={{ display: "block", marginTop: 6, color: "#8fffa0", fontSize: 13 }}><b>{evo.toName}</b> apprend <b>{getMove(mid)?.name ?? mid}</b>&nbsp;!</span>
+                            ))}</>)}
                 </p>
                 {canCancel && (
                     <button style={S.cancelBtn} onClick={(e) => { e.stopPropagation(); doCancel() }}>✋ Annuler l&apos;évolution (B)</button>

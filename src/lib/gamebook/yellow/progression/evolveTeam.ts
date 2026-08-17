@@ -34,8 +34,10 @@ export function evolveTeam(team: MonInstance[]): TeamEvolution[] {
         let guard = 0
         let evolved = false
         let target = levelEvolutionTarget(mon)
+        const learnedMoveIds: string[] = [], pendingMoveIds: string[] = [] // cumulés sur toute la chaîne d'évolution
         while (target && guard < 5) {
-            if (applyEvolution(mon, target)) evolved = true
+            const r = applyEvolution(mon, target)
+            if (r) { evolved = true; learnedMoveIds.push(...(r.learnedMoveIds ?? [])); pendingMoveIds.push(...(r.pendingMoveIds ?? [])) }
             target = levelEvolutionTarget(mon)
             guard++
         }
@@ -46,6 +48,8 @@ export function evolveTeam(team: MonInstance[]): TeamEvolution[] {
                 fromName: getSpecies(beforeSpeciesId)?.name ?? beforeSpeciesId,
                 toId: mon.speciesId,
                 toName: getSpecies(mon.speciesId)?.name ?? mon.speciesId,
+                learnedMoveIds,
+                pendingMoveIds,
                 beforeSpeciesId,
                 beforeMoves,
                 beforePendingMoves,

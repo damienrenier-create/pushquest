@@ -38,6 +38,8 @@ export interface EvolutionResult {
     fromName: string
     toId: string
     toName: string
+    learnedMoveIds?: string[] // capacités apprises DIRECT (slot libre) à l'évolution → à annoncer au joueur
+    pendingMoveIds?: string[] // capacités en attente (4 slots pleins) → gérées par l'écran d'apprentissage
 }
 
 /**
@@ -56,6 +58,7 @@ export function applyEvolution(mon: MonInstance, toId: string): EvolutionResult 
     // Slots libres remplis direct ; surplus mis en attente (écran d'apprentissage).
     const known = new Set(mon.moves.map((m) => m.moveId))
     const pend = new Set(mon.pendingMoves ?? [])
+    const learnedMoveIds: string[] = [], pendingMoveIds: string[] = []
     for (const e of toSp.learnset) {
         if (e.level > mon.level || known.has(e.moveId) || pend.has(e.moveId)) continue
         const mv = getMove(e.moveId)
@@ -63,10 +66,12 @@ export function applyEvolution(mon: MonInstance, toId: string): EvolutionResult 
         if (mon.moves.length < 4) {
             mon.moves.push({ moveId: e.moveId, pp: mv.pp, ppMax: mv.pp })
             known.add(e.moveId)
+            learnedMoveIds.push(e.moveId) // appris direct → à annoncer
         } else {
             ;(mon.pendingMoves ??= []).push(e.moveId)
             pend.add(e.moveId)
+            pendingMoveIds.push(e.moveId)
         }
     }
-    return { fromId: fromSp.id, fromName: fromSp.name, toId: toSp.id, toName: toSp.name }
+    return { fromId: fromSp.id, fromName: fromSp.name, toId: toSp.id, toName: toSp.name, learnedMoveIds, pendingMoveIds }
 }
