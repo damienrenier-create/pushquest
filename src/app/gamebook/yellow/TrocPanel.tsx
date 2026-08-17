@@ -1,17 +1,17 @@
 "use client"
 
-// USINE — LE GRAND MARCHAND : échange ASYNCHRONE de Daemons.
-//   • Dépôt/offre : on retire le Daemon du PC UNIQUEMENT après confirmation serveur (escrow) → jamais de perte.
-//   • Réclamation : à l'ouverture (et après chaque action), les livraisons en attente sont ajoutées au PC.
-//   Seuls les Daemons de la RÉSERVE (PC) sont échangeables (l'équipe reste intouchée → aucun soft-lock).
+// USINE — LE GRAND MARCHAND : échange ASYNCHRONE, escrow SOFT (aucune suppression au dépôt).
+//   • Déposer/proposer un Daemon de la RÉSERVE (PC) = poser un drapeau "listed" (il reste en boîte, grisé, verrouillé).
+//   • Les livraisons (échange conclu / retour) sont appliquées à l'ouverture : on AJOUTE le reçu, puis on RETIRE le
+//     donné (jamais l'inverse → aucune perte), et on déliste les Daemons rendus. Puis on acquitte (2 phases).
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
-import { getPlayer, releaseFromPc, addTradedMonToPc } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { fetchTroc, postTrocDeposit, postTrocWithdraw, postTrocOffer, postTrocCancelOffer, postTrocRespond, postTrocClaim, type TrocState } from "@/lib/gamebook/yellow/frontier/trocApi"
+import { fetchTroc, postTrocDeposit, postTrocWithdraw, postTrocOffer, postTrocCancelOffer, postTrocRespond, postTrocClaim, postTrocAck, type TrocState, type TrocListing, type TrocOffer } from "@/lib/gamebook/yellow/frontier/trocApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
 function monLabel(raw: unknown): { name: string; sub: string } {
@@ -22,15 +22,9 @@ function monLabel(raw: unknown): { name: string; sub: string } {
     const it = getHeldItem(m.heldItem) // l'objet tenu part avec le Daemon échangé
     return { name: `${m.shiny ? "✨ " : ""}${m.nickname || sp.name}`, sub: `Niv ${m.level} · ${sp.types.join("/")} · IV ${iv}/75${it ? ` · 🎒 ${it.name}` : ""}` }
 }
-
 function MonChip({ raw }: { raw: unknown }) {
     const { name, sub } = monLabel(raw)
-    return (
-        <div style={{ lineHeight: 1.25 }}>
-            <div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div>
-            <div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div>
-        </div>
-    )
+    return <div style={{ lineHeight: 1.25 }}><div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div><div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div></div>
 }
 
 const box: React.CSSProperties = { background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }
@@ -42,19 +36,28 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
     const [st, setSt] = useState<TrocState | null>(null)
     const [busy, setBusy] = useState(false)
     const [picker, setPicker] = useState<null | { kind: "deposit" } | { kind: "offer"; listingId: string; ownerNickname: string }>(null)
-    const [wantNote, setWantNote] = useState("") // « ce que je cherche » (optionnel) — attaché au dépôt
+    const [wantNote, setWantNote] = useState("")
 
+    // Applique les livraisons en attente : AJOUT (reçu) puis RETRAIT (donné) puis DÉVERROUILLAGE (rendu), enfin ACK.
+    const applyDeliveries = async () => {
+        const res = await postTrocClaim()
+        const ds = res.ok ? (res.deliveries ?? []) : []
+        if (!ds.length) return
+        let received = 0
+        for (const d of ds) {
+            if (d.monJson) { if (addTradedMonToPc(d.monJson)) received++ } // AJOUT d'abord (jamais de perte)
+            if (d.removeUid) removeTradedMon(d.removeUid)                  // puis RETRAIT du Daemon donné
+            if (d.unlockUid) unlistMon(d.unlockUid)                        // ou simple DÉVERROUILLAGE (offre rendue)
+        }
+        persistYellowSave()
+        await postTrocAck(ds.map((d) => d.id)) // acquittement APRÈS persistance (au pire on réapplique → doublon, jamais perte)
+        if (received > 0) onToast?.(`📦 ${received} Daemon(s) reçu(s) au PC !`)
+    }
     const refresh = async () => {
-        const s = await fetchTroc()
-        if (s.deliveries.length > 0) {
-            const res = await postTrocClaim()
-            if (res.ok && res.mons?.length) {
-                let n = 0
-                for (const d of res.mons) { if (addTradedMonToPc(d.mon)) n++ }
-                if (n > 0) { persistYellowSave(); onToast?.(`📦 ${n} Daemon(s) récupéré(s) au PC !`) }
-            }
-            setSt(await fetchTroc())
-        } else setSt(s)
+        let s = await fetchTroc()
+        if (s.deliveries.length > 0) { await applyDeliveries(); s = await fetchTroc() }
+        reconcileListedMons([...s.myListings.map((l) => l.id), ...s.offersSent.map((o) => o.id)]) // auto-réparation
+        setSt(s)
     }
     useEffect(() => { refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -62,25 +65,31 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
 
     const doDeposit = (mon: MonInstance) => guard(async () => {
         const r = await postTrocDeposit(mon, wantNote)
-        if (r?.ok) { releaseFromPc(mon.uid); persistYellowSave(); setPicker(null); setWantNote(""); onToast?.("🛒 Daemon déposé sur l'étal."); await refresh() }
+        if (r?.ok && r.listing?.id) { listMonForTrade(mon.uid, r.listing.id); persistYellowSave(); setPicker(null); setWantNote(""); onToast?.("🛒 Daemon posé sur l'étal (grisé dans ta boîte)."); await refresh() }
         else if (r?.reason === "full") onToast?.("Étal plein (3 max).")
         else onToast?.("Échange indisponible pour l'instant.")
     })
     const doOffer = (listingId: string, mon: MonInstance) => guard(async () => {
         const r = await postTrocOffer(listingId, mon)
-        if (r?.ok) { releaseFromPc(mon.uid); persistYellowSave(); setPicker(null); onToast?.("🤝 Offre envoyée !"); await refresh() }
+        if (r?.ok && r.offer?.id) { listMonForTrade(mon.uid, r.offer.id); persistYellowSave(); setPicker(null); onToast?.("🤝 Offre envoyée (Daemon grisé)."); await refresh() }
         else if (r?.reason === "gone") { onToast?.("Cet étal n'existe plus."); await refresh() }
         else onToast?.("Échange indisponible pour l'instant.")
     })
-    const doWithdraw = (listingId: string) => guard(async () => { const r = await postTrocWithdraw(listingId); if (r?.ok) { onToast?.("Étal retiré."); await refresh() } })
-    const doCancel = (offerId: string) => guard(async () => { const r = await postTrocCancelOffer(offerId); if (r?.ok) { onToast?.("Offre annulée."); await refresh() } })
+    const doWithdraw = (l: TrocListing) => guard(async () => {
+        const r = await postTrocWithdraw(l.id)
+        if (r?.ok) { if (l.ownerUid) unlistMon(l.ownerUid); persistYellowSave(); onToast?.("Étal retiré — Daemon rendu."); await refresh() }
+    })
+    const doCancel = (o: TrocOffer) => guard(async () => {
+        const r = await postTrocCancelOffer(o.id)
+        if (r?.ok) { if (o.offererUid) unlistMon(o.offererUid); persistYellowSave(); onToast?.("Offre annulée."); await refresh() }
+    })
     const doRespond = (offerId: string, accept: boolean) => guard(async () => {
         const r = await postTrocRespond(offerId, accept)
-        if (r?.ok) { onToast?.(accept ? "✅ Échange conclu !" : "Offre refusée."); await refresh() }
+        if (r?.ok) { onToast?.(accept ? "✅ Échange conclu !" : "Offre refusée."); await refresh() } // le swap est appliqué via les livraisons dans refresh()
         else if (r?.reason === "gone") { onToast?.("Étal déjà échangé."); await refresh() }
     })
 
-    const pc = getPlayer().pc
+    const pc = getPlayer().pc.filter((m) => m.tradeState !== "listed") // on ne propose que les Daemons LIBRES (pas déjà sur l'étal)
 
     return (
         <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }} onClick={onClose}>
@@ -89,7 +98,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                     <div style={{ fontWeight: 800, fontSize: 15 }}>🛒 LE GRAND MARCHAND</div>
                     <button onClick={onClose} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 800 }}>✕</button>
                 </div>
-                <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>Échange asynchrone : dépose des Daemons de ta RÉSERVE (PC), d&apos;autres dresseurs proposent les leurs. Quand vous êtes d&apos;accord, j&apos;échange.</div>
+                <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>Échange asynchrone. Ton Daemon posé reste dans ta boîte, <b>grisé</b>, jusqu&apos;à l&apos;échange — rien n&apos;est jamais perdu.</div>
 
                 {picker ? (
                     <>
@@ -100,7 +109,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                 style={{ width: "100%", boxSizing: "border-box", background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: "7px 9px", color: "#fff", fontFamily: "inherit", fontSize: 11, marginBottom: 8 }} />
                         )}
                         {pc.length === 0 ? (
-                            <div style={{ fontSize: 12, opacity: 0.7 }}>Ta réserve (PC) est vide. Dépose d&apos;abord un Daemon au PC d&apos;un Centre.</div>
+                            <div style={{ fontSize: 12, opacity: 0.7 }}>Aucun Daemon libre dans ta réserve (PC). Dépose d&apos;abord un Daemon au PC d&apos;un Centre.</div>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                                 {pc.map((m) => (
@@ -125,7 +134,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                 <div key={l.id} style={box}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                                         <MonChip raw={l.monJson} />
-                                        <button disabled={busy} onClick={() => doWithdraw(l.id)} style={btn("#c98a8a")}>Retirer</button>
+                                        <button disabled={busy} onClick={() => doWithdraw(l)} style={btn("#c98a8a")}>Retirer</button>
                                     </div>
                                     {l.wantNote ? <div style={wantStyle}>🔎 cherche : {l.wantNote}</div> : null}
                                     {offers.length > 0 && <div style={{ fontSize: 9, opacity: 0.6, margin: "6px 0 3px" }}>Offres reçues :</div>}
@@ -167,7 +176,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                             {st.offersSent.map((o) => (
                                 <div key={o.id} style={{ ...box, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                                     <MonChip raw={o.monJson} />
-                                    <button disabled={busy} onClick={() => doCancel(o.id)} style={btn("#c98a8a")}>Annuler</button>
+                                    <button disabled={busy} onClick={() => doCancel(o)} style={btn("#c98a8a")}>Annuler</button>
                                 </div>
                             ))}
                         </>}

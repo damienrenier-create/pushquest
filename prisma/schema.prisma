@@ -552,7 +552,8 @@ model TradeListing {
   id            String   @id @default(cuid())
   ownerId       String                       // dépositaire
   ownerNickname String   @default("Dresseur")
-  monJson       Json                          // Daemon en escrow (retiré de la save de l'owner)
+  ownerUid      String   @default("")        // uid du Daemon dans la save de l'owner (escrow SOFT : il y reste, grisé)
+  monJson       Json                          // snapshot du Daemon (affiché aux autres + livré à l'échange)
   wantNote      String   @default("")         // « ce que je cherche » (optionnel) — indicatif, l'étal reste ouvert à toute proposition
   createdAt     DateTime @default(now())
   @@index([ownerId])
@@ -563,17 +564,22 @@ model TradeOffer {
   ownerId         String                       // propriétaire de la listing (pour lister ses offres reçues)
   offererId       String                       // proposeur
   offererNickname String   @default("Dresseur")
-  monJson         Json                          // Daemon proposé, en escrow (retiré de la save du proposeur)
+  offererUid      String   @default("")        // uid du Daemon proposé dans la save du proposeur (escrow SOFT)
+  monJson         Json                          // snapshot du Daemon proposé
   createdAt       DateTime @default(now())
   @@index([listingId])
   @@index([ownerId])
   @@index([offererId])
 }
+// Canal serveur→client HORS save (anti-écrasement). Le client applique au chargement puis ACQUITTE (supprime).
+//   addMon (recevoir) + removeUid (retirer SON Daemon échangé) + unlockUid (délister SON Daemon rendu). Combinables.
 model TradeDelivery {
   id          String   @id @default(cuid())
-  recipientId String                       // destinataire qui réclamera le Daemon au chargement
-  monJson     Json
-  note        String   @default("")        // ex. « Échange avec X » / « Retour d'étal »
+  recipientId String                       // destinataire qui applique au chargement
+  monJson     Json?                         // Daemon à AJOUTER au PC (null pour une livraison de simple déverrouillage)
+  removeUid   String   @default("")         // uid du Daemon du destinataire à RETIRER (échange conclu)
+  unlockUid   String   @default("")         // uid du Daemon du destinataire à DÉLISTER (offre rendue)
+  note        String   @default("")
   createdAt   DateTime @default(now())
   @@index([recipientId])
 }

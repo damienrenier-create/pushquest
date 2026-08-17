@@ -2462,8 +2462,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={menuTitleStyle}>PC — RANGEMENT</div>
                             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "2px 0" }}>ÉQUIPE ({player.team.length}/6)</div>
                             {player.team.map((m) => (
-                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
+                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%", opacity: m.tradeState === "listed" ? 0.45 : 1 }} onClick={() => setSelected(m)} title={m.tradeState === "listed" ? "Sur l'étal du Grand Marchand" : undefined}>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{m.tradeState === "listed" && <span title="Sur l'étal du Marchand">🛒 </span>}{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
@@ -2492,8 +2492,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {player.pc.length === 0 && <div style={{ fontSize: 11, opacity: 0.6 }}>Aucun Daemon en réserve.</div>}
                             {slice.map((m) => (
-                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
+                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%", opacity: m.tradeState === "listed" ? 0.45 : 1 }} onClick={() => setSelected(m)} title={m.tradeState === "listed" ? "Sur l'étal du Grand Marchand" : undefined}>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{m.tradeState === "listed" && <span title="Sur l'étal du Marchand">🛒 </span>}{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
@@ -3200,6 +3200,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const byUid = (uid: string) => collection.find((m) => m.uid === uid)
                 const roster = player.fusionRoster
                 const rosterUids = new Set(roster.flatMap((p) => [p.a, p.b])) // uids DÉJÀ engagés → interdits dans une autre fusion
+                const listedUids = collection.filter((m) => m.tradeState === "listed").map((m) => m.uid) // posés sur l'étal → verrouillés en fusion
                 const nameOf = (uid: string) => { const m = byUid(uid); return m ? displayName(m) : "?" }
                 const fusionNameOf = (p: { a: string; b: string }) => {
                     const a = byUid(p.a), b = byUid(p.b)
@@ -3290,7 +3291,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         <FusionPickerView
                                             slot={atelierPicking}
                                             daemons={collection}
-                                            disabledUids={new Set([...rosterUids, atelierAdd[atelierPicking === "a" ? "b" : "a"]].filter(Boolean))}
+                                            disabledUids={new Set([...rosterUids, ...listedUids, atelierAdd[atelierPicking === "a" ? "b" : "a"]].filter(Boolean))}
                                             onPick={(uid) => { setAtelierAdd((d) => d ? { ...d, [atelierPicking]: uid } : d); setAtelierPicking(null) }}
                                             onClose={() => setAtelierPicking(null)}
                                         />
@@ -4527,18 +4528,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             if (r.ok) { setToast(`${displayName(live)} déposé au PC.`); persistYellowSave(); closeFiche() }
                                             else if (r.reason === "last") setToast("Tu dois garder au moins 1 Daemon !")
                                         }}>📦 Déposer</button>
+                                    ) : live.tradeState === "listed" ? (
+                                        // Daemon posé sur l'étal du Grand Marchand : verrouillé (ni équipe, ni relâche) tant qu'il y est.
+                                        <div style={{ flex: 1, fontSize: 11, color: "#e0a458", textAlign: "center", padding: "6px 4px", border: "1px solid #e0a458", borderRadius: 8, background: "rgba(224,164,88,.1)" }}>🛒 Sur l&apos;étal du Marchand — retire-le de l&apos;étal pour le réutiliser.</div>
                                     ) : (
                                         <>
                                             <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
                                                 const r = withdrawFromPc(live.uid)
                                                 if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
                                                 else if (r.reason === "full") setToast("Équipe pleine (6 max).")
+                                                else if (r.reason === "listed") setToast("Ce Daemon est sur l'étal du Marchand.")
                                             }}>➡️ Équipe</button>
                                             {/* RELÂCHER : définitif (irréversible) → confirmation. Seulement depuis le PC (jamais l'équipe). */}
                                             <button style={{ ...menuBtnStyle, flex: 1, borderColor: "#c05050", color: "#e08888" }} onClick={() => {
                                                 if (!window.confirm(`Relâcher ${displayName(live)} (N.${live.level}) ? Il quittera DÉFINITIVEMENT le jeu — c'est IRRÉVERSIBLE.`)) return
                                                 const r = releaseFromPc(live.uid)
                                                 if (r.ok) { setToast(`${displayName(live)} a été relâché. Adieu ! 🕊️`); persistYellowSave(); closeFiche() }
+                                                else if (r.reason === "listed") setToast("Ce Daemon est sur l'étal du Marchand.")
                                             }}>🕊️ Relâcher</button>
                                         </>
                                     ))}

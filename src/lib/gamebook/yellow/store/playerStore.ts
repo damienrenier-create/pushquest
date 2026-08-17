@@ -2421,11 +2421,12 @@ export function depositToPc(uid: string): { ok: boolean; reason?: "introuvable" 
     return { ok: true }
 }
 
-/** Retire un Daemon du PC vers l'équipe. Refuse si l'équipe est pleine. */
-export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "full" } {
+/** Retire un Daemon du PC vers l'équipe. Refuse si l'équipe est pleine OU si le Daemon est posé sur l'étal (listed). */
+export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "full" | "listed" } {
     if (st.team.length >= TEAM_MAX) return { ok: false, reason: "full" }
     const idx = st.pc.findIndex((m) => m.uid === uid)
     if (idx < 0) return { ok: false, reason: "introuvable" }
+    if (st.pc[idx].tradeState === "listed") return { ok: false, reason: "listed" } // engagé sur l'étal → verrouillé
     const mon = st.pc[idx]
     st = { ...st, pc: st.pc.filter((_, i) => i !== idx), team: [...st.team, mon] }
     emit()
@@ -2433,13 +2434,53 @@ export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvabl
 }
 
 /** RELÂCHE définitivement un Daemon de la RÉSERVE (PC) — retiré du jeu, ne revient pas. On ne relâche QUE depuis
- *  le PC (l'équipe n'est jamais concernée) → aucun risque de se retrouver sans Daemon. */
-export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable" } {
+ *  le PC (l'équipe n'est jamais concernée) → aucun risque de se retrouver sans Daemon. Refuse si posé sur l'étal. */
+export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "listed" } {
     const idx = st.pc.findIndex((m) => m.uid === uid)
     if (idx < 0) return { ok: false, reason: "introuvable" }
+    if (st.pc[idx].tradeState === "listed") return { ok: false, reason: "listed" }
     st = { ...st, pc: st.pc.filter((_, i) => i !== idx) }
     emit()
     return { ok: true }
+}
+
+// === ÉCHANGE ASYNCHRONE — escrow SOFT par drapeau (aucune suppression au dépôt). ===
+/** Pose le drapeau "listed" sur un Daemon de la RÉSERVE (l'étal l'a accepté côté serveur). Le Daemon reste en boîte. */
+export function listMonForTrade(uid: string, listingId: string): boolean {
+    const idx = st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0 || st.pc[idx].tradeState === "listed") return false
+    const pc = [...st.pc]; pc[idx] = { ...pc[idx], tradeState: "listed", tradeListingId: listingId }
+    st = { ...st, pc }
+    emit()
+    return true
+}
+/** Lève le drapeau "listed" (retrait de l'étal / offre annulée / refusée) : le Daemon redevient utilisable. */
+export function unlistMon(uid: string): void {
+    const idx = st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0 || st.pc[idx].tradeState !== "listed") return
+    const pc = [...st.pc]; const { tradeState, tradeListingId, ...rest } = pc[idx]; void tradeState; void tradeListingId; pc[idx] = rest
+    st = { ...st, pc }
+    emit()
+}
+/** RETIRE un Daemon échangé (à l'échange conclu seulement). Cherche équipe ET PC par sûreté. Idempotent. */
+export function removeTradedMon(uid: string): void {
+    const inPc = st.pc.some((m) => m.uid === uid), inTeam = st.team.some((m) => m.uid === uid)
+    if (!inPc && !inTeam) return
+    st = { ...st, pc: st.pc.filter((m) => m.uid !== uid), team: st.team.filter((m) => m.uid !== uid) }
+    emit()
+}
+/** AUTO-RÉPARATION au chargement : tout Daemon "listed" dont l'étal n'existe plus côté serveur est délisté
+ *  (jamais bloqué à tort). `activeIds` = ids des étals/offres encore vivants pour ce joueur. */
+export function reconcileListedMons(activeIds: readonly string[]): void {
+    const set = new Set(activeIds)
+    let changed = false
+    const pc = st.pc.map((m) => {
+        if (m.tradeState === "listed" && !set.has(m.tradeListingId ?? "")) {
+            changed = true; const { tradeState, tradeListingId, ...rest } = m; void tradeState; void tradeListingId; return rest
+        }
+        return m
+    })
+    if (changed) { st = { ...st, pc }; emit() }
 }
 
 /** ÉCHANGE ASYNCHRONE (Grand Marchand) — ajoute au PC un Daemon reçu via une livraison serveur. On lui pose un

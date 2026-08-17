@@ -1,13 +1,13 @@
 // src/lib/gamebook/yellow/frontier/trocApi.ts
 //
-// USINE — LE GRAND MARCHAND : client de /api/gamebook/yellow/troc (échange asynchrone). Toutes les mutations
-//   renvoient { ok } — l'appelant ne retire un Daemon de sa save qu'APRÈS un ok (escrow confirmé).
+// USINE — LE GRAND MARCHAND : client de /api/gamebook/yellow/troc (échange asynchrone, escrow SOFT).
+//   Les mutations renvoient { ok } — l'appelant ne pose/retire un drapeau qu'APRÈS un ok.
 
 const BASE = "/api/gamebook/yellow/troc"
 
-export interface TrocListing { id: string; ownerId: string; ownerNickname: string; monJson: unknown; wantNote?: string; createdAt: string }
-export interface TrocOffer { id: string; listingId: string; ownerId: string; offererId: string; offererNickname: string; monJson: unknown; createdAt: string }
-export interface TrocDelivery { id: string; recipientId: string; monJson: unknown; note: string; createdAt: string }
+export interface TrocListing { id: string; ownerId: string; ownerNickname: string; ownerUid?: string; monJson: unknown; wantNote?: string; createdAt: string }
+export interface TrocOffer { id: string; listingId: string; ownerId: string; offererId: string; offererNickname: string; offererUid?: string; monJson: unknown; createdAt: string }
+export interface TrocDelivery { id: string; recipientId: string; monJson: unknown | null; removeUid: string; unlockUid: string; note: string; createdAt: string }
 export interface TrocState {
     myListings: TrocListing[]
     otherListings: TrocListing[]
@@ -38,4 +38,6 @@ export const postTrocWithdraw = (listingId: string) => post({ action: "withdraw"
 export const postTrocOffer = (listingId: string, mon: unknown) => post({ action: "offer", listingId, mon })
 export const postTrocCancelOffer = (offerId: string) => post({ action: "cancelOffer", offerId })
 export const postTrocRespond = (offerId: string, accept: boolean) => post({ action: "respond", offerId, accept })
-export const postTrocClaim = (): Promise<{ ok: boolean; mons?: { mon: unknown; note: string }[] }> => post({ action: "claim" })
+/** PEEK des livraisons (sans suppression). Le client applique puis acquitte via postTrocAck. */
+export const postTrocClaim = (): Promise<{ ok: boolean; deliveries?: TrocDelivery[] }> => post({ action: "claim" })
+export const postTrocAck = (ids: string[]) => post({ action: "ackClaim", ids })

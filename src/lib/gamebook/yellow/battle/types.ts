@@ -226,6 +226,12 @@ export interface MonInstance {
     /** VŒU « ABONDANCE MAUDITE » (Jacanon) : ce Daemon REFUSE d'obéir en combat (PvE), quels que soient les badges,
      *  jusqu'à ce que le créateur le gracie (script admin). Persisté. RÉVERSIBLE — aucune destruction. */
     disobedient?: boolean
+    /** ÉCHANGE ASYNCHRONE (Grand Marchand) — ESCROW « SOFT » sans suppression : "listed" = ce Daemon est posé sur
+     *  l'étal. Il RESTE dans la boîte (visible, stats évoluent) mais est GRISÉ + VERROUILLÉ (exclu des sélecteurs
+     *  équipe/fusion, du retrait vers l'équipe et de la remise en liberté). Levé au retrait de l'étal (unlist), et le
+     *  Daemon n'est RETIRÉ qu'à l'échange conclu. `tradeListingId` relie le drapeau à l'étal serveur (auto-réparation). */
+    tradeState?: "listed"
+    tradeListingId?: string
     /** COURBE D'XP FORCÉE pour cette instance (multiplicateur d'XP nécessaire), indépendante de l'espèce.
      *  Ex. Daemon offert « lent comme un légendaire » = 1.25 (colossal). Absent → courbe de l'espèce. Persisté. */
     growthMult?: number
