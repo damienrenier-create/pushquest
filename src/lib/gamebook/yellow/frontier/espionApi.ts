@@ -1,19 +1,19 @@
 // src/lib/gamebook/yellow/frontier/espionApi.ts
 //
-// USINE — L'ESPION : client des appels /api/gamebook/yellow/espion (liste des joueurs + révélation payante d'un
-//   roster). Dégrade proprement (liste vide / échec silencieux) si la table n'existe pas encore.
+// USINE — L'ESPION : client de /api/gamebook/yellow/espion.
+//   • liste des joueurs espionnables (accès Zone de Combat) — gratuit
+//   • VITRINE d'un joueur (sprites seulement) — gratuit
+//   • RÉVÉLATION d'un Daemon précis (par uid) contre des JC (coût croissant) — payant
 
 const BASE = "/api/gamebook/yellow/espion"
 
 export interface EspionPlayer { userId: string; nickname: string; teamSize: number }
-
-/** Roster révélé : mons BRUTS de la save de la cible (le client les hydrate via fullStats). */
+export interface EspionVitrineMon { uid: string; speciesId: string; level: number; shiny: boolean; zone: "team" | "pc" }
 export interface EspionReveal {
     ok: boolean
-    reason?: "insufficient"
+    reason?: "insufficient" | "gone"
     nickname?: string
-    team?: unknown[]
-    pc?: unknown[]
+    mon?: unknown       // Daemon BRUT complet (hydraté par le client)
     cost?: number
     jc?: number
     spyCount?: number
@@ -27,12 +27,21 @@ export async function fetchEspionPlayers(): Promise<EspionPlayer[]> {
     } catch { return [] }
 }
 
-export async function postEspionReveal(target: string): Promise<EspionReveal> {
+export async function fetchEspionVitrine(target: string): Promise<{ nickname: string; mons: EspionVitrineMon[] } | null> {
+    try {
+        const r = await fetch(`${BASE}?target=${encodeURIComponent(target)}`)
+        const j = await r.json()
+        if (!j?.ok) return null
+        return { nickname: String(j.nickname ?? "Dresseur"), mons: Array.isArray(j.mons) ? (j.mons as EspionVitrineMon[]) : [] }
+    } catch { return null }
+}
+
+export async function postEspionReveal(target: string, uid: string): Promise<EspionReveal> {
     try {
         const r = await fetch(BASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ target }),
+            body: JSON.stringify({ target, uid }),
         })
         return (await r.json()) as EspionReveal
     } catch { return { ok: false } }

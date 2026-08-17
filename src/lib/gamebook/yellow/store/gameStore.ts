@@ -322,6 +322,7 @@ interface GameStore {
     domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
     espionOpen: boolean // USINE — L'ESPION : consulter (payant) les rosters d'autres joueurs
     trocOpen: boolean // USINE — LE GRAND MARCHAND : échange asynchrone de Daemons
+    usineMenuOpen: boolean // USINE — panneau de série (location) : n'ouvre QUE via le Maître de l'Usine
     fusionMenuOpen: boolean // AUTEL DE LA CHIMÈRE : choisir 2 Daemons → fusion → combat-épreuve
     fusionAtelierOpen: boolean // ORDINATEUR DE FUSION : atelier (boîte/équipe + les 6 slots de fusion)
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
@@ -394,6 +395,7 @@ interface GameStore {
     closeDomeMenu: () => void
     closeEspion: () => void
     closeTroc: () => void
+    closeUsineMenu: () => void
     closeFusionMenu: () => void
     closeFusionAtelier: () => void
     openPc: () => void
@@ -1000,6 +1002,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     domeMenuOpen: false,
     espionOpen: false,
     trocOpen: false,
+    usineMenuOpen: false,
     fusionMenuOpen: false,
     fusionAtelierOpen: false,
     signOpen: null,
@@ -1041,7 +1044,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -1855,6 +1858,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ domeMenuOpen: true })
             return
         }
+        // USINE — LE MAÎTRE : ouvre le panneau de série (location). SEUL point d'accès (plus d'auto-affichage).
+        if (npc.id === "y_usine_maitre") {
+            set({ usineMenuOpen: true })
+            return
+        }
         // USINE — L'ESPION : ouvre le panneau d'espionnage (rosters d'autres joueurs, payant).
         if (npc.id === "y_usine_espion") {
             set({ espionOpen: true })
@@ -2566,6 +2574,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeDomeMenu: () => set({ domeMenuOpen: false }),
     closeEspion: () => set({ espionOpen: false }),
     closeTroc: () => set({ trocOpen: false }),
+    closeUsineMenu: () => set({ usineMenuOpen: false }),
     closeFusionMenu: () => set({ fusionMenuOpen: false }),
     closeFusionAtelier: () => set({ fusionAtelierOpen: false }),
     openPc: () => set({ pcOpen: true, fusionAtelierOpen: false }),

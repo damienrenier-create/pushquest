@@ -285,6 +285,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeEspion = useGameStore((s) => s.closeEspion)
     const trocOpen = useGameStore((s) => s.trocOpen)
     const closeTroc = useGameStore((s) => s.closeTroc)
+    const usineMenuOpen = useGameStore((s) => s.usineMenuOpen)
+    const closeUsineMenu = useGameStore((s) => s.closeUsineMenu)
     const fusionMenuOpen = useGameStore((s) => s.fusionMenuOpen) // AUTEL DE LA CHIMÈRE (salle de fusion)
     const closeFusionMenu = useGameStore((s) => s.closeFusionMenu)
     const fusionAtelierOpen = useGameStore((s) => s.fusionAtelierOpen) // ORDINATEUR DE FUSION (atelier 6 slots)
@@ -510,6 +512,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // À l'entrée de la TOUR ou de l'USINE : on récupère le profil serveur (towerBest/factoryBest) pour savoir si le
     //   joueur est CHAMPION (série ≥ 46) et lui proposer sa CT du Maître. Dégrade en silence si la table n'existe pas.
     useEffect(() => {
+        if (mapPlayer.mapId !== "yellow_combat_usine") closeUsineMenu() // le panneau ne survit pas à la sortie de l'Usine
         if (mapPlayer.mapId !== "yellow_combat_tour" && mapPlayer.mapId !== "yellow_combat_usine") return
         fetchFrontierProfile().then(setFrontierProf).catch(() => {})
     }, [mapPlayer.mapId])
@@ -2874,10 +2877,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                 </div>
             )}
-            {/* ZONE DE COMBAT — USINE : draft de location (placeholder) dans l'intérieur de l'Usine */}
-            {!battle && !run && mapPlayer.mapId === "yellow_combat_usine" && !dialogue && (
+            {/* ZONE DE COMBAT — USINE : draft de location. N'OUVRE QUE via le Maître de l'Usine (usineMenuOpen). */}
+            {!battle && !run && usineMenuOpen && mapPlayer.mapId === "yellow_combat_usine" && !dialogue && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #6aa0ec", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏭 USINE DE COMBAT</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <div style={{ fontWeight: 800 }}>🏭 USINE DE COMBAT</div>
+                        <button onClick={() => { setUsineDraft(null); closeUsineMenu() }} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 7, padding: "2px 8px", cursor: "pointer", fontWeight: 800, fontSize: 12 }}>✕</button>
+                    </div>
                     {/* CHAMPION de l'Usine (série ≥ 46 = palier DAN_4, « équivalent Dôme ») : choix d'une CT du Maître, une seule fois. */}
                     {frontierProf && frontierProf.factoryBest >= 46 && !isMasterCtClaimed("usine") && (
                         <div style={{ marginBottom: 8, padding: 8, background: "rgba(255,215,74,.12)", border: "1px solid #ffd54a", borderRadius: 8 }}>
