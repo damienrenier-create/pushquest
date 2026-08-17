@@ -71,6 +71,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
+import DomeMasters from "./DomeMasters"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -3068,7 +3069,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     <div style={{ marginBottom: 10 }}>{topN(dome.daemonUse, 5).map(([id, n], i) => `${i + 1}. ${getSpecies(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun tournoi joué)"}</div>
                                     <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>💥 Tes attaques du Dôme</div>
                                     <div style={{ marginBottom: 10 }}>{topN(dome.moveUse, 5).map(([id, n], i) => `${i + 1}. ${getMove(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun tournoi joué)"}</div>
-                                    <div style={{ fontSize: 10, opacity: 0.6 }}>Bientôt : leaderboard des autres joueurs · top coups les + forts · top némésis.</div>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 5 }}>🏯 Les maîtres du Dôme</div>
+                                    <DomeMasters />
+                                    <div style={{ fontSize: 10, opacity: 0.6, marginTop: 8 }}>Bientôt : top coups les + forts · top némésis.</div>
                                 </div>
                             )}
                             <button onClick={() => closeDomeMenu()} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "9px", cursor: "pointer", fontSize: 12 }}>✕ Fermer</button>

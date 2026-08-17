@@ -9,12 +9,8 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import type { ChampionMon, FusionChampionMon } from "@/lib/gamebook/yellow/storage/save"
-import { DOME_TITLES } from "@/lib/gamebook/yellow/frontier/domeBudgets"
-import { tierRank, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
-
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
 interface FusionChampionEntry { nickname: string; wonAt: string; team: FusionChampionMon[]; tier: string }
-interface DomeChampionEntry { userId?: string; nickname: string; wonAt: string; team: ChampionMon[]; tier: string }
 const TIER_META: Record<string, { label: string; color: string }> = {
     bronze: { label: "BRONZE", color: "#cd7f32" }, argent: { label: "ARGENT", color: "#c0c6cf" }, or: { label: "OR", color: "#ffd54a" },
 }
@@ -33,31 +29,19 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [champions, setChampions] = useState<ChampionEntry[]>([])
     const [fusionChamps, setFusionChamps] = useState<FusionChampionEntry[]>([])
-    const [domeChamps, setDomeChamps] = useState<DomeChampionEntry[]>([])
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
     const [openFusion, setOpenFusion] = useState<FusionChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
     const activeWorld = useActiveWorld()
     const player = usePlayer()
     const fusionUnlocked = player.defeatedTrainers.includes("autel_visited") // arrivé au Dôme Fusion → onglet FUSION
-    const domeUnlocked = player.domeChampionships >= 1 // a décroché ≥1 titre au Dôme → onglet DÔME (Panthéon)
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion" | "dome">(activeWorld === "replay" ? "live" : activeWorld)
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion">(activeWorld === "replay" ? "live" : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
     // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
     const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
-    // DÔME : un seul sacre par joueur (son palier LE PLUS HAUT), classé du plus prestigieux au plus modeste.
-    const domeShown = useMemo(() => {
-        const best = new Map<string, DomeChampionEntry>()
-        for (const c of domeChamps) {
-            const key = c.userId ?? c.nickname
-            const prev = best.get(key)
-            if (!prev || tierRank(c.tier as DomeTier) > tierRank(prev.tier as DomeTier)) best.set(key, c)
-        }
-        return [...best.values()].sort((a, b) => tierRank(b.tier as DomeTier) - tierRank(a.tier as DomeTier))
-    }, [domeChamps])
-    const worldLabel = viewWorld === "fusion" ? "FUSION" : viewWorld === "dome" ? "DÔME" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")
+    const worldLabel = viewWorld === "fusion" ? "FUSION" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")
 
     // Affronter l'équipe figée d'un Champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
     const fight = (label: string, team: ChampionMon[]) => {
@@ -86,17 +70,9 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                     if (!cancelled) setFusionChamps((jf?.champions ?? []) as FusionChampionEntry[])
                 } catch { /* silencieux */ }
             }
-            // Panthéon du Dôme (onglet DÔME, réservé aux titrés). Best-effort.
-            if (domeUnlocked) {
-                try {
-                    const rd = await fetch("/api/gamebook/yellow/dome-hall-of-fame")
-                    const jd = rd.ok ? await rd.json() : null
-                    if (!cancelled) setDomeChamps((jd?.champions ?? []) as DomeChampionEntry[])
-                } catch { /* silencieux */ }
-            }
         })()
         return () => { cancelled = true }
-    }, [fusionUnlocked, domeUnlocked])
+    }, [fusionUnlocked])
 
     const fmtDate = (iso: string) => {
         try { return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) }
@@ -108,8 +84,8 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
             <div style={box} onClick={(e) => e.stopPropagation()}>
                 <div style={titleStyle}>🏛️ HALL OF FAME · {worldLabel}</div>
 
-                {/* Toggle de RUN (runs atteints) + onglets FUSION (Dôme de la Fusion) et DÔME (Zone de Combat) */}
-                {(availWorlds.length > 1 || fusionUnlocked || domeUnlocked) && (
+                {/* Toggle de RUN (runs atteints) + onglet FUSION (Dôme de la Fusion) */}
+                {(availWorlds.length > 1 || fusionUnlocked) && (
                     <div style={runToggleRow}>
                         {availWorlds.map((w) => (
                             <button key={w.id} onClick={() => setViewWorld(w.id)}
@@ -123,51 +99,12 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                                 🧬 FUSION
                             </button>
                         )}
-                        {domeUnlocked && (
-                            <button onClick={() => setViewWorld("dome")}
-                                style={{ ...runToggleBtn, borderColor: viewWorld === "dome" ? "#7ee0ff" : "rgba(255,255,255,0.15)", background: viewWorld === "dome" ? "#2a7fa0" : "rgba(255,255,255,0.06)", color: "#fff" }}>
-                                🏯 DÔME
-                            </button>
-                        )}
                     </div>
                 )}
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Hall of Fame indisponible (hors-ligne ?).</div>}
-                {viewWorld === "dome" ? (
-                    <div style={scroll}>
-                        {domeShown.length === 0 && (
-                            <div style={muted}>Aucun maître du Dôme pour l&apos;instant.<br />Décroche un titre à la Zone de Combat pour graver ton équipe ! 🏯</div>
-                        )}
-                        {domeShown.map((c, ci) => {
-                            const title = DOME_TITLES[c.tier as DomeTier] ?? c.tier
-                            return (
-                                <div key={ci} style={champCard}>
-                                    <div style={champHead}>
-                                        <span style={{ ...champName, color: "#7ee0ff" }}>🏯 {c.nickname}</span>
-                                        <span style={{ fontSize: 9, fontWeight: 800, color: "#11121a", background: "#7ee0ff", borderRadius: 999, padding: "1px 8px" }}>{title}</span>
-                                        <span style={champDate}>{fmtDate(c.wonAt)}</span>
-                                    </div>
-                                    <div style={teamRow}>
-                                        {c.team.map((m, mi) => {
-                                            const sp = getSpecies(m.speciesId)
-                                            return (
-                                                <button key={mi} style={monCard} onClick={() => setOpenMon(m)} title="Voir la fiche">
-                                                    {sp?.sprite ? <img src={sp.sprite} alt={sp.name} style={monImg} /> : <div style={{ fontSize: 24 }}>❓</div>}
-                                                    <div style={monName}>{m.shiny ? "✨" : ""}{m.nickname ?? sp?.name ?? m.speciesId}</div>
-                                                    <div style={monLvl}>N.{m.level}</div>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                    <button style={fightBtn} onClick={() => fight(`Maître du Dôme · ${c.nickname}`, c.team)}>
-                                        ⚔️ Affronter l&apos;équipe de {c.nickname}
-                                    </button>
-                                </div>
-                            )
-                        })}
-                    </div>
-                ) : viewWorld === "fusion" ? (
+                {viewWorld === "fusion" ? (
                     <div style={scroll}>
                         {fusionChamps.length === 0 && (
                             <div style={muted}>Aucun sacre de fusion pour l&apos;instant.<br />Bats le Dieu Spaghetti à l&apos;Autel pour graver ton équipe ! 🧬</div>
