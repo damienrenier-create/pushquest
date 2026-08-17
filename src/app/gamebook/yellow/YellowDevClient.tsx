@@ -245,6 +245,15 @@ function writeInteriorReturn(uid: string, v: { mapId: string; x: number; y: numb
     } catch { /* quota / mode privé : silencieux */ }
 }
 
+/** REFLET (arène/ghost run 2) : rend le PREMIER Daemon envoyé IMPRÉVISIBLE des DEUX côtés (mélange l'ordre, Fisher-Yates).
+ *  Anti-exploit : le dresseur reflet ne connaît plus d'avance ton lead, et toi non plus le sien → fini le pré-contre du
+ *  1er Daemon qui rendait les reflets trop faciles. Copie superficielle → n'altère JAMAIS l'équipe réelle persistée. */
+function randomizeLead(team: MonInstance[]): MonInstance[] {
+    const a = team.slice()
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] }
+    return a
+}
+
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "", gameMode = "normal" }: { userId?: string; isCreator?: boolean; nickname?: string; gameMode?: string }) {
     const move = useGameStore((s) => s.move)
     const activateRepel = useGameStore((s) => s.activateRepel)
@@ -4538,7 +4547,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         //   puis Annuler ne coûte rien. Verrou lu par duelPlayedToday() au prochain handleArenaClick.
                         if (effectiveRunWorld() === "run3") recordDuelMatch()
                         duelOppRef.current = { userId: arenaFight.opp.userId, nickname: arenaFight.opp.nickname }
-                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "hof" })
+                        startTrainerBattle(randomizeLead(getPlayer().team), randomizeLead(arenaFight.enemy), Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "hof" })
                         setArenaFight(null)
                     }}
                     onCancel={() => setArenaFight(null)}
@@ -4552,7 +4561,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     accent="#e0a13a"
                     enemyTeam={ghostFight.enemy}
                     onFight={() => {
-                        startTrainerBattle(getPlayer().team, ghostFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: RUN2_GHOST_TRAINER_PREFIX + ghostFight.ghost.userId, reward: 0, aiLevel: "hof" })
+                        startTrainerBattle(randomizeLead(getPlayer().team), randomizeLead(ghostFight.enemy), Math.floor(Math.random() * 1e9), { trainerId: RUN2_GHOST_TRAINER_PREFIX + ghostFight.ghost.userId, reward: 0, aiLevel: "hof" })
                         setGhostFight(null)
                     }}
                     onCancel={() => setGhostFight(null)}
