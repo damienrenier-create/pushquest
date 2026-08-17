@@ -821,7 +821,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     if (survivePct > 0 && dealt >= defender.currentHp && defender.currentHp === maxHpOf(defender)
         && rng.next() < survivePct / 100) {
         dealt = Math.max(1, defender.currentHp - 1)
-        events.push({ kind: "message", text: `${displayName(defender)} s'accroche à 1 PV !` })
+        events.push({ kind: "message", text: defHeld?.survive1hpPct ? `${displayName(defender)} se raccroche à 1 PV grâce à son ${defHeld.name} !` : `${displayName(defender)} s'accroche à 1 PV !` })
     }
     applyDamage(state, other(side), dealt, events)
     // Record À VIE de l'attaquant (flavor affiché dans la fiche, persisté).
@@ -1063,10 +1063,11 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
             events.push({ kind: "message", text: `L'eau parasite siphonne les PV de ${displayName(mon)} !` })
         }
         // Restes (objet) OU talent Cœur vaillant : régénère une fraction des PV max en fin de tour.
-        const lefto = heldEffect(mon)?.leftoversFrac ?? talentEffect(mon)?.leftoversFrac
+        const heldRegen = heldEffect(mon)
+        const lefto = heldRegen?.leftoversFrac ?? talentEffect(mon)?.leftoversFrac
         if (lefto && mon.currentHp > 0 && mon.currentHp < maxHpOf(mon)) {
             applyHeal(state, side, Math.max(1, Math.floor(maxHpOf(mon) / lefto)), events)
-            events.push({ kind: "message", text: `${displayName(mon)} récupère un peu de PV.` })
+            events.push({ kind: "message", text: heldRegen?.leftoversFrac ? `${displayName(mon)} récupère des PV grâce à ${heldRegen.name} !` : `${displayName(mon)} récupère un peu de PV.` })
         }
     }
 }
