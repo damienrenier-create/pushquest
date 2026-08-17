@@ -14,7 +14,7 @@ import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 
 export const dynamic = "force-dynamic"
 
-export const FEAT_FIRST_IDS = ["champion", "fusion_champion", "catch_ukognofy"] as const
+export const FEAT_FIRST_IDS = ["champion", "fusion_champion", "catch_ukognofy", "dome_master", "tour_master", "usine_master"] as const
 const FEATS = new Set<string>(FEAT_FIRST_IDS)
 
 async function requireYellow() {

@@ -122,6 +122,9 @@ async function claimFirstFeats(): Promise<void> {
     if (p.isChampion) feats.push("champion")
     if (dt.includes("fusleague_bronze") || dt.includes("fusleague_argent") || dt.includes("fusleague_or")) feats.push("fusion_champion")
     if (dt.includes("ukognofy_caught")) feats.push("catch_ukognofy")
+    if (dt.includes("dome_master_ct")) feats.push("dome_master")   // 1er à décrocher la CT du Maître au Dôme
+    if (dt.includes("tour_master_ct")) feats.push("tour_master")   // …à la Tour
+    if (dt.includes("usine_master_ct")) feats.push("usine_master") // …à l'Usine
     for (const featId of feats) {
         try {
             await fetch("/api/gamebook/yellow/feat-first", {

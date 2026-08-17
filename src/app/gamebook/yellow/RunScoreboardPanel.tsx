@@ -243,6 +243,9 @@ const FEAT_FIRST_META: { id: string; label: string }[] = [
     { id: "champion", label: "👑 1er Champion de la Ligue" },
     { id: "fusion_champion", label: "🐉 1er Maître de la Chimère" },
     { id: "catch_ukognofy", label: "✨ 1er à choper Ukognofy" },
+    { id: "dome_master", label: "🏛️ 1er Maître du Dôme" },
+    { id: "tour_master", label: "🏯 1er Maître de la Tour" },
+    { id: "usine_master", label: "🏭 1er Maître de l'Usine" },
 ]
 
 /** Onglet RUN 4 / LIGUE : 🥇 PREMIÈRES DU GROUPE (course au premier, gravé à vie) + Maîtres de la Chimère classés
