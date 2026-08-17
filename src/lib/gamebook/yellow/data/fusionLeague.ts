@@ -54,8 +54,8 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "regnantaur", b: "mycedruide", name: "Regnadruide", moves: ["vague_mentale", "bombe_beurk", "spores_dodo", "onde_folie"] }, // PSY/POISON ~Aéromite — vague_mentale + spores_dodo légaux (mycédruide/regnantaur)
         { a: "coccimperatrice", b: "colosfer", name: "Impérafer", moves: ["crochet_maitre", "poing_meteore", "seisme", "danse_lames"] }, // COMBAT/METAL ~impératrice de fer (bruiser physique : 2 STAB + séisme + danse-lames)
         { a: "merorem", b: "wyvortal", name: "Mérovortal", moves: ["bombe_beurk", "boul_pollen", "toxik", "repos"] },                    // POISON/INSECTE ~Grotadmorv (staller) — REMPLACÉ en Argent/Or (cf. ANTITRIO_ARGENT_OR)
-        { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "pique_fatal", "vampelec", "toxik"] },              // ELEC/VOL ~Nostenfer (rapide) — pique_fatal = STAB Vol légal (les 2)
-        { a: "sylvapuce", b: "merorem", name: "Cerforem", moves: ["spores_dodo", "tempete_verte", "bombe_beurk", "toxik"] },            // PLANTE/POISON — staller végétal empoisonné (moves 100% cerfeuillu/merorem)
+        { a: "supabatchu", b: "necrocorbe", name: "Supacorbe", moves: ["fulgurance", "souffle_polaire", "vampelec", "toxik"] },          // ELEC/POISON (le VOL saute au calcul) ~Nostenfer — STAB Élec = fulgurance/vampelec ; Souffle Polaire (Glace, spé) COUVRE les Sol immunisés à l'Élec, remplace Pique-Fatal (Vol physique = slot mort)
+        { a: "sylvapuce", b: "merorem", name: "Cerforem", moves: ["tempete_verte", "bombe_beurk", "toxik", "repos"] },                  // PLANTE/POISON — staller ACE : gagne REPOS (soin) — on garde 2 offensifs (règle ≥2), donc c'est Spores-Dodo qui saute (pas Bombe-Beurk, sinon 1 seul offensif)
     ] },
     { key: "bruno", name: "BRUNO", theme: "COMBAT", icon: "🥊", pairs: [
         // BRUNO (Mackogneur/Tygnon/Kicklee/Kapoera/Onix) → cogneurs physiques COMBAT + le mur Roche/Sol.
@@ -70,7 +70,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         // KAREN (Conseil-4 Ténèbres) — ÉQUIPE BOSS de 6 fusions, MOVESETS 100% issus des learnsets des parents. Ordre =
         //   lead disable → 2 murs set-up → mur colossal speed-control → 2 sweepers rapides (ACE = Ténépanthe). 3 ténèbres.
         { a: "bouhbou", b: "mycedruide", name: "Bouhdruide", moves: ["spores_dodo", "toxik", "crochet_maitre", "bombe_beurk"] },        // COMBAT/POISON ~Ectoplasma — lead disable (sommeil+toxik)
-        { a: "geckebre", b: "condombre", name: "Géckombre", moves: ["morsure_sombre", "seisme", "danse_lames", "repos"] },              // SOL/TÉN — mur physique set-up (double STAB Séisme + Morsure)
+        { a: "geckebre", b: "condombre", name: "Géckombre", moves: ["ball_ombre", "seisme", "danse_lames", "repos"] },                  // SOL/TÉN — mur physique set-up : Ball'Ombre (Spectre PHYSIQUE, légal condombre) remplace Morsure (Ténèbres = spé, slot mort sur build Atk) ; STAB physique = Séisme
         { a: "ombrapanthe", b: "magnetor", name: "Magnépanthe", moves: ["ball_ombre", "poing_meteore", "seisme", "danse_lames"] },      // SPECTRE/METAL — pivot bulky set-up (superbe défense)
         { a: "leviabysse", b: "leviathonn", name: "Abyssathonn", moves: ["hydrocanon", "devoreur_ombres", "surtension", "repos"] },     // EAU/TÉN — mur colossal + speed-control (surtension −2 Vit, appris par Léviathonn)
         { a: "tenebrir", b: "thundah", name: "Thundèbre", moves: ["lance_flammes", "fulgurance", "vague_mentale", "focalisation"] },    // SPECTRE/FEU — sweeper spé le + rapide (Vit 449)
@@ -79,10 +79,10 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "lance", name: "LANCE", theme: "DRAGON", icon: "🐉", pairs: [
         // LANCE, Champion (Léviator/Dracaufeu/Ptéra + l'ACE Dracolosse) → sweepers physiques + le colosse dragon final.
         { a: "leviathonn", b: "aquilord", name: "Aquilathonn", moves: ["hydrocanon", "fonce_bec", "souffle_polaire", "reprise_ailes"] }, // EAU/VOL ~Léviator (mur spé) — hydrocanon = STAB Eau légal (léviathonn)
-        { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "draco_charge", "danse_lames"] }, // FEU/VOL ~Dracaufeu — draco_charge (Dragon) légal remplace seisme (non appris)
+        { a: "dracarlin", b: "draconarque", name: "Dracarnarque", moves: ["crocs_de_feu", "pique_fatal", "draco_charge", "focalisation"] }, // FEU/VOL/DRAGON ~Dracaufeu — RE-RÔLÉ sweep_spc (types 100% spéciaux) : crocs/draco frappent en Spé ; focalisation (+Spé) remplace Danse-Lames (inutile en spé)
         { a: "chronorex", b: "pterosidhe", name: "Chronosidhe", moves: ["serres_aube", "bourrasque_feerique", "seisme", "danse_lames"] }, // VOL/FEE ~Ptéra — bourrasque_feerique = STAB Fée légal (ptérosidhe) remplace eclat_lunaire
         { a: "draconarque", b: "megalithe", name: "Dracolithe", moves: ["draco_charge", "lame_roche", "seisme", "danse_lames"] },        // DRAGON/ROCHE — RÉSISTE le Roche (casse le sweep anti-Vol) ; cogneur set-up
-        { a: "oragron", b: "lunarque", name: "Lunagron", moves: ["tornade", "bourrasque_feerique", "fulgurance", "focalisation"] },      // VOL/FÉE — sweeper spé + set-up (moves 100% oragron/lunarque)
+        { a: "oragron", b: "lunarque", name: "Lunagron", moves: ["tornade", "eclat_lunaire", "fulgurance", "focalisation"] },            // VOL/FÉE — sweeper spé : Éclat Lunaire (STAB Fée spé pw85, légal lunarque niv 38) remplace Bourrasque Féerique (pw40)
         { a: "draconarque", b: "goshendofy", name: "Goshendarque", moves: ["souffle_primordial", "pique_fatal", "seisme", "repos"] },    // DRAGON/VOL ~Dracolosse (ACE)
     ] },
 ]
@@ -143,7 +143,7 @@ const ANTITRIO_ARGENT_OR: Record<string, { replace: string; with: FusionPairDef 
         { replace: "Morrinpâte", with: { a: "geckebre", b: "kangoudead", name: "Géckang", moves: ["morsure_sombre", "seisme", "repos", "toxik"] } },                     // SOL/TÉNÈBRES — mur anti-Jerbiwat increvable (PV699/Déf305 ; immune Psy ×0 ET Élec ×0, résiste Spectre ; seul le Feu passe neutre)
     ],
     koga: [{ replace: "Mérovortal", with: { a: "kangoudead", b: "merorem", name: "Mérodead", moves: ["toxik", "devoreur_ombres", "repos", "bombe_beurk"] } }],            // TÉNÈBRES/POISON — staller PV882, immune Psy, résiste Spectre/Ténèbres ×0.5
-    bruno: [{ replace: "Coccikara", with: { a: "maitrezenc", b: "condombre", name: "Condozenc", moves: ["crochet_maitre", "morsure_sombre", "seisme", "danse_lames"] } }], // COMBAT/TÉNÈBRES — Atk502, immune Psy ; Crochet ×2 ton Ténèbres, Morsure ×2 ton Spectre/Psy
+    bruno: [{ replace: "Coccikara", with: { a: "maitrezenc", b: "condombre", name: "Condozenc", moves: ["crochet_maitre", "ball_ombre", "seisme", "danse_lames"] } }], // COMBAT/TÉNÈBRES — Atk502, immune Psy ; Crochet ×2 ton Ténèbres, Ball'Ombre (Spectre PHYSIQUE, légal condombre) pour enfin TOUCHER les Spectres (Combat 0×) — remplace Morsure (Ténèbres = spé, riposte nulle)
 }
 
 /** Paires effectives d'un dresseur au palier donné : Bronze = d'origine ; Argent/Or = murs anti-trio substitués (si définis). */
@@ -166,7 +166,7 @@ export const CONSEIL_ROLES: Record<string, FusionRole> = {
     // KAREN (Ténèbres) — le + varié : tank/mur/sweeper phys + staller spé + 2 sweepers spé rapides (ACE Ténépanthe).
     Bouhdruide: "tank_atk", Géckombre: "wall_def", Magnépanthe: "sweep_atk", Abyssathonn: "wall_spc", Thundèbre: "sweep_spc", Ténépanthe: "sweep_spc",
     // LANCE (Dragon) — mur spé + 2 sweepers phys + mur roche + sweeper spé + ACE tank.
-    Aquilathonn: "wall_spc", Dracarnarque: "sweep_atk", Chronosidhe: "sweep_atk", Dracolithe: "wall_def", Lunagron: "sweep_spc", Goshendarque: "tank_atk",
+    Aquilathonn: "wall_spc", Dracarnarque: "sweep_spc", Chronosidhe: "sweep_atk", Dracolithe: "wall_def", Lunagron: "sweep_spc", Goshendarque: "tank_atk",
 }
 
 // OBJETS TENUS ENNEMIS (argent/or) — variés par RÔLE pour coller à l'archétype de la fusion. Baie réactive + objet
