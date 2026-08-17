@@ -71,7 +71,9 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
+import { isDomeChampion, isMasterCtClaimed } from "@/lib/gamebook/yellow/store/playerStore"
 import DomeMasters from "./DomeMasters"
+import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -3044,6 +3046,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {domeTab === "inscrire" && (
                                 <div style={{ textAlign: "center" }}>
+                                    {isDomeChampion() && !isMasterCtClaimed("dome") && (
+                                        <div style={{ textAlign: "left", background: "rgba(255,215,74,.08)", border: "1.5px solid #ffd54a", borderRadius: 10, padding: 10, marginBottom: 14 }}>
+                                            <div style={{ fontWeight: 800, color: "#ffd54a", fontSize: 13, marginBottom: 4 }}>🏆 MAÎTRE DU DÔME — ta récompense t'attend !</div>
+                                            <div style={{ fontSize: 10.5, opacity: 0.85, marginBottom: 8, lineHeight: 1.4 }}>Tu as vaincu les 11 tiers, jusqu'au 4ᵉ Dan. Ton nom est gravé dans l'histoire du Dôme. Reçois une CT INÉDITE du Maître :</div>
+                                            <MasterCtChoice facility="dome" onClaimed={(name) => { setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DU DÔME. 🏆`); closeDomeMenu() }} />
+                                        </div>
+                                    )}
                                     <div style={{ fontSize: 12, opacity: 0.88, marginBottom: 14, lineHeight: 1.55 }}>« Ton palier : <b style={{ color: "#c9a0ff" }}>{DOME_TITLES[cur]}</b>. Prêt à te battre, aspirant ? »<br /><span style={{ fontSize: 10.5, opacity: 0.8 }}>Tu reprends toujours à ton rang — jamais depuis Bronze.</span></div>
                                     <button onClick={() => { closeDomeMenu(); setDomeRegisterOpen(true) }} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 10, padding: "12px 20px", cursor: "pointer", fontSize: 14, boxShadow: "0 0 10px #4cd96466" }}>▶ S'inscrire au tournoi</button>
                                 </div>

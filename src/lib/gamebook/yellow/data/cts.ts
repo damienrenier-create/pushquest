@@ -175,6 +175,10 @@ export const CTS: CtData[] = [
  *  (ctRewardOptions). Seul octroi = victoire du boss en ngplus (cf. NGPLUS_BOSS_GIFTS). Source unique. */
 export const NGPLUS_EXCLUSIVE_CT_IDS: readonly string[] = ["ct53", "ct54", "ct55", "ct56", "ct57"]
 
+/** CT DU MAÎTRE (Dôme / Usine / Tour) — le champion de CHAQUE facilité en choisit UNE, jamais 2× la même (les CT déjà
+ *  possédées sortent du choix). Un triple-champion en décroche donc 3/4. Source UNIQUE (jamais en vente ni au labo). */
+export const MASTER_CT_IDS: readonly string[] = ["ct62", "ct63", "ct64", "ct65"]
+
 export function getCt(id: string): CtData | null {
     return CTS.find((c) => c.id === id) ?? null
 }

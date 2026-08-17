@@ -189,6 +189,7 @@ export const BADGES: readonly BadgeDef[] = [
     // ── ⑥ DÔME (🔒 se greffe à la découverte du Dôme) ──
     { id: "dome_bronze", label: "Gagner ta 1ʳᵉ couronne au Dôme", tier: "silver", secret: true, cat: "dome", earned: (i) => i.domeChampionships >= 1, reveal: (i) => i.domeChampionships >= 1 },
     { id: "dome_gold", label: "Décrocher le titre OR au Dôme", tier: "diamond", secret: true, cat: "dome", earned: (i) => i.domeChampionships >= 3, reveal: (i) => i.domeChampionships >= 1 },
+    { id: "dome_master", label: "MAÎTRE DU DÔME — les 11 tiers vaincus (4ᵉ Dan inclus)", tier: "legend", secret: true, cat: "dome", earned: (i) => i.domeChampionships >= 11, reveal: (i) => i.domeChampionships >= 6 },
 
     // ── ⑦ EXPLORATION — zones du run 1 (🔒 révélées à la découverte de la zone) ──
     { id: "grotte_nexus", label: "Découvrir la Grotte du Nexus", tier: "bronze", secret: true, cat: "exploration", earned: (i) => hasMk(i, MK_MERCHANT), reveal: (i) => hasMk(i, MK_MERCHANT) },

@@ -19,7 +19,7 @@ import { getItem, MAGNETOR_EVO_ITEM } from "../data/items"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
-import { getCt, canLearnCt, purchasableCts, run2BlackjackCtPool, type BadgeId } from "../data/cts"
+import { getCt, canLearnCt, purchasableCts, run2BlackjackCtPool, MASTER_CT_IDS, type BadgeId } from "../data/cts"
 import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, MEROREM_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_TARGET, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats, type YellowStats } from "../storage/save"
@@ -1365,6 +1365,22 @@ export function recordFusionLeagueDefeat(tier: string) {
     const cur = st.fusionLeagueDefeats ?? {}
     st = { ...st, fusionLeagueDefeats: { ...cur, [tier]: (cur[tier] ?? 0) + 1 } }
     emit()
+}
+// CT DU MAÎTRE (Dôme / Usine / Tour) — le champion de chaque facilité en choisit UNE, jamais 2× la même.
+const MASTER_CT_MARKER: Record<string, string> = { dome: "dome_master_ct", tour: "tour_master_ct", usine: "usine_master_ct" }
+/** Champion du Dôme = les 11 tiers vaincus (les 4 Dan inclus). */
+export function isDomeChampion(): boolean { return st.domeChampionships >= 11 }
+/** Les CT-maître ENCORE au choix (celles pas déjà possédées). Vide = le joueur les a toutes. */
+export function availableMasterCtIds(): string[] { return MASTER_CT_IDS.filter((id) => !st.ownedCts.includes(id) && !st.boughtCts.includes(id)) }
+/** A-t-on déjà réclamé la CT-maître de cette facilité (dome/tour/usine) ? */
+export function isMasterCtClaimed(facility: string): boolean { return st.defeatedTrainers.includes(MASTER_CT_MARKER[facility] ?? "") }
+/** Réclame la CT-maître d'une facilité : octroie la CT (grantCt) + pose le marqueur (1 seule fois par facilité). */
+export function claimMasterCt(ctId: string, facility: string): boolean {
+    const marker = MASTER_CT_MARKER[facility]
+    if (!marker || isMasterCtClaimed(facility) || !MASTER_CT_IDS.includes(ctId) || st.ownedCts.includes(ctId)) return false
+    grantCt(ctId)
+    markTrainerDefeated(marker)
+    return true
 }
 /** OBJETS TENUS ENNEMIS — marque une tentative de Ligue de Fusion pour `today` (YYYY-MM-DD) ; renvoie TRUE si c'est
  *  la PREMIÈRE du jour (→ baies ennemies actives en argent). En or les baies sont toujours actives (géré à l'appel). */
