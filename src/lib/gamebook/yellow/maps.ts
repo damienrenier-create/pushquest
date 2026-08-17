@@ -1246,7 +1246,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_combat_usine: {
         id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
-        backgroundImage: "/yellow/sprites/combat_usine.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
+        backgroundImage: "/yellow/sprites/combat_usine_new.jpg", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
         exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }],
     },
     // SALLE 1/3 — TOURNOI (salle d'accueil du Dôme). Porte SUD → hub Zone de Combat, porte EST → salle Dan (gatée MAÎTRE).

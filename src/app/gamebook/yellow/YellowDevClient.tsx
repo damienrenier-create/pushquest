@@ -95,7 +95,7 @@ import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/game
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
-import { postRecordRun, postReplaySpend, fetchFrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { postRecordRun, postReplaySpend, fetchFrontierProfile, type FrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
@@ -337,6 +337,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const frontierResumedRef = useRef(false)
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     const [usineCursor, setUsineCursor] = useState(0) // carousel : fiche du Daemon de location affichée
+    // Profil Frontier (serveur) : records towerBest/factoryBest → détecte le CHAMPION (série ≥ 46 = palier DAN_4)
+    //   pour offrir la CT du Maître dans la Tour/Usine. Rafraîchi à l'entrée de la salle + après chaque fin de série.
+    const [frontierProf, setFrontierProf] = useState<FrontierProfile | null>(null)
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<DomeSnap | null>(null)
     const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
@@ -498,6 +501,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!replayMenu) return
         fetchFrontierProfile().then((p) => setReplayNextCost(replayCost(p.replaysUsed))).catch(() => setReplayNextCost(null))
     }, [replayMenu])
+    // À l'entrée de la TOUR ou de l'USINE : on récupère le profil serveur (towerBest/factoryBest) pour savoir si le
+    //   joueur est CHAMPION (série ≥ 46) et lui proposer sa CT du Maître. Dégrade en silence si la table n'existe pas.
+    useEffect(() => {
+        if (mapPlayer.mapId !== "yellow_combat_tour" && mapPlayer.mapId !== "yellow_combat_usine") return
+        fetchFrontierProfile().then(setFrontierProf).catch(() => {})
+    }, [mapPlayer.mapId])
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     const [profileView, setProfileView] = useState(false) // MULTI-PROFILS : overlay « Mes profils » (nouveau profil + bascule)
     const [genesisCraftStep, setGenesisCraftStep] = useState<number | null>(null) // MODE GENÈSE : étape de craft (0..5) ; null = pas en craft
@@ -1649,7 +1658,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const ended = applyLossFromBattle()
             if (ended && !frontierReportedRef.current) {
                 frontierReportedRef.current = true
-                postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }) // persiste JC + record (serveur, neutre si table absente)
+                // persiste JC + record (serveur, neutre si table absente) → le profil frais met à jour le statut CHAMPION
+                postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }).then((p) => { if (p) setFrontierProf(p) })
                 setToast(`🏯 Série terminée — ${ended.streak} victoire(s) · ${ended.jc} JC enregistrés`)
             }
             endRun()
@@ -2839,6 +2849,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #e8893a", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 300 }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>🏯 TOUR DE COMBAT</div>
+                    {/* CHAMPION de la Tour (série ≥ 46 = palier DAN_4, « équivalent Dôme ») : choix d'une CT du Maître, une seule fois. */}
+                    {frontierProf && frontierProf.towerBest >= 46 && !isMasterCtClaimed("tour") && (
+                        <div style={{ marginBottom: 8, padding: 8, background: "rgba(255,215,74,.12)", border: "1px solid #ffd54a", borderRadius: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: "#ffd54a", marginBottom: 4 }}>🏆 CHAMPION DE LA TOUR — récompense du Maître</div>
+                            <MasterCtChoice facility="tour" onClaimed={(name) => setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DE LA TOUR. 🏆`)} />
+                        </div>
+                    )}
                     <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Série d&apos;endurance avec ton équipe : tiens le plus loin possible. 👑 Boss tous les 7 — et tu n&apos;es soigné QUE tous les 7 combats. Choisis ton mode :</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
@@ -2855,6 +2872,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !run && mapPlayer.mapId === "yellow_combat_usine" && !dialogue && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #6aa0ec", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>🏭 USINE DE COMBAT</div>
+                    {/* CHAMPION de l'Usine (série ≥ 46 = palier DAN_4, « équivalent Dôme ») : choix d'une CT du Maître, une seule fois. */}
+                    {frontierProf && frontierProf.factoryBest >= 46 && !isMasterCtClaimed("usine") && (
+                        <div style={{ marginBottom: 8, padding: 8, background: "rgba(255,215,74,.12)", border: "1px solid #ffd54a", borderRadius: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: "#ffd54a", marginBottom: 4 }}>🏆 CHAMPION DE L&apos;USINE — récompense du Maître</div>
+                            <MasterCtChoice facility="usine" onClaimed={(name) => setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DE L'USINE. 🏆`)} />
+                        </div>
+                    )}
                     {!usineDraft ? (
                         <>
                             <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — tu joueras une équipe de LOCATION :</div>
