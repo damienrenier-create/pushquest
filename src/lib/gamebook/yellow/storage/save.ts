@@ -221,6 +221,9 @@ export interface YellowSave {
     /** OBJETS TENUS ENNEMIS — date (YYYY-MM-DD) de la DERNIÈRE tentative de Ligue de Fusion : sert la règle « baies
      *  ennemies seulement à la 1re run du jour » (argent). Optionnel/additif. */
     fusionLeagueTryDate?: string
+    /** SALLE ULTIME — roster de fusion GELÉ qui a bouclé chaque palier (parents à plat : [a0,b0,a1,b1,…]). Sert à
+     *  reconstruire TON reflet dans la salle ultime (argent affronte le bronze ; or affronte l'argent). Optionnel/additif. */
+    fusionChampionRoster?: Record<string, MonInstance[]>
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -676,6 +679,11 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             ? Object.fromEntries(Object.entries(o.fusionLeagueDefeats as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
         fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
+        fusionChampionRoster: o.fusionChampionRoster && typeof o.fusionChampionRoster === "object" && !Array.isArray(o.fusionChampionRoster)
+            ? Object.fromEntries(Object.entries(o.fusionChampionRoster as Record<string, unknown>)
+                .filter(([, v]) => Array.isArray(v))
+                .map(([k, v]) => [k, (v as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null).slice(0, 12)]))
+            : undefined,
     }
 }
 

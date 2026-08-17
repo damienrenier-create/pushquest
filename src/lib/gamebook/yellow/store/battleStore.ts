@@ -58,7 +58,7 @@ import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
-import { recordFusionLeagueDefeat } from "./playerStore"
+import { recordFusionLeagueDefeat, snapshotFusionChampionRoster } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -1119,6 +1119,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
         markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
+        // SALLE ULTIME (brique 1) — GÈLE le roster de fusion vainqueur de CE palier → servira à reconstruire TON reflet
+        //   dans la salle ultime du palier SUIVANT (argent affronte ton bronze, or affronte ton argent).
+        snapshotFusionChampionRoster(sacredTier)
         // BOUCLE ENDGAME : le palier ULTIME (OR) propose de recréer son Daemon perso & rejouer le run 1. Re-proposé
         //   à CHAQUE sacre OR (événementiel) → refus = re-tenté au prochain. Jamais en bulle de rejeu.
         if (sacredTier === "or" && getActiveWorld() !== "replay") loopOffer = true

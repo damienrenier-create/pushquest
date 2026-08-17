@@ -209,6 +209,8 @@ interface PlayerState {
     fusionLeagueDefeats?: Record<string, number>
     /** OBJETS TENUS ENNEMIS — date de la dernière tentative de Ligue (règle « baies ennemies : 1re run du jour » en argent). */
     fusionLeagueTryDate?: string
+    /** SALLE ULTIME — roster de fusion GELÉ (parents à plat [a,b,a,b,…]) qui a bouclé chaque palier → reconstruit TON reflet. */
+    fusionChampionRoster?: Record<string, MonInstance[]>
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -540,6 +542,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         jcEnergyBuysToday: "jcEnergyBuysToday" in p ? p.jcEnergyBuysToday : st.jcEnergyBuysToday,
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
+        fusionChampionRoster: "fusionChampionRoster" in p ? p.fusionChampionRoster : st.fusionChampionRoster,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
     }
     emit()
@@ -1370,6 +1373,21 @@ export function beginFusionLeagueTry(today: string): boolean {
     if (first) { st = { ...st, fusionLeagueTryDate: today }; emit() }
     return first
 }
+/** SALLE ULTIME — GÈLE le roster de fusion (parents résolus depuis team+pc, à plat [a,b,a,b,…]) qui vient de boucler
+ *  `tier`. Reconstruit TON reflet plus tard (argent affronte le bronze, or l'argent). Clone profond → immuable. */
+export function snapshotFusionChampionRoster(tier: string) {
+    const all = [...st.team, ...st.pc]
+    const flat: MonInstance[] = []
+    for (const p of st.fusionRoster) {
+        const a = all.find((m) => m.uid === p.a), b = all.find((m) => m.uid === p.b)
+        if (a && b) flat.push(JSON.parse(JSON.stringify(a)) as MonInstance, JSON.parse(JSON.stringify(b)) as MonInstance)
+    }
+    if (!flat.length) return
+    st = { ...st, fusionChampionRoster: { ...(st.fusionChampionRoster ?? {}), [tier]: flat } }
+    emit()
+}
+/** Le roster de fusion gelé d'un palier (parents à plat [a,b,a,b,…]) — vide si aucun sacre de ce palier. */
+export function getFusionChampionRoster(tier: string): MonInstance[] { return st.fusionChampionRoster?.[tier] ?? [] }
 
 /**
  * Banque les reps réelles en ÉNERGIE, INSTANTANÉMENT (high-water mark) : crédite le
