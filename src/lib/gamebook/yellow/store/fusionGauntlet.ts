@@ -10,6 +10,15 @@ import type { BattleMon } from "../battle/types"
 
 let team: BuiltFusion[] | null = null
 
+// OBJETS TENUS ENNEMIS — les BAIES ennemies sont-elles actives pour CETTE run de gauntlet ? (règle « 1re run du jour »
+//   en argent ; toujours en or). Calculé au DÉMARRAGE de la run (gameStore beginFusionLeagueTry) puis lu à chaque
+//   construction d'équipe ennemie. TRANSIENT comme le reste du gauntlet (perdu au reload → recalculé au redémarrage).
+let gauntletBerries = false
+/** Fixe si les baies ennemies sont actives pour cette run (calculé une fois au démarrage). */
+export function setGauntletBerries(v: boolean): void { gauntletBerries = v }
+/** Les baies ennemies sont-elles actives pour la run en cours ? */
+export function getGauntletBerries(): boolean { return gauntletBerries }
+
 /** L'équipe-gauntlet courante (null = pas de Ligue de Fusion en cours). */
 export function getGauntletTeam(): BuiltFusion[] | null { return team }
 /** Pose l'équipe-gauntlet (à l'entrée) ou la vide (fin de run — le dispose des espèces est fait par l'appelant). */

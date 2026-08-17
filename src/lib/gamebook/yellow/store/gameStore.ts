@@ -25,13 +25,13 @@ import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion 
 import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
 import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
-import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, type GauntletCarryMon } from "./fusionGauntlet"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -499,6 +499,11 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
+        // OBJETS TENUS ENNEMIS — décide UNE fois pour CETTE run si les BAIES ennemies sont actives : toujours en OR,
+        //   seulement à la 1re run du jour en ARGENT (les objets passifs, eux, sont toujours là). Cf. assignEnemyHeldItems.
+        const startTier = activeFusionTier((m) => isTrainerDefeated(m))
+        const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
+        setGauntletBerries(startTier === "or" || (startTier === "argent" && firstTryToday))
         const c0 = serializeGauntletCarry(); setFusionLeagueCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
         // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
         //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
@@ -537,12 +542,12 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     if (trainerId === "y_fusion_miroir") {
         // BOSS FINAL — le Dieu Spaghetti forme ULTIME : 3 chimères + UKOGNOFY (Goshendofy+Ukognos), scalé au palier.
         //   (Remplace l'ancien miroir/reflet du roster.) Fusions FIXES, curées.
-        enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)), lvlBonus)
+        enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)), lvlBonus, getGauntletBerries())
     } else {
         const key = fusionLeagueKeyForTrainer(trainerId)
         if (!key) { disposeFusionGauntlet(); return null }
         const tier = activeFusionTier((m) => isTrainerDefeated(m))
-        enemyFusions = buildFusionLeagueTeam(key, tier, lvlBonus)
+        enemyFusions = buildFusionLeagueTeam(key, tier, lvlBonus, getGauntletBerries())
     }
 
     // ENNEMI seulement (le gauntlet joueur est disposé à part) → disposé à la salle suivante.

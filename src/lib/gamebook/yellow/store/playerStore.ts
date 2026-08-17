@@ -207,6 +207,8 @@ interface PlayerState {
     /** HAUT FAIT — défaites CUMULÉES par palier de la Ligue de Fusion (bronze/argent/or). Fige naturellement à la
      *  complétion d'un palier (les défaites suivantes comptent pour le palier actif suivant). + de défaites = badge - cher. */
     fusionLeagueDefeats?: Record<string, number>
+    /** OBJETS TENUS ENNEMIS — date de la dernière tentative de Ligue (règle « baies ennemies : 1re run du jour » en argent). */
+    fusionLeagueTryDate?: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -537,6 +539,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         potionBuysToday: "potionBuysToday" in p ? p.potionBuysToday : st.potionBuysToday,
         jcEnergyBuysToday: "jcEnergyBuysToday" in p ? p.jcEnergyBuysToday : st.jcEnergyBuysToday,
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
+        fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
     }
     emit()
@@ -1359,6 +1362,13 @@ export function recordFusionLeagueDefeat(tier: string) {
     const cur = st.fusionLeagueDefeats ?? {}
     st = { ...st, fusionLeagueDefeats: { ...cur, [tier]: (cur[tier] ?? 0) + 1 } }
     emit()
+}
+/** OBJETS TENUS ENNEMIS — marque une tentative de Ligue de Fusion pour `today` (YYYY-MM-DD) ; renvoie TRUE si c'est
+ *  la PREMIÈRE du jour (→ baies ennemies actives en argent). En or les baies sont toujours actives (géré à l'appel). */
+export function beginFusionLeagueTry(today: string): boolean {
+    const first = st.fusionLeagueTryDate !== today
+    if (first) { st = { ...st, fusionLeagueTryDate: today }; emit() }
+    return first
 }
 
 /**

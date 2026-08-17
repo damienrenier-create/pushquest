@@ -169,19 +169,65 @@ export const CONSEIL_ROLES: Record<string, FusionRole> = {
     Aquilathonn: "wall_spc", Dracarnarque: "sweep_atk", Chronosidhe: "sweep_atk", Dracolithe: "wall_def", Lunagron: "sweep_spc", Goshendarque: "tank_atk",
 }
 
+// OBJETS TENUS ENNEMIS (argent/or) — variés par RÔLE pour coller à l'archétype de la fusion. Baie réactive + objet
+//   passif. Budget : ARGENT 1 baie + 1 objet ; OR 2 baies + 2 objets. Les baies ne sont posées que si `berriesActive`
+//   (règle « 1re run du jour » en argent ; TOUJOURS en or — décidé dans gameStore). L'ACE (dernière fusion) prend la
+//   Baie Phénix en OR. Les objets passifs (Restes/Bandeau…) sont TOUJOURS présents dès l'argent. Rien en bronze.
+const ROLE_BERRY: Record<FusionRole, string> = {
+    wall_def: "baie_roc",     // +Déf à ¼ PV : le mur devient increvable
+    wall_spc: "baie_pure",    // staller : immunise le statut (para/toxik/gel/brûlure)
+    tank_atk: "baie_soin",    // soin 30 % à ⅓ PV
+    tank_spc: "baie_soin",
+    sweep_atk: "baie_fougue", // +Atk à ¼ PV : comeback offensif
+    sweep_spc: "baie_eclat",  // +Spé à ¼ PV
+}
+const ROLE_OBJECT: Record<FusionRole, string> = {
+    wall_def: "restes",        // regen passif 1/16/tour
+    wall_spc: "restes",
+    tank_atk: "bandeau",       // survit à un OHKO depuis PV pleins
+    tank_spc: "poudre_claire", // −10 % précision adverse
+    sweep_atk: "vive_griffe",  // 20 % passe en 1er
+    sweep_spc: "lentilscope",  // +1 cran de critique
+}
+/** Attribue les objets tenus ENNEMIS (argent/or) : baies aux fusions les + tanky / à l'ACE (fin de team, gatées par
+ *  berriesActive) ; objets passifs aux fusions de tête (toujours). Rien en bronze. Modifie les instances EN PLACE. */
+function assignEnemyHeldItems(team: BuiltFusion[], roles: (FusionRole | undefined)[], tier: FusionTier, berriesActive: boolean): void {
+    if (tier === "bronze") return
+    const nBerry = tier === "or" ? 2 : 1
+    const nObj = tier === "or" ? 2 : 1
+    const roleAt = (i: number): FusionRole => roles[i] ?? "tank_atk"
+    if (berriesActive) {
+        for (let k = 0; k < nBerry; k++) {
+            const i = team.length - 1 - k
+            if (i < 0) break
+            team[i].instance.heldItem = (tier === "or" && k === 0) ? "baie_phenix" : ROLE_BERRY[roleAt(i)]
+        }
+    }
+    let placed = 0
+    for (let i = 0; i < team.length && placed < nObj; i++) {
+        if (team[i].instance.heldItem) continue // déjà une baie posée ci-dessus
+        team[i].instance.heldItem = ROLE_OBJECT[roleAt(i)]
+        placed++
+    }
+}
+
 /** Équipe de FUSIONS d'un dresseur pour un palier. Renvoie des BuiltFusion (espèces éphémères ENREGISTRÉES →
  *  à DÉTRUIRE après le combat via disposeFusionLeagueTeam). Les parents ne sont jamais persistés.
- *  Chaque fusion est bâtie avec SON rôle (CONSEIL_ROLES) → archétypes nets (sweeper frêle, mur bulky…). */
-export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, levelBonus = 0): BuiltFusion[] {
+ *  Chaque fusion est bâtie avec SON rôle (CONSEIL_ROLES) → archétypes nets (sweeper frêle, mur bulky…).
+ *  `berriesActive` (argent/or) : pose aussi les baies réactives (cf. assignEnemyHeldItems). */
+export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, levelBonus = 0, berriesActive = false): BuiltFusion[] {
     const tr = FUSION_LEAGUE.find((t) => t.key === trainerKey)
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     // levelBonus (ex. vœu du génie « Ligue +3 ») → tous les fusionnés montent d'autant, plafonné à 100.
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
-    return tierPairs(tr.key, tier, tr.pairs).map((p) => {
+    const pairs = tierPairs(tr.key, tier, tr.pairs)
+    const team = pairs.map((p) => {
         const role = CONSEIL_ROLES[p.name]
         return buildFusion(buildParent(p.a, level, saiyan, role), buildParent(p.b, level, saiyan, role), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) })
     })
+    assignEnemyHeldItems(team, pairs.map((p) => CONSEIL_ROLES[p.name]), tier, berriesActive)
+    return team
 }
 
 // ==================== BOSS FINAL — LE DIEU SPAGHETTI (forme ultime) ====================
@@ -216,14 +262,16 @@ export const FUSION_BOSS_ULTRA: FusionPairDef[] = [
 
 /** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat.
  *  Bronze = équipe d'origine (1er sacre accessible) ; ARGENT/OR = l'ULTRA-TEAM (rôles dédiés, best-in-role, 12 parents distincts). */
-export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0): BuiltFusion[] {
+export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0, berriesActive = false): BuiltFusion[] {
     const { level: baseLevel, saiyan } = FUSION_TIERS[tier]
     const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
     const ultra = tier !== "bronze"
     const pairs = ultra ? FUSION_BOSS_ULTRA : FUSION_BOSS_PAIRS
-    return pairs.map((p) =>
+    const team = pairs.map((p) =>
         buildFusion(buildParent(p.a, level, saiyan, p.role, ultra), buildParent(p.b, level, saiyan, p.role, ultra), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
+    assignEnemyHeldItems(team, pairs.map((p) => p.role), tier, berriesActive)
+    return team
 }
 
 /** Détruit les espèces éphémères d'une équipe de Ligue (fin de combat / démontage). */

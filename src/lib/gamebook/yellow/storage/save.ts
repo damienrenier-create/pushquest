@@ -218,6 +218,9 @@ export interface YellowSave {
     casinoCapToday?: number
     /** HAUT FAIT — défaites cumulées par palier de la Ligue de Fusion (barème du badge de complétion). Optionnel/additif. */
     fusionLeagueDefeats?: Record<string, number>
+    /** OBJETS TENUS ENNEMIS — date (YYYY-MM-DD) de la DERNIÈRE tentative de Ligue de Fusion : sert la règle « baies
+     *  ennemies seulement à la 1re run du jour » (argent). Optionnel/additif. */
+    fusionLeagueTryDate?: string
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -672,6 +675,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         fusionLeagueDefeats: o.fusionLeagueDefeats && typeof o.fusionLeagueDefeats === "object" && !Array.isArray(o.fusionLeagueDefeats)
             ? Object.fromEntries(Object.entries(o.fusionLeagueDefeats as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
+        fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
     }
 }
 
