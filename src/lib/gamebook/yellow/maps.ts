@@ -1122,6 +1122,13 @@ function buildDomeFinalRoom(): TileType[][] {
     m[11][8] = "path" // porte SUD → retour salle Dan
     return m
 }
+// USINE DE COMBAT : les 3 PREMIÈRES rangées (0-2) = le bloc machinerie du décor → NON marchables. Les 3 PNJ se
+//   tiennent en rangée 4 (juste sous la machinerie), interpellés depuis la rangée 5.
+function buildUsineRoom(): TileType[][] {
+    const m = buildZoneRoom(16, 12) // périphérie murs + porte sud (8,11)
+    for (let x = 0; x < 16; x++) { m[1][x] = "tree"; m[2][x] = "tree" } // rangées 1 et 2 = murs (rangée 0 déjà mur périphérique)
+    return m
+}
 
 // GROTTE DU NEXUS — 1er étage (casse-tête Mt. Moon endgame). Collision v1 AUTO-échantillonnée depuis
 // grotte_casse_tete.png (void + gros rochers bloquants) → à CALER finement en jeu via debugGrid. 49×42.
@@ -1245,7 +1252,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 4, targetSpawnY: 8 }],
     },
     yellow_combat_usine: {
-        id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
+        id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildUsineRoom(), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/combat_usine_new.jpg", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
         exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }],
     },

@@ -115,7 +115,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { emoji: "🔧", color: "#6aa0ec" }, // remplacé par NPC_SPRITES (npc_usine_maitre)
         initialX: 3,
-        initialY: 3, // posé sur le mur haut ; on l'interpelle depuis (3,4)
+        initialY: 4, // sous le bloc machinerie (rangées 0-2 murées) ; on l'interpelle depuis (3,5)
         dialoguesAfter: [
             "« Bienvenue à l'Usine, pilote. Ici tu combats avec une équipe de LOCATION — draftée à chaque série. »",
             "Tiens la série le plus loin possible. Franchis la 46ᵉ victoire — l'équivalent du 4ᵉ Dan du Dôme — et tu deviens CHAMPION DE L'USINE.",
@@ -132,7 +132,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { emoji: "🕵️", color: "#8e7cc3" }, // remplacé par NPC_SPRITES (npc/daemomaniaque)
         initialX: 8,
-        initialY: 3, // posé sur le mur haut ; on l'interpelle depuis (8,4)
+        initialY: 4, // sous le bloc machinerie (rangées 0-2 murées) ; on l'interpelle depuis (8,5)
         dialoguesAfter: ["« Psst… tu veux voir les secrets des autres dresseurs ? Leurs stats, leurs IV, leurs attaques… Ça se paie en Jetons. »"],
     },
     // (c) LE GRAND MARCHAND (haut-droite) : échange ASYNCHRONE de Daemons (l'étal + offres + confirmations).
@@ -145,7 +145,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { emoji: "🛒", color: "#e0a458" }, // remplacé par NPC_SPRITES (npc_usine_marchand)
         initialX: 12,
-        initialY: 3, // posé sur le mur haut ; on l'interpelle depuis (12,4)
+        initialY: 4, // sous le bloc machinerie (rangées 0-2 murées) ; on l'interpelle depuis (12,5)
         dialoguesAfter: ["« Dépose tes Daemons sur mon étal. D'autres dresseurs viendront proposer les leurs — et quand vous serez d'accord, j'échange. »"],
     },
 
