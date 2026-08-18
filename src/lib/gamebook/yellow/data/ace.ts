@@ -107,6 +107,16 @@ export function aceIntro(): string[] { return acePick(ACE_INTRO_VARIANTS) }
 export function aceWinTaunt(): string { return acePick(ACE_WIN_TAUNTS) }
 /** Concession quand ACE PERD (le joueur a gagné). */
 export function aceLoseLine(): string { return acePick(ACE_LOSE_LINES) }
+// NARGUE : le joueur gagne mais n'a JAMAIS reçu le CALEPIN (offert seulement à sa 1re DÉFAITE contre ACE) → il le
+//   provoque en agitant le cadeau qu'il n'aura pas tant qu'il n'aura pas mordu la poussière. Voix cosmique-cocky.
+export const ACE_NO_CALEPIN_TEASES = [
+    "« Au fait… j'avais un cadeau pour toi. Un CALEPIN, pour noter tes petites leçons. Mais ça, ça ne tombe QUE dans les mains des vaincus. Toi, tu gagnes. Donc rien. Nah~ »",
+    "« Ironie cosmique : le seul truc que je te réservais, c'est un carnet de consolation. Réservé à ceux qui TOMBENT devant moi. Reviens perdre, et il est à toi. »",
+    "« Beau combat. Dommage — mon calepin corné ne se donne qu'avec ta PREMIÈRE défaite. L'univers a de l'humour : gagne, et tu repars les mains vides. »",
+    "« Tu veux ta récompense ? Facile : perds. J'ai un carnet qui n'attend que ça. Tant que tu triomphes, il prend la poussière sur mon étagère. À ta guise, rival. »",
+]
+/** Nargue si le joueur GAGNE sans avoir encore reçu le CALEPIN (offert seulement à la 1re défaite contre ACE). */
+export function aceNoCalepinTease(): string { return acePick(ACE_NO_CALEPIN_TEASES) }
 /** Ligne teaser du cadeau selon le nb de victoires : compte à rebours, ou ligne d'après-cadeau. */
 export function aceGiftLine(aceWins: number): string {
     const left = ACE_PANTHEON_WIN - aceWins

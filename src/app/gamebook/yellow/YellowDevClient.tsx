@@ -65,7 +65,7 @@ import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
-import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
+import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
@@ -1437,6 +1437,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const reward = getAceRewardMsg()
             // Concession d'ACE PIOCHÉE AU HASARD (différente à chaque défaite) + le message de récompense.
             const lines = [aceLoseLine(), ...(reward ? [reward] : [])]
+            // NARGUE : le joueur gagne mais n'a jamais eu le CALEPIN (réservé à la 1re DÉFAITE) → ACE agite le cadeau perdu.
+            if (!calepinOwned(userId)) lines.push(aceNoCalepinTease())
             showDialogue("y_ace", "ACE", lines)
             clearAceWin()
         }
