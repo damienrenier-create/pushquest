@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { fusionMaskedView, GROTTE_ENTERED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
@@ -25,19 +26,33 @@ function monLabel(raw: unknown): { name: string; sub: string } {
     const it = getHeldItem(m.heldItem) // l'objet tenu part avec le Daemon échangé
     return { name: `${m.shiny ? "✨ " : ""}${m.nickname || sp.name}`, sub: `Niv ${m.level} · ${sp.types.join("/")} · IV ${iv}/75${it ? ` · 🎒 ${it.name}` : ""}` }
 }
-function MonChip({ raw }: { raw: unknown }) {
+function MonChip({ raw, foreign = false }: { raw: unknown; foreign?: boolean }) {
     const m = raw as MonInstance & { nickname?: string }
     const sp = getSpecies(m?.speciesId)
     if (!sp) return <div style={{ fontWeight: 800, fontSize: 12 }}>Daemon</div>
+    // ANTI-SPOILER : Daemon d'AUTRUI (foreign) → fusion masquée en MissingNo/« ??? » tant que le viewer n'a pas vu la Grotte.
+    const view = fusionMaskedView(m.speciesId, !foreign || getPlayer().defeatedTrainers.includes(GROTTE_ENTERED_MARKER))
+    if (view.masked) return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src={view.sprite} alt="" width={40} height={40} style={{ imageRendering: "pixelated", flexShrink: 0 }} />
+            <div style={{ lineHeight: 1.3 }}>
+                <div style={{ fontWeight: 800, fontSize: 12 }}>???</div>
+                <div style={{ fontSize: 9, opacity: 0.65 }}>Fusion inconnue · niv {m.level} — visite la Grotte du Nexus</div>
+            </div>
+        </div>
+    )
     const { name, sub } = monLabel(raw)
     const st = fullStats(m, sp)
     const moves = (m.moves ?? []).map((s) => getMove(s.moveId)).filter(Boolean)
     return (
-        <div style={{ lineHeight: 1.3 }}>
-            <div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div>
-            <div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div>
-            <div style={{ fontSize: 9, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>PV {st.hp} · Atq {st.atk} · Déf {st.def} · Vit {st.spe} · Spé {st.spc}</div>
-            {moves.length > 0 && <div style={{ fontSize: 9, opacity: 0.7 }}>⚔️ {moves.map((mv) => mv!.name).join(" · ")}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src={sp.sprite} alt="" width={40} height={40} style={{ imageRendering: "pixelated", flexShrink: 0 }} />
+            <div style={{ lineHeight: 1.3 }}>
+                <div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div>
+                <div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div>
+                <div style={{ fontSize: 9, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>PV {st.hp} · Atq {st.atk} · Déf {st.def} · Vit {st.spe} · Spé {st.spc}</div>
+                {moves.length > 0 && <div style={{ fontSize: 9, opacity: 0.7 }}>⚔️ {moves.map((mv) => mv!.name).join(" · ")}</div>}
+            </div>
         </div>
     )
 }
@@ -184,7 +199,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                     {offers.length > 0 && <div style={{ fontSize: 9, opacity: 0.6, margin: "6px 0 3px" }}>Offres reçues :</div>}
                                     {offers.map((o) => (
                                         <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, background: "#191922", borderRadius: 6, padding: "5px 7px", marginTop: 4 }}>
-                                            <div><div style={{ fontSize: 9, opacity: 0.6 }}>{o.offererNickname} propose :</div><MonChip raw={o.monJson} /></div>
+                                            <div><div style={{ fontSize: 9, opacity: 0.6 }}>{o.offererNickname} propose :</div><MonChip raw={o.monJson} foreign /></div>
                                             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                                                 <button disabled={busy} onClick={() => doRespond(o.id, true)} style={btn("#7ac98a")}>✓</button>
                                                 <button disabled={busy} onClick={() => doRespond(o.id, false)} style={btn("#c98a8a")}>✕</button>
@@ -204,7 +219,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                             return (
                                 <div key={l.id} style={box}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                                        <div><div style={{ fontSize: 9, opacity: 0.6 }}>{l.ownerNickname}</div><MonChip raw={l.monJson} /></div>
+                                        <div><div style={{ fontSize: 9, opacity: 0.6 }}>{l.ownerNickname}</div><MonChip raw={l.monJson} foreign /></div>
                                         {already
                                             ? <span style={{ fontSize: 10, opacity: 0.6 }}>offre envoyée</span>
                                             : <button disabled={busy} onClick={() => setPicker({ kind: "offer", listingId: l.id, ownerNickname: l.ownerNickname })} style={btn("#8ab6c9")}>Proposer</button>}
