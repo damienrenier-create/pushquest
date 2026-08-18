@@ -9,10 +9,11 @@ import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
-import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchTroc, postTrocDeposit, postTrocWithdraw, postTrocOffer, postTrocCancelOffer, postTrocRespond, postTrocClaim, postTrocAck, type TrocState, type TrocListing, type TrocOffer } from "@/lib/gamebook/yellow/frontier/trocApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
+import WantedTab from "./WantedTab"
 
 function monLabel(raw: unknown): { name: string; sub: string } {
     const m = raw as MonInstance & { nickname?: string }
@@ -35,6 +36,7 @@ const wantStyle: React.CSSProperties = { fontSize: 10, color: "#8ab6c9", marginT
 export default function TrocPanel({ onClose, onToast }: { onClose: () => void; onToast?: (m: string) => void }) {
     const [st, setSt] = useState<TrocState | null>(null)
     const [busy, setBusy] = useState(false)
+    const [tab, setTab] = useState<"etal" | "wanted">("etal") // OFFRE (étal) | DEMANDE (recherches)
     const [picker, setPicker] = useState<null | { kind: "deposit" } | { kind: "offer"; listingId: string; ownerNickname: string }>(null)
     const [wantNote, setWantNote] = useState("")
 
@@ -43,13 +45,15 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
         const res = await postTrocClaim()
         const ds = res.ok ? (res.deliveries ?? []) : []
         if (!ds.length) return
-        let received = 0
+        let received = 0, repsGot = 0
         for (const d of ds) {
             if (d.monJson) { if (addTradedMonToPc(d.monJson)) received++ } // AJOUT d'abord (jamais de perte)
             if (d.removeUid) removeTradedMon(d.removeUid)                  // puis RETRAIT du Daemon donné
             if (d.unlockUid) unlistMon(d.unlockUid)                        // ou simple DÉVERROUILLAGE (offre rendue)
+            if (d.reps > 0) { grantReps(d.reps); repsGot += d.reps }       // MARKET WANTED : paiement/remboursement en reps
         }
         persistYellowSave()
+        if (repsGot > 0) onToast?.(`⚡ +${repsGot} reps reçus (échange).`)
         await postTrocAck(ds.map((d) => d.id)) // acquittement APRÈS persistance (au pire on réapplique → doublon, jamais perte)
         if (received > 0) onToast?.(`📦 ${received} Daemon(s) reçu(s) au PC !`)
     }
@@ -100,7 +104,16 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>Échange asynchrone. Ton Daemon posé reste dans ta boîte, <b>grisé</b>, jusqu&apos;à l&apos;échange — rien n&apos;est jamais perdu.</div>
 
-                {picker ? (
+                {/* Deux faces du marché : OFFRE (l'étal) | DEMANDE (les recherches) */}
+                <div style={{ display: "flex", gap: 6, margin: "6px 0 8px" }}>
+                    {(["etal", "wanted"] as const).map((t) => (
+                        <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "6px 4px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800, background: tab === t ? "#e0a458" : "#332e4a", color: tab === t ? "#15151f" : "#fff" }}>{t === "etal" ? "🛒 Étal" : "🔎 Recherches"}</button>
+                    ))}
+                </div>
+
+                {tab === "wanted" ? (
+                    <WantedTab onToast={onToast} claim={applyDeliveries} />
+                ) : picker ? (
                     <>
                         <div style={sectionTitle}>{picker.kind === "deposit" ? "Choisis un Daemon à déposer" : `Proposer à ${(picker as any).ownerNickname}`}</div>
                         {picker.kind === "deposit" && (

@@ -7,7 +7,7 @@ const BASE = "/api/gamebook/yellow/troc"
 
 export interface TrocListing { id: string; ownerId: string; ownerNickname: string; ownerUid?: string; monJson: unknown; wantNote?: string; createdAt: string }
 export interface TrocOffer { id: string; listingId: string; ownerId: string; offererId: string; offererNickname: string; offererUid?: string; monJson: unknown; createdAt: string }
-export interface TrocDelivery { id: string; recipientId: string; monJson: unknown | null; removeUid: string; unlockUid: string; note: string; createdAt: string }
+export interface TrocDelivery { id: string; recipientId: string; monJson: unknown | null; removeUid: string; unlockUid: string; reps: number; note: string; createdAt: string }
 export interface TrocState {
     myListings: TrocListing[]
     otherListings: TrocListing[]
