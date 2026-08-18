@@ -268,6 +268,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const repelSteps = useGameStore((s) => s.repelSteps) // REPOUSSE : pas restants (HUD + garde anti-double)
     const activateTorch = useGameStore((s) => s.activateTorch)
     const torchSteps = useGameStore((s) => s.torchSteps) // LAMPE TORCHE : pas d'autonomie restants (HUD + sac)
+    const torchOn = useGameStore((s) => s.torchOn) // LAMPE : allumée / éteinte (toggle HUD pour économiser les pas)
+    const toggleTorch = useGameStore((s) => s.toggleTorch)
     const mapPlayer = useGameStore((s) => s.player)
     // LIGUE DE FUSION — dans une salle de fusion, l'onglet ÉQUIPE affiche les 6 FUSIONNÉS du gauntlet (au lieu de
     //   l'équipe de base) : on peut ouvrir la fiche de chacun + réordonner l'ordre de combat et les attaques.
@@ -3348,11 +3350,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     🧴 Repousse · {repelSteps} pas
                 </div>
             )}
-            {/* HUD LAMPE TORCHE — pas d'autonomie restants (top-center, sous la repousse si les deux sont actives). */}
+            {/* HUD LAMPE TORCHE — cliquable : éteindre/rallumer pour ÉCONOMISER les pas (éteinte = pas de conso, pas gardés). */}
             {!battle && torchSteps > 0 && (
-                <div style={{ position: "absolute", left: "50%", top: repelSteps > 0 ? 34 : 8, transform: "translateX(-50%)", zIndex: 60, background: "#3a2a10ee", color: "#ffdf9e", border: "1px solid #e0a13a", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>
-                    🔦 Torche · {torchSteps} pas
-                </div>
+                <button onClick={toggleTorch} title="Toucher pour éteindre / rallumer la lampe (économise l'autonomie)"
+                    style={{ position: "absolute", left: "50%", top: repelSteps > 0 ? 34 : 8, transform: "translateX(-50%)", zIndex: 60, background: torchOn ? "#3a2a10ee" : "#1c1c22ee", color: torchOn ? "#ffdf9e" : "#9aa0ac", border: `1px solid ${torchOn ? "#e0a13a" : "#565b66"}`, borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, boxShadow: "0 2px 10px rgba(0,0,0,0.35)", cursor: "pointer" }}>
+                    {torchOn ? `🔦 Torche · ${torchSteps} pas` : `🕯️ Éteinte · ${torchSteps} pas gardés`}
+                </button>
             )}
             {/* ZONE DE COMBAT — pause entre vagues : Continuer ou Quitter (en gardant les JC) */}
             {run && run.status === "active" && tourChoice && (

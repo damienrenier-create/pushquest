@@ -361,9 +361,10 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     // EMBUSCADE : dresseur qui vient de nous repérer → bulle « ! » au-dessus de sa tête.
     const trainerAlertId = useGameStore((s) => s.trainerAlertId)
     const torchRadius = useGameStore((s) => s.torchRadius)
+    const torchOn = useGameStore((s) => s.torchOn)
     // BROUILLARD : rayon de vision de base de la map (true = 2 legacy · nombre = rayon), élargi par une lampe torche active.
     const darkBase = map.darkness === true ? 2 : (typeof map.darkness === "number" ? map.darkness : 0)
-    const visionRadius = torchSteps > 0 ? Math.max(darkBase, torchRadius) + 1 : darkBase // lampe torche active → +1 case d'éclairage
+    const visionRadius = (torchOn && torchSteps > 0) ? Math.max(darkBase, torchRadius) + 1 : darkBase // lampe ALLUMÉE → +1 case (éteinte → rayon sombre de base, pas gardés)
 
     const cam = computeCamera(player.posX, player.posY, map)
     // RUN 3 : activeNpcs() applique les positions run-3 + rend invisibles les dresseurs d'arène (peints dans le

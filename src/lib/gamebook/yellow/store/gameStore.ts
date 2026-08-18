@@ -408,12 +408,15 @@ interface GameStore {
     repelSteps: number // REPOUSSE (objet, hors combat) : pas restants sans rencontre sauvage (affiché en HUD)
     torchSteps: number // LAMPE TORCHE : pas d'autonomie restants (0 = éteinte). Décrémente sur les maps SOMBRES (HUD)
     torchRadius: number // LAMPE TORCHE : rayon éclairé tant que torchSteps > 0 (sinon on retombe au rayon de base de la map)
+    torchOn: boolean // LAMPE : allumée (éclaire + consomme) ou ÉTEINTE (pas d'éclairage NI de conso → pas gardés)
 
     // === ACTIONS ===
     /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
     activateRepel: (steps: number) => void
     /** Allume une lampe torche : rayon éclairé + autonomie en pas (dans les maps sombres). Remplace la torche active. */
     activateTorch: (radius: number, steps: number) => void
+    /** Éteint / rallume la lampe : éteinte = aucune conso (les pas restants sont GARDÉS pour plus tard). */
+    toggleTorch: () => void
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
@@ -1111,8 +1114,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     repelSteps: 0,
     torchSteps: 0,
     torchRadius: 0,
+    torchOn: true,
     activateRepel: (steps) => set({ repelSteps: Math.max(0, Math.floor(steps)) }),
-    activateTorch: (radius, steps) => set({ torchRadius: Math.max(0, Math.floor(radius)), torchSteps: Math.max(0, Math.floor(steps)) }),
+    activateTorch: (radius, steps) => set({ torchRadius: Math.max(0, Math.floor(radius)), torchSteps: Math.max(0, Math.floor(steps)), torchOn: true }),
+    toggleTorch: () => set({ torchOn: !get().torchOn }),
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -1612,7 +1617,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const isWildTile = onWildTile === "grassTall"
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
-        if (moved && !!map.darkness && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
+        if (moved && !!map.darkness && get().torchOn && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
         // 🐈‍⬛ GALIJAH : à chaque pas hors rejeu, on (ré)arme la chasse dès 150 ESPÈCES DIFFÉRENTES au Pokédex — atteintes
         //   par N'IMPORTE QUEL moyen (capture, ÉVOLUTION, fusion, cadeau, échange…), pas seulement une capture sauvage.
         //   Idempotent (no-op si déjà armé / <150 / déjà capturé). Garde l'armement synchrone avec le décompte affiché.
