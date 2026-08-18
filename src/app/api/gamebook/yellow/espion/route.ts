@@ -85,10 +85,10 @@ export async function POST(req: NextRequest) {
         let jc = 0, spyCount = 0
         try {
             const fp = (prisma as any).frontierProfile
-            const p = await fp.findUnique({ where: { userId: auth.userId } })
+            const p = await fp.findUnique({ where: { userId: auth.userId }, select: { jc: true, spyCount: true } })
             jc = Math.max(0, Math.floor(Number(p?.jc) || 0)); spyCount = Math.max(0, Math.floor(Number(p?.spyCount) || 0))
             if (jc < accessCost) return NextResponse.json({ ok: false, reason: "insufficient", jc, cost: accessCost }, { status: 200 })
-            await fp.update({ where: { userId: auth.userId }, data: { jc: jc - accessCost } })
+            await fp.update({ where: { userId: auth.userId }, data: { jc: jc - accessCost }, select: { jc: true } })
             jc = jc - accessCost
         } catch { /* table FrontierProfile absente → accès gratuit (dégradation propre) */ }
         const mons = team.map((m) => vitrineMon(m, "team")).filter((m) => m.uid && m.speciesId)
@@ -118,14 +118,14 @@ export async function POST(req: NextRequest) {
     let cost = 0, jc = 0, spyCount = 0
     try {
         const fp = (prisma as any).frontierProfile
-        const existing = await fp.findUnique({ where: { userId: auth.userId } })
+        const existing = await fp.findUnique({ where: { userId: auth.userId }, select: { jc: true, spyCount: true } })
         spyCount = Math.max(0, Math.floor(Number(existing?.spyCount) || 0))
         jc = Math.max(0, Math.floor(Number(existing?.jc) || 0))
         // Coût = 1 JC par NIVEAU du Daemon + FRAIS DE DOSSIER croissants (10, 20, 30… = 10×(spyCount+1)).
         const monLevel = Math.max(1, Math.floor(Number((mon as any).level) || 1))
         cost = monLevel + FEE_STEP * (spyCount + 1)
         if (jc < cost) return NextResponse.json({ ok: false, reason: "insufficient", jc, cost }, { status: 200 })
-        await fp.update({ where: { userId: auth.userId }, data: { jc: jc - cost } })
+        await fp.update({ where: { userId: auth.userId }, data: { jc: jc - cost }, select: { jc: true } })
         jc = jc - cost
         try { await fp.update({ where: { userId: auth.userId }, data: { spyCount: spyCount + 1 } }); spyCount = spyCount + 1 }
         catch { /* colonne spyCount pas encore migrée → coût reste au palier de base, non bloquant */ }

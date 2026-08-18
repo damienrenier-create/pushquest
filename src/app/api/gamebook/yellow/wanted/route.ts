@@ -36,13 +36,13 @@ const posInt = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0))
 async function addJc(userId: string, delta: number) {
     try {
         const fp = (prisma as any).frontierProfile
-        const p = await fp.findUnique({ where: { userId } })
+        const p = await fp.findUnique({ where: { userId }, select: { jc: true } }) // select explicite → immunise contre le SELECT * (cf. frontier route)
         const jc = Math.max(0, Math.floor(Number(p?.jc) || 0))
-        await fp.upsert({ where: { userId }, create: { userId, jc: Math.max(0, jc + delta) }, update: { jc: Math.max(0, jc + delta) } })
+        await fp.upsert({ where: { userId }, create: { userId, jc: Math.max(0, jc + delta) }, update: { jc: Math.max(0, jc + delta) }, select: { jc: true } })
     } catch { /* table absente → no-op */ }
 }
 async function getJc(userId: string): Promise<number> {
-    try { const p = await (prisma as any).frontierProfile.findUnique({ where: { userId } }); return Math.max(0, Math.floor(Number(p?.jc) || 0)) } catch { return 0 }
+    try { const p = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { jc: true } }); return Math.max(0, Math.floor(Number(p?.jc) || 0)) } catch { return 0 }
 }
 
 export async function GET() {

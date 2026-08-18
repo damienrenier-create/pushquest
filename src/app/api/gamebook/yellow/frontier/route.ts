@@ -38,12 +38,18 @@ function pickProfile(p: any) {
     }
 }
 
+// SELECT EXPLICITE des seules colonnes utilisées ici (toutes présentes en base de longue date). ⚠️ ANTI-BUG « faux
+//   zéro JC » : un findUnique SANS select fait un SELECT * → si le client Prisma (régénéré au build) connaît une NOUVELLE
+//   colonne pas encore migrée (db:push en retard), la lecture PLANTE et le catch renvoie jc:0 pour TOUS. Le select fige
+//   les colonnes lues → immunise la lecture du JC contre tout futur ajout de schéma. NE JAMAIS y mettre une colonne récente.
+const PROFILE_SELECT = { jc: true, towerBest: true, factoryBest: true, domeBest: true, symbols: true, replaysUsed: true } as const
+
 export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
     try {
         const fp = (prisma as any).frontierProfile
-        const p = await fp.findUnique({ where: { userId: auth.userId } })
+        const p = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
         return NextResponse.json({ ok: true, profile: p ? pickProfile(p) : { ...DEFAULTS } })
     } catch {
         return NextResponse.json({ ok: true, profile: { ...DEFAULTS } }) // table pas encore créée → neutre
@@ -72,7 +78,7 @@ export async function POST(req: NextRequest) {
             const jcEarned = Math.max(0, Math.floor(Number(body.jcEarned) || 0))
             const symbol = typeof body.symbol === "string" ? body.symbol : null
 
-            const existing = await fp.findUnique({ where: { userId: auth.userId } })
+            const existing = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
             const cur = pickProfile(existing)
             const symbols = [...cur.symbols]
             if (symbol && !symbols.includes(symbol)) symbols.push(symbol)
@@ -85,6 +91,7 @@ export async function POST(req: NextRequest) {
                 where: { userId: auth.userId },
                 create: { userId: auth.userId, ...data },
                 update: data,
+                select: PROFILE_SELECT,
             })
             return NextResponse.json({ ok: true, profile: pickProfile(saved) })
         }
@@ -92,19 +99,19 @@ export async function POST(req: NextRequest) {
         if (action === "spend") {
             const amount = Math.max(0, Math.floor(Number(body.amount) || 0))
             const symbol = typeof body.symbol === "string" ? body.symbol : null
-            const existing = await fp.findUnique({ where: { userId: auth.userId } })
+            const existing = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
             const jc = existing?.jc ?? 0
             if (jc < amount) return NextResponse.json({ ok: false, reason: "insufficient", jc })
             const symbols = [...pickProfile(existing).symbols]
             if (symbol && !symbols.includes(symbol)) symbols.push(symbol) // achat d'un symbole de prestige (atomique)
-            const saved = await fp.update({ where: { userId: auth.userId }, data: { jc: jc - amount, ...(symbol ? { symbols } : {}) } })
+            const saved = await fp.update({ where: { userId: auth.userId }, data: { jc: jc - amount, ...(symbol ? { symbols } : {}) }, select: PROFILE_SELECT })
             return NextResponse.json({ ok: true, jc: saved.jc, symbols: pickProfile(saved).symbols })
         }
 
         if (action === "replaySpend") {
             // REJEU (« run bis ») : coût JC CROISSANT (server-authoritative) selon replaysUsed (compteur GLOBAL).
             //   1er rejeu gratuit. Débit du coût + incrément du compteur, ATOMIQUES. Refus si solde insuffisant.
-            const existing = await fp.findUnique({ where: { userId: auth.userId } })
+            const existing = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
             const used = existing?.replaysUsed ?? 0
             const cost = replayCost(used)
             const jc = existing?.jc ?? 0
@@ -113,6 +120,7 @@ export async function POST(req: NextRequest) {
                 where: { userId: auth.userId },
                 create: { userId: auth.userId, jc: Math.max(0, jc - cost), replaysUsed: used + 1 },
                 update: { jc: jc - cost, replaysUsed: used + 1 },
+                select: PROFILE_SELECT,
             })
             return NextResponse.json({ ok: true, jc: saved.jc, replaysUsed: saved.replaysUsed, cost })
         }
