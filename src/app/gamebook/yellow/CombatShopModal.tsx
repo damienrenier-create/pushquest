@@ -145,6 +145,15 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         )
                     })}
 
+                    <Section title="⚡ Boosts de combat (objets X)">
+                        <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Consommés en combat (SAC → Boosts) : +1 cran (~+50 %) sur une stat jusqu&apos;à la fin du duel. Coûtent le tour.</div>
+                        {["x_attaque", "x_defense", "x_vitesse", "x_special"].map((id) => {
+                            const it = ITEMS[id]; const owned = player.items[id] ?? 0; const price = it.price ?? 120
+                            return <Row key={id} label={`${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc={it.description} price={price} disabled={busy || (jc ?? 0) < price}
+                                onBuy={() => spend(price, { grant: () => addItem(id, 1), toast: `⚡ ${it.name} acheté ! (en combat : SAC → Boosts)` })} />
+                        })}
+                    </Section>
+
                     <Section title="🌟 Daemons de légende">
                         <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Les gardiens uniques — dernier recours pour compléter ton Pokédex. Prix exorbitant.</div>
                         {legendaryOffer.length === 0 ? <Empty>Tous les gardiens sont déjà à toi. 🏅</Empty> : legendaryOffer.map((id) => {
