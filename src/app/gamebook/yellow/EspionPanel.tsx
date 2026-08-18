@@ -13,7 +13,7 @@ import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { ivTotal, ivTier, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { evTotal, evTotalCap } from "@/lib/gamebook/yellow/data/evConfig"
-import { fetchEspionPlayers, postEspionAccess, postEspionReveal, espionRevealCost, type EspionPlayer, type EspionVitrineMon } from "@/lib/gamebook/yellow/frontier/espionApi"
+import { fetchEspionPlayers, postEspionAccess, postEspionAccessBox, postEspionReveal, espionRevealCost, type EspionPlayer, type EspionVitrineMon } from "@/lib/gamebook/yellow/frontier/espionApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
 const STAT_LABELS: [string, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
@@ -94,37 +94,41 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
     const [spyCount, setSpyCount] = useState(0)
     const [revealed, setRevealed] = useState<Record<string, unknown>>({})
     const [detailUid, setDetailUid] = useState<string | null>(null)
-    const [accessConfirm, setAccessConfirm] = useState<EspionPlayer | null>(null) // paiement d'accès en attente
+    const [boxMons, setBoxMons] = useState<EspionVitrineMon[] | null>(null) // vitrine de la BOÎTE (PC) après paiement
+    const [boxInfo, setBoxInfo] = useState<{ cost: number; size: number } | null>(null) // coût/taille de la boîte du joueur courant
+    const [boxConfirm, setBoxConfirm] = useState(false)                            // paiement d'accès à la boîte en attente
     const [confirmMon, setConfirmMon] = useState<EspionVitrineMon | null>(null)    // paiement de révélation en attente
     const [busy, setBusy] = useState(false)
     const [note, setNote] = useState<string | null>(null)
 
     useEffect(() => { fetchEspionPlayers().then(setPlayers).catch(() => setPlayers([])) }, [])
 
-    const openPlayer = (p: EspionPlayer) => {
+    // Équipe GRATUITE : à l'ouverture on charge la vitrine ÉQUIPE + les infos de BOÎTE (coût = somme niv. du PC).
+    const openPlayer = async (p: EspionPlayer) => {
         if (busy) return
-        const cached = vitrineCache[p.userId]
-        if (cached) { setTarget({ userId: p.userId, nickname: p.nickname }); setVitrine(cached); setDetailUid(null); setNote(null); return } // déjà payé
-        setNote(null); setAccessConfirm(p)
-    }
-
-    const confirmAccess = async () => {
-        const p = accessConfirm
-        if (!p || busy) return
         setBusy(true); setNote(null)
         const r = await postEspionAccess(p.userId)
         setBusy(false)
-        if (!r.ok) {
-            if (r.reason === "insufficient") setNote(`Pas assez de Jetons : l'accès coûte ${r.cost} (tu as ${r.jc}).`)
-            else setNote("Accès impossible pour l'instant.")
-            setAccessConfirm(null)
-            return
-        }
+        if (!r.ok) { setNote("Accès impossible pour l'instant."); return }
         const vit = { nickname: r.nickname ?? p.nickname, mons: r.mons ?? [] }
         setVitrineCache((c) => ({ ...c, [p.userId]: vit }))
         setTarget({ userId: p.userId, nickname: p.nickname }); setVitrine(vit); setSpyCount(r.spyCount ?? 0)
-        setAccessConfirm(null); setDetailUid(null)
-        if (r.cost && r.cost > 0) onCharged?.(`🕵️ −${r.cost} JC · dossier de ${r.nickname ?? p.nickname} ouvert`)
+        setBoxInfo({ cost: r.boxCost ?? 0, size: r.boxSize ?? 0 }); setBoxMons(null); setBoxConfirm(false); setDetailUid(null)
+    }
+
+    // BOÎTE (PC) PAYANTE : débite la somme des niveaux du PC → dévoile les sprites de la boîte entière.
+    const confirmBox = async () => {
+        if (!target || busy) return
+        setBusy(true); setNote(null)
+        const r = await postEspionAccessBox(target.userId)
+        setBusy(false)
+        if (!r.ok) {
+            if (r.reason === "insufficient") setNote(`Pas assez de Jetons : la boîte coûte ${r.cost} (tu as ${r.jc}).`)
+            else setNote("Accès à la boîte impossible pour l'instant.")
+            setBoxConfirm(false); return
+        }
+        setBoxMons(r.mons ?? []); setBoxConfirm(false)
+        if (r.cost && r.cost > 0) onCharged?.(`🕵️ −${r.cost} JC · boîte de ${target.nickname} ouverte`)
     }
 
     const clickMon = (m: EspionVitrineMon) => {
@@ -152,7 +156,7 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
         if (r.cost && r.cost > 0) onCharged?.(`🕵️ −${r.cost} JC · ${getSpecies(m.speciesId)?.name ?? "Daemon"} de ${target.nickname} dévoilé`)
     }
 
-    const back = () => { setTarget(null); setVitrine(null); setDetailUid(null); setConfirmMon(null); setNote(null) }
+    const back = () => { setTarget(null); setVitrine(null); setBoxMons(null); setBoxInfo(null); setBoxConfirm(false); setDetailUid(null); setConfirmMon(null); setNote(null) }
 
     return (
         <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }} onClick={onClose}>
@@ -164,7 +168,7 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
 
                 {!target ? (
                     <>
-                        <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8 }}>Choisis un dresseur (ceux qui ont accès à la Zone de Combat). <b>Ouvrir son dossier coûte la somme des niveaux de son équipe</b> ; ensuite chaque fiche dévoilée coûte 1 JC/niveau + des frais de dossier croissants.</div>
+                        <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8 }}>Choisis un dresseur (accès Zone de Combat). Voir son <b>équipe portée est GRATUIT</b> ; sa <b>BOÎTE (PC)</b> coûte la somme des niveaux du PC. Dévoiler une fiche = 1 JC/niveau + frais de dossier croissants.</div>
                         {players == null ? (
                             <div style={{ fontSize: 12, opacity: 0.7 }}>Chargement…</div>
                         ) : players.length === 0 ? (
@@ -173,24 +177,13 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
                             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                                 {players.map((p) => (
                                     <button key={p.userId} disabled={busy} onClick={() => openPlayer(p)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, textAlign: "left", background: "#242433", border: "1px solid #3a3550", borderRadius: 8, padding: "8px 10px", cursor: busy ? "default" : "pointer", color: "#fff", fontFamily: "inherit", opacity: busy ? 0.6 : 1 }}>
-                                        <span><b>{p.nickname}</b> <span style={{ fontSize: 10, opacity: 0.6 }}>· {p.teamSize} Daemon(s)</span></span>
-                                        <span style={{ fontSize: 10, fontWeight: 800, color: vitrineCache[p.userId] ? "#7ac98a" : "#ffd54a" }}>{vitrineCache[p.userId] ? "ouvert ✓" : `💠 ${p.accessCost}`}</span>
+                                        <span><b>{p.nickname}</b> <span style={{ fontSize: 10, opacity: 0.6 }}>· {p.teamSize} en équipe{p.boxSize > 0 ? ` · boîte ${p.boxSize}` : ""}</span></span>
+                                        <span style={{ fontSize: 10, fontWeight: 800, color: "#7ac98a" }}>équipe gratuite ›</span>
                                     </button>
                                 ))}
                             </div>
                         )}
 
-                        {/* CONFIRMATION D'ACCÈS */}
-                        {accessConfirm && (
-                            <div style={{ marginTop: 10, padding: 10, background: "rgba(255,215,74,.1)", border: "1px solid #ffd54a", borderRadius: 8, textAlign: "center" }}>
-                                <div style={{ fontSize: 12 }}>Ouvrir le dossier de <b>{accessConfirm.nickname}</b> pour <b style={{ color: "#ffd54a" }}>💠 {accessConfirm.accessCost} JC</b> ?</div>
-                                <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2 }}>= somme des niveaux de son équipe · dévoiler une fiche coûtera ensuite en plus</div>
-                                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
-                                    <button disabled={busy} onClick={confirmAccess} style={{ background: "#7ac98a", color: "#15151f", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Payer l&apos;accès</button>
-                                    <button disabled={busy} onClick={() => setAccessConfirm(null)} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Annuler</button>
-                                </div>
-                            </div>
-                        )}
                         {note && <div style={{ fontSize: 11, color: "#ff9e6b", marginTop: 8 }}>{note}</div>}
                     </>
                 ) : (
@@ -204,6 +197,29 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
                                 <VitrineCard key={m.uid} mon={m} price={espionRevealCost(m.level, spyCount)} revealed={revealed[m.uid] !== undefined} disabled={busy} onClick={() => clickMon(m)} viewerEnteredGrotte={enteredGrotte} />
                             ))}
                         </div>
+
+                        {/* BOÎTE (PC) — accès PAYANT (somme des niveaux du PC) */}
+                        {boxInfo && boxInfo.size > 0 && (boxMons == null ? (boxConfirm ? (
+                            <div style={{ marginTop: 12, padding: 10, background: "rgba(255,215,74,.1)", border: "1px solid #ffd54a", borderRadius: 8, textAlign: "center" }}>
+                                <div style={{ fontSize: 12 }}>Ouvrir la <b>boîte (PC)</b> de <b>{target.nickname}</b> pour <b style={{ color: "#ffd54a" }}>💠 {boxInfo.cost} JC</b> ?</div>
+                                <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2 }}>= somme des niveaux de sa boîte ({boxInfo.size} Daemon·s)</div>
+                                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+                                    <button disabled={busy} onClick={confirmBox} style={{ background: "#7ac98a", color: "#15151f", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Payer</button>
+                                    <button disabled={busy} onClick={() => setBoxConfirm(false)} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Annuler</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button disabled={busy} onClick={() => { setNote(null); setBoxConfirm(true) }} style={{ display: "block", margin: "12px auto 0", background: "#332e4a", color: "#ffd54a", border: "1px solid #ffd54a", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800, fontSize: 12 }}>📦 Voir la boîte ({boxInfo.size}) · 💠 {boxInfo.cost} JC</button>
+                        )) : (
+                            <>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: "#c9b8f5", margin: "14px 0 6px" }}>📦 Boîte de {target.nickname}</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+                                    {boxMons.map((m) => (
+                                        <VitrineCard key={m.uid} mon={m} price={espionRevealCost(m.level, spyCount)} revealed={revealed[m.uid] !== undefined} disabled={busy} onClick={() => clickMon(m)} viewerEnteredGrotte={enteredGrotte} />
+                                    ))}
+                                </div>
+                            </>
+                        ))}
 
                         {confirmMon && (
                             <div style={{ marginTop: 10, padding: 10, background: "rgba(255,215,74,.1)", border: "1px solid #ffd54a", borderRadius: 8, textAlign: "center" }}>
