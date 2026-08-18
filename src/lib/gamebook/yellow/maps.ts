@@ -1116,6 +1116,7 @@ function buildDomeDanRoom(): TileType[][] {
     const m = fillRoom(16, 12, "path") // murs périphériques (dont la colonne la plus à droite)
     for (let x = 0; x < 16; x++) { m[1][x] = "tree"; m[2][x] = "tree"; m[3][x] = "tree" } // 4 PREMIÈRES rangées NON marchables (row 0 = mur périphérique)
     m[6][0] = "path" // porte OUEST → retour Tournoi
+    m[11][7] = "path" // SORTIE SUD (7,11) → retour Tournoi (case (7,10) juste au-dessus, déjà marchable)
     // Porte du SACRE en (7,4)+(8,4) : cases INTÉRIEURES de la rangée 4 (marchables) → gérée par les exits.
     return m
 }
@@ -1279,6 +1280,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/dome_dan.jpg", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
         exits: [
             { x: 0, y: 6, targetMapId: "yellow_combat_dome", targetSpawnX: 12, targetSpawnY: 6 }, // OUEST → Tournoi (près de la porte 12/13,4)
+            { x: 7, y: 11, targetMapId: "yellow_combat_dome", targetSpawnX: 12, targetSpawnY: 6 }, // SORTIE SUD (7,11) → Tournoi
             { x: 7, y: 4, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // porte du SACRE → Finale (gate domeChampionships>=11 dans gameStore)
             { x: 8, y: 4, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // 2e case de la porte du sacre
         ],
