@@ -20,6 +20,21 @@ export { FUSION_RULES }
 /** Marker (defeatedTrainers) posé à la 1re arrivée au Dôme Fusion (Autel). GATE du Fusiodex + de l'anti-spoiler. */
 export const AUTEL_VISITED_MARKER = "autel_visited"
 
+/** Marker (defeatedTrainers) posé à la 1re ENTRÉE dans la Grotte Puzzle → jauge anti-spoiler des fusions CROSS-JOUEUR. */
+export const GROTTE_ENTERED_MARKER = "grotte_entered"
+const MISSINGNO_SPRITE = "/yellow/sprites/dex/missingno.png"
+/** Une espèce est-elle une FUSION (dexNo ≥ 500, ou Ukognofy) → à masquer pour qui n'a pas vu la Grotte. */
+export function isFusionSpeciesId(speciesId: string): boolean {
+    return (getSpecies(speciesId)?.dexNo ?? 0) >= 500 || speciesId === "ukognofy"
+}
+/** Vue ANTI-SPOILER d'un Daemon d'AUTRUI : si c'est une fusion ET que le VIEWER n'a jamais mis les pieds dans la
+ *  Grotte Puzzle → MissingNo + « ??? ». Sinon le vrai sprite/nom. À utiliser dans espion / échange / classements. */
+export function fusionMaskedView(speciesId: string, viewerEnteredGrotte: boolean): { sprite: string; name: string; masked: boolean } {
+    const sp = getSpecies(speciesId)
+    if (!viewerEnteredGrotte && isFusionSpeciesId(speciesId)) return { sprite: MISSINGNO_SPRITE, name: "???", masked: true }
+    return { sprite: sp?.sprite ?? MISSINGNO_SPRITE, name: sp?.name ?? "Daemon", masked: false }
+}
+
 /** Le Dieu Spaghetti explique le Dôme à la 1re arrivée → débloque le Fusiodex dans le menu du joueur. */
 export const DOME_SPAGHETTI_LINES = [
     "*Une vapeur de sauce divine s'élève de l'autel central…*",

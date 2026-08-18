@@ -55,7 +55,7 @@ import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LI
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
-import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
+import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
@@ -2611,7 +2611,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); markTrainerDefeated(GROTTE_ENTERED_MARKER) } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10 + marqueur anti-spoiler fusions
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false

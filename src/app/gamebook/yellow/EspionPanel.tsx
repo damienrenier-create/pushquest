@@ -6,6 +6,8 @@
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { fusionMaskedView, GROTTE_ENTERED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
@@ -69,21 +71,22 @@ function MonSheet({ raw }: { raw: unknown }) {
     )
 }
 
-function VitrineCard({ mon, price, revealed, onClick, disabled }: { mon: EspionVitrineMon; price: number; revealed: boolean; onClick: () => void; disabled: boolean }) {
-    const sp = getSpecies(mon.speciesId)
+function VitrineCard({ mon, price, revealed, onClick, disabled, viewerEnteredGrotte }: { mon: EspionVitrineMon; price: number; revealed: boolean; onClick: () => void; disabled: boolean; viewerEnteredGrotte: boolean }) {
+    // ANTI-SPOILER : une fusion d'autrui reste MissingNo tant que le VIEWER n'a pas mis les pieds dans la Grotte Puzzle.
+    const view = fusionMaskedView(mon.speciesId, viewerEnteredGrotte)
+    const showShiny = !view.masked && mon.shiny
     return (
         <button onClick={onClick} disabled={disabled} title={revealed ? "Déjà dévoilé" : `Dévoiler pour ${price} JC`}
             style={{ position: "relative", width: 72, background: revealed ? "rgba(126,201,138,.12)" : "#242433", border: `1px solid ${revealed ? "#7ac98a" : "#3a3550"}`, borderRadius: 8, padding: 4, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1 }}>
-            {sp?.sprite
-                ? <img src={sp.sprite} alt="" width={52} height={52} style={{ imageRendering: "pixelated", display: "block", margin: "0 auto", filter: mon.shiny ? "drop-shadow(0 0 3px gold)" : "none" }} />
-                : <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>❓</div>}
-            <div style={{ fontSize: 9, textAlign: "center", opacity: 0.85 }}>{mon.shiny ? "✨" : ""}Niv {mon.level}</div>
+            <img src={view.sprite} alt="" width={52} height={52} style={{ imageRendering: "pixelated", display: "block", margin: "0 auto", filter: showShiny ? "drop-shadow(0 0 3px gold)" : "none" }} />
+            <div style={{ fontSize: 9, textAlign: "center", opacity: 0.85 }}>{showShiny ? "✨" : ""}Niv {mon.level}</div>
             <div style={{ fontSize: 9, textAlign: "center", fontWeight: 800, color: revealed ? "#7ac98a" : "#ffd54a" }}>{revealed ? "✓ vu" : `💠 ${price}`}</div>
         </button>
     )
 }
 
 export default function EspionPanel({ onClose, onCharged }: { onClose: () => void; onCharged?: (msg: string) => void }) {
+    const enteredGrotte = usePlayer().defeatedTrainers.includes(GROTTE_ENTERED_MARKER) // anti-spoiler fusions cross-joueur
     const [players, setPlayers] = useState<EspionPlayer[] | null>(null)
     const [target, setTarget] = useState<{ userId: string; nickname: string } | null>(null)
     const [vitrine, setVitrine] = useState<{ nickname: string; mons: EspionVitrineMon[] } | null>(null)
@@ -198,7 +201,7 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
                             {(vitrine?.mons ?? []).map((m) => (
-                                <VitrineCard key={m.uid} mon={m} price={espionRevealCost(m.level, spyCount)} revealed={revealed[m.uid] !== undefined} disabled={busy} onClick={() => clickMon(m)} />
+                                <VitrineCard key={m.uid} mon={m} price={espionRevealCost(m.level, spyCount)} revealed={revealed[m.uid] !== undefined} disabled={busy} onClick={() => clickMon(m)} viewerEnteredGrotte={enteredGrotte} />
                             ))}
                         </div>
 
