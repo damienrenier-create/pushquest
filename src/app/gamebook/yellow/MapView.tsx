@@ -14,7 +14,7 @@ import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } 
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
-import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
+import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_SPRITE_RECT, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
@@ -622,7 +622,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     <div
                         style={{
                             position: "absolute",
-                            ...screenPos(SYLVEBARBE_BLOCK.x0, SYLVEBARBE_BLOCK.y0, SYLVEBARBE_BLOCK.x1 - SYLVEBARBE_BLOCK.x0 + 1, SYLVEBARBE_BLOCK.y1 - SYLVEBARBE_BLOCK.y0 + 1),
+                            ...screenPos(SYLVEBARBE_SPRITE_RECT.x0, SYLVEBARBE_SPRITE_RECT.y0, SYLVEBARBE_SPRITE_RECT.x1 - SYLVEBARBE_SPRITE_RECT.x0 + 1, SYLVEBARBE_SPRITE_RECT.y1 - SYLVEBARBE_SPRITE_RECT.y0 + 1),
                             backgroundImage: `url(${SYLVEBARBE_SLEEP_SPRITE}?v=1)`,
                             backgroundRepeat: "no-repeat",
                             backgroundSize: "100% 100%",

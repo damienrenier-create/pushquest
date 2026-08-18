@@ -10,7 +10,7 @@ import type { MonInstance } from "../battle/types"
 
 export const SYLVEBARBE_NPC_ID = "y_sylvebarbe"
 export const SYLVEBARBE_MAP_ID = "yellow_entrance"
-export const SYLVEBARBE_POS = { x: 23, y: 38 } // haut du bloc sud (cols 22-25, rows 38-39) ; interpellé depuis (23,37)
+export const SYLVEBARBE_POS = { x: 23, y: 39 } // sur la RANGÉE DE SORTIE (cols 22-25, row 39) ; interpellé depuis (23,38). Battu → PNJ retiré → (23,38) ET la sortie libres.
 export const SYLVEBARBE_LEVEL = 85             // gardien post-Ligue MUSCLÉ (Ligue = niv 52-62) : exige une équipe VRAIMENT forte
 export const SYLVEBARBE_FLUTE_ITEM = "daemonflute"
 

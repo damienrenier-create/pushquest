@@ -5,7 +5,12 @@
 // Sylvebarbe (combat unique → markSylvebarbeAwake quand on le bat ou le capture) → la voie sud s'ouvre.
 
 export const SYLVEBARBE_BLOCK_MAP = "yellow_entrance"
-export const SYLVEBARBE_BLOCK = { x0: 22, x1: 25, y0: 38, y1: 39 } as const
+// COLLISION : seule la RANGÉE 39 (les cases de sortie vers la Zone de Combat) est murée tant que Sylvebarbe garde
+//   la route. La rangée 38 (le HAUT du sprite = « empreinte ») reste MARCHABLE → on peut s'approcher du colosse
+//   endormi, et une fois battu la case (23,38) est libre PAR CONSTRUCTION (plus aucun rectangle ni PNJ ne la touche).
+export const SYLVEBARBE_BLOCK = { x0: 22, x1: 25, y0: 39, y1: 39 } as const
+// VISUEL SEUL : le sprite du colosse endormi couvre 2 rangées (38-39), indépendamment de la collision ci-dessus.
+export const SYLVEBARBE_SPRITE_RECT = { x0: 22, x1: 25, y0: 38, y1: 39 } as const
 export const SYLVEBARBE_SLEEP_SPRITE = "/yellow/sprites/sylvebarbe_endormi.png"
 
 /** Une case (x,y) est-elle dans le rectangle bloqué par le Sylvebarbe endormi ? */
