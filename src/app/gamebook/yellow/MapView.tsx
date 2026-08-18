@@ -748,6 +748,8 @@ function npc40CellStyle(url: string, col: number, row: number): React.CSSPropert
 const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | null> = {
     // PNJ 10 — Sentinelle de la Grotte du Nexus (bloqueur de couloir), portrait entier fourni.
     y_pnj10_grotte: { url: "/yellow/sprites/pnj10.png", frames: 1, h: 1.9 },
+    // MAÎTRE DAN (Salle des Dan) — portrait fourni (npc 19, 120×120). h réglable en jeu si besoin.
+    y_dome_dan_maitre: { url: "/yellow/sprites/npc19_dan.png", frames: 1, h: 1.4 },
     // PNJ 1 — Spéléologue égaré de la Grotte du Nexus B2F (teaser du légendaire nocturne).
     y_pnj1_grotte_b2f: { url: "/yellow/sprites/pnj1_grotte_b2f.png", frames: 1, h: 1.9 },
     // PNJ 3 — Aventurier bloqueur de la Grotte B2F (de profil, barre le couloir jusqu'à sa défaite).

@@ -1113,9 +1113,10 @@ function buildDomeTournamentRoom(): TileType[][] {
     return m
 }
 function buildDomeDanRoom(): TileType[][] {
-    const m = fillRoom(16, 12, "path") // murs périphériques, AUCUNE porte sud
-    m[6][0] = "path"  // porte OUEST → retour Tournoi
-    m[0][8] = "path"  // porte NORD → salle Finale (gatée 4 Dan)
+    const m = fillRoom(16, 12, "path") // murs périphériques (dont la colonne la plus à droite)
+    for (let x = 0; x < 16; x++) { m[1][x] = "tree"; m[2][x] = "tree"; m[3][x] = "tree" } // 4 PREMIÈRES rangées NON marchables (row 0 = mur périphérique)
+    m[6][0] = "path" // porte OUEST → retour Tournoi
+    // Porte du SACRE en (7,4)+(8,4) : cases INTÉRIEURES de la rangée 4 (marchables) → gérée par les exits.
     return m
 }
 function buildDomeFinalRoom(): TileType[][] {
@@ -1128,6 +1129,7 @@ function buildDomeFinalRoom(): TileType[][] {
 function buildUsineRoom(): TileType[][] {
     const m = buildZoneRoom(16, 12) // périphérie murs + porte sud (8,11)
     for (let x = 0; x < 16; x++) { m[1][x] = "tree"; m[2][x] = "tree" } // rangées 1 et 2 = murs (rangée 0 déjà mur périphérique)
+    m[11][7] = "path" // 2e case de sortie SUD (7,11), à côté de (8,11)
     return m
 }
 
@@ -1255,7 +1257,10 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_combat_usine: {
         id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildUsineRoom(), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/combat_usine_new.jpg", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
-        exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }],
+        exits: [
+            { x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 },
+            { x: 7, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }, // 2e case de sortie SUD
+        ],
     },
     // SALLE 1/3 — TOURNOI (salle d'accueil du Dôme). Porte SUD → hub Zone de Combat, porte EST → salle Dan (gatée MAÎTRE).
     yellow_combat_dome: {
@@ -1274,7 +1279,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/dome_dan.jpg", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
         exits: [
             { x: 0, y: 6, targetMapId: "yellow_combat_dome", targetSpawnX: 12, targetSpawnY: 6 }, // OUEST → Tournoi (près de la porte 12/13,4)
-            { x: 8, y: 0, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // NORD → Finale (gate domeChampionships>=11 dans gameStore)
+            { x: 7, y: 4, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // porte du SACRE → Finale (gate domeChampionships>=11 dans gameStore)
+            { x: 8, y: 4, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // 2e case de la porte du sacre
         ],
     },
     // SALLE 3/3 — FINALE (le Maître à la coupe est peint dans le décor). PNJ invisible `y_dome_coupe` → reward. Porte SUD → Dan.
@@ -1282,7 +1288,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_dome_final", name: "SACRE DU DÔME", tiles: buildDomeFinalRoom(), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/dome_final.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
         exits: [
-            { x: 8, y: 11, targetMapId: "yellow_dome_dan", targetSpawnX: 8, targetSpawnY: 1 }, // SUD → retour Dan
+            { x: 8, y: 11, targetMapId: "yellow_dome_dan", targetSpawnX: 8, targetSpawnY: 5 }, // SUD → retour Dan (sous la porte du sacre 7/8,4)
         ],
     },
     // SALLE DE FUSION « Autel de la Chimère » : fusionner 2 Daemons pour un combat-épreuve (cf. data/fusionMon).
