@@ -39,6 +39,7 @@ import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALI
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
+import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
@@ -367,7 +368,7 @@ export function freezeTeam(team: MonInstance[]): ChampionMon[] {
 
 /** Lance un combat amical contre l'équipe de champion FIGÉE (Hall of Fame). Sans sac (noItems), IA la plus
  *  maligne ("hof"), aucune récompense ni XP (challenge pur). `label` identifie le combat (ligue/arène). */
-export function startHofBattle(label: string, champTeam: ChampionMon[], expMult = 0): boolean {
+export function startHofBattle(label: string, champTeam: ChampionMon[], expMult = 0, championReward = false): boolean {
     const playerTeam = getPlayer().team
     if (playerTeam.length === 0 || champTeam.length === 0) return false
     if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
@@ -376,7 +377,8 @@ export function startHofBattle(label: string, champTeam: ChampionMon[], expMult 
     // expMult : 0 = Ligue/HoF (challenge pur, défaut) ; 2 = arène du prochain objectif (Panthéon) ; 1 = 1 cran au-dessus.
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
-    setStore({ battle, evolutions: [], trainer: { trainerId: `hof:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    // champ: = rematch d'une team JOUEUR du palmarès (récompense Super Ball + baie run2+) ; hof: = Ligue/HoF (pas de cadeau).
+    setStore({ battle, evolutions: [], trainer: { trainerId: `${championReward ? "champ" : "hof"}:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
 }
@@ -885,6 +887,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const berry = ananasRewardBerry(ananasVariant())
             if (berry) addItem(berry, 1)
             rematchReward = { npcId: ANANAS_NPC_ID, npcName: "ANANAS", lines: ananasWinLines(berry) }
+        } else if (storeState.trainer.trainerId.startsWith("champ:")) {
+            // TEAM d'un JOUEUR du palmarès vaincue (Hall des Champions) → Super Ball + (dès le run 2) une baie au hasard.
+            addItem("super_ball", 1)
+            const run2plus = effectiveRunWorld() !== "live" || getPlayer().isChampion
+            const champBerry = run2plus ? BERRY_IDS[Math.floor(Math.random() * BERRY_IDS.length)] : null
+            if (champBerry) addItem(champBerry, 1)
+            rematchReward = { npcId: "champ", npcName: "HALL DES CHAMPIONS", lines: ["🏆 Tu as battu l'équipe d'un champion du palmarès !", `🎁 Reçois une Super Nexus-Ball${champBerry ? " + une baie surprise 🫐" : ""} !`] }
         } else if (storeState.trainer.trainerId === PNJ7_TRAINER_ID) {
             // L'ÉCLAIREUR (PNJ 7) : le cap 1×/jour a déjà été posé au LANCEMENT (gameStore.tryLaunchPnj7) → aucun
             // marker ici. Victoire → amorce la DÉMO (les 3 prochaines rencontres Grotte = 2 parents puis fusion),
