@@ -27,6 +27,21 @@ const MISSINGNO_SPRITE = "/yellow/sprites/dex/missingno.png"
 export function isFusionSpeciesId(speciesId: string): boolean {
     return (getSpecies(speciesId)?.dexNo ?? 0) >= 500 || speciesId === "ukognofy"
 }
+
+/** Daemons « stade ULTIME » qui ne peuvent JAMAIS fusionner (ni comme parent). MégamonarX est déjà l'aboutissement.
+ *  Extensible (Sartay) — ajoute ici un id pour l'exclure de toute fusion. */
+export const NON_FUSABLE_IDS: readonly string[] = ["megamonarx"]
+
+/** Valide une PAIRE de parents à l'Autel / au roster de Ligue. Renvoie un message d'ERREUR (à toaster) ou null si OK.
+ *  RÈGLES (Sartay) : (1) jamais deux fois la MÊME espèce ; (2) un stade ULTIME (MégamonarX…) ne fusionne jamais ;
+ *  (3) SUPER-FUSION — une fusion (native/capturée, dexNo ≥ 500 ou Ukognofy) ne fusionne QU'AVEC une AUTRE fusion,
+ *  jamais avec un Daemon normal (et réciproquement). Déterministe → même verdict à l'Autel, au roster et en PvP. */
+export function fusionPairError(aSpeciesId: string, bSpeciesId: string): string | null {
+    if (aSpeciesId === bSpeciesId) return "Impossible de fusionner deux Daemons de la MÊME espèce."
+    if (NON_FUSABLE_IDS.includes(aSpeciesId) || NON_FUSABLE_IDS.includes(bSpeciesId)) return "Ce Daemon est un stade ultime : il ne peut pas fusionner."
+    if (isFusionSpeciesId(aSpeciesId) !== isFusionSpeciesId(bSpeciesId)) return "Une fusion ne peut fusionner qu'avec une AUTRE fusion (native ou capturée)."
+    return null
+}
 /** Vue ANTI-SPOILER d'un Daemon d'AUTRUI : si c'est une fusion ET que le VIEWER n'a jamais mis les pieds dans la
  *  Grotte Puzzle → MissingNo + « ??? ». Sinon le vrai sprite/nom. À utiliser dans espion / échange / classements. */
 export function fusionMaskedView(speciesId: string, viewerEnteredGrotte: boolean): { sprite: string; name: string; masked: boolean } {

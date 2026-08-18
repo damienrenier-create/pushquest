@@ -361,9 +361,10 @@ export default function BattleScreen() {
             // Anti-statut → choisir la cible (actif OU banc). Grisé si aucun Daemon vivant n'a de statut.
             Object.values(ITEMS).filter((it) => it.category === "STATUS_HEAL" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setItemTargetId(it.id); setMenu("itemTarget") }, disabled: !battle.player.team.some((m) => m.currentHp > 0 && m.status !== "NONE") }))
-            // Objets X (boost de stat)
+            // Objets X (boost de stat) → CIBLABLES : choisir l'actif OU un Daemon du banc (le pré-booster avant de
+            //   le switcher, il entrera boosté). Grisé seulement si toute l'équipe est K.O. (garde-fou).
             Object.values(ITEMS).filter((it) => it.category === "BOOST" && owned(it.id))
-                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id) }))
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setItemTargetId(it.id); setMenu("itemTarget") }, disabled: !battle.player.team.some((m) => m.currentHp > 0) }))
             // Rappel (revive) → choisir un Daemon K.O. à ranimer (désactivé si aucun K.O. dans l'équipe)
             Object.values(ITEMS).filter((it) => it.category === "REVIVE" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setReviveItemId(it.id); setMenu("reviveTarget") }, disabled: !battle.player.team.some((m) => m.currentHp <= 0) }))
@@ -388,9 +389,14 @@ export default function BattleScreen() {
             options.push({ label: "← RETOUR", onSelect: () => { setReviveItemId(null); setMenu("bag") } })
             canBack = true
         } else if (menu === "itemTarget") {
-            // SOIN / ANTI-STATUT : choisir le Daemon à soigner (actif OU banc). Grisé si le membre ne peut pas en profiter.
+            // SOIN / ANTI-STATUT / OBJET X : choisir le Daemon (actif OU banc). Grisé si le membre ne peut pas en profiter.
             const ti = itemTargetId ? ITEMS[itemTargetId] : null
-            const cantBenefit = (m: (typeof battle.player.team)[number]) => m.currentHp <= 0 || (ti?.category === "STATUS_HEAL" ? m.status === "NONE" : m.currentHp >= maxHpOf(m))
+            const cantBenefit = (m: (typeof battle.player.team)[number]) => {
+                if (m.currentHp <= 0) return true // K.O. → aucun objet ciblable ne s'applique (il faut un Rappel)
+                if (ti?.category === "BOOST") return false // objet X : pré-boostable sur n'importe quel Daemon vivant (même à plein PV)
+                if (ti?.category === "STATUS_HEAL") return m.status === "NONE" // anti-statut : inutile sans statut
+                return m.currentHp >= maxHpOf(m) // soin de PV : inutile à plein PV
+            }
             battle.player.team.forEach((m, i) => options.push({
                 label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}${m.status !== "NONE" ? ` (${m.status})` : ""}`,
                 onSelect: () => { if (itemTargetId) doItem(itemTargetId, i) }, disabled: cantBenefit(m),

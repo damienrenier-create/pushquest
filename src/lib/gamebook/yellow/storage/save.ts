@@ -224,6 +224,8 @@ export interface YellowSave {
     casinoCapToday?: number
     /** HAUT FAIT — défaites cumulées par palier de la Ligue de Fusion (barème du badge de complétion). Optionnel/additif. */
     fusionLeagueDefeats?: Record<string, number>
+    /** GROTTE/BOUTIQUE JC — cliquet prix par catégorie (nb d'achats par catégorie, CE RUN). Optionnel/additif. */
+    grotteShopBuys?: Record<string, number>
     /** OBJETS TENUS ENNEMIS — date (YYYY-MM-DD) de la DERNIÈRE tentative de Ligue de Fusion : sert la règle « baies
      *  ennemies seulement à la 1re run du jour » (argent). Optionnel/additif. */
     fusionLeagueTryDate?: string
@@ -320,6 +322,7 @@ function parseMon(raw: unknown): MonInstance | null {
         allocated: parseAllocated(o.allocated),
         ev: parseAllocated(o.ev),
         evCapBoost: o.evCapBoost === true ? true : undefined,
+        evCurveV2: o.evCurveV2 === true ? true : undefined,
         pendingSaiyanLevels: typeof o.pendingSaiyanLevels === "number" ? Math.max(0, Math.floor(o.pendingSaiyanLevels)) : undefined,
         lastLevelUpAt: typeof o.lastLevelUpAt === "string" ? o.lastLevelUpAt : undefined,
         capturedLevel: typeof o.capturedLevel === "number" ? Math.floor(o.capturedLevel) : undefined,
@@ -688,6 +691,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         fusionLeagueDefeats: o.fusionLeagueDefeats && typeof o.fusionLeagueDefeats === "object" && !Array.isArray(o.fusionLeagueDefeats)
             ? Object.fromEntries(Object.entries(o.fusionLeagueDefeats as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
+        grotteShopBuys: o.grotteShopBuys && typeof o.grotteShopBuys === "object" && !Array.isArray(o.grotteShopBuys)
+            ? Object.fromEntries(Object.entries(o.grotteShopBuys as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
+            : undefined,
         fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
         fusionChampionRoster: o.fusionChampionRoster && typeof o.fusionChampionRoster === "object" && !Array.isArray(o.fusionChampionRoster)
             ? Object.fromEntries(Object.entries(o.fusionChampionRoster as Record<string, unknown>)
@@ -711,6 +717,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         allocated: m.allocated && Object.keys(m.allocated).length ? { ...m.allocated } : undefined,
         ev: m.ev && Object.keys(m.ev).length ? { ...m.ev } : undefined,
         evCapBoost: m.evCapBoost ? true : undefined,
+        evCurveV2: m.evCurveV2 ? true : undefined,
         pendingSaiyanLevels: m.pendingSaiyanLevels && m.pendingSaiyanLevels > 0 ? m.pendingSaiyanLevels : undefined,
         lastLevelUpAt: m.lastLevelUpAt,
         capturedLevel: m.capturedLevel,

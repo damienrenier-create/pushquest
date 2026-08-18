@@ -8,7 +8,7 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps, recordJcEnergyBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps, recordJcEnergyBuy, getJcEnergyBuysToday, recordGrotteShopBuy } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -64,6 +64,12 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
 
     useEffect(() => { fetchFrontierProfile().then((p) => { setJc(p.jc); setSymbols(p.symbols) }) }, [])
 
+    // CLIQUET PRIX PAR CATÉGORIE (Sartay) : chaque achat d'une catégorie fait +10 % COMPOSÉ sur TOUTE la catégorie,
+    //   remis à zéro PAR RUN (le compteur grotteShopBuys est omis des reset de monde → repart à zéro). Prix AFFICHÉ
+    //   ET DÉBITÉ = base × 1,1^(nb d'achats de la catégorie ce run). Entrée grotte, repousse (⚡), légendes et
+    //   symboles NE ratchetent PAS (gate / autre monnaie / achats uniques).
+    const catPrice = (base: number, cat: string) => Math.round(base * Math.pow(1.1, player.grotteShopBuys?.[cat] ?? 0))
+
     const spend = async (price: number, opts: { symbol?: string; grant?: () => void; toast: string }) => {
         if (busy) return
         if (jc === null) { setMsg("Chargement du solde…"); return }
@@ -97,10 +103,10 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                                 onBuy={() => setConfirmGrotte(true)} />
                             {/* OUTILS DE GROTTE (juste sous l'entrée) : torches (JC — la Grotte est dans le noir) + repousse (énergie). */}
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, margin: "10px 0 4px", lineHeight: 1.3 }}>🔦 Lampes torches — la Grotte est plongée dans le noir (à allumer depuis le sac) :</div>
-                            {TORCHES.map(({ id, jc: cost }) => {
-                                const it = ITEMS[id]
+                            {TORCHES.map(({ id, jc: base }) => {
+                                const it = ITEMS[id]; const cost = catPrice(base, "grotte")
                                 return <Row key={id} label={`${it.name}${(player.items[id] ?? 0) > 0 ? ` (×${player.items[id]})` : ""}`} desc={`Rayon ${it.torchRadius} cases · ${it.torchSteps} pas`} price={cost} disabled={busy || (jc ?? 0) < cost}
-                                    onBuy={() => spend(cost, { grant: () => addItem(id, 1), toast: `🔦 ${it.name} achetée ! (sac → 🔦 Lampes torches)` })} />
+                                    onBuy={() => spend(cost, { grant: () => { addItem(id, 1); recordGrotteShopBuy("grotte") }, toast: `🔦 ${it.name} achetée ! (sac → 🔦 Lampes torches)` })} />
                             })}
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, margin: "10px 0 4px", lineHeight: 1.3 }}>🧴 Repousse — éloigne les Daemons sauvages 30 pas (payée en énergie) :</div>
                             <Row label={`🧴 Repousse${(player.items["repousse"] ?? 0) > 0 ? ` (×${player.items["repousse"]})` : ""}`} price={100} currency="⚡" disabled={busy || player.reps < 100}
@@ -110,25 +116,25 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
 
                     <Section title="⚡ Recharge d'énergie">
                         {player.run3Used && <div style={{ fontSize: 10, opacity: 0.75, color: INK, marginBottom: 6, lineHeight: 1.3 }}>⚠️ Chaque recharge fait grimper les prix du MAGASIN de +10 % aujourd'hui (cumulatif, remis à zéro chaque nuit).</div>}
-                        {ENERGY.map((e) => (
-                            <Row key={e.amount} label={`+${e.amount} énergie`} price={e.price} disabled={busy || (jc ?? 0) < e.price}
+                        {ENERGY.map((e) => { const price = catPrice(e.price, "energie")
+                            return <Row key={e.amount} label={`+${e.amount} énergie`} price={price} disabled={busy || (jc ?? 0) < price}
                                 onBuy={() => setConfirmEnergy(e)} />
-                        ))}
+                        })}
                     </Section>
 
                     <Section title="💿 CT rares">
                         {ctOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT du lot.</Empty> : ctOffer.map((id) => {
-                            const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null
-                            return <Row key={id} label={mv?.name ?? id} price={CT_PRICE} disabled={busy || (jc ?? 0) < CT_PRICE}
-                                onBuy={() => spend(CT_PRICE, { grant: () => grantCt(id), toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
+                            const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null; const price = catPrice(CT_PRICE, "ct")
+                            return <Row key={id} label={mv?.name ?? id} price={price} disabled={busy || (jc ?? 0) < price}
+                                onBuy={() => spend(price, { grant: () => { grantCt(id); recordGrotteShopBuy("ct") }, toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
                         })}
                     </Section>
 
                     <Section title="🔩 Objet d'évolution">
                         {(() => {
-                            const it = ITEMS["noyau_metal"]; const owned = player.items["noyau_metal"] ?? 0
-                            return <Row label={`${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc="Fait évoluer Magmator (niv 50+) en Magnetor — à utiliser depuis la fiche du Daemon." price={NOYAU_PRICE} disabled={busy || (jc ?? 0) < NOYAU_PRICE}
-                                onBuy={() => spend(NOYAU_PRICE, { grant: () => addItem("noyau_metal", 1), toast: `🔩 ${it.name} acheté ! (fiche Magmator → « Utiliser le Noyau »)` })} />
+                            const it = ITEMS["noyau_metal"]; const owned = player.items["noyau_metal"] ?? 0; const price = catPrice(NOYAU_PRICE, "evolution")
+                            return <Row label={`${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc="Fait évoluer Magmator (niv 50+) en Magnetor — à utiliser depuis la fiche du Daemon." price={price} disabled={busy || (jc ?? 0) < price}
+                                onBuy={() => spend(price, { grant: () => { addItem("noyau_metal", 1); recordGrotteShopBuy("evolution") }, toast: `🔩 ${it.name} acheté ! (fiche Magmator → « Utiliser le Noyau »)` })} />
                         })()}
                     </Section>
 
@@ -137,9 +143,9 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         return (
                             <Section key={g.cat} title={`🎒 ${g.title}`}>
                                 {items.map((it) => {
-                                    const owned = player.items[it.id] ?? 0
-                                    return <Row key={it.id} label={`${it.emoji} ${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc={it.description} price={it.jcPrice} disabled={busy || (jc ?? 0) < it.jcPrice}
-                                        onBuy={() => spend(it.jcPrice, { grant: () => addItem(it.id, 1), toast: `✅ ${it.name} acheté !` })} />
+                                    const owned = player.items[it.id] ?? 0; const price = catPrice(it.jcPrice, g.cat)
+                                    return <Row key={it.id} label={`${it.emoji} ${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc={it.description} price={price} disabled={busy || (jc ?? 0) < price}
+                                        onBuy={() => spend(price, { grant: () => { addItem(it.id, 1); recordGrotteShopBuy(g.cat) }, toast: `✅ ${it.name} acheté !` })} />
                                 })}
                             </Section>
                         )
@@ -148,9 +154,9 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                     <Section title="⚡ Boosts de combat (objets X)">
                         <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Consommés en combat (SAC → Boosts) : +1 cran (~+50 %) sur une stat jusqu&apos;à la fin du duel. Coûtent le tour.</div>
                         {["x_attaque", "x_defense", "x_vitesse", "x_special"].map((id) => {
-                            const it = ITEMS[id]; const owned = player.items[id] ?? 0; const price = it.price ?? 120
+                            const it = ITEMS[id]; const owned = player.items[id] ?? 0; const price = catPrice(it.price ?? 120, "boost")
                             return <Row key={id} label={`${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc={it.description} price={price} disabled={busy || (jc ?? 0) < price}
-                                onBuy={() => spend(price, { grant: () => addItem(id, 1), toast: `⚡ ${it.name} acheté ! (en combat : SAC → Boosts)` })} />
+                                onBuy={() => spend(price, { grant: () => { addItem(id, 1); recordGrotteShopBuy("boost") }, toast: `⚡ ${it.name} acheté ! (en combat : SAC → Boosts)` })} />
                         })}
                     </Section>
 
@@ -199,12 +205,12 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                     <div onClick={(e) => e.stopPropagation()} style={confirmBox}>
                         <div style={{ fontWeight: 800, fontSize: 14, color: INK, marginBottom: 8 }}>⚡ Recharger {confirmEnergy.amount} énergie ?</div>
                         <div style={{ fontSize: 12, color: INK, lineHeight: 1.45, marginBottom: 14 }}>
-                            Coût : <b>{confirmEnergy.price} 💠</b> pour <b>+{confirmEnergy.amount} énergie</b>.
+                            Coût : <b>{catPrice(confirmEnergy.price, "energie")} 💠</b> pour <b>+{confirmEnergy.amount} énergie</b>.
                             {player.run3Used && <><br /><b>⚠️ Attention :</b> cet achat fait <b>grimper les prix du magasin de +10 %</b> pour aujourd'hui{getJcEnergyBuysToday() > 0 ? ` (déjà +${Math.round((Math.pow(1.1, getJcEnergyBuysToday()) - 1) * 100)}% ce jour)` : ""}. La Bourse du Nexus n'aime pas l'argent facile…</>}
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={() => setConfirmEnergy(null)} style={cancelBtn}>Annuler</button>
-                            <button disabled={busy} onClick={() => { const e = confirmEnergy; setConfirmEnergy(null); spend(e.price, { grant: () => { grantReps(e.amount); recordJcEnergyBuy() }, toast: `✅ +${e.amount} énergie !${player.run3Used ? " (prix du magasin +10 %)" : ""}` }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Recharger ({confirmEnergy.price} 💠)</button>
+                            <button disabled={busy} onClick={() => { const e = confirmEnergy; setConfirmEnergy(null); const ep = catPrice(e.price, "energie"); spend(ep, { grant: () => { grantReps(e.amount); recordJcEnergyBuy(); recordGrotteShopBuy("energie") }, toast: `✅ +${e.amount} énergie !${player.run3Used ? " (prix du magasin +10 %)" : ""}` }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Recharger ({catPrice(confirmEnergy.price, "energie")} 💠)</button>
                         </div>
                     </div>
                 </div>

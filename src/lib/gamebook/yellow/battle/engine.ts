@@ -1566,9 +1566,22 @@ function applyItem(state: BattleState, itemId: string, events: BattleEvent[], ta
         }
         return
     }
-    // Objet X : boost de stat (+ crans) pour le combat
+    // Objet X : boost de stat — CIBLABLE (comme les potions) : par défaut l'ACTIF, mais targetIndex permet de
+    //   PRÉ-BOOSTER un Daemon du BANC. Les crans sont stockés PAR-MON et seul le mon SORTANT est remis à neutre
+    //   au switch → le pré-boosté GARDE ses crans et entrera boosté. Tactique de switch importante. Un Daemon
+    //   K.O. n'est pas boostable (il doit d'abord être ranimé).
     if (it.category === "BOOST" && it.boostStat) {
-        applyStatChange(state, "player", it.boostStat, it.boostStages ?? 1, events)
+        const tgt = targetIndex != null ? state.player.team[targetIndex] : mon
+        if (!tgt || tgt.currentHp <= 0) { events.push({ kind: "message", text: "Mais ça n'a aucun effet…" }); return }
+        if (tgt === mon) {
+            applyStatChange(state, "player", it.boostStat, it.boostStages ?? 1, events) // actif → moteur (msg/clamp/échec si déjà +6)
+        } else {
+            const before = tgt.stages[it.boostStat]
+            const after = clampStage(before + (it.boostStages ?? 1))
+            if (after === before) { events.push({ kind: "message", text: `${displayName(tgt)} : ${labelStat(it.boostStat)} ne peut pas monter plus haut !` }); return }
+            tgt.stages[it.boostStat] = after
+            events.push({ kind: "message", text: `${displayName(tgt)} (au banc) : ${labelStat(it.boostStat)} augmente ! Il entrera en jeu boosté.` })
+        }
         return
     }
     events.push({ kind: "message", text: "Mais ça n'a aucun effet ici…" })

@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { usePlayer, setFusionRoster } from "@/lib/gamebook/yellow/store/playerStore"
+import { fusionPairError } from "@/lib/gamebook/yellow/data/fusiodex"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { officialFusions, officialFusionProgress, historyFusions, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
@@ -137,6 +138,9 @@ export default function FusiodexClient() {
     const equipForLeague = (aId: string, bId: string, name: string) => {
         const roster = player.fusionRoster
         if (roster.length >= 6) { setEquipMsg({ ok: false, text: "Équipe de fusion pleine (6 max) — retire-en une à l'Atelier." }); return }
+        // RÈGLES FUSION (partagées) : une vieille entrée du journal pourrait violer les règles actuelles (super-fusion, stade ultime) → on bloque l'équipement.
+        const ruleErr = fusionPairError(aId, bId)
+        if (ruleErr) { setEquipMsg({ ok: false, text: ruleErr }); return }
         const box = [...player.team, ...player.pc]
         const byUid = (uid: string) => box.find((m) => m.uid === uid)
         const committed = new Set(roster.flatMap((p) => [p.a, p.b]))

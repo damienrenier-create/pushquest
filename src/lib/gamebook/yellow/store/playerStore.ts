@@ -216,6 +216,10 @@ interface PlayerState {
     /** HAUT FAIT — défaites CUMULÉES par palier de la Ligue de Fusion (bronze/argent/or). Fige naturellement à la
      *  complétion d'un palier (les défaites suivantes comptent pour le palier actif suivant). + de défaites = badge - cher. */
     fusionLeagueDefeats?: Record<string, number>
+    /** GROTTE/BOUTIQUE JC — cliquet prix PAR CATÉGORIE : nb d'achats par catégorie CE RUN. Chaque achat d'une
+     *  catégorie fait +10 % COMPOSÉ sur toute la catégorie. PAR RUN → reset AUTO au reset de monde (champ omis
+     *  des startRun3World/startNgPlusWorld/resetForIntro qui reconstruisent l'état). Optionnel/additif → save-safe. */
+    grotteShopBuys?: Record<string, number>
     /** OBJETS TENUS ENNEMIS — date de la dernière tentative de Ligue (règle « baies ennemies : 1re run du jour » en argent). */
     fusionLeagueTryDate?: string
     /** SALLE ULTIME — roster de fusion GELÉ (parents à plat [a,b,a,b,…]) qui a bouclé chaque palier → reconstruit TON reflet. */
@@ -554,6 +558,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         potionBuysToday: "potionBuysToday" in p ? p.potionBuysToday : st.potionBuysToday,
         jcEnergyBuysToday: "jcEnergyBuysToday" in p ? p.jcEnergyBuysToday : st.jcEnergyBuysToday,
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
+        grotteShopBuys: "grotteShopBuys" in p ? p.grotteShopBuys : st.grotteShopBuys,
         fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
         fusionChampionRoster: "fusionChampionRoster" in p ? p.fusionChampionRoster : st.fusionChampionRoster,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
@@ -895,6 +900,7 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
         capturedMapId: mon.capturedMapId ?? (currentMapId || undefined),
         capturedQuotaReached: mon.capturedQuotaReached ?? ctx?.quotaReached,
         evCapBoost: mon.evCapBoost ?? (leagueEverBeaten || undefined),
+        evCurveV2: mon.evCurveV2 ?? true, // courbe EV V2 (malus haut niveau) — estampillée À LA CAPTURE → non rétroactif
     }
     if (st.team.length < TEAM_MAX) {
         st = { ...st, team: [...st.team, owned] }
@@ -1370,6 +1376,14 @@ export function getJcEnergyBuysToday(): number { return st.jcEnergyBuysToday ?? 
 /** BOURSE — enregistre une recharge d'énergie payée en JC → +1 (le shop entier prend +10 % aujourd'hui). */
 export function recordJcEnergyBuy() {
     st = { ...st, jcEnergyBuysToday: (st.jcEnergyBuysToday ?? 0) + 1 }
+    emit()
+}
+/** GROTTE/BOUTIQUE JC — nb d'achats de la catégorie `cat` CE RUN (cliquet prix par catégorie ; reset par run). */
+export function getGrotteShopBuys(cat: string): number { return st.grotteShopBuys?.[cat] ?? 0 }
+/** GROTTE/BOUTIQUE JC — enregistre un achat dans `cat` → +1 (toute la catégorie prend +10 % COMPOSÉ, ce run). */
+export function recordGrotteShopBuy(cat: string) {
+    const cur = st.grotteShopBuys ?? {}
+    st = { ...st, grotteShopBuys: { ...cur, [cat]: (cur[cat] ?? 0) + 1 } }
     emit()
 }
 /** HAUT FAIT Ligue de Fusion — défaites cumulées sur un palier (bronze/argent/or). */

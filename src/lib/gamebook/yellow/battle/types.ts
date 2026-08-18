@@ -265,6 +265,9 @@ export interface MonInstance {
     /** EV : capturé APRÈS la 1ʳᵉ Ligue → plafond d'EV modulé (voir evTotalCap). Estampillé à la capture,
      *  NON rétroactif : absent sur les Daemons capturés avant le déblocage → plafond de base 510. */
     evCapBoost?: boolean
+    /** EV — courbe V2 : capturé sous le barème avec MALUS de plafond à HAUT niveau de capture (−2 % >40 … −20 % >80).
+     *  Estampillé à la capture, strictement NON rétroactif : absent sur les Daemons capturés avant → AUCUN malus. */
+    evCurveV2?: boolean
     /** ENTRAÎNEMENT SAIYAN — points de stats non encore dépensés (gagnés au level-up). */
     statPoints?: number
     /** ENTRAÎNEMENT SAIYAN — bonus à plat alloués par le joueur, par stat (additif). */

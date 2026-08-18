@@ -28,8 +28,9 @@ const IV_SUM_MAX = 75 // 5 stats × 15
  * 510 par défaut. Si le Daemon a été capturé APRÈS la 1ʳᵉ Ligue (`evCapBoost`, estampillé à la
  * capture), le plafond monte selon DEUX leviers ADDITIFS :
  *   • potentiel génétique : +5 % × (ΣIV / 75) → IV parfaits = +5 % ;
- *   • niveau de capture bas : +5 % (niv 1-10) · +3 % (11-19) · +1 % (20-30) · 0 % (≥31).
- * Max = ⌊510 × 1.10⌋ = 561. Le cap PAR STAT (252) reste inchangé.
+ *   • niveau de capture : BONUS +5 % (1-10) · +3 % (11-19) · +1 % (20-30) · 0 % (31-40), puis MALUS (« courbe V2 »,
+ *     NON rétroactif — seules les captures estampillées `evCurveV2`) −2 % (>40) · −5 % (>50) · −10 % (>60) · −15 % (>70) · −20 % (>80).
+ * Max = ⌊510 × 1.10⌋ = 561 (bas niveau + IV parfaits) ; min ≈ ⌊510 × 0.80⌋ = 408 (capture niv 81+). Cap PAR STAT (252) inchangé.
  */
 export function evTotalCap(mon: MonInstance): number {
     // SHINY : +10 % de plafond d'EV SUPPLÉMENTAIRE (à GRINDER en combat — pas offert), CUMULÉ avec les autres boosts.
@@ -48,7 +49,19 @@ export function evTotalCap(mon: MonInstance): number {
     const ivSum = STAT_KEYS.reduce((a, k) => a + Math.max(0, mon.ivs?.[k] ?? 0), 0)
     const genetic = EV_CAP_GENETIC_MAX * Math.min(1, ivSum / IV_SUM_MAX)
     const cl = mon.capturedLevel ?? mon.level
-    const capture = cl <= 10 ? 0.05 : cl <= 19 ? 0.03 : cl <= 30 ? 0.01 : 0
+    // NIVEAU DE CAPTURE. BONUS bas niveau (+5/+3/+1) = rétroactif (inchangé). MALUS haut niveau (−2 %>40 · −5 %>50 ·
+    //   −10 %>60 · −15 %>70 · −20 %>80) = « courbe V2 », appliquée UNIQUEMENT aux captures estampillées `evCurveV2`
+    //   → strictement NON rétroactif : aucun Daemon déjà en boîte ne perd de plafond (il garde l'ancienne courbe).
+    let capture: number
+    if (cl <= 10) capture = 0.05
+    else if (cl <= 19) capture = 0.03
+    else if (cl <= 30) capture = 0.01
+    else if (cl <= 40 || !mon.evCurveV2) capture = 0 // 31-40 = neutre ; capture PRÉ-V2 = jamais de malus (rétro-safe)
+    else if (cl <= 50) capture = -0.02
+    else if (cl <= 60) capture = -0.05
+    else if (cl <= 70) capture = -0.10
+    else if (cl <= 80) capture = -0.15
+    else capture = -0.20
     return Math.floor(EV_TOTAL_CAP * (1 + genetic + capture) * shinyMult)
 }
 

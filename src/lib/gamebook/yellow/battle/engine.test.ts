@@ -469,6 +469,25 @@ describe("objets de combat (X / anti-statut)", () => {
         expect(s2.player.team[s2.player.activeIndex].stages.spc).toBe(1)
     })
 
+    it("un objet X CIBLE un Daemon du BANC (pré-boost) sans toucher l'actif", () => {
+        const s0 = createBattle(
+            [createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }), createMonInstance("plumiot", 40)],
+            [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        expect(s0.player.activeIndex).toBe(0)
+        const s1 = resolveTurn(s0, { kind: "item", itemId: "x_vitesse", targetIndex: 1 })
+        expect(s1.player.team[1].stages.spe).toBe(1) // le Daemon du BANC (index 1) est bien boosté…
+        expect(s1.player.team[0].stages.spe).toBe(0) // …et l'ACTIF (index 0) n'est PAS touché
+    })
+
+    it("un objet X sur un Daemon du banc K.O. n'a aucun effet", () => {
+        const s0 = createBattle(
+            [createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }), createMonInstance("plumiot", 40)],
+            [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        s0.player.team[1].currentHp = 0 // le Daemon du banc est K.O.
+        const s1 = resolveTurn(s0, { kind: "item", itemId: "x_vitesse", targetIndex: 1 })
+        expect(s1.player.team[1].stages.spe).toBe(0) // pas de boost sur un K.O.
+    })
+
     it("un anti-statut soigne le bon statut", () => {
         const s0 = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         s0.player.team[s0.player.activeIndex].status = "PARALYSIS"

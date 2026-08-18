@@ -38,6 +38,25 @@ describe("EV — expérience de combat", () => {
         expect(m.ev?.atk).toBe(EV_STAT_CAP)
     })
 
+    describe("courbe V2 — MALUS de plafond à haut niveau de capture (NON rétroactif)", () => {
+        const capV2 = (capLevel: number): MonInstance => ({ ...capturedMon({ boost: true, capLevel }), evCurveV2: true })
+        it("nouvelle capture (evCurveV2) : malus par palier au-dessus du niveau 40", () => {
+            expect(evTotalCap(capV2(50))).toBe(Math.floor(EV_TOTAL_CAP * 0.98)) // >40 → −2 %
+            expect(evTotalCap(capV2(60))).toBe(Math.floor(EV_TOTAL_CAP * 0.95)) // >50 → −5 %
+            expect(evTotalCap(capV2(70))).toBe(Math.floor(EV_TOTAL_CAP * 0.90)) // >60 → −10 %
+            expect(evTotalCap(capV2(80))).toBe(Math.floor(EV_TOTAL_CAP * 0.85)) // >70 → −15 %
+            expect(evTotalCap(capV2(85))).toBe(Math.floor(EV_TOTAL_CAP * 0.80)) // >80 → −20 %
+        })
+        it("31-40 reste neutre, bas niveau garde son BONUS (inchangé)", () => {
+            expect(evTotalCap(capV2(35))).toBe(EV_TOTAL_CAP)                    // 31-40 = 0 %
+            expect(evTotalCap(capV2(5))).toBe(Math.floor(EV_TOTAL_CAP * 1.05))  // 1-10 = +5 %
+        })
+        it("NON RÉTROACTIF : capture PRÉ-V2 (sans evCurveV2) → AUCUN malus même à haut niveau", () => {
+            expect(evTotalCap(capturedMon({ boost: true, capLevel: 85 }))).toBe(EV_TOTAL_CAP) // reste 510
+            expect(evTotalCap(capturedMon({ boost: true, capLevel: 60 }))).toBe(EV_TOTAL_CAP)
+        })
+    })
+
     it("gainEv respecte le budget total (≈ 2 stats maxées)", () => {
         const m = mon()
         gainEv(m, "atk", EV_STAT_CAP)
