@@ -59,6 +59,10 @@ export interface YellowSave {
     consultsToday?: number
     /** VIEUX SAGE SAIYAN : nb de points Saiyan redistribués AUJOURD'HUI (reset quotidien ; plafond 20/jour). Optionnel (défaut 0). */
     sageSaiyanPointsToday?: number
+    /** ANANAS (chercheur de baies) : nb de badges au dernier combat (run 1-3), jour du dernier combat (run 4), pic de niveau (run 4). Optionnels. */
+    ananasLastBadgeCount?: number
+    ananasDate?: string
+    ananasPeakLevel?: number
     /** OBSOLÈTE depuis 12/08 (Galijah piloté par le nb d'ESPÈCES du Pokédex). Champ conservé pour compat de save, plus lu/écrit. Optionnel (défaut 0). */
     capturesToday?: number
     /** Nb total de victoires sur le sbire (cumulatif → cycle des explications). */
@@ -588,6 +592,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
         sageSaiyanPointsToday: typeof o.sageSaiyanPointsToday === "number" ? Math.max(0, Math.floor(o.sageSaiyanPointsToday)) : 0,
+        ananasLastBadgeCount: typeof o.ananasLastBadgeCount === "number" ? Math.max(0, Math.floor(o.ananasLastBadgeCount)) : 0,
+        ananasDate: typeof o.ananasDate === "string" ? o.ananasDate : "",
+        ananasPeakLevel: typeof o.ananasPeakLevel === "number" ? Math.max(0, Math.floor(o.ananasPeakLevel)) : 0,
         capturesToday: typeof o.capturesToday === "number" ? Math.max(0, Math.floor(o.capturesToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),

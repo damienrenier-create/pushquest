@@ -844,6 +844,8 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_usine_marchand: { url: "/yellow/sprites/npc_usine_marchand.png" },
     // VIEUX SAGE SAIYAN (Ville Jaune, spot aléatoire) : planche Gen 3 760×160 (npc 96). Face au joueur (défauts col1/row0).
     y_sage_saiyan: { url: "/yellow/sprites/npc96_sage_saiyan.png" },
+    // ANANAS (chercheur de baies, Route Nord) : planche Gen 3 760×160 (npc 98). Face au joueur (défauts col1/row0).
+    y_ananas: { url: "/yellow/sprites/npc98_ananas.png" },
     // LIGUE DE FUSION Johto — Conseil des Chimères (planches Gen 3 dédiées). Chacun face au joueur (row Sud).
     y_fusion_1: { url: "/yellow/sprites/npc_fusion_will_gen3.png" },   // WILL (Psy)
     y_fusion_2: { url: "/yellow/sprites/npc_fusion_koga_gen3.png" },   // KOGA (Poison)

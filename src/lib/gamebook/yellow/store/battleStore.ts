@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -38,6 +38,7 @@ import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
+import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
@@ -878,6 +879,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // cap journalier). Incrémente le compteur → ses 5 Gek montent de +2 niveaux (+ Saiyan) au prochain combat.
             recordPnj5Defeat()
             rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
+        } else if (storeState.trainer.trainerId === ANANAS_TRAINER_ID) {
+            // ANANAS (chercheur de baies) : le ticket a été consommé au LANCEMENT (gameStore.markAnanasStarted).
+            //   VICTOIRE → récompense selon le run : rien (run 1), Baie Phénix (run 2/3), baie au hasard 20 % Phénix (run 4).
+            const berry = ananasRewardBerry(ananasVariant())
+            if (berry) addItem(berry, 1)
+            rematchReward = { npcId: ANANAS_NPC_ID, npcName: "ANANAS", lines: ananasWinLines(berry) }
         } else if (storeState.trainer.trainerId === PNJ7_TRAINER_ID) {
             // L'ÉCLAIREUR (PNJ 7) : le cap 1×/jour a déjà été posé au LANCEMENT (gameStore.tryLaunchPnj7) → aucun
             // marker ici. Victoire → amorce la DÉMO (les 3 prochaines rencontres Grotte = 2 parents puis fusion),

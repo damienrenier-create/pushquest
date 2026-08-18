@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -50,6 +50,7 @@ import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
+import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -137,6 +138,23 @@ export function activeNpcs() {
             initialX: sgx,
             initialY: sgy,
             dialoguesAfter: ["« Ha ! Un disciple. Présente-moi un Daemon : on va rééquilibrer sa sueur Saiyan. »"],
+        }]
+    }
+    // ANANAS (chercheur de baies) : POP dans les HAUTES HERBES de la Route Nord, tant qu'il propose un combat
+    //   (run 1-3 : une nouvelle arène battue depuis son dernier combat ; run 4 : 1×/jour). Spot stable par session.
+    if (ananasAvailable()) {
+        if (ananasSpotIdx < 0) ananasSpotIdx = Math.floor(Math.random() * ANANAS_SPOTS.length)
+        const [anx, any] = ANANAS_SPOTS[ananasSpotIdx]
+        list = [...list, {
+            id: ANANAS_NPC_ID,
+            name: "ANANAS",
+            mapId: "yellow_route_nord",
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "🍍", color: "#e0b84a" }, // repli si le sprite Gen3 manque
+            initialX: anx,
+            initialY: any,
+            dialoguesAfter: ["« Des baies… il doit bien y avoir des baies par ici ! »"],
         }]
     }
     // DÉFI NÉMÉSIS (vœu de Jacanon) : PNJ PERSONNEL au Centre Pokémon de la Ville Jaune (case 1,7, regard DROITE via
@@ -323,6 +341,10 @@ let daemoSpotIdx = -1
 //   overrides buildViridianCollisions), tirés au hasard PAR SESSION (stable → atteignable), re-tirés au reload.
 const SAGE_SPOTS: ReadonlyArray<readonly [number, number]> = [[5, 18], [11, 18], [18, 18], [9, 17], [15, 19], [10, 20], [15, 20], [19, 21]]
 let sageSpotIdx = -1
+// ANANAS : 8 cases de HAUTES HERBES (grassTall) garanties marchandes sur la Route Nord (patches initiaux),
+//   tirées au hasard par session (stable → atteignable), re-tirées au chargement.
+const ANANAS_SPOTS: ReadonlyArray<readonly [number, number]> = [[11, 7], [26, 10], [34, 11], [14, 18], [19, 19], [30, 27], [36, 29], [33, 25]]
+let ananasSpotIdx = -1
 // UKOGNOFY — « déjà affronté CETTE visite » (transient, remis à false à chaque arrivée dans la chambre). Garantit
 //   UNE SEULE rencontre par venue : après le combat, ré-approcher le PNJ ne relance rien (il faut ressortir et
 //   refaire la chaîne). Empêche de brûler les 3 tentatives en une seule visite.
@@ -368,6 +390,7 @@ interface GameStore {
     trainerAlertId: string | null
     pendingNgplusAbandon: boolean // NG+ : offre d'abandon de CHEN en cours → confirmation UI à la fermeture du dialogue
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
+    pendingAnanas: boolean // intro d'ANANAS en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
     pendingUkognofy: boolean // intro d'UKOGNOFY (bump chambre, 2ᵉ visite+) en cours → combat à la fermeture
@@ -927,6 +950,26 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
     return null
 }
 
+// ANANAS (chercheur de baies, hautes herbes Route Nord) : équipe VARIABLE selon le run, évoluée au niveau du
+//   boss d'arène battu (run 1-3) / moyenne du joueur en cliquet (run 4). Meilleure IA ("hof"). Ticket consommé
+//   au LANCEMENT (gagné ou perdu). Récompense (baie) donnée sur VICTOIRE dans finishBattle.
+function tryLaunchAnanas(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: ANANAS_NPC_ID, npcName: "ANANAS", lineIndex: 0, lines: ANANAS_NO_TEAM_LINES }
+    }
+    const variant = ananasVariant()
+    const badges = getPlayerSave().badges
+    const lastBadge = badges[badges.length - 1] ?? "plante" // dernière arène battue (run 1-3)
+    const avg = Math.max(1, Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length)))
+    const level = ananasTargetLevel(variant, lastBadge, avg, getAnanasPeakLevel())
+    markAnanasStarted(variant, level) // consomme le ticket + cliquet de niveau (run 4)
+    const enemyTeam = buildAnanasTeam(variant, level)
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: ANANAS_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // GARDIEN DE LA GROTTE DU NEXUS (PNJ 5). Nb de victoires MÉMORISÉ à l'entrée de la grotte : le gardien est
 // « battu cette visite » dès que pnj5WinsCount() dépasse ce repère → le blocage (18-20,33) se lève. Ré-armé
 // à chaque nouvelle entrée (setMap) → on le rebat à chaque visite. Runtime-only (non persistant = re-combat au reload).
@@ -1046,6 +1089,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     trainerAlertId: null,
     pendingNgplusAbandon: false,
     pendingOrcaline: false,
+    pendingAnanas: false,
     pendingGekroc: false,
     pendingSylvebarbe: false,
     pendingUkognofy: false,
@@ -1806,6 +1850,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
                 } else if (get().pendingOrcaline) {
                     set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
+                } else if (get().pendingAnanas) {
+                    set({ dialogue: tryLaunchAnanas(), pendingAnanas: false })
                 } else if (get().pendingGekroc) {
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingSylvebarbe) {
@@ -2339,6 +2385,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // ANANAS (chercheur de baies, Route Nord) : intro → combat à la fermeture. Le PNJ n'apparaît que s'il
+        //   propose un combat (ananasAvailable), donc pas de garde « déjà fait » à dupliquer.
+        if (npc.id === ANANAS_NPC_ID) {
+            const team = getPlayerSave().team
+            if (!team.some((m) => m.currentHp > 0)) {
+                set({ dialogue: { npcId: npc.id, npcName: "ANANAS", lineIndex: 0, lines: ANANAS_NO_TEAM_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: "ANANAS", lines: ananasIntroLines(ananasVariant()), lineIndex: 0 }, pendingAnanas: true })
+            return
+        }
+
         // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
         if (npc.id === HH_COLLECTOR_ID) {
             // RUN 3 (Maison COMBAT) : le Collectionneur enseigne MITRA-POING (ct58) à qui lui montre un GAMARUTO.
@@ -2493,6 +2551,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchAce(), pendingAce: false })
         } else if (get().pendingOrcaline) {
             set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
+        } else if (get().pendingAnanas) {
+            set({ dialogue: tryLaunchAnanas(), pendingAnanas: false })
         } else if (get().pendingGekroc) {
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingSylvebarbe) {

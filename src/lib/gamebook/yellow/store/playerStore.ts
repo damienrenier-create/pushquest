@@ -24,6 +24,7 @@ import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASI
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats, type YellowStats } from "../storage/save"
 import type { StatKey } from "../battle/types"
+import type { AnanasVariant } from "../data/ananas"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
 import { aceTargetLevel, bestCounter, ACE_EASY_START } from "../data/ace"
@@ -90,6 +91,12 @@ interface PlayerState {
     consultsToday?: number
     /** VIEUX SAGE SAIYAN : points Saiyan redistribués aujourd'hui (reset au tick ; plafond 20/jour). Optionnel (défaut 0). */
     sageSaiyanPointsToday?: number
+    /** ANANAS : nb de badges au dernier combat (run 1-3 : dispo si badges.length dépasse) — défaut 0. */
+    ananasLastBadgeCount?: number
+    /** ANANAS : jour du dernier combat en run 4 (1/jour, comparé à creditedThrough) — défaut "". */
+    ananasDate?: string
+    /** ANANAS : niveau-pic de son équipe en run 4 (cliquet, ne redescend jamais) — défaut 0. */
+    ananasPeakLevel?: number
     /** OBSOLÈTE depuis 12/08 (Galijah est désormais piloté par le nb d'ESPÈCES du Pokédex, cf. armGalijahByDex/galijahCountdown). Champ conservé pour compat de save, plus lu/écrit. Optionnel. */
     capturesToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
@@ -480,6 +487,9 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
         sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? st.sageSaiyanPointsToday ?? 0,
+        ananasLastBadgeCount: p.ananasLastBadgeCount ?? st.ananasLastBadgeCount ?? 0,
+        ananasDate: p.ananasDate ?? st.ananasDate ?? "",
+        ananasPeakLevel: p.ananasPeakLevel ?? st.ananasPeakLevel ?? 0,
         capturesToday: p.capturesToday ?? st.capturesToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
@@ -1723,6 +1733,27 @@ export function recordOrcalineDefeat(): number {
     st = { ...st, orcalineWins: winsBefore + 1, orcalineDate: st.creditedThrough }
     emit()
     return winsBefore
+}
+
+// === ANANAS (petit chercheur de baies, hautes herbes de la Route Nord) ===
+/** Variante d'équipe d'Ananas selon le run en cours (live+champion = run 4 « post-Sylvebarbe »). */
+export function ananasVariant(): AnanasVariant {
+    const w = effectiveRunWorld()
+    if (w === "ngplus") return "run2"
+    if (w === "run3") return "run3"
+    return st.isChampion ? "run4" : "run1"
+}
+/** Ananas propose-t-il un combat ? run 1-3 : une NOUVELLE arène battue depuis son dernier combat ; run 4 : 1×/jour. */
+export function ananasAvailable(): boolean {
+    if (ananasVariant() === "run4") return st.creditedThrough === "" || st.ananasDate !== st.creditedThrough
+    return st.badges.length > (st.ananasLastBadgeCount ?? 0)
+}
+export function getAnanasPeakLevel(): number { return st.ananasPeakLevel ?? 0 }
+/** Consomme le « ticket » Ananas AU LANCEMENT du combat (gagné OU perdu) + mémorise son pic de niveau (cliquet run 4). */
+export function markAnanasStarted(variant: AnanasVariant, level: number) {
+    if (variant === "run4") st = { ...st, ananasDate: st.creditedThrough, ananasPeakLevel: Math.max(st.ananasPeakLevel ?? 0, Math.floor(level)) }
+    else st = { ...st, ananasLastBadgeCount: st.badges.length }
+    emit()
 }
 
 /** PNJ 5 (gardien de la Grotte du Nexus) : nb de victoires du joueur (pilote le SCALING : +2 niveaux/victoire). */
