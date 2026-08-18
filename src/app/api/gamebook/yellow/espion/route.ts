@@ -39,41 +39,22 @@ function vitrineMon(m: RawMon, zone: "team" | "pc") {
     return { uid: String(m.uid ?? ""), speciesId: String(m.speciesId ?? ""), level: Number(m.level ?? 1), shiny: m.shiny === true, zone }
 }
 
-export async function GET(req: NextRequest) {
+const teamLevelSum = (team: RawMon[]) => team.reduce((n, m) => n + Math.max(1, Math.floor(Number(m.level) || 1)), 0)
+
+export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
-    const target = new URL(req.url).searchParams.get("target")
-
-    // VITRINE d'un joueur : sprites seulement (gratuit).
-    if (target) {
-        try {
-            const row = await prisma.gamebookProgress.findUnique({
-                where: { userId_chapterId: { userId: target, chapterId: YELLOW_CHAPTER_ID } },
-                select: { flags: true, user: { select: { nickname: true } } },
-            })
-            if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
-            // On n'espionne QUE ce que le joueur a SUR LUI (son équipe), jamais sa réserve (PC).
-            const { team } = flagsOf(row.flags)
-            const mons = team.map((m) => vitrineMon(m, "team")).filter((m) => m.uid && m.speciesId)
-            // spyCount du SPECTATEUR → le client calcule le prix de chaque fiche : niveau + frais de dossier 10×(spyCount+1).
-            let spyCount = 0
-            try { const p = await (prisma as any).frontierProfile.findUnique({ where: { userId: auth.userId } }); spyCount = Math.max(0, Math.floor(Number(p?.spyCount) || 0)) } catch { /* table absente → 0 */ }
-            return NextResponse.json({ ok: true, nickname: row.user?.nickname ?? "Dresseur", mons, spyCount })
-        } catch {
-            return NextResponse.json({ error: "Read failed" }, { status: 500 })
-        }
-    }
-
     // LISTE des joueurs espionnables : accès Zone de Combat (Sylvebarbe battu) + équipe non vide.
+    //   accessCost = SOMME des niveaux de l'équipe → frais pour OUVRIR la vitrine du joueur (payé une fois par ouverture).
     try {
         const saves = await prisma.gamebookProgress.findMany({
             where: { chapterId: YELLOW_CHAPTER_ID, userId: { not: auth.userId } },
             select: { userId: true, flags: true, user: { select: { nickname: true } } },
         })
         const players = saves
-            .map((s) => { const { team, sylvebarbeAwake } = flagsOf(s.flags); return { userId: s.userId, nickname: s.user?.nickname ?? "Dresseur", teamSize: team.length, sylvebarbeAwake } })
+            .map((s) => { const { team, sylvebarbeAwake } = flagsOf(s.flags); return { userId: s.userId, nickname: s.user?.nickname ?? "Dresseur", teamSize: team.length, accessCost: teamLevelSum(team), sylvebarbeAwake } })
             .filter((p) => p.sylvebarbeAwake && p.teamSize > 0)
-            .map(({ userId, nickname, teamSize }) => ({ userId, nickname, teamSize }))
+            .map(({ userId, nickname, teamSize, accessCost }) => ({ userId, nickname, teamSize, accessCost }))
             .sort((a, b) => a.nickname.localeCompare(b.nickname))
         return NextResponse.json({ ok: true, players })
     } catch {
@@ -88,8 +69,33 @@ export async function POST(req: NextRequest) {
     let body: any
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const target = typeof body?.target === "string" ? body.target : ""
+    const action = typeof body?.action === "string" ? body.action : ""
     const uid = typeof body?.uid === "string" ? body.uid : ""
-    if (!target || target === auth.userId || !uid) return NextResponse.json({ error: "Bad request" }, { status: 400 })
+    if (!target || target === auth.userId) return NextResponse.json({ error: "Bad request" }, { status: 400 })
+
+    // === ACCÈS À LA VITRINE : payer la SOMME des niveaux de l'équipe → débloque les sprites + le droit de révéler. ===
+    if (action === "access") {
+        let team: RawMon[] = [], nick = "Dresseur"
+        try {
+            const row = await prisma.gamebookProgress.findUnique({ where: { userId_chapterId: { userId: target, chapterId: YELLOW_CHAPTER_ID } }, select: { flags: true, user: { select: { nickname: true } } } })
+            if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
+            team = flagsOf(row.flags).team; nick = row.user?.nickname ?? "Dresseur"
+        } catch { return NextResponse.json({ error: "Read failed" }, { status: 500 }) }
+        const accessCost = teamLevelSum(team)
+        let jc = 0, spyCount = 0
+        try {
+            const fp = (prisma as any).frontierProfile
+            const p = await fp.findUnique({ where: { userId: auth.userId } })
+            jc = Math.max(0, Math.floor(Number(p?.jc) || 0)); spyCount = Math.max(0, Math.floor(Number(p?.spyCount) || 0))
+            if (jc < accessCost) return NextResponse.json({ ok: false, reason: "insufficient", jc, cost: accessCost }, { status: 200 })
+            await fp.update({ where: { userId: auth.userId }, data: { jc: jc - accessCost } })
+            jc = jc - accessCost
+        } catch { /* table FrontierProfile absente → accès gratuit (dégradation propre) */ }
+        const mons = team.map((m) => vitrineMon(m, "team")).filter((m) => m.uid && m.speciesId)
+        return NextResponse.json({ ok: true, nickname: nick, mons, spyCount, jc, cost: accessCost })
+    }
+
+    if (!uid) return NextResponse.json({ error: "Bad request" }, { status: 400 })
 
     // 1) Retrouver LE Daemon ciblé (par uid) dans la save de la cible — lecture seule.
     let mon: RawMon | null = null

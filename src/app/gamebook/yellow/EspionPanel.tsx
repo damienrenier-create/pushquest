@@ -1,8 +1,8 @@
 "use client"
 
-// USINE — L'ESPION : on choisit un dresseur (ceux ayant accès à la Zone de Combat), on voit les Daemons qu'il a SUR LUI
-//   (son ÉQUIPE, sprites seulement). Cliquer un Daemon affiche son PRIX (1 JC/niveau + frais de dossier 10×n) et
-//   demande CONFIRMATION ; on paie, puis on révèle sa fiche COMPLÈTE (IV/EV/Saiyan réparti/objet/moveset).
+// USINE — L'ESPION. Flux : liste des dresseurs (accès Zone de Combat) → PAYER l'accès (somme des niveaux de son
+//   équipe) → VITRINE (sprites de son équipe) → cliquer un Daemon → PAYER (1 JC/niveau + frais de dossier 10×n),
+//   confirmation → fiche COMPLÈTE (IV/EV/Saiyan réparti/objet/moveset). On n'espionne que l'équipe (jamais le PC).
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -11,7 +11,7 @@ import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { ivTotal, ivTier, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { evTotal, evTotalCap } from "@/lib/gamebook/yellow/data/evConfig"
-import { fetchEspionPlayers, fetchEspionVitrine, postEspionReveal, espionRevealCost, type EspionPlayer, type EspionVitrineMon } from "@/lib/gamebook/yellow/frontier/espionApi"
+import { fetchEspionPlayers, postEspionAccess, postEspionReveal, espionRevealCost, type EspionPlayer, type EspionVitrineMon } from "@/lib/gamebook/yellow/frontier/espionApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
 const STAT_LABELS: [string, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
@@ -22,14 +22,14 @@ function MonSheet({ raw }: { raw: unknown }) {
     if (!sp) return null
     const st = fullStats(m, sp)
     const tier = m.ivs ? ivTier(m.ivs) : null
-    const iv = m.ivs ? ivTotal(m.ivs) : 0                       // total sur 5 stats Gen 1 (DV 0..15) → max 75
+    const iv = m.ivs ? ivTotal(m.ivs) : 0
     const ev = m.ev ? evTotal(m.ev) : 0
-    const evCap = evTotalCap(m)                                  // plafond individuel (510 → 561 shiny/late-bloomer/evCapBoost)
-    const alloc = m.allocated ?? {}                             // points Saiyan DÉPENSÉS, par stat
+    const evCap = evTotalCap(m)
+    const alloc = m.allocated ?? {}
     const saiyan = Object.values(alloc).reduce((a, b) => a + (Number(b) || 0), 0)
-    const saiyanBreak = STAT_LABELS.filter(([k]) => (Number((alloc as any)[k]) || 0) > 0).map(([k, lbl]) => `${lbl}+${(alloc as any)[k]}`) // répartition
-    const unspent = m.statPoints ?? 0                            // points Saiyan gagnés NON encore répartis
-    const it1 = getHeldItem(m.heldItem), it2 = getHeldItem(m.heldItem2) // heldItem2 = 2e objet des fusionnés
+    const saiyanBreak = STAT_LABELS.filter(([k]) => (Number((alloc as any)[k]) || 0) > 0).map(([k, lbl]) => `${lbl}+${(alloc as any)[k]}`)
+    const unspent = m.statPoints ?? 0
+    const it1 = getHeldItem(m.heldItem), it2 = getHeldItem(m.heldItem2)
     const moves = (m.moves ?? []).map((slot) => getMove(slot.moveId)).filter(Boolean)
     const statused = !!m.status && m.status !== "NONE"
     const badges = statused || m.disobedient || (m.traded && m.originalTrainerName)
@@ -69,7 +69,6 @@ function MonSheet({ raw }: { raw: unknown }) {
     )
 }
 
-/** Carte de VITRINE : sprite + niveau + PRIX de la révélation (gratuit à regarder ; payant à dévoiler). */
 function VitrineCard({ mon, price, revealed, onClick, disabled }: { mon: EspionVitrineMon; price: number; revealed: boolean; onClick: () => void; disabled: boolean }) {
     const sp = getSpecies(mon.speciesId)
     return (
@@ -88,25 +87,43 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
     const [players, setPlayers] = useState<EspionPlayer[] | null>(null)
     const [target, setTarget] = useState<{ userId: string; nickname: string } | null>(null)
     const [vitrine, setVitrine] = useState<{ nickname: string; mons: EspionVitrineMon[] } | null>(null)
-    const [spyCount, setSpyCount] = useState(0)                  // compteur perso → frais de dossier croissants
-    const [revealed, setRevealed] = useState<Record<string, unknown>>({}) // uid -> mon brut (payé, cache session)
+    const [vitrineCache, setVitrineCache] = useState<Record<string, { nickname: string; mons: EspionVitrineMon[] }>>({}) // accès déjà payés (session)
+    const [spyCount, setSpyCount] = useState(0)
+    const [revealed, setRevealed] = useState<Record<string, unknown>>({})
     const [detailUid, setDetailUid] = useState<string | null>(null)
-    const [confirmMon, setConfirmMon] = useState<EspionVitrineMon | null>(null) // achat en attente de confirmation
+    const [accessConfirm, setAccessConfirm] = useState<EspionPlayer | null>(null) // paiement d'accès en attente
+    const [confirmMon, setConfirmMon] = useState<EspionVitrineMon | null>(null)    // paiement de révélation en attente
     const [busy, setBusy] = useState(false)
     const [note, setNote] = useState<string | null>(null)
 
     useEffect(() => { fetchEspionPlayers().then(setPlayers).catch(() => setPlayers([])) }, [])
 
-    const openPlayer = async (p: EspionPlayer) => {
+    const openPlayer = (p: EspionPlayer) => {
         if (busy) return
-        setBusy(true); setNote(null); setDetailUid(null); setConfirmMon(null)
-        const v = await fetchEspionVitrine(p.userId)
-        setBusy(false)
-        if (!v) { setNote("Vitrine indisponible pour l'instant."); return }
-        setTarget({ userId: p.userId, nickname: p.nickname }); setVitrine({ nickname: v.nickname, mons: v.mons }); setSpyCount(v.spyCount)
+        const cached = vitrineCache[p.userId]
+        if (cached) { setTarget({ userId: p.userId, nickname: p.nickname }); setVitrine(cached); setDetailUid(null); setNote(null); return } // déjà payé
+        setNote(null); setAccessConfirm(p)
     }
 
-    // Clic sur une carte : déjà payé → affiche direct ; sinon → écran de CONFIRMATION du prix.
+    const confirmAccess = async () => {
+        const p = accessConfirm
+        if (!p || busy) return
+        setBusy(true); setNote(null)
+        const r = await postEspionAccess(p.userId)
+        setBusy(false)
+        if (!r.ok) {
+            if (r.reason === "insufficient") setNote(`Pas assez de Jetons : l'accès coûte ${r.cost} (tu as ${r.jc}).`)
+            else setNote("Accès impossible pour l'instant.")
+            setAccessConfirm(null)
+            return
+        }
+        const vit = { nickname: r.nickname ?? p.nickname, mons: r.mons ?? [] }
+        setVitrineCache((c) => ({ ...c, [p.userId]: vit }))
+        setTarget({ userId: p.userId, nickname: p.nickname }); setVitrine(vit); setSpyCount(r.spyCount ?? 0)
+        setAccessConfirm(null); setDetailUid(null)
+        if (r.cost && r.cost > 0) onCharged?.(`🕵️ −${r.cost} JC · dossier de ${r.nickname ?? p.nickname} ouvert`)
+    }
+
     const clickMon = (m: EspionVitrineMon) => {
         if (busy) return
         if (revealed[m.uid] !== undefined) { setDetailUid(m.uid); setConfirmMon(null); setNote(null); return }
@@ -127,7 +144,7 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
             return
         }
         setRevealed((prev) => ({ ...prev, [m.uid]: r.mon }))
-        if (typeof r.spyCount === "number") setSpyCount(r.spyCount) // le prochain dossier coûtera plus cher
+        if (typeof r.spyCount === "number") setSpyCount(r.spyCount)
         setDetailUid(m.uid); setConfirmMon(null)
         if (r.cost && r.cost > 0) onCharged?.(`🕵️ −${r.cost} JC · ${getSpecies(m.speciesId)?.name ?? "Daemon"} de ${target.nickname} dévoilé`)
     }
@@ -144,7 +161,7 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
 
                 {!target ? (
                     <>
-                        <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8 }}>Choisis un dresseur (ceux qui ont accès à la Zone de Combat). Tu verras les Daemons qu&apos;il a SUR LUI — dévoiler une fiche complète coûte <b>1 JC par niveau + des frais de dossier</b> (10, 20, 30… croissants).</div>
+                        <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8 }}>Choisis un dresseur (ceux qui ont accès à la Zone de Combat). <b>Ouvrir son dossier coûte la somme des niveaux de son équipe</b> ; ensuite chaque fiche dévoilée coûte 1 JC/niveau + des frais de dossier croissants.</div>
                         {players == null ? (
                             <div style={{ fontSize: 12, opacity: 0.7 }}>Chargement…</div>
                         ) : players.length === 0 ? (
@@ -152,10 +169,23 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                                 {players.map((p) => (
-                                    <button key={p.userId} disabled={busy} onClick={() => openPlayer(p)} style={{ textAlign: "left", background: "#242433", border: "1px solid #3a3550", borderRadius: 8, padding: "8px 10px", cursor: busy ? "default" : "pointer", color: "#fff", fontFamily: "inherit", opacity: busy ? 0.6 : 1 }}>
-                                        <b>{p.nickname}</b> <span style={{ fontSize: 10, opacity: 0.6 }}>· {p.teamSize} Daemon(s)</span>
+                                    <button key={p.userId} disabled={busy} onClick={() => openPlayer(p)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, textAlign: "left", background: "#242433", border: "1px solid #3a3550", borderRadius: 8, padding: "8px 10px", cursor: busy ? "default" : "pointer", color: "#fff", fontFamily: "inherit", opacity: busy ? 0.6 : 1 }}>
+                                        <span><b>{p.nickname}</b> <span style={{ fontSize: 10, opacity: 0.6 }}>· {p.teamSize} Daemon(s)</span></span>
+                                        <span style={{ fontSize: 10, fontWeight: 800, color: vitrineCache[p.userId] ? "#7ac98a" : "#ffd54a" }}>{vitrineCache[p.userId] ? "ouvert ✓" : `💠 ${p.accessCost}`}</span>
                                     </button>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* CONFIRMATION D'ACCÈS */}
+                        {accessConfirm && (
+                            <div style={{ marginTop: 10, padding: 10, background: "rgba(255,215,74,.1)", border: "1px solid #ffd54a", borderRadius: 8, textAlign: "center" }}>
+                                <div style={{ fontSize: 12 }}>Ouvrir le dossier de <b>{accessConfirm.nickname}</b> pour <b style={{ color: "#ffd54a" }}>💠 {accessConfirm.accessCost} JC</b> ?</div>
+                                <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2 }}>= somme des niveaux de son équipe · dévoiler une fiche coûtera ensuite en plus</div>
+                                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+                                    <button disabled={busy} onClick={confirmAccess} style={{ background: "#7ac98a", color: "#15151f", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Payer l&apos;accès</button>
+                                    <button disabled={busy} onClick={() => setAccessConfirm(null)} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontWeight: 800 }}>Annuler</button>
+                                </div>
                             </div>
                         )}
                         {note && <div style={{ fontSize: 11, color: "#ff9e6b", marginTop: 8 }}>{note}</div>}
@@ -172,7 +202,6 @@ export default function EspionPanel({ onClose, onCharged }: { onClose: () => voi
                             ))}
                         </div>
 
-                        {/* CONFIRMATION D'ACHAT */}
                         {confirmMon && (
                             <div style={{ marginTop: 10, padding: 10, background: "rgba(255,215,74,.1)", border: "1px solid #ffd54a", borderRadius: 8, textAlign: "center" }}>
                                 <div style={{ fontSize: 12 }}>Dévoiler <b>{getSpecies(confirmMon.speciesId)?.name ?? "ce Daemon"}</b> (niv {confirmMon.level}) pour <b style={{ color: "#ffd54a" }}>💠 {espionRevealCost(confirmMon.level, spyCount)} JC</b> ?</div>

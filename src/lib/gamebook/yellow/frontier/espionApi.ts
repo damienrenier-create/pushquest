@@ -7,8 +7,9 @@
 
 const BASE = "/api/gamebook/yellow/espion"
 
-export interface EspionPlayer { userId: string; nickname: string; teamSize: number }
+export interface EspionPlayer { userId: string; nickname: string; teamSize: number; accessCost: number }
 export interface EspionVitrineMon { uid: string; speciesId: string; level: number; shiny: boolean; zone: "team" | "pc" }
+export interface EspionAccess { ok: boolean; reason?: "insufficient"; nickname?: string; mons?: EspionVitrineMon[]; spyCount?: number; jc?: number; cost?: number }
 export interface EspionReveal {
     ok: boolean
     reason?: "insufficient" | "gone"
@@ -27,13 +28,12 @@ export async function fetchEspionPlayers(): Promise<EspionPlayer[]> {
     } catch { return [] }
 }
 
-export async function fetchEspionVitrine(target: string): Promise<{ nickname: string; mons: EspionVitrineMon[]; spyCount: number } | null> {
+/** ACCÈS payant à la vitrine d'un joueur (coût = somme des niveaux de son équipe). Renvoie les sprites + spyCount. */
+export async function postEspionAccess(target: string): Promise<EspionAccess> {
     try {
-        const r = await fetch(`${BASE}?target=${encodeURIComponent(target)}`)
-        const j = await r.json()
-        if (!j?.ok) return null
-        return { nickname: String(j.nickname ?? "Dresseur"), mons: Array.isArray(j.mons) ? (j.mons as EspionVitrineMon[]) : [], spyCount: Math.max(0, Math.floor(Number(j.spyCount) || 0)) }
-    } catch { return null }
+        const r = await fetch(BASE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "access", target }) })
+        return (await r.json()) as EspionAccess
+    } catch { return { ok: false } }
 }
 
 /** Coût d'une révélation : 1 JC par NIVEAU + frais de dossier 10×(spyCount+1). (Doit refléter le calcul serveur.) */
