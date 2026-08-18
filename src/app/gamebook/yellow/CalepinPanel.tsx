@@ -3,21 +3,23 @@
 // LE CALEPIN — carnet d'astuces reçu d'ACE (1re défaite). Liste les conseils DÉJÀ LUS (panneaux du parc), dans
 //   l'ordre reçu (triable), avec des NOTES PERSO annotables. Contenu = mêmes fiches TOPICS que le Manuel.
 
-import { useState } from "react"
-import { TOPICS } from "./ParkSignPanel"
+import { Fragment, useState } from "react"
+import { TOPICS, topicCat } from "./ParkSignPanel"
 import { getCalepin, setCalepinNote } from "@/lib/gamebook/yellow/store/calepinStore"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 
 export default function CalepinPanel({ userId, onClose }: { userId: string; onClose: () => void }) {
     const [cal, setCal] = useState(() => getCalepin(userId))
-    const [sort, setSort] = useState<"recu" | "alpha">("recu")
+    const [sort, setSort] = useState<"recu" | "alpha" | "theme">("recu")
     const [open, setOpen] = useState<string | null>(null)   // tip (titre) déplié en détail
     const [draft, setDraft] = useState("")                  // brouillon de note du tip ouvert
 
     // Titres reçus → fiche TOPICS correspondante (on ignore ceux qui n'existent plus dans les données).
     const received = cal.tips.map((t) => TOPICS.find((x) => x.t === t)).filter((x): x is (typeof TOPICS)[number] => !!x)
-    const list = sort === "alpha" ? [...received].sort((a, b) => a.t.localeCompare(b.t)) : received
+    const list = sort === "alpha" ? [...received].sort((a, b) => a.t.localeCompare(b.t))
+        : sort === "theme" ? [...received].sort((a, b) => topicCat(a.t).localeCompare(topicCat(b.t)) || a.t.localeCompare(b.t))
+            : received
     const topic = open ? TOPICS.find((x) => x.t === open) : null
 
     const openTip = (t: string) => { setOpen(t); setDraft(getCalepin(userId).notes[t] ?? "") }
@@ -45,19 +47,24 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                     <>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 11 }}>
                             <span style={{ opacity: 0.7 }}>Trier :</span>
-                            <button onClick={() => setSort("recu")} style={{ background: sort === "recu" ? INK : "transparent", color: sort === "recu" ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "3px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 }}>Ordre reçu</button>
-                            <button onClick={() => setSort("alpha")} style={{ background: sort === "alpha" ? INK : "transparent", color: sort === "alpha" ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "3px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 }}>A → Z</button>
+                            {([["recu", "Ordre reçu"], ["theme", "Thème"], ["alpha", "A → Z"]] as const).map(([k, lbl]) => (
+                                <button key={k} onClick={() => setSort(k)} style={{ background: sort === k ? INK : "transparent", color: sort === k ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "3px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 }}>{lbl}</button>
+                            ))}
                         </div>
                         {list.length === 0 ? (
                             <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>Ton calepin est vide pour l&apos;instant. Lis les <b>panneaux</b> du monde (Route Nord…) : chaque astuce s&apos;y inscrira, et tu pourras y ajouter tes notes.</div>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                {list.map((t) => {
+                                {list.map((t, i) => {
                                     const hasNote = !!(cal.notes[t.t] ?? "").trim()
+                                    const showHeader = sort === "theme" && (i === 0 || topicCat(list[i - 1].t) !== topicCat(t.t))
                                     return (
-                                        <button key={t.t} onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-                                            {t.t}{hasNote && <span title="Note perso"> ✍️</span>}
-                                        </button>
+                                        <Fragment key={t.t}>
+                                            {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{topicCat(t.t)}</div>}
+                                            <button onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
+                                                {t.t}{hasNote && <span title="Note perso"> ✍️</span>}
+                                            </button>
+                                        </Fragment>
                                     )
                                 })}
                             </div>

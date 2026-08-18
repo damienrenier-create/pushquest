@@ -138,6 +138,23 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     },
 ]
 
+// THÈME de chaque astuce (pour trier/regrouper le Calepin & le Manuel). Clé = titre exact du TOPIC.
+export const TOPIC_CAT: Record<string, string> = {
+    "🎯 Capturer un Daemon": "Capture",
+    "⚡ Reps → Énergie": "Ressources",
+    "🏆 Le quota du jour": "Ressources",
+    "⚔️ Table des types": "Combat",
+    "☠️ Les attaques de statut": "Combat",
+    "⬆️ Renforcement (buffs)": "Combat",
+    "🏃 La fuite": "Combat",
+    "📊 Niveau de l'équipe": "Progression",
+    "📈 Le partage d'XP": "Progression",
+    "🎓 Apprendre des attaques": "Progression",
+    "🐆 ACE, le rival": "Monde & PNJ",
+    "🏥 Le Centre Daemon": "Monde & PNJ",
+}
+export const topicCat = (title: string): string => TOPIC_CAT[title] ?? "Divers"
+
 export default function ParkSignPanel() {
     const idx = useGameStore((s) => s.signOpen)
     const close = useGameStore((s) => s.closeSign)
