@@ -579,9 +579,44 @@ model TradeDelivery {
   monJson     Json?                         // Daemon à AJOUTER au PC (null pour une livraison de simple déverrouillage)
   removeUid   String   @default("")         // uid du Daemon du destinataire à RETIRER (échange conclu)
   unlockUid   String   @default("")         // uid du Daemon du destinataire à DÉLISTER (offre rendue)
+  reps        Int      @default(0)          // MARKET WANTED : reps à CRÉDITER au destinataire (paiement d'un échange demande)
   note        String   @default("")
   createdAt   DateTime @default(now())
   @@index([recipientId])
+}
+
+// MARKET « WANTED » (Grand Marchand) — face DEMANDE : un joueur poste ce qu'il CHERCHE (espèce + prix indicatif en JC
+//   ou reps). D'autres, qui ont l'espèce, proposent leur Daemon et NÉGOCIENT le prix (ping-pong). Escrow SYMÉTRIQUE :
+//   le Daemon du vendeur est engagé (drapeau listed) ; quand l'ACHETEUR contre-propose, son montant est BLOQUÉ (débité,
+//   `escrowedByBuyer`) → l'accord est sûr même si un des deux est hors-ligne. À l'accord : Daemon→acheteur, montant→vendeur.
+model TradeWanted {
+  id            String   @id @default(cuid())
+  ownerId       String                       // demandeur (acheteur)
+  ownerNickname String   @default("Dresseur")
+  speciesId     String                       // espèce recherchée
+  priceKind     String   @default("jc")       // "jc" | "reps"
+  price         Int      @default(0)          // prix proposé au départ (indicatif, négociable)
+  note          String   @default("")
+  createdAt     DateTime @default(now())
+  @@index([ownerId])
+}
+model TradeWantedOffer {
+  id              String   @id @default(cuid())
+  wantedId        String                       // l'annonce ciblée
+  buyerId         String                       // demandeur (= wanted.ownerId)
+  buyerNickname   String   @default("Dresseur")
+  sellerId        String                       // fournisseur (qui a le Daemon)
+  sellerNickname  String   @default("Dresseur")
+  monJson         Json                          // snapshot du Daemon proposé
+  sellerUid       String   @default("")        // uid du Daemon chez le vendeur (escrow SOFT : drapeau listed)
+  priceKind       String   @default("jc")       // "jc" | "reps"
+  price           Int      @default(0)          // prix COURANT (négocié)
+  lastBy          String   @default("seller")   // "seller" | "buyer" : qui a fixé le prix courant → l'AUTRE peut accepter
+  escrowedByBuyer Int      @default(0)          // montant BLOQUÉ chez l'acheteur (posé quand il contre-propose) ; 0 sinon
+  createdAt       DateTime @default(now())
+  @@index([wantedId])
+  @@index([buyerId])
+  @@index([sellerId])
 }
 
 model UserStatus {
