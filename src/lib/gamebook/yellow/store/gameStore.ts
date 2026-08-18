@@ -45,7 +45,7 @@ import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevanche
 import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_PASS_MARKER_PREFIX, ACE_PASS_MAX_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
@@ -1735,10 +1735,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && ACE_TRIGGER_TILES.some((t) => t.x === next.posX && t.y === next.posY)) {
             if (getPlayerSave().badges.includes("feu") || aceBypassByNickname()) {
                 // Badge Flamme (ou pseudo whitelisté) → ACE laisse passer vers CENDREVILLE.
+                // Il ne PARLE qu'aux ACE_PASS_MAX_LINES premiers passages (compteur persisté) ; ensuite, transition muette.
+                let passes = 0
+                while (isTrainerDefeated(`${ACE_PASS_MARKER_PREFIX}${passes + 1}`)) passes++
+                const speak = passes < ACE_PASS_MAX_LINES
+                if (speak) markTrainerDefeated(`${ACE_PASS_MARKER_PREFIX}${passes + 1}`)
                 const cp = createInitialPlayer("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y, "left")
                 set({
                     map: YELLOW_MAPS["yellow_cendreville"], player: cp,
-                    dialogue: { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_PASS_LINES, lineIndex: 0 },
+                    dialogue: speak ? { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_PASS_LINES, lineIndex: 0 } : null,
                 })
                 scheduleSave(cp)
                 return

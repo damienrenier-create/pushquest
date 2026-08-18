@@ -82,6 +82,21 @@ export function currentGymBadge(badges: readonly string[]): BadgeId {
     return GYM_BADGE_ORDER.find((b) => !badges.includes(b)) ?? "elec"
 }
 
+// PANTHÉON DES ARÈNES — ORDRE COMPLET des 5 arènes (l'eau/Cendreville en dernier) + état d'une arène selon les badges.
+export const FULL_BADGE_ORDER: BadgeId[] = ["plante", "roche", "feu", "elec", "eau"]
+export type ArenaGate = "beaten" | "next" | "reachable" | "locked"
+/** beaten = badge obtenu (grisé, plus affrontable) · next = prochain objectif (XP ×2) · reachable = 1 cran au-dessus
+ *  (XP normale) · locked = 2 crans ou + au-dessus (trop fort, inaccessible). */
+export function arenaGate(badge: string, badges: readonly string[]): ArenaGate {
+    if (badges.includes(badge)) return "beaten"
+    const idx = (FULL_BADGE_ORDER as string[]).indexOf(badge)
+    const nextIdx = (FULL_BADGE_ORDER as string[]).findIndex((b) => !badges.includes(b))
+    const dist = idx - (nextIdx === -1 ? FULL_BADGE_ORDER.length : nextIdx)
+    if (dist <= 0) return "next"
+    if (dist === 1) return "reachable"
+    return "locked"
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RUN 3 — analyse d'arène spécifique : gardiens RE-TYPÉS (type Ligue) + BOSS = équipe figée d'un vrai joueur.
 // ─────────────────────────────────────────────────────────────────────────────

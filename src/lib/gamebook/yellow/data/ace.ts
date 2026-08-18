@@ -47,6 +47,10 @@ export const ACE_PASS_LINES = [
     "« Tu pues le roussi. Bon. CENDREVILLE est à toi — profites-en avant qu'elle t'enterre. »",
     "« Et tout au sud, la LIGUE : le Conseil des 4, le Maître. Tous les badges, ou les portes restent closes comme un caveau. J'y serai. Sur le trône. »",
 ]
+// Le dialogue de passage vers CENDREVILLE n'est joué que les N premières fois (au-delà : transition silencieuse).
+//   Compteur persisté via defeatedTrainers (marqueurs ace_cendreville_pass_1.., additif, per-world).
+export const ACE_PASS_MARKER_PREFIX = "ace_cendreville_pass_"
+export const ACE_PASS_MAX_LINES = 3
 // Pas (encore) le Badge Flamme : ACE bloque CENDREVILLE.
 export const ACE_GATE_LINES = [
     "*ACE s'adosse au panneau, sans bouger d'un poil.*",

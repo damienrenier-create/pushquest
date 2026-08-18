@@ -366,13 +366,14 @@ export function freezeTeam(team: MonInstance[]): ChampionMon[] {
 
 /** Lance un combat amical contre l'équipe de champion FIGÉE (Hall of Fame). Sans sac (noItems), IA la plus
  *  maligne ("hof"), aucune récompense ni XP (challenge pur). `label` identifie le combat (ligue/arène). */
-export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean {
+export function startHofBattle(label: string, champTeam: ChampionMon[], expMult = 0): boolean {
     const playerTeam = getPlayer().team
     if (playerTeam.length === 0 || champTeam.length === 0) return false
     if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
     const enemyTeam = champTeam.map((m, i) => championToInstance(m, i))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
+    // expMult : 0 = Ligue/HoF (challenge pur, défaut) ; 2 = arène du prochain objectif (Panthéon) ; 1 = 1 cran au-dessus.
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: `hof:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()

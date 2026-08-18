@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { arenaGate, type ArenaGate } from "@/lib/gamebook/yellow/data/arenaInfos"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface Entry { nickname: string; badgeId: string; wonAt: string; team: ChampionMon[] }
@@ -56,9 +57,9 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
 
-    // Affronter l'équipe figée d'un champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
-    const fight = (label: string, team: ChampionMon[]) => {
-        if (startHofBattle(label, team)) (onFight ?? close)()
+    // Affronter l'équipe figée d'un champion (combat amical, sans sac, IA maligne). expMult : 2 (prochain objectif) ou 1.
+    const fight = (label: string, team: ChampionMon[], expMult: number) => {
+        if (startHofBattle(label, team, expMult)) (onFight ?? close)()
         else setNotice("Soigne ton équipe (au moins 1 Daemon debout) avant d'affronter un champion !")
     }
 
@@ -111,6 +112,11 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     const arena = arenaList.find((a) => a.id === tab) ?? arenaList[0]
     const list = byBadge[tab] ?? []
     const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"
+    // GATING par badges — uniquement pour SON PROPRE run (consulter un autre run = lecture seule, pas d'affrontement).
+    const myWorld = activeWorld === "replay" ? "live" : activeWorld
+    const gate: ArenaGate | "consult" = viewWorld === myWorld ? arenaGate(arena.id, player.badges) : "consult"
+    const dimmed = gate === "beaten" || gate === "locked"
+    const gateNote: React.CSSProperties = { marginTop: 8, fontSize: 11.5, textAlign: "center", opacity: 0.75 }
 
     return (
         <div style={overlay} onClick={close}>
@@ -157,7 +163,7 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
 
                 <div style={scroll}>
                     {list.map((c, ci) => (
-                        <div key={ci} style={champCard}>
+                        <div key={ci} style={{ ...champCard, opacity: dimmed ? 0.45 : 1 }}>
                             <div style={champHead}>
                                 <span style={{ ...champName, color: arena.color }}>{arena.emoji} {c.nickname}</span>
                                 <span style={champDate}>{fmtDate(c.wonAt)}</span>
@@ -174,9 +180,13 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
                                     )
                                 })}
                             </div>
-                            <button style={{ ...fightBtn, borderColor: arena.color, color: arena.color }} onClick={() => fight(`${arena.nom} · ${c.nickname}`, c.team)}>
-                                ⚔️ Affronter l&apos;équipe de {c.nickname}
-                            </button>
+                            {/* Affrontement gaté par l'avancée : prochain objectif = XP ×2 (appétant) ; 1 cran au-dessus = XP normale ;
+                                arène déjà conquise = grisée ; 2 crans au-dessus = verrouillée ; autre run = consultation seule. */}
+                            {gate === "next" && <button style={{ ...fightBtn, borderColor: arena.color, color: arena.color }} onClick={() => fight(`${arena.nom} · ${c.nickname}`, c.team, 2)}>⚔️ Affronter {c.nickname} · <b>XP ×2</b></button>}
+                            {gate === "reachable" && <button style={{ ...fightBtn, borderColor: arena.color, color: arena.color }} onClick={() => fight(`${arena.nom} · ${c.nickname}`, c.team, 1)}>⚔️ Affronter l&apos;équipe de {c.nickname}</button>}
+                            {gate === "beaten" && <div style={gateNote}>✅ Arène déjà conquise</div>}
+                            {gate === "locked" && <div style={gateNote}>🔒 Trop fort — décroche d&apos;abord les badges précédents</div>}
+                            {gate === "consult" && <div style={gateNote}>👁️ Consultation ({worldLabel})</div>}
                         </div>
                     ))}
                 </div>
