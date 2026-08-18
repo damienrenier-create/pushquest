@@ -977,6 +977,10 @@ function tryLaunchAnanas(): ActiveDialogue | null {
 // Couvre le reload direct DANS la grotte (setMap non rappelé) : le blocage reste actif tant qu'on n'a pas ré-entré+vaincu.
 let pnj5WinsAtEntry = -1
 const pnj5ClearedThisVisit = (): boolean => pnj5WinsAtEntry >= 0 && pnj5WinsCount() > pnj5WinsAtEntry
+// LATENCE anti-ré-affrontement : après un déclenchement du gardien, N pas de GRÂCE avant qu'un piège (18/19,33)
+// puisse relancer le combat → le joueur peut s'éloigner / se diriger vers la sortie sans se refaire happer aussitôt.
+let pnj5GraceSteps = 0
+const PNJ5_GRACE = 4
 
 // Meute de 5 Gek scalée (+2 niveaux/victoire) + IA « hof » (la plus maligne). Récurrent, sans cap journalier.
 // La GATE « titre Or au Dôme » est vérifiée à l'INTERACTION (sinon renvoi hors grotte) — cf. handler pressA.
@@ -1153,7 +1157,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // (gate Or → renvoi hors grotte, sinon combat contre les 5 Gek), tant qu'il n'est pas battu CETTE visite.
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === PNJ5_MAP_ID && !pnj5ClearedThisVisit()
+            && pnj5GraceSteps <= 0 // LATENCE : pas de re-déclenchement pendant la grâce
             && inPnj5Trigger(next.posX, next.posY)) {
+            pnj5GraceSteps = PNJ5_GRACE // rearme la grâce : 4 pas avant qu'un piège puisse relancer
             if (getPlayerSave().domeChampionships < 3) {
                 const kicked = createInitialPlayer(PNJ5_KICK.mapId, PNJ5_KICK.x, PNJ5_KICK.y, "down")
                 set({ map: YELLOW_MAPS[PNJ5_KICK.mapId], player: kicked, dialogue: { npcId: PNJ5_NPC_ID, npcName: "GARDIEN", lineIndex: 0, lines: PNJ5_NO_DOME_LINES } })
@@ -1172,6 +1178,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             scheduleSave({ ...player, direction: next.direction })
             return
         }
+        // LATENCE gardien : chaque pas EFFECTIF dans la Grotte 1F consomme 1 de grâce (le piège reste inerte tant que > 0).
+        if ((next.posX !== player.posX || next.posY !== player.posY) && player.mapId === PNJ5_MAP_ID && pnj5GraceSteps > 0) pnj5GraceSteps--
         // SENTINELLE (PNJ 10) — INTERCEPTION : marcher sur le couloir (17-19,18) LANCE le combat tant qu'elle n'est
         // pas vaincue CETTE visite (bloqueur pur, sans gate). On ne bouge pas, on tourne face à elle et on enchaîne.
         if ((next.posX !== player.posX || next.posY !== player.posY)
