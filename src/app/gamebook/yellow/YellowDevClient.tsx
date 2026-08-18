@@ -2265,6 +2265,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
+                        {/* ENCODER MES REPS → tableau de bord PushQuest (WorkoutEntry). ESSENTIEL pour les comptes INVITÉS
+                            (Zyran…), dont la nav normale est masquée : ?dashboard=1 lève leur redirect (cf. app/page.tsx). */}
+                        <button style={{ ...menuBtnStyle, borderColor: "#4a9a5a", color: "#8ee0a0" }} onClick={() => router.push("/?dashboard=1")}>📊 ENCODER MES REPS</button>
                         {/* FUSIODEX : débloqué à la 1re arrivée au Dôme Fusion (marker autel_visited). Anti-spoiler :
                             invisible tant que le joueur n'a pas atteint l'Autel. */}
                         {player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
