@@ -4,8 +4,10 @@
 // du parc (Route Nord). Chaque panneau ouvre SON sujet (signOpen = index), et on
 // peut feuilleter les autres avec ◀ ▶ / swipe. Privilégie la QUALITÉ de l'info.
 
-import { type ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { recordCalepinTip } from "@/lib/gamebook/yellow/store/calepinStore"
+import { getCurrentPlayerId } from "@/lib/gamebook/yellow/store/playerStore"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 
@@ -139,6 +141,11 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
 export default function ParkSignPanel() {
     const idx = useGameStore((s) => s.signOpen)
     const close = useGameStore((s) => s.closeSign)
+    // CALEPIN : consigne l'astuce dès qu'on lit le panneau (le carnet la gardera, annotable, à relire au calme).
+    useEffect(() => {
+        if (idx === null) return
+        recordCalepinTip(getCurrentPlayerId(), TOPICS[((idx % TOPICS.length) + TOPICS.length) % TOPICS.length].t)
+    }, [idx])
     if (idx === null) return null
     // UNE fiche par panneau : on affiche UNIQUEMENT le sujet du panneau cliqué.
     // Plus de carrousel/navigation entre les fiches (demande Sartay).

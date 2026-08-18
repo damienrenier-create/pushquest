@@ -55,6 +55,8 @@ import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import ParkSignPanel from "./ParkSignPanel"
 import HelpPanel from "./HelpPanel"
+import CalepinPanel from "./CalepinPanel"
+import { calepinOwned, grantCalepin } from "@/lib/gamebook/yellow/store/calepinStore"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname, DEFAULT_SPAWN, restoreFusionGauntletFromCarry, reorderFusionGauntletTeam, reorderFusionGauntletMove } from "@/lib/gamebook/yellow/store/gameStore"
 import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
@@ -485,6 +487,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pcSwapMon, setPcSwapMon] = useState<MonInstance | null>(null) // SWAP 1-action PC→équipe : équipe pleine → qui remplacer par ce Daemon PC
     const [helpOpen, setHelpOpen] = useState(false) // 📖 AIDE : glossaire centralisé des astuces (menu pause)
+    const [calepinOpen, setCalepinOpen] = useState(false) // 📓 CALEPIN : carnet perso (donné par ACE à la 1re défaite)
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
@@ -1217,7 +1220,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             persistYellowSave()
             clearWhiteout()
-            if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
+            // 1re DÉFAITE : ACE remet le CALEPIN (carnet d'astuces, dans le sac, te suit de A à Z). Prioritaire sur la raillerie.
+            if (grantCalepin(userId)) {
+                showDialogue("y_ace", "ACE", [
+                    "*Tu rassembles tes Daemons K.O. ACE surgit, un carnet corné à la main, sourire en coin.*",
+                    "« Première défaite, hein ? Tiens — un CALEPIN. Note-y les conseils, les astuces… tout ce que ce monde t'apprend. »",
+                    "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC. Maintenant relève-toi. »",
+                ])
+            }
+            else if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
             else if (nemTaunt) showDialogue("y_nemesis_challenge", "LE NÉMÉSIS", [nemTaunt]) // défaite au défi némésis
         }
     }, [whiteout, battle, setMap, mapPlayer.mapId, showDialogue])
@@ -2517,6 +2528,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <>
                                 <div style={menuTitleStyle}>🎒 SAC</div>
                                 <div style={{ maxHeight: "62vh", overflowY: "auto" }}>
+                                    {/* 📓 CALEPIN — objet UNIQUE donné par ACE (1re défaite). Ouvre le carnet d'astuces + notes perso. */}
+                                    {calepinOwned(userId) && (
+                                        <button style={{ ...menuBtnStyle, width: "100%", marginBottom: 6, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => { setMenu("none"); setCalepinOpen(true) }}>📓 CALEPIN — astuces &amp; notes perso</button>
+                                    )}
                                     {/* 📀 Poche CT (toute CT reçue/achetée/cadeau y est visible + enseignable) */}
                                     {player.ownedCts.length > 0 && (
                                         <>
@@ -3563,6 +3578,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
             <ParkSignPanel />
             {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+            {calepinOpen && <CalepinPanel userId={userId} onClose={() => setCalepinOpen(false)} />}
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
 
