@@ -49,7 +49,7 @@ function TypesPage() {
         ["🌿 Plante", "Eau · Sol · Roche"],
         ["⚡ Élec", "Eau · Vol"],
         ["🪨 Roche", "Feu · Vol · Insecte · Glace"],
-        ["🌍 Sol", "Feu · Élec · Roche · Poison"],
+        ["🌍 Sol", "Feu · Élec · Roche · Poison · Acier"],
         ["🥊 Combat", "Normal · Roche · Glace · Acier"],
         ["🦅 Vol", "Plante · Combat · Insecte"],
         ["🔮 Psy", "Combat · Poison"],
@@ -79,7 +79,7 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     {
         t: "🏆 Le quota du jour", body: <>
             <P>Atteins ton <b>quota quotidien</b> et la nature te récompense en combat sauvage :</P>
-            <P>• captures <b>facilitées</b> (×1,3)<br />• Daemons plus <b>rares</b> et de plus <b>haut niveau</b> dans les herbes</P>
+            <P>• captures <b>facilitées</b> (×1,3)<br />• Daemons plus <b>rares</b> dans les herbes</P>
             <P><b>Dépasse</b> ton quota pour des potentiels génétiques (IV) encore meilleurs sur les sauvages.</P>
         </>,
     },
@@ -99,7 +99,7 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     {
         t: "☠️ Les attaques de statut", body: <>
             <P>Certaines attaques infligent un <b>statut</b> : brûlure, poison, paralysie, sommeil, gel, confusion.</P>
-            <P><b>Exemple :</b> <i>Flammèche</i> (Feu) brûle 10% du temps — <b>Braisille</b> et <b>Fennaise</b> l'apprennent dès le <b>niveau 7</b>.</P>
+            <P><b>Exemple :</b> <i>Flammèche</i> (Feu) brûle 10% du temps — <b>Braisille</b> l'apprend au <b>niveau 6</b>, <b>Fennaise</b> au <b>niveau 7</b>.</P>
             <P>Poison &amp; brûlure rongent l'ennemi chaque tour ; paralysie/sommeil/gel l'empêchent d'agir. De quoi gagner sans prendre un coup.</P>
         </>,
     },
@@ -113,7 +113,7 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     {
         t: "🎓 Apprendre des attaques", body: <>
             <P>Un Daemon ne retient que <b>quatre</b> attaques à la fois.</P>
-            <P>Quand il veut en apprendre une 5e (niveau ou CT), ça t'attend dans sa <b>FICHE</b> : tu choisis quelle attaque remplacer, quand tu veux. Plus de pop-up qui interrompt.</P>
+            <P>Quand il veut en apprendre une 5e (niveau ou CT), un pop-up te le propose — mais il ne te <b>force</b> plus : bouton <b>« Plus tard »</b> et l'attaque t'attend dans sa <b>FICHE</b>, à traiter quand tu veux (tu choisis quelle attaque remplacer).</P>
         </>,
     },
     {
@@ -124,9 +124,9 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     },
     {
         t: "🐆 ACE, le rival", body: <>
-            <P>ACE t'attend en ville : défie-le <b>une fois par jour</b>.</P>
-            <P>Il se cale sur <b>ton meilleur Daemon</b>, recalibré à chaque combat : <b>facile</b> tes 3 premières fois, puis <b>+2 niveaux</b> au-dessus de toi.</P>
-            <P>Le <b>vaincre</b> rapporte un cadeau chaque jour… et un <b>Panthéon</b> à la 12e victoire ! Reste devant en t'entraînant.</P>
+            <P>ACE t'attend en ville : tu peux le <b>battre une fois par jour</b> (mais retente librement si tu perds).</P>
+            <P>Il se cale sur la <b>moyenne de ton équipe +2</b>, en <b>cliquet</b> : son niveau est <b>figé entre deux défaites</b> et ne grimpe qu'<b>après</b> l'avoir battu — jamais parce que TON équipe monte. 1re rencontre un poil plus douce.</P>
+            <P>Le <b>vaincre</b> rapporte un cadeau à chaque victoire… jusqu'à la <b>7e</b>, où il te lègue un <b>Panthéon</b> ! Ensuite plus de cadeau, mais reviens le battre.</P>
         </>,
     },
     {
