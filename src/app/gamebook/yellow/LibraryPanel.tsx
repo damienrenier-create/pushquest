@@ -7,6 +7,8 @@
 import { useEffect, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { fusionMaskedView, GROTTE_ENTERED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
 
 interface RegistryMon { speciesId: string; level: number; nickname: string | null }
 interface RegistryPlayer {
@@ -40,11 +42,12 @@ function sortVal(p: RegistryPlayer, k: SortKey): number {
 }
 
 function MonSprite({ id, level, size = 36 }: { id: string; level?: number; size?: number }) {
-    const sp = getSpecies(id)
+    // ANTI-SPOILER : classement = Daemons d'AUTRUI → fusion masquée en MissingNo tant que le viewer n'a pas vu la Grotte.
+    const view = fusionMaskedView(id, getPlayer().defeatedTrainers.includes(GROTTE_ENTERED_MARKER))
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            {sp?.sprite
-                ? <img src={sp.sprite} alt={sp.name} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated" }} />
+            {view.sprite
+                ? <img src={view.sprite} alt={view.name} style={{ width: size, height: size, objectFit: "contain", imageRendering: "pixelated" }} />
                 : <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.6 }}>❔</div>}
             {level != null && <span style={{ fontSize: 9, color: INK, opacity: 0.7 }}>N.{level}</span>}
         </div>
@@ -116,6 +119,7 @@ export default function LibraryPanel() {
             </div>
 
             {selected && (() => {
+                const entered = getPlayer().defeatedTrainers.includes(GROTTE_ENTERED_MARKER) // anti-spoiler fusions
                 const fav = selected.favoriteDaemon ? getSpecies(selected.favoriteDaemon) : null
                 return (
                     <div onClick={() => setSelected(null)} style={{ ...overlay, zIndex: 62 }}>
@@ -125,18 +129,19 @@ export default function LibraryPanel() {
                                 <div style={{ fontSize: 12, color: INK, lineHeight: 1.6, marginBottom: 10 }}>
                                     📕 Pokédex <b>{selected.dexCaught}/{dexTotal}</b> · 🎖️ {selected.badges.map((b) => BADGE_ICON[b] ?? b).join(" ") || "aucun badge"}<br />
                                     ⚔️ PvP <b>{selected.pvp.wins}V</b> / {selected.pvp.losses}D · 🐆 <b>{selected.aceWins}</b> victoire(s) sur ACE
-                                    {fav && <><br />⭐ Daemon fétiche : <b>{fav.name}</b></>}
+                                    {fav && <><br />⭐ Daemon fétiche : <b>{fusionMaskedView(selected.favoriteDaemon as string, entered).name}</b></>}
                                 </div>
                                 <div style={{ fontWeight: 800, fontSize: 13, color: INK, marginBottom: 6 }}>ÉQUIPE ({selected.team.length})</div>
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                     {selected.team.map((m, i) => {
                                         const sp = getSpecies(m.speciesId)
+                                        const view = fusionMaskedView(m.speciesId, entered)
                                         return (
                                             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff8e8", border: `1px solid ${DARK}`, borderRadius: 6, padding: "4px 8px" }}>
                                                 <MonSprite id={m.speciesId} size={42} />
                                                 <div style={{ textAlign: "left" }}>
-                                                    <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{m.nickname || sp?.name || m.speciesId} <span style={{ opacity: 0.7, fontWeight: 400 }}>N.{m.level}</span></div>
-                                                    <div style={{ fontSize: 10, color: INK, opacity: 0.6 }}>{sp?.types.join(" / ") ?? ""}</div>
+                                                    <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{view.masked ? "???" : (m.nickname || sp?.name || m.speciesId)} <span style={{ opacity: 0.7, fontWeight: 400 }}>N.{m.level}</span></div>
+                                                    <div style={{ fontSize: 10, color: INK, opacity: 0.6 }}>{view.masked ? "" : (sp?.types.join(" / ") ?? "")}</div>
                                                 </div>
                                             </div>
                                         )

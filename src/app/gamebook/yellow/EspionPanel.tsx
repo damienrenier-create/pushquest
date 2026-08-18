@@ -76,8 +76,8 @@ function VitrineCard({ mon, price, revealed, onClick, disabled, viewerEnteredGro
     const view = fusionMaskedView(mon.speciesId, viewerEnteredGrotte)
     const showShiny = !view.masked && mon.shiny
     return (
-        <button onClick={onClick} disabled={disabled} title={revealed ? "Déjà dévoilé" : `Dévoiler pour ${price} JC`}
-            style={{ position: "relative", width: 72, background: revealed ? "rgba(126,201,138,.12)" : "#242433", border: `1px solid ${revealed ? "#7ac98a" : "#3a3550"}`, borderRadius: 8, padding: 4, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1 }}>
+        <button onClick={view.masked ? undefined : onClick} disabled={disabled || view.masked} title={view.masked ? "Fusion — visible seulement une fois la Grotte du Nexus visitée" : revealed ? "Déjà dévoilé" : `Dévoiler pour ${price} JC`}
+            style={{ position: "relative", width: 72, background: revealed ? "rgba(126,201,138,.12)" : "#242433", border: `1px solid ${revealed ? "#7ac98a" : "#3a3550"}`, borderRadius: 8, padding: 4, cursor: (disabled || view.masked) ? "default" : "pointer", opacity: (disabled || view.masked) ? 0.6 : 1 }}>
             <img src={view.sprite} alt="" width={52} height={52} style={{ imageRendering: "pixelated", display: "block", margin: "0 auto", filter: showShiny ? "drop-shadow(0 0 3px gold)" : "none" }} />
             <div style={{ fontSize: 9, textAlign: "center", opacity: 0.85 }}>{showShiny ? "✨" : ""}Niv {mon.level}</div>
             <div style={{ fontSize: 9, textAlign: "center", fontWeight: 800, color: revealed ? "#7ac98a" : "#ffd54a" }}>{revealed ? "✓ vu" : `💠 ${price}`}</div>
