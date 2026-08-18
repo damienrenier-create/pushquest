@@ -1127,8 +1127,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 e.preventDefault(); inB ? (inBMenu ? goBackRef.current() : dispatchBattleInput("b")) : (goBackRef.current() || pressB())
             }
             else if (e.key === "Tab") {
-                // Start/Select = ouvre/ferme le menu pause (en combat aussi : viewers sûrs).
+                // Start = ouvre/ferme le menu pause (en combat aussi : viewers sûrs).
                 e.preventDefault(); setMenu((m) => (m === "none" ? "pause" : "none"))
+            }
+            else if (k === "c" && !inB && menu === "none" && calepinOwned(userId)) {
+                // SELECT (raccourci C) = ouvre directement le CALEPIN, s'il a été reçu d'ACE. Hors combat, hors menu.
+                e.preventDefault(); setCalepinOpen(true)
             }
         }
         window.addEventListener("keydown", handler)
@@ -1221,12 +1225,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             persistYellowSave()
             clearWhiteout()
-            // 1re DÉFAITE : ACE remet le CALEPIN (carnet d'astuces, dans le sac, te suit de A à Z). Prioritaire sur la raillerie.
-            if (grantCalepin(userId)) {
+            // 1re DÉFAITE CONTRE ACE (uniquement) : il remet le CALEPIN — carnet VIERGE, rangé dans le SAC, te suit de A à Z.
+            //   aceTaunt !== null ⟺ la défaite vient d'ACE (battleStore.aceLossTaunt). Prioritaire sur la raillerie.
+            if (aceTaunt !== null && grantCalepin(userId)) {
                 showDialogue("y_ace", "ACE", [
                     "*Tu rassembles tes Daemons K.O. ACE surgit, un carnet corné à la main, sourire en coin.*",
-                    "« Première défaite, hein ? Tiens — un CALEPIN. Note-y les conseils, les astuces… tout ce que ce monde t'apprend. »",
-                    "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC. Maintenant relève-toi. »",
+                    "« Première défaite contre moi, hein ? Tiens — un CALEPIN. VIERGE. Note-y ce que ce monde t'apprend, au fil de tes rencontres : panneaux, conseils de PNJ… tout s'y inscrira. »",
+                    "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC (ou presse SELECT). Maintenant relève-toi. »",
                 ])
             }
             else if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
@@ -2256,7 +2261,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
-                        <button style={menuBtnStyle} onClick={() => { setMenu("none"); setCalepinOpen(true) }}>📓 CALEPIN (astuces &amp; notes)</button>
                         {/* FUSIODEX : débloqué à la 1re arrivée au Dôme Fusion (marker autel_visited). Anti-spoiler :
                             invisible tant que le joueur n'a pas atteint l'Autel. */}
                         {player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
