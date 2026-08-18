@@ -81,6 +81,9 @@ function resolveActiveMap(mapId: string): YellowMapData | undefined {
 // (comme l'arène Plante en run 1) → pas de sprite parasite par-dessus. Hors run 3 : liste inchangée (réf. stable).
 export function activeNpcs() {
     let list = YELLOW_NPCS
+    // SYLVEBARBE battu : on retire le PNJ invisible (il n'a plus de dialogue utile ni de sprite endormi) → sa case
+    //   (23,38) entre Ville Jaune et la Zone de Combat REDEVIENT MARCHABLE (fini le « reste » qui bloquait dans le vide).
+    if (getPlayerSave().sylvebarbeAwake) list = list.filter((n) => n.id !== SYLVEBARBE_NPC_ID)
     if (effectiveRunWorld() === "run3") {
         list = list.map((n) => (n.run3X != null
             ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
