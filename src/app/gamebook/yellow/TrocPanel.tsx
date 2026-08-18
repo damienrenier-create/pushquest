@@ -8,6 +8,8 @@
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
+import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
 import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -24,8 +26,20 @@ function monLabel(raw: unknown): { name: string; sub: string } {
     return { name: `${m.shiny ? "✨ " : ""}${m.nickname || sp.name}`, sub: `Niv ${m.level} · ${sp.types.join("/")} · IV ${iv}/75${it ? ` · 🎒 ${it.name}` : ""}` }
 }
 function MonChip({ raw }: { raw: unknown }) {
+    const m = raw as MonInstance & { nickname?: string }
+    const sp = getSpecies(m?.speciesId)
+    if (!sp) return <div style={{ fontWeight: 800, fontSize: 12 }}>Daemon</div>
     const { name, sub } = monLabel(raw)
-    return <div style={{ lineHeight: 1.25 }}><div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div><div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div></div>
+    const st = fullStats(m, sp)
+    const moves = (m.moves ?? []).map((s) => getMove(s.moveId)).filter(Boolean)
+    return (
+        <div style={{ lineHeight: 1.3 }}>
+            <div style={{ fontWeight: 800, fontSize: 12 }}>{name}</div>
+            <div style={{ fontSize: 9, opacity: 0.65 }}>{sub}</div>
+            <div style={{ fontSize: 9, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>PV {st.hp} · Atq {st.atk} · Déf {st.def} · Vit {st.spe} · Spé {st.spc}</div>
+            {moves.length > 0 && <div style={{ fontSize: 9, opacity: 0.7 }}>⚔️ {moves.map((mv) => mv!.name).join(" · ")}</div>}
+        </div>
+    )
 }
 
 const box: React.CSSProperties = { background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }
@@ -37,6 +51,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
     const [st, setSt] = useState<TrocState | null>(null)
     const [busy, setBusy] = useState(false)
     const [tab, setTab] = useState<"etal" | "wanted">("etal") // OFFRE (étal) | DEMANDE (recherches)
+    const [sortBy, setSortBy] = useState<"niveau" | "nom" | "type" | "iv">("niveau") // tri du sélecteur de dépôt
     const [picker, setPicker] = useState<null | { kind: "deposit" } | { kind: "offer"; listingId: string; ownerNickname: string }>(null)
     const [wantNote, setWantNote] = useState("")
 
@@ -93,7 +108,14 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
         else if (r?.reason === "gone") { onToast?.("Étal déjà échangé."); await refresh() }
     })
 
-    const pc = getPlayer().pc.filter((m) => m.tradeState !== "listed") // on ne propose que les Daemons LIBRES (pas déjà sur l'étal)
+    const pc0 = getPlayer().pc.filter((m) => m.tradeState !== "listed") // on ne propose que les Daemons LIBRES (pas déjà sur l'étal)
+    const pc = [...pc0].sort((a, b) => {
+        const sa = getSpecies(a.speciesId), sb = getSpecies(b.speciesId)
+        if (sortBy === "niveau") return b.level - a.level
+        if (sortBy === "nom") return (a.nickname || sa?.name || "").localeCompare(b.nickname || sb?.name || "")
+        if (sortBy === "type") return (sa?.types[0] || "").localeCompare(sb?.types[0] || "")
+        return (b.ivs ? ivTotal(b.ivs) : 0) - (a.ivs ? ivTotal(a.ivs) : 0) // iv
+    })
 
     return (
         <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }} onClick={onClose}>
@@ -121,6 +143,15 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
                                 placeholder="Ce que tu cherches (optionnel) — ex. « un EAU niv 50 »"
                                 style={{ width: "100%", boxSizing: "border-box", background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: "7px 9px", color: "#fff", fontFamily: "inherit", fontSize: 11, marginBottom: 8 }} />
                         )}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, fontSize: 11 }}>
+                            <span style={{ opacity: 0.6 }}>Trier :</span>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} style={{ background: "#20202c", color: "#fff", border: "1px solid #3a3550", borderRadius: 6, padding: "3px 6px", fontSize: 11 }}>
+                                <option value="niveau">Niveau ↓</option>
+                                <option value="nom">Nom</option>
+                                <option value="type">Type</option>
+                                <option value="iv">IV ↓</option>
+                            </select>
+                        </div>
                         {pc.length === 0 ? (
                             <div style={{ fontSize: 12, opacity: 0.7 }}>Aucun Daemon libre dans ta réserve (PC). Dépose d&apos;abord un Daemon au PC d&apos;un Centre.</div>
                         ) : (
