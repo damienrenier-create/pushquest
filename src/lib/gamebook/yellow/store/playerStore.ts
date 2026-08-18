@@ -88,6 +88,8 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    /** VIEUX SAGE SAIYAN : points Saiyan redistribués aujourd'hui (reset au tick ; plafond 20/jour). Optionnel (défaut 0). */
+    sageSaiyanPointsToday?: number
     /** OBSOLÈTE depuis 12/08 (Galijah est désormais piloté par le nb d'ESPÈCES du Pokédex, cf. armGalijahByDex/galijahCountdown). Champ conservé pour compat de save, plus lu/écrit. Optionnel. */
     capturesToday?: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
@@ -477,6 +479,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
+        sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? st.sageSaiyanPointsToday ?? 0,
         capturesToday: p.capturesToday ?? st.capturesToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
@@ -1338,6 +1341,7 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
+        sageSaiyanPointsToday: 0, // nouveau jour → le Vieux Sage Saiyan redonne 20 points redistribuables
         // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
         //   pas par un compteur quotidien. Le tick ne remet donc RIEN à zéro ni ne désarme la chasse (choix Sartay 12/08).
     }
@@ -2646,6 +2650,74 @@ export function allocateStatPoint(uid: string, stat: StatKey): boolean {
         return true
     }
     return false
+}
+
+// ═══════════ VIEUX SAGE SAIYAN — RESPEC des points Saiyan (frères = Daemomaniaque + Espion) ═══════════
+// Le père de la famille « maniaque ». 1×/jour, sur un Daemon de l'ÉQUIPE, il redistribue des points Saiyan
+// déjà alloués (retire d'une stat, réinjecte dans une autre) à SOMME CONSTANTE. Plafond 20 points/jour.
+// Coût triangulaire CUMULÉ sur la journée : le k-ième point du jour coûte k reps (même pool que l'énergie).
+export const SAGE_SAIYAN_DAILY_CAP = 20
+
+/** Points Saiyan encore redistribuables aujourd'hui (0..20). */
+export function sageSaiyanPointsLeftToday(): number {
+    return Math.max(0, SAGE_SAIYAN_DAILY_CAP - (st.sageSaiyanPointsToday ?? 0))
+}
+/** Le sage propose-t-il encore un respec aujourd'hui ? (budget quotidien non épuisé). */
+export function sageAvailableToday(): boolean {
+    return sageSaiyanPointsLeftToday() > 0
+}
+/** Coût en reps pour déplacer `points` points de plus alors qu'on en a déjà bougé `used` aujourd'hui :
+ *  Σ de (used+1) à (used+points) = points·used + points·(points+1)/2 (le k-ième point du jour coûte k). */
+export function sageRespecCost(points: number, used: number = st.sageSaiyanPointsToday ?? 0): number {
+    const n = Math.max(0, Math.floor(points)), u = Math.max(0, Math.floor(used))
+    return n * u + (n * (n + 1)) / 2
+}
+
+/**
+ * VIEUX SAGE SAIYAN — applique un RESPEC sur un Daemon de l'ÉQUIPE. `deltas` = variation par stat, Σ === 0
+ * (redistribution stricte : on ne crée ni ne détruit de point). Débite le coût triangulaire du jour en reps,
+ * ajuste currentHp si la stat PV bouge (±3 PV/point, clampé [1, nouveau max]), incrémente le compteur du jour.
+ * Refuse si : déséquilibré / rien à faire / hors budget 20/j / une stat passerait sous 0 / reps insuffisants.
+ */
+export function respecSaiyan(uid: string, deltas: Partial<Record<StatKey, number>>): { ok: boolean; reason?: "gone" | "unbalanced" | "empty" | "budget" | "negative" | "reps"; cost?: number } {
+    const keys: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
+    let sum = 0, moved = 0
+    for (const k of keys) { const d = Math.floor(deltas[k] ?? 0); sum += d; if (d > 0) moved += d }
+    if (sum !== 0) return { ok: false, reason: "unbalanced" } // somme non conservée = interdit
+    if (moved <= 0) return { ok: false, reason: "empty" }
+    const used = st.sageSaiyanPointsToday ?? 0
+    if (used + moved > SAGE_SAIYAN_DAILY_CAP) return { ok: false, reason: "budget" }
+
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "gone" } // équipe uniquement
+    const m = st.team[idx]
+    const sp = getSpecies(m.speciesId)
+    if (!sp) return { ok: false, reason: "gone" }
+
+    // Nouvelle allocation : applique les deltas, refuse toute stat qui passerait sous 0, purge les clés à 0.
+    const allocated: Partial<Record<StatKey, number>> = { ...(m.allocated ?? {}) }
+    for (const k of keys) {
+        const nv = (allocated[k] ?? 0) + Math.floor(deltas[k] ?? 0)
+        if (nv < 0) return { ok: false, reason: "negative" }
+        if (nv === 0) delete allocated[k]; else allocated[k] = nv
+    }
+    const cost = sageRespecCost(moved, used)
+    if (st.reps < cost) return { ok: false, reason: "reps", cost }
+
+    // currentHp suit la variation de PV MAX (le pool vivant n'est jamais re-clampé en combat → à gérer ici).
+    const deltaHp = Math.floor(deltas.hp ?? 0)
+    const provisional: MonInstance = { ...m, allocated }
+    let currentHp = m.currentHp
+    if (deltaHp !== 0) {
+        const newMax = fullStats(provisional, sp).hp
+        currentHp = Math.max(1, Math.min(m.currentHp + deltaHp * SAIYAN_POINT_VALUE.hp, newMax))
+    }
+    const next = st.team.slice()
+    next[idx] = { ...provisional, currentHp }
+    st = { ...st, team: next, reps: st.reps - cost, sageSaiyanPointsToday: used + moved }
+    trackBallLockSpend(cost) // VŒU DU GÉNIE : dépense de reps hors spendReps
+    emit()
+    return { ok: true, cost }
 }
 
 /**

@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -120,6 +120,23 @@ export function activeNpcs() {
             initialX: dmx,
             initialY: dmy,
             dialoguesAfter: ["« Tu veux savoir où dénicher un Daemon précis ? Demande-moi. »"],
+        }]
+    }
+    // VIEUX SAGE SAIYAN (père du Daemomaniaque & de l'Espion) : POP à VILLE JAUNE sur un spot marchand aléatoire,
+    //   UNIQUEMENT tant qu'il reste des points à redistribuer aujourd'hui (budget 20/jour). Spot stable par session.
+    if (sageAvailableToday()) {
+        if (sageSpotIdx < 0) sageSpotIdx = Math.floor(Math.random() * SAGE_SPOTS.length)
+        const [sgx, sgy] = SAGE_SPOTS[sageSpotIdx]
+        list = [...list, {
+            id: "y_sage_saiyan",
+            name: "VIEUX SAGE",
+            mapId: "yellow_entrance",
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "🧙", color: "#e0a020" }, // repli si le sprite Gen3 manque (vrai sprite = NPC_GEN3_IDLE)
+            initialX: sgx,
+            initialY: sgy,
+            dialoguesAfter: ["« Ha ! Un disciple. Présente-moi un Daemon : on va rééquilibrer sa sueur Saiyan. »"],
         }]
     }
     // DÉFI NÉMÉSIS (vœu de Jacanon) : PNJ PERSONNEL au Centre Pokémon de la Ville Jaune (case 1,7, regard DROITE via
@@ -302,6 +319,10 @@ let galijahStepsLeft = -1
 //   page n'est pas rechargée → le PNJ reste atteignable), re-tiré au prochain chargement → « pop à différents endroits ».
 const DAEMO_SPOTS: ReadonlyArray<readonly [number, number]> = [[26, 15], [8, 17], [17, 29], [36, 4], [22, 2], [7, 8], [30, 29]]
 let daemoSpotIdx = -1
+// VIEUX SAGE SAIYAN : 8 emplacements MARCHABLES connus de Ville Jaune (bandes path/grass rows 17-21, cols 0-22 :
+//   overrides buildViridianCollisions), tirés au hasard PAR SESSION (stable → atteignable), re-tirés au reload.
+const SAGE_SPOTS: ReadonlyArray<readonly [number, number]> = [[5, 18], [11, 18], [18, 18], [9, 17], [15, 19], [10, 20], [15, 20], [19, 21]]
+let sageSpotIdx = -1
 // UKOGNOFY — « déjà affronté CETTE visite » (transient, remis à false à chaque arrivée dans la chambre). Garantit
 //   UNE SEULE rencontre par venue : après le combat, ré-approcher le PNJ ne relance rien (il faut ressortir et
 //   refaire la chaîne). Empêche de brûler les 3 tentatives en une seule visite.
@@ -319,6 +340,7 @@ interface GameStore {
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     daemomaniaqueOpen: boolean // DAEMOMANIAQUE (Cendreville, post run 3) : guide de capture « où/quand/comment »
+    sageOpen: boolean // VIEUX SAGE SAIYAN (Ville Jaune, spot aléatoire 1×/jour) : respec des points Saiyan
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
@@ -392,6 +414,7 @@ interface GameStore {
     closeLibrary: () => void
     closeAdvisor: () => void
     closeDaemomaniaque: () => void
+    closeSage: () => void
     closeLab: () => void
     closeMoveReminder: () => void
     closeCombatShop: () => void
@@ -999,6 +1022,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     libraryOpen: false,
     advisorOpen: false,
     daemomaniaqueOpen: false,
+    sageOpen: false,
     labOpen: false,
     moveReminderOpen: false,
     combatShopOpen: false,
@@ -1047,7 +1071,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -1952,6 +1976,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ daemomaniaqueOpen: true })
             return
         }
+        if (npc.id === "y_sage_saiyan") {
+            set({ sageOpen: true })
+            return
+        }
 
         // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
         if (npc.id === "y_lab_computer") {
@@ -2576,6 +2604,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeLibrary: () => set({ libraryOpen: false }),
     closeAdvisor: () => set({ advisorOpen: false }),
     closeDaemomaniaque: () => set({ daemomaniaqueOpen: false }),
+    closeSage: () => set({ sageOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
