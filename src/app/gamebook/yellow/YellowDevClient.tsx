@@ -54,7 +54,6 @@ import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import ParkSignPanel from "./ParkSignPanel"
-import HelpPanel from "./HelpPanel"
 import CalepinPanel from "./CalepinPanel"
 import { calepinOwned, grantCalepin } from "@/lib/gamebook/yellow/store/calepinStore"
 import PosterPanel from "./PosterPanel"
@@ -486,8 +485,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const ficheTouchY = useRef<number | null>(null) // + axe Y : un swipe ne compte que s'il DOMINE le scroll vertical
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pcSwapMon, setPcSwapMon] = useState<MonInstance | null>(null) // SWAP 1-action PC→équipe : équipe pleine → qui remplacer par ce Daemon PC
-    const [helpOpen, setHelpOpen] = useState(false) // 📖 AIDE : glossaire centralisé des astuces (menu pause)
-    const [calepinOpen, setCalepinOpen] = useState(false) // 📓 CALEPIN : carnet perso (donné par ACE à la 1re défaite)
+    const [calepinOpen, setCalepinOpen] = useState(false) // 📓 CALEPIN : carnet UNIQUE (astuces + notes) — menu pause + sac
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
@@ -2254,7 +2252,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
-                        <button style={menuBtnStyle} onClick={() => { setMenu("none"); setHelpOpen(true) }}>💡 AIDE (ASTUCES)</button>
+                        <button style={menuBtnStyle} onClick={() => { setMenu("none"); setCalepinOpen(true) }}>📓 CALEPIN (astuces &amp; notes)</button>
                         {/* FUSIODEX : débloqué à la 1re arrivée au Dôme Fusion (marker autel_visited). Anti-spoiler :
                             invisible tant que le joueur n'a pas atteint l'Autel. */}
                         {player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
@@ -3577,7 +3575,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
             {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
             <ParkSignPanel />
-            {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
             {calepinOpen && <CalepinPanel userId={userId} onClose={() => setCalepinOpen(false)} />}
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}

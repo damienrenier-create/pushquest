@@ -15,11 +15,15 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
     const [open, setOpen] = useState<string | null>(null)   // tip (titre) déplié en détail
     const [draft, setDraft] = useState("")                  // brouillon de note du tip ouvert
 
-    // Titres reçus → fiche TOPICS correspondante (on ignore ceux qui n'existent plus dans les données).
-    const received = cal.tips.map((t) => TOPICS.find((x) => x.t === t)).filter((x): x is (typeof TOPICS)[number] => !!x)
-    const list = sort === "alpha" ? [...received].sort((a, b) => a.t.localeCompare(b.t))
-        : sort === "theme" ? [...received].sort((a, b) => topicCat(a.t).localeCompare(topicCat(b.t)) || a.t.localeCompare(b.t))
-            : received
+    // Carnet UNIQUE : TOUTES les fiches (référence), les LUES marquées ✓. Notes possibles sur n'importe laquelle.
+    const recvSet = new Set(cal.tips)
+    const recvOrder = [ // « ordre reçu » : d'abord les astuces lues (dans l'ordre), puis les non encore lues.
+        ...cal.tips.map((t) => TOPICS.find((x) => x.t === t)).filter((x): x is (typeof TOPICS)[number] => !!x),
+        ...TOPICS.filter((x) => !recvSet.has(x.t)),
+    ]
+    const list = sort === "alpha" ? [...TOPICS].sort((a, b) => a.t.localeCompare(b.t))
+        : sort === "theme" ? [...TOPICS].sort((a, b) => topicCat(a.t).localeCompare(topicCat(b.t)) || a.t.localeCompare(b.t))
+            : recvOrder
     const topic = open ? TOPICS.find((x) => x.t === open) : null
 
     const openTip = (t: string) => { setOpen(t); setDraft(getCalepin(userId).notes[t] ?? "") }
@@ -51,24 +55,22 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                                 <button key={k} onClick={() => setSort(k)} style={{ background: sort === k ? INK : "transparent", color: sort === k ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "3px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 }}>{lbl}</button>
                             ))}
                         </div>
-                        {list.length === 0 ? (
-                            <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>Ton calepin est vide pour l&apos;instant. Lis les <b>panneaux</b> du monde (Route Nord…) : chaque astuce s&apos;y inscrira, et tu pourras y ajouter tes notes.</div>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                {list.map((t, i) => {
-                                    const hasNote = !!(cal.notes[t.t] ?? "").trim()
-                                    const showHeader = sort === "theme" && (i === 0 || topicCat(list[i - 1].t) !== topicCat(t.t))
-                                    return (
-                                        <Fragment key={t.t}>
-                                            {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{topicCat(t.t)}</div>}
-                                            <button onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-                                                {t.t}{hasNote && <span title="Note perso"> ✍️</span>}
-                                            </button>
-                                        </Fragment>
-                                    )
-                                })}
-                            </div>
-                        )}
+                        <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>✅ = astuce déjà croisée en jeu · ✍️ = tu y as mis une note</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            {list.map((t, i) => {
+                                const hasNote = !!(cal.notes[t.t] ?? "").trim()
+                                const seen = recvSet.has(t.t)
+                                const showHeader = sort === "theme" && (i === 0 || topicCat(list[i - 1].t) !== topicCat(t.t))
+                                return (
+                                    <Fragment key={t.t}>
+                                        {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{topicCat(t.t)}</div>}
+                                        <button onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13, opacity: seen ? 1 : 0.72 }}>
+                                            {seen ? "✅ " : "▫️ "}{t.t}{hasNote && <span title="Note perso"> ✍️</span>}
+                                        </button>
+                                    </Fragment>
+                                )
+                            })}
+                        </div>
                     </>
                 )}
             </div>
