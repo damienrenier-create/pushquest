@@ -3,10 +3,12 @@
 // Nexus Jaune Éclair — AIDE : glossaire CENTRALISÉ de toutes les astuces (mêmes fiches que les panneaux du parc,
 //   source unique TOPICS). Liste des sujets → détail. Ouvert depuis le menu pause (📖 Aide).
 
-import { useState } from "react"
-import { TOPICS } from "./ParkSignPanel"
+import { Fragment, useState } from "react"
+import { TOPICS, topicCat } from "./ParkSignPanel"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
+// Sujets regroupés par THÈME (index d'origine conservé pour l'ouverture).
+const BY_THEME = TOPICS.map((t, i) => ({ t, i })).sort((a, b) => topicCat(a.t.t).localeCompare(topicCat(b.t.t)) || a.t.t.localeCompare(b.t.t))
 
 export default function HelpPanel({ onClose }: { onClose: () => void }) {
     const [idx, setIdx] = useState<number | null>(null)
@@ -27,11 +29,17 @@ export default function HelpPanel({ onClose }: { onClose: () => void }) {
                     </>
                 ) : (
                     <>
-                        <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 8 }}>Toutes les astuces du jeu, réunies. Choisis un sujet :</div>
+                        <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 8 }}>Toutes les astuces du jeu, réunies par thème. Choisis un sujet :</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                            {TOPICS.map((t, i) => (
-                                <button key={i} onClick={() => setIdx(i)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>{t.t}</button>
-                            ))}
+                            {BY_THEME.map(({ t, i }, k) => {
+                                const showHeader = k === 0 || topicCat(BY_THEME[k - 1].t.t) !== topicCat(t.t)
+                                return (
+                                    <Fragment key={i}>
+                                        {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.6, margin: "6px 0 1px" }}>{topicCat(t.t)}</div>}
+                                        <button onClick={() => setIdx(i)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>{t.t}</button>
+                                    </Fragment>
+                                )
+                            })}
                         </div>
                     </>
                 )}
