@@ -1108,7 +1108,8 @@ function buildUkognofyChamber(): TileType[][] {
 //   3) FINALE (yellow_dome_final) : porte SUD (8,11)→retour Dan + PNJ coupe (reward). Gates dans gameStore.
 function buildDomeTournamentRoom(): TileType[][] {
     const m = buildZoneRoom(16, 12) // porte SUD (8,11) → hub déjà ouverte
-    m[6][15] = "path" // porte EST → salle Dan
+    m[11][7] = "path" // 2e case de sortie SUD (7,11), à côté de (8,11)
+    // La porte vers la salle Dan est en (12,4)+(13,4) : cases INTÉRIEURES déjà marchables → gérée par les exits.
     return m
 }
 function buildDomeDanRoom(): TileType[][] {
@@ -1261,8 +1262,10 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildDomeTournamentRoom(), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/dome_tournoi.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75, // 1200/16 = 75
         exits: [
-            { x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 },
-            { x: 15, y: 6, targetMapId: "yellow_dome_dan", targetSpawnX: 1, targetSpawnY: 6 }, // porte EST → Dan (gate domeChampionships>=7 dans gameStore)
+            { x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }, // sortie SUD → hub
+            { x: 7, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }, // 2e case de sortie SUD
+            { x: 12, y: 4, targetMapId: "yellow_dome_dan", targetSpawnX: 1, targetSpawnY: 6 }, // porte → Dan (gate domeChampionships>=7 dans gameStore)
+            { x: 13, y: 4, targetMapId: "yellow_dome_dan", targetSpawnX: 1, targetSpawnY: 6 }, // 2e case de la porte → Dan
         ],
     },
     // SALLE 2/3 — DAN (bracket des 4 Dan). Porte OUEST → Tournoi, porte NORD → Finale (gatée 4 Dan). Maître Dan pour le lore.
@@ -1270,7 +1273,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_dome_dan", name: "SALLE DES DAN", tiles: buildDomeDanRoom(), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/dome_dan.jpg", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75,
         exits: [
-            { x: 0, y: 6, targetMapId: "yellow_combat_dome", targetSpawnX: 14, targetSpawnY: 6 }, // OUEST → Tournoi
+            { x: 0, y: 6, targetMapId: "yellow_combat_dome", targetSpawnX: 12, targetSpawnY: 6 }, // OUEST → Tournoi (près de la porte 12/13,4)
             { x: 8, y: 0, targetMapId: "yellow_dome_final", targetSpawnX: 8, targetSpawnY: 10 }, // NORD → Finale (gate domeChampionships>=11 dans gameStore)
         ],
     },
