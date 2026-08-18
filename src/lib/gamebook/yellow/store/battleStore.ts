@@ -39,7 +39,7 @@ import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALI
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
-import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo } from "../data/pnj7"
+import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
@@ -890,6 +890,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // marker ici. Victoire → amorce la DÉMO (les 3 prochaines rencontres Grotte = 2 parents puis fusion),
             // puis carrousel d'infos (biotopes + scientifique + secret de la fusion).
             primeGrotteDemo()
+            markTrainerDefeated(ECLAIREUR_PRECISION_MARKER) // PERSISTANT : débloque les coords d'échelle précises du Daemomaniaque
             rematchReward = { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lines: [...PNJ7_VICTORY_LINES, ...PNJ7_CAROUSEL_LINES] }
         } else if (storeState.trainer.trainerId === PNJ6_TRAINER_ID) {
             // L'ÉCHANGEUR (PNJ 6) : victoire → offre d'échange Crocavern ↔ team[0] (modale côté client). RÉPÉTABLE

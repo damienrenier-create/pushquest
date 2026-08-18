@@ -15,6 +15,7 @@ import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
+import { ECLAIREUR_PRECISION_MARKER } from "@/lib/gamebook/yellow/data/pnj7"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 
 const TYPE_COLOR: Record<string, string> = {
@@ -29,6 +30,8 @@ export default function DaemomaniaquePanel() {
     const open = useGameStore((s) => s.daemomaniaqueOpen)
     const close = useGameStore((s) => s.closeDaemomaniaque)
     const player = usePlayer()
+    // ÉCLAIREUR (Grotte Puzzle) vaincu → localisations précises (coord d'échelle) au lieu du flou « Grotte B1F ».
+    const eclaireurBeaten = player.defeatedTrainers.includes(ECLAIREUR_PRECISION_MARKER)
     const dex = usePokedex()
     const aw = useActiveWorld()
     const [q, setQ] = useState("")
@@ -79,11 +82,11 @@ export default function DaemomaniaquePanel() {
     const pick = (sp: SpeciesData) => {
         setErr(null)
         if (!infoAllowed(sp.id)) { setErr("Le Daemomaniaque ne parle que des Daemons que tu as déjà croisés."); return }
-        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion) }); return }
+        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
         setRevealed((s) => new Set(s).add(sp.id))
-        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion) })
+        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) })
     }
 
     const left = freeConsultsLeft()

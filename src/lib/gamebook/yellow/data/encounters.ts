@@ -243,7 +243,32 @@ const fmtPct = (p: number): string => `≈${p >= 1 ? Math.round(p) : p.toFixed(1
 export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
 /** Guide « où/quand/comment » d'un Daemon POUR UNE RUN donnée (1/2/3). hideEndgame masque les zones post-Ligue
  *  (run 1 avant la Ligue). Ne renvoie QUE des localisations de cette run → chaque mode du Daemomaniaque reste cohérent. */
-export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false): CaptureGuide {
+// ÉCLAIREUR (PNJ 7) → localisation PRÉCISE des Daemons de la Grotte Puzzle : coord de l'ÉCHELLE qui débouche dans
+//   le couloir de pop (mapping confirmé Sartay). Clé = rare EXCLUSIF du couloir (1 par biotope B1F). 1/2/3 = échelles
+//   1F↔B1F ; b/c = échelles B1F↔B2F (on donne le bout où l'on REMONTE dans le couloir).
+const GROTTE_CORRIDOR_LADDER: { rareKey: string; corridor: string; ladder: string }[] = [
+    { rareKey: "obscurene", corridor: "Obscurène", ladder: "l'échelle en (19,15) — Grotte 1F" },
+    { rareKey: "caninombre", corridor: "Caninombre", ladder: "l'échelle en (19,15) — Grotte 1F" },
+    { rareKey: "gavillus", corridor: "Gavillus", ladder: "l'échelle en (5,7) — Grotte 1F" },
+    { rareKey: "wistree", corridor: "Wistree", ladder: "l'échelle en (31,17) — Grotte 1F" },
+    { rareKey: "shady", corridor: "Shady", ladder: "l'échelle en (25,22) — Grotte B2F" },
+    { rareKey: "hypnoppo", corridor: "Hypnoppo", ladder: "l'échelle en (17,32) — Grotte B2F" },
+]
+/** Indices d'échelle (éclaireur vaincu) : pour chaque biotope B1F contenant `speciesId`, la coord de l'échelle qui
+ *  débouche dans ce couloir. [] si l'espèce ne pop pas dans la Grotte Puzzle. */
+function grotteLadderHints(speciesId: string): string[] {
+    const rects = ZONES["yellow_grotte_nexus_b1f"]?.rects
+    if (!rects) return []
+    const out: string[] = []
+    for (const rect of rects) {
+        if (!rect.pool.some((e) => e.speciesId === speciesId)) continue
+        const c = GROTTE_CORRIDOR_LADDER.find((cc) => rect.pool.some((e) => e.speciesId === cc.rareKey))
+        if (c) { const line = `🪜 Couloir de ${c.corridor} : prends ${c.ladder}`; if (!out.includes(line)) out.push(line) }
+    }
+    return out
+}
+
+export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false, eclaireurBeaten: boolean = false): CaptureGuide {
     const sp = getSpecies(speciesId)
     if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
     const matches = guideMatchesRun(speciesId, run, hideEndgame)
@@ -270,6 +295,10 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
         if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
     }
+    // ÉCLAIREUR vaincu → localisation PRÉCISE dans la Grotte Puzzle : la coord de l'échelle du couloir de pop.
+    //   Uniquement si l'espèce a un vrai match B1F CE run (sinon pas de hint fantôme hors-run).
+    if (eclaireurBeaten && !hideEndgame && matches.some((m) => m.mapId === "yellow_grotte_nexus_b1f"))
+        for (const h of grotteLadderHints(speciesId)) where.push(h)
     // RATTRAPAGE LIVE post-Ligue : une fois CHAMPION (run 1), des inédits du run 3 (Otama, Hypnoppo, Karmaki, Wistree)
     //   deviennent capturables en LIVE (run3LiveCatchupHH/Grotte). Le guide DOIT les ajouter — sinon « ne se croise
     //   pas » à tort (ex. Otama). Ne s'applique qu'à run===1 && champion (jamais en run 2/3, où ils ont leurs zones).
@@ -287,7 +316,7 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         // Sinon : repli sur le pré-évolué (récursif — trouve la base sauvage OU sa propre obtention spéciale).
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
-            const base = captureGuide(preEvo.id, run, hideEndgame, champion)
+            const base = captureGuide(preEvo.id, run, hideEndgame, champion, eclaireurBeaten)
             if (base.where.length > 0 || base.how.length > 0) {
                 return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
             }

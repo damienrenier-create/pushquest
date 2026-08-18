@@ -20,6 +20,9 @@ import { FUSION_BASE_PARENTS } from "./fusionBaseSpecies"
 
 export const PNJ7_NPC_ID = "y_pnj7_grotte"
 export const PNJ7_TRAINER_ID = "y_pnj7_grotte"
+// Marqueur PERSISTANT (defeatedTrainers) posé à la 1re victoire → le Daemomaniaque donne les coords d'échelle
+//   précises pour les Daemons de la Grotte Puzzle (avant : localisation volontairement floue « Grotte B1F »).
+export const ECLAIREUR_PRECISION_MARKER = "eclaireur_precision"
 export const PNJ7_MAP_ID = "yellow_grotte_nexus"
 export const PNJ7_NAME = "ÉCLAIREUR"
 export const PNJ7_POS = { x: 27, y: 18 } as const
