@@ -57,7 +57,16 @@ export default function FashionPicker() {
     const neutral = Math.round(h) === 0 && Math.abs(s - 1) < 0.01 && Math.abs(b - 1) < 0.01
     const filter = filterOf(h, s, b)
     const adopt = () => pick(neutral ? base : encodeAvatar(base, h, s, b)) // teinte neutre → préréglage propre (sans fragment)
-    const roll = () => { const t = rollAvatarTint(Math.random); setH(t.h); setS(t.s); setB(t.b) }
+    // 🎲 ROLL PERSONNAGE : tire une silhouette au hasard (coiffure/visage/yeux/tenue = planche Sprite Forge) + une teinte.
+    //   La variété des TRAITS dépend du nombre de planches du pool (FASHION_AVATARS) → Sartay l'agrandit via Sprite Forge.
+    //   On évite de retomber sur la même planche deux fois de suite.
+    const rollChar = () => {
+        let b2 = base
+        if (FASHION_AVATARS.length > 1) { do { b2 = FASHION_AVATARS[Math.floor(Math.random() * FASHION_AVATARS.length)] } while (b2 === base) }
+        setBase(b2)
+        const t = rollAvatarTint(Math.random); setH(t.h); setS(t.s); setB(t.b)
+    }
+    const rollTint = () => { const t = rollAvatarTint(Math.random); setH(t.h); setS(t.s); setB(t.b) }
 
     return (
         <div onClick={close} style={overlay}>
@@ -70,8 +79,9 @@ export default function FashionPicker() {
                             <div style={cellStyle(base, 72, filter)} />
                         </div>
                         <div style={{ flex: 1, fontSize: 11.5, color: INK, lineHeight: 1.4 }}>
-                            « Compose ton look, chéri — <b>teinte-le</b> à ton goût… ou laisse le hasard décider ! »
-                            <button onClick={roll} style={rollBtn}>🎲 ROLL une teinte</button>
+                            « Laisse le hasard décider, chéri — un <b>personnage entier</b> ! »
+                            <button onClick={rollChar} style={rollBtn}>🎲 ROLL un personnage</button>
+                            <button onClick={rollTint} style={rollBtn2}>🎨 juste la teinte</button>
                         </div>
                     </div>
 
@@ -112,6 +122,7 @@ const overlay: React.CSSProperties = { position: "absolute", inset: 0, backgroun
 const box: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 360, maxHeight: "90%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
 const header: React.CSSProperties = { padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14 }
 const rollBtn: React.CSSProperties = { marginTop: 6, width: "100%", padding: "6px 0", background: ACCENT, color: "#fff", border: "none", borderRadius: 8, fontWeight: 800, fontSize: 12, cursor: "pointer" }
+const rollBtn2: React.CSSProperties = { marginTop: 6, width: "100%", padding: "5px 0", background: "#fff8e8", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 11, cursor: "pointer" }
 const linkBtn: React.CSSProperties = { alignSelf: "flex-start", background: "none", border: "none", color: "#a05", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 }
 const adoptBtn: React.CSSProperties = { marginTop: 14, width: "100%", padding: "9px 0", background: ACCENT, color: "#fff", border: `2px solid ${INK}`, borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: "pointer" }
 const resetBtn: React.CSSProperties = { marginTop: 8, width: "100%", padding: "7px 0", background: "#fff8e8", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer" }
