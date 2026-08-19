@@ -75,7 +75,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue } from "@/lib/gamebook/yellow/store/playerStore"
 import DomeMasters from "./DomeMasters"
 import EspionPanel from "./EspionPanel"
 import TrocPanel from "./TrocPanel"
@@ -641,10 +641,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const all = [...player.team, ...player.pc]
         const byU = (uid: string) => all.find((m) => m.uid === uid)!
         const built = dedupFusions(player.fusionRoster).map((p) => buildFusion(byU(p.a), byU(p.b)))
-        return {
-            team: built.map((f) => f.instance),
-            species: built.map((f) => getSpecies(f.speciesId)).filter((s): s is SpeciesData => !!s),
+        const team = built.map((f) => f.instance)
+        const species = built.map((f) => getSpecies(f.speciesId)).filter((s): s is SpeciesData => !!s)
+        // MÉGAMONARX (stade ULTIME, « fruit de fusion ») : rejoint l'équipe de Ligue (1 slot, MAX 1) si activé.
+        //   Fielded DIRECTEMENT (pas de fusion) → clone défensif ; espèce réelle dans SPECIES (aucun dispose).
+        const mega = player.megaInLigue ? all.find((m) => m.speciesId === "megamonarx") : undefined
+        const megaSp = mega ? getSpecies("megamonarx") : undefined
+        if (mega && megaSp && team.length < 6) {
+            team.push(JSON.parse(JSON.stringify(mega)) as MonInstance)
+            species.push(megaSp)
         }
+        return { team, species }
     }
     const fusionHooks: FusionPvpHooks = { buildTeam: buildMyFusionTeam, dispose: (ids) => ids.forEach(disposeFusion) }
     // Nombre de fusions valides prêtes au combat (roster ↔ Daemons présents, déduplié par uid) → gate des défis.
@@ -3312,6 +3319,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         )
                                     })}
                                     {roster.length < 6 && collection.length >= 2 && <button style={{ ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" }} onClick={() => setAtelierAdd({ a: "", b: "" })}>＋ AJOUTER UNE FUSION</button>}
+                                    {/* MÉGAMONARX (stade ultime) : peut rejoindre l'équipe de Ligue en solo (1 slot, max 1), sans fusionner. */}
+                                    {collection.some((m) => m.speciesId === "megamonarx") && (
+                                        <button onClick={() => { setMegaInLigue(!player.megaInLigue); persistYellowSave() }}
+                                            style={{ ...menuBtnStyle, borderColor: player.megaInLigue ? "#c9a227" : "#cdbb86", color: player.megaInLigue ? "#ffd76a" : undefined }}>
+                                            {player.megaInLigue ? "⭐ MÉGAMONARX inclus dans la Ligue (1 slot)" : "☆ Inclure MÉGAMONARX (stade ultime, 1 slot)"}
+                                        </button>
+                                    )}
                                     {collection.length < 2 && <div style={{ fontSize: 11, color: "#c83030", margin: "4px 0" }}>Il te faut au moins 2 Daemons.</div>}
                                     <button style={menuBtnStyle} onClick={() => openPc()}>📦 BOÎTE / ÉQUIPE (ranger tes Daemons)</button>
                                     <button style={menuBtnDimStyle} disabled={!valid.length} onClick={fight}>⚔️ Tester au combat (optionnel){valid.length ? ` — ${valid.length} fusion${valid.length > 1 ? "s" : ""}` : ""}</button>

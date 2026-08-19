@@ -223,6 +223,9 @@ interface PlayerState {
     /** FASHION VICTIM — avatar (planche Gen3) choisi par le joueur ; partagé via la présence (les autres le voient).
      *  Préférence COSMÉTIQUE GLOBALE → préservée entre les runs (cf. reset de monde). Optionnel/additif → save-safe. */
     chosenAvatar?: string
+    /** LIGUE DE FUSION — inclure MÉGAMONARX (stade ULTIME, « fruit de fusion ») dans l'équipe (1 slot, MAX 1).
+     *  PER-RUN (reset avec le roster de fusion, par omission). Optionnel/additif → save-safe. */
+    megaInLigue?: boolean
     /** OBJETS TENUS ENNEMIS — date de la dernière tentative de Ligue (règle « baies ennemies : 1re run du jour » en argent). */
     fusionLeagueTryDate?: string
     /** SALLE ULTIME — roster de fusion GELÉ (parents à plat [a,b,a,b,…]) qui a bouclé chaque palier → reconstruit TON reflet. */
@@ -563,6 +566,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         grotteShopBuys: "grotteShopBuys" in p ? p.grotteShopBuys : st.grotteShopBuys,
         chosenAvatar: "chosenAvatar" in p ? p.chosenAvatar : st.chosenAvatar,
+        megaInLigue: "megaInLigue" in p ? p.megaInLigue : st.megaInLigue,
         fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
         fusionChampionRoster: "fusionChampionRoster" in p ? p.fusionChampionRoster : st.fusionChampionRoster,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
@@ -1397,6 +1401,8 @@ export function setChosenAvatar(path: string | undefined) {
 }
 /** FASHION VICTIM — avatar Gen3 choisi (undefined = sprite par défaut). */
 export function getChosenAvatar(): string | undefined { return st.chosenAvatar }
+/** LIGUE DE FUSION — (dés)active l'inclusion de MÉGAMONARX dans l'équipe de Ligue (1 slot). */
+export function setMegaInLigue(on: boolean) { st = { ...st, megaInLigue: on }; emit() }
 /** HAUT FAIT Ligue de Fusion — défaites cumulées sur un palier (bronze/argent/or). */
 export function getFusionLeagueDefeats(tier: string): number { return st.fusionLeagueDefeats?.[tier] ?? 0 }
 /** Enregistre une DÉFAITE en Ligue de Fusion sur le palier donné (barème du badge de complétion : + de défaites = - de points). */
