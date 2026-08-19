@@ -4,6 +4,10 @@
 // Daemon précis (son uid) : un boost de stat (+10 à +40 %) dont la PRÉCISION (chance que le boost s'applique)
 // dépend du POTENTIEL GÉNÉTIQUE (Σ IV) du Daemon. PV = toujours 100 %. Shiny = 100 %.
 //
+// DÉCLENCHEMENT de la précision (Sartay) : jet PAR TOUR pour les stats (atk/def/spe/spc/eva) — l'objet « capricieux »
+//   s'active ou non à chaque tour (jet sur le RNG SEEDÉ du combat → déterministe/PvP-safe). Les PV : PAR COMBAT et
+//   TOUJOURS actifs (on ne fait pas fluctuer les PV max en plein tour) → +pct % de PV max appliqué à l'entrée en jeu.
+//
 // GATING : il faut avoir battu ≥1 Ligue (arène OU fusion) pour y accéder, et rebattre une Ligue entre deux crafts.
 //   Plafond À VIE : 6 objets avant la victoire de la Ligue Fusion BRONZE, +6 après (12 au total).
 // COÛT : niveau du Daemon × demande d'amélioration (%). Ex. niv 50, 20 % → 1000 JC.
