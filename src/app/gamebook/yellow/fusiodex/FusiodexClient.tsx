@@ -10,7 +10,7 @@ import { usePlayer, setFusionRoster } from "@/lib/gamebook/yellow/store/playerSt
 import { fusionPairError } from "@/lib/gamebook/yellow/data/fusiodex"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { officialFusions, officialFusionProgress, historyFusions, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
+import { officialFusions, officialFusionProgress, historyFusions, fusionEvolutionChain, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -87,6 +87,30 @@ function StatBars({ stats }: { stats: FusionStats }) {
                     </div>
                 )
             })}
+        </div>
+    )
+}
+
+// LIGNÉE D'ÉVOLUTION révélée À LA CAPTURE : on nomme les stades CAPTURÉS + le 1er stade suivant NON capturé (en
+//   « ??? » avec sa méthode = « son niveau d'évolution »), puis on s'ARRÊTE → pas de spoil de la profondeur.
+function FusionChain({ rootId, caught }: { rootId: string; caught: string[] }) {
+    const chain = fusionEvolutionChain(rootId)
+    if (chain.length <= 1) return null // pas d'évolution → rien à afficher
+    const steps: { name: string; known: boolean; method?: string }[] = []
+    for (let i = 0; i < chain.length; i++) {
+        const known = caught.includes(chain[i].id)
+        steps.push({ name: known ? chain[i].name : "? ? ?", known, method: i > 0 ? chain[i - 1].toNextLabel : undefined })
+        if (!known) break // on borne la révélation au 1er stade inconnu
+    }
+    return (
+        <div style={S.chain}>
+            <span style={S.chainLbl}>🧬 Lignée</span>
+            {steps.map((st, i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                    {i > 0 && <span style={S.chainArrow}>▸{st.method ? ` ${st.method} ` : " "}</span>}
+                    <b style={{ color: st.known ? "#d9b8ff" : "#6a5a8a", fontWeight: 800 }}>{st.name}</b>
+                </span>
+            ))}
         </div>
     )
 }
@@ -212,9 +236,11 @@ export default function FusiodexClient() {
                                             ? <TypeChips types={f.types} />
                                             : <div style={S.desc}>Chimère non observée</div>}
                                         {f.seen && f.description && <div style={S.desc}>« {f.description} »</div>}
+                                        {/* À LA CAPTURE : révèle la lignée d'évolution (jusqu'au 1er stade non atteint, en ???). */}
+                                        {dex.caught.includes(f.id) && <FusionChain rootId={f.id} caught={dex.caught} />}
                                         {!f.seen && <div style={S.descMuted}>Croise-la dans la Grotte du Nexus pour révéler son identité.</div>}
                                     </div>
-                                    <div style={S.tag}>{f.seen ? "👁" : "🔒"}</div>
+                                    <div style={S.tag}>{dex.caught.includes(f.id) ? "✓" : f.seen ? "👁" : "🔒"}</div>
                                 </div>
                             )
                         })}
@@ -302,6 +328,9 @@ const S: Record<string, React.CSSProperties> = {
     parentLine: { fontSize: 10.5, opacity: 0.82, marginTop: 3 },
     desc: { fontSize: 10.5, opacity: 0.75, marginTop: 3, fontStyle: "italic" },
     descMuted: { fontSize: 10, opacity: 0.55, marginTop: 3, fontStyle: "italic" },
+    chain: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, marginTop: 6, padding: "5px 8px", background: "rgba(20,16,34,0.55)", border: "1px solid #3a2e56", borderRadius: 8, fontSize: 10.5 },
+    chainLbl: { fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.6, marginRight: 2 },
+    chainArrow: { fontSize: 9.5, opacity: 0.7, color: "#b98aff", whiteSpace: "nowrap" },
     statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", marginTop: 7 },
     statLine: { display: "flex", alignItems: "center", gap: 5, fontSize: 9.5 },
     statLbl: { width: 22, opacity: 0.7, fontWeight: 700 },

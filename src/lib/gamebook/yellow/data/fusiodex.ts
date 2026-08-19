@@ -14,6 +14,7 @@ import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
 import { FUSION_RULES } from "./fusionLore"
 import { computeFusion, type FusionParent, type FusionStats } from "./fusionSpecies"
 import { getSpecies } from "./species"
+import { getItem } from "./items"
 
 export { FUSION_RULES }
 
@@ -70,10 +71,20 @@ export interface OfficialFusionEntry {
     seen: boolean
 }
 
-/** Les fusions OFFICIELLES (espèces permanentes à sprite : les 5 fusions de base). Le drapeau `seen` dit si le
- *  joueur l'a APERÇUE — l'UI masque tout (nom/sprite/type) des entrées non vues (anti-spoiler). */
+/** Espèces RACINES du Fusiodex : celles qui ne sont l'ÉVOLUTION d'aucune autre (base-1 des lignées). Seules elles
+ *  sont listées dans l'onglet « Officielles » ; les stades évolués (S2+) n'apparaissent QUE dans la LIGNÉE de leur
+ *  racine (fiche), jamais en vrac → pas de spoiler de la profondeur ni du compte. */
+export function fusionRootSpeciesIds(): Set<string> {
+    const targets = new Set<string>()
+    for (const s of FUSION_BASE_SPECIES) if (s.evolution?.toId) targets.add(s.evolution.toId)
+    return new Set(FUSION_BASE_SPECIES.filter((s) => !targets.has(s.id)).map((s) => s.id))
+}
+
+/** Les fusions OFFICIELLES RACINES (espèces permanentes à sprite). Le drapeau `seen` dit si le joueur l'a APERÇUE
+ *  — l'UI masque tout (nom/sprite/type) des entrées non vues (anti-spoiler). Les stades évolués sont exclus d'ici. */
 export function officialFusions(seenIds: string[]): OfficialFusionEntry[] {
-    return FUSION_BASE_SPECIES.map((s) => ({
+    const roots = fusionRootSpeciesIds()
+    return FUSION_BASE_SPECIES.filter((s) => roots.has(s.id)).map((s) => ({
         id: s.id,
         name: s.name,
         types: s.types,
@@ -84,11 +95,35 @@ export function officialFusions(seenIds: string[]): OfficialFusionEntry[] {
     }))
 }
 
-/** Nombre de fusions officielles aperçues / total (badge de progression du Fusiodex). */
+/** Nombre de fusions RACINES aperçues / total (badge de progression du Fusiodex). */
 export function officialFusionProgress(seenIds: string[]): { seen: number; total: number } {
-    const total = FUSION_BASE_SPECIES.length
-    const seen = FUSION_BASE_SPECIES.filter((s) => seenIds.includes(s.id)).length
-    return { seen, total }
+    const roots = fusionRootSpeciesIds()
+    const rootList = FUSION_BASE_SPECIES.filter((s) => roots.has(s.id))
+    return { seen: rootList.filter((s) => seenIds.includes(s.id)).length, total: rootList.length }
+}
+
+/** Un maillon de lignée : l'espèce + le libellé de la MÉTHODE menant au stade SUIVANT (undefined = stade final). */
+export interface FusionChainStep { id: string; name: string; toNextLabel?: string }
+
+/** Lignée d'évolution complète d'une racine (racine → S2 → …), avec la méthode menant à chaque stade suivant.
+ *  Borne anti-boucle. Utilisée par le Fusiodex pour révéler la lignée À LA CAPTURE (stades non atteints masqués). */
+export function fusionEvolutionChain(rootId: string): FusionChainStep[] {
+    const out: FusionChainStep[] = []
+    const seen = new Set<string>()
+    let cur: string | undefined = rootId
+    while (cur && !seen.has(cur)) {
+        seen.add(cur)
+        const sp = getSpecies(cur)
+        if (!sp) break
+        const m = sp.evolution?.method
+        const toNextLabel = !m ? undefined
+            : m.kind === "LEVEL" ? `niv. ${m.level}`
+            : m.kind === "ITEM" ? (getItem(m.itemId)?.name ?? "objet")
+            : m.kind === "TRADE" ? "échange" : undefined
+        out.push({ id: cur, name: sp.name, toNextLabel })
+        cur = sp.evolution?.toId
+    }
+    return out
 }
 
 // ── HISTORIQUE « Mes fusions » : reconstruit nom+types+stats depuis une simple paire de speciesId, SANS instance
