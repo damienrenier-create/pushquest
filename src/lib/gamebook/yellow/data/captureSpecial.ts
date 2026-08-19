@@ -136,9 +136,14 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     },
 
     // ── Starters du run 3 (bases) ──
-    elefer: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
-    cornaive: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
-    coccipoing: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
+    elefer: { note: "Starter du run 3 (jamais sauvage).", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE.", "⚠️ Seulement 2 des 3 lignées-starter par run 3 : pour la lignée qu'a choisie ACE, il faut RECOMMENCER un run 3 en la prenant comme starter."] },
+    cornaive: { note: "Starter du run 3 (jamais sauvage).", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE.", "⚠️ Seulement 2 des 3 lignées-starter par run 3 : pour la lignée qu'a choisie ACE, il faut RECOMMENCER un run 3 en la prenant comme starter."] },
+    coccipoing: { note: "Starter du run 3 (jamais sauvage).", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE.", "⚠️ Seulement 2 des 3 lignées-starter par run 3 : pour la lignée qu'a choisie ACE, il faut RECOMMENCER un run 3 en la prenant comme starter."] },
+
+    // ── Création canonisée de Jacanon (dex de référence — NON obtenable par le joueur) ──
+    joeyrrant: { note: "Non obtenable.", how: ["Création canonisée de Jacanon : n'existe que dans l'équipe du PNJ Jacanon (run 3) et comme parent de fusions ennemies. Impossible à capturer, recevoir ou faire évoluer soi-même."] },
+    wallabisan: { note: "Non obtenable.", how: ["Stade 2 de la création de Jacanon (évolution de Joeyrrant). Dex de référence / équipe du PNJ uniquement — ni capturable, ni recevable, ni évoluable par toi."] },
+    kangoudead: { note: "Non obtenable.", how: ["Stade final de la création de Jacanon. Dex de référence, équipe du PNJ Jacanon et parent de fusions ennemies. Impossible à obtenir."] },
 
     // ── PÊCHE (canne offerte par la Fashion Victim, Grotte 1F — face à un plan d'eau) ──
     osquille: {
