@@ -371,13 +371,13 @@ const HAUTES_HERBES_TYPES = ["VOL", "EAU", "PLANTE", "FEU", "COMBAT", "SOL", "RO
 // Poids = rareté (commun ~100 · secondaire ~45-70 · rare ~14 · très rare ~5) → les rares restent rares.
 const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
     VOL: [{ speciesId: "plumiot", base: 100 }, { speciesId: "cornaissant", base: 60 }, { speciesId: "piouflot", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "colibraise", base: 45 }],
-    EAU: [{ speciesId: "loutrille", base: 100 }, { speciesId: "piouflot", base: 50 }, { speciesId: "tetardoc", base: 45 }, { speciesId: "braisecaille", base: 5 }],
+    EAU: [{ speciesId: "piouflot", base: 50 }], // loutrille + têtardoc + braisécaille RETIRÉS → désormais EXCLUSIFS à la PÊCHE (data/fishing.ts)
     PLANTE: [{ speciesId: "pampousse", base: 100 }, { speciesId: "broussours", base: 45 }, { speciesId: "tamanpousse", base: 14 }],
-    FEU: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 100 }, { speciesId: "brasicow", base: 45 }, { speciesId: "colibraise", base: 45 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "braisecaille", base: 5 }],
+    FEU: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 100 }, { speciesId: "brasicow", base: 45 }, { speciesId: "colibraise", base: 45 }, { speciesId: "lavapetit", base: 45 }], // braisécaille RETIRÉE → PÊCHE
     COMBAT: [{ speciesId: "couperin", base: 100 }, { speciesId: "broussours", base: 60 }, { speciesId: "forgeotin", base: 45 }, { speciesId: "brasicow", base: 45 }],
     // Mottoche est proposée ici EN RUN 1 ; en RUN 2 elle est FILTRÉE (exclusive à la Grotte) — cf. rollTrainingGrid.
     SOL: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }],
-    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }, { speciesId: "tetardoc", base: 30 }],
+    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }], // têtardoc RETIRÉ → PÊCHE
     POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
     GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
     INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
@@ -483,8 +483,7 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "lavapetit", base: 70, repulsion: ["water"] },                       // Roche/Feu — un peu plus commun ici (rare en Route Nord)
             { speciesId: "limaroche", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Psy
             { speciesId: "quadroc", base: UNCOMMON, repulsion: ["water"] },                   // lignée diamant
-            { speciesId: "braisecaille", base: VERY_RARE, affinity: ["water"] },              // tortue FEU/EAU : RESTE dans la Rocheuse (au lac)
-            // (Eau/Glace — marmoterre, loutrille, têtardoc — déplacés à la GROTTE GELÉE ; braisécaille conservée ici.)
+            // (Eau/Glace — marmoterre, loutrille, têtardoc — déplacés à la GROTTE GELÉE ; braisécaille RETIRÉE → PÊCHE.)
             // 🍄👻🐉 LE FOND (champignons-fantômes + dragon caché)
             { speciesId: "sporbeo", base: UNCOMMON },                                         // champignon-spectre (→ Lampignon → Mycédruide)
             { speciesId: "revemante", base: UNCOMMON },                                       // insecte-fantôme des cavernes
@@ -828,8 +827,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             // ── 2-STADES RARES (85% base sous l'évo · 15% final au ×1,5) ──
             { speciesId: "brasicow", base: 4, levelFixed: 29, player: "combat" }, // Brasicow (évo 30)
             { speciesId: "brasicow", base: 1, levelFixed: 45, player: "combat" }, // → Tauricendre (~1,5×30)
-            { speciesId: "braisecaille", base: 3, levelFixed: 31 },               // Braisécaille (évo 32)
-            { speciesId: "braisecaille", base: 1, levelFixed: 48 },               // → Caldéront (~1,5×32)
+            // braisécaille + Caldéront RETIRÉS de la Centrale → braisécaille désormais EXCLUSIVE à la PÊCHE (Caldéront = évolution)
             // ── PÉPITE : Pyropanthe, super-rare, UNE SEULE capture (ne repop plus une fois au Pokédex) ──
             { speciesId: "pyropanthe", base: 2, levelFixed: 50, noEvolve: true, catchOnce: true, captureMult: 0.5 },
         ],
@@ -881,7 +879,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "sporbeo", base: 25 },
             { speciesId: "cailloutchi", base: 10 }, { speciesId: "cornaissant", base: 10 },
             { speciesId: "mottoche", base: 5, noEvolve: true, levelFixed: 5 }, // niveau 5 FIXE (fodder)
-            { speciesId: "braisecaille", base: 5 }, { speciesId: "brook", base: 5 }, // Braisécaille RESTE dans la Rocheuse ; Forgeotin (Combat) → Maison Combat run 3
+            { speciesId: "brook", base: 5 }, // braisécaille RETIRÉE → PÊCHE ; Forgeotin (Combat) → Maison Combat run 3
             // les 3 starters du run 1 (nostalgie, rares)
             { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
             { speciesId: "draclet", base: 1, rare: true },

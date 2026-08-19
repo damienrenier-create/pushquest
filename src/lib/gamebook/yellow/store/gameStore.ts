@@ -53,7 +53,7 @@ import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, fashionVictimVisibleFor } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
-import { pickFishSpecies, fishingLevel, fishingShinyChance, rollBiteTime } from "../data/fishing"
+import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, FISHING_MAX_WAIT_SEC, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -454,7 +454,7 @@ interface GameStore {
     torchSteps: number // LAMPE TORCHE : pas d'autonomie restants (0 = éteinte). Décrémente sur les maps SOMBRES (HUD)
     torchRadius: number // LAMPE TORCHE : rayon éclairé tant que torchSteps > 0 (sinon on retombe au rayon de base de la map)
     torchOn: boolean // LAMPE : allumée (éclaire + consomme) ou ÉTEINTE (pas d'éclairage NI de conso → pas gardés)
-    fishing: { dir: Direction; biteAt: number } | null // CANNE À PÊCHE : session active. `dir` = pose de pêche (face à l'eau) ; `biteAt` = instant (s) où le poisson mord (pré-tiré). null = pas de pêche. Transitoire, NON persisté. L'UI (FishingOverlay) possède le chrono.
+    fishing: { dir: Direction; biteAt: number; catch: { speciesId: string; level: number; shiny: boolean; hard: boolean } | null } | null // CANNE À PÊCHE : session active. `dir` = pose ; `biteAt` = instant (s) de la morsure ; `catch` = issue PRÉ-TIRÉE (null = « rien ne mord », le chrono va au bout). Transitoire, NON persisté ; l'UI possède le chrono.
 
     // === ACTIONS ===
     /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
@@ -1194,23 +1194,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: "y_fishing", npcName: "Canne à pêche", lineIndex: 0, lines: ["Ton équipe est K.O. — impossible de ferrer quoi que ce soit."] } })
             return
         }
-        // Ouvre la SESSION de pêche (face à l'eau). Le poisson mordra à `biteAt` (pré-tiré, tôt en général, 60 s rare).
-        //   L'UI (FishingOverlay) affiche le chrono jusqu'à biteAt puis appelle hookFish(). La direction = pose (sprite).
-        set({ fishing: { dir: player.direction, biteAt: rollBiteTime(Math.random()) } })
+        // PRÉ-TIRE l'issue de la session (l'UI n'anime plus qu'un chrono). repsMult = MÊME dépassement de quota que
+        //   les rencontres ; niveau des rares = 50 % bande de badges / 50 % moyenne d'équipe ; commun = calé moyenne.
+        const badges = getPlayerSave().badges.length
+        const avg = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
+        const world = effectiveRunWorld()
+        const run = world === "run3" ? "run3" : world === "ngplus" ? "run2" : "run1"
+        const repsMult = 1 + Math.min(0.8, Math.max(0, getPlayerSave().wildCtx?.overshoot ?? 0))
+        const geauckeAvailable = !getPokedex().caught.includes(GEAUCKE_ID)
+        const tier = fishingTier(Math.random(), repsMult, geauckeAvailable)
+        if (tier === "none") { set({ fishing: { dir: player.direction, biteAt: FISHING_MAX_WAIT_SEC, catch: null } }); return } // « rien » → chrono au bout
+        const biteAt = rollBiteTime(Math.random())
+        const shiny = Math.random() < fishingShinyChance(biteAt)
+        let speciesId: string, level: number, hard: boolean
+        if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
+        else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
+        else { speciesId = fishingCommon(run, Math.random()); level = fishingLevel(avg, Math.random()); hard = false }
+        set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard } } })
     },
     hookFish: () => {
         const fishing = get().fishing
         if (!fishing || getBattleSnapshot().battle) { set({ fishing: null }); return }
         set({ fishing: null })
+        // « RIEN NE MORD » : la ligne a couru jusqu'au bout du chrono (temps perdu).
+        if (!fishing.catch) { set({ dialogue: { npcId: "y_fishing", npcName: "Pêche", lineIndex: 0, lines: ["Tu remontes ta ligne… vide. Rien n'a mordu cette fois. (Il faut de la patience !)"] } }); return }
         const team = getPlayerSave().team
         if (!team.some((m) => m.currentHp > 0)) return
-        // Ça mord ! Shiny d'autant plus probable qu'on a attendu (plancher = taux normal ; garanti à 60 s mais rare).
-        const shiny = Math.random() < fishingShinyChance(fishing.biteAt)
-        const leadLevel = team.find((m) => m.currentHp > 0)?.level ?? 10
-        const speciesId = pickFishSpecies(Math.random())
-        const lvl = fishingLevel(leadLevel, Math.random())
+        const { speciesId, level, shiny, hard } = fishing.catch
+        const inst = createMonInstance(speciesId, level, { owned: false, shiny })
+        // Capture DURE (≈ Gékraise) pour rares/Geaucké : affaiblir d'abord (captureRequiresDamage) + valeur de capture ×0.45.
+        if (hard) Object.assign(inst, { captureMult: 0.45, captureRequiresDamage: true })
         const seed = Math.floor(Math.random() * 1e9) >>> 0
-        startWildBattle(getPlayerSave().team, [createMonInstance(speciesId, lvl, { owned: false, shiny })], seed)
+        startWildBattle(getPlayerSave().team, [inst], seed)
     },
     cancelFishing: () => set({ fishing: null }),
     confirmFashionPick: (path) => {

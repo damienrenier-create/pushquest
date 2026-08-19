@@ -6,23 +6,52 @@
 
 export const FISHING_ROD_ITEM_ID = "canne_a_peche"
 
-/** Pool de pêche = espèces EAU pondérées (identique au carré EAU des Hautes Herbes). */
-export const FISHING_POOL: ReadonlyArray<{ speciesId: string; weight: number }> = [
-    { speciesId: "loutrille", weight: 100 },
-    { speciesId: "piouflot", weight: 50 },
-    { speciesId: "tetardoc", weight: 45 },
-    { speciesId: "braisecaille", weight: 5 },
-]
+// ── ESPÈCES ──────────────────────────────────────────────────────────────────────────────────────────────────
+/** GIGA-RARE pêchable : glass-cannon Roche/Eau. 1 % de touche, et NE REPOP PLUS une fois capturé. Niveau fixe 30. */
+export const GEAUCKE_ID = "geaucke"
+export const GEAUCKE_LEVEL = 30
+/** Communs de pêche PAR RUN (braisécaille + l'espèce EAU du run) — désormais EXCLUSIFS à la pêche (retirés du sauvage). */
+export const FISHING_COMMONS: Record<string, readonly string[]> = {
+    run1: ["braisecaille", "loutrille"],
+    run2: ["braisecaille", "tetardoc"],
+    run3: ["braisecaille", "gouttiny"],
+}
+/** L'espèce commune ferrée pour un run (50/50). `rand`∈[0,1) → déterministe/testable. */
+export function fishingCommon(run: string, rand: number): string {
+    const pool = FISHING_COMMONS[run] ?? FISHING_COMMONS.run1
+    return pool[Math.min(pool.length - 1, Math.floor(Math.max(0, Math.min(0.999999, rand)) * pool.length))]
+}
+/** Le RARE du moment selon l'HEURE locale : Osquille de JOUR (8h-20h), Rô de NUIT (20h-8h). */
+export function fishingRareOfHour(hour: number): string {
+    const h = ((Math.floor(hour) % 24) + 24) % 24
+    return h >= 8 && h < 20 ? "osquille" : "ro"
+}
 
-/** Tire une espèce EAU pondérée. `rand` ∈ [0,1). Déterministe pour un rand donné → testable. */
-export function pickFishSpecies(rand: number): string {
-    const total = FISHING_POOL.reduce((a, e) => a + e.weight, 0)
-    let r = Math.max(0, Math.min(0.999999, rand)) * total
-    for (const e of FISHING_POOL) {
-        if (r < e.weight) return e.speciesId
-        r -= e.weight
-    }
-    return FISHING_POOL[0].speciesId
+// ── TIRAGE DU TIER (par prise) ───────────────────────────────────────────────────────────────────────────────
+export const FISHING_NOCATCH = 0.40    // « 60 s pour rien » : le plus souvent, ça ne mord pas
+export const FISHING_GEAUCKE = 0.01     // Geaucké : giga-rare
+export const FISHING_RARE_BASE = 0.06   // Osquille/Rô : base, ×(1 + dépassement de quota reps)
+export type FishTier = "none" | "geaucke" | "rare" | "common"
+/** Tire le TIER d'une prise. `rand`∈[0,1). `repsMult` = 1 + dépassement de quota (1→1.8). `geauckeAvailable` = false
+ *  si Geaucké déjà capturé (sa proba retombe sur les communs). Le RARE est TOUJOURS dispo (Osquille jour / Rô nuit). */
+export function fishingTier(rand: number, repsMult: number, geauckeAvailable: boolean): FishTier {
+    const geaucke = geauckeAvailable ? FISHING_GEAUCKE : 0
+    const rare = Math.min(0.3, FISHING_RARE_BASE * Math.max(1, repsMult))
+    const r = Math.max(0, Math.min(0.999999, rand))
+    if (r < FISHING_NOCATCH) return "none"
+    if (r < FISHING_NOCATCH + geaucke) return "geaucke"
+    if (r < FISHING_NOCATCH + geaucke + rare) return "rare"
+    return "common"
+}
+
+// ── NIVEAU DES RARES (Osquille/Rô) : 50 % bande de badges, 50 % niveau moyen d'équipe ────────────────────────
+const FISHING_BADGE_BANDS: ReadonlyArray<readonly [number, number]> = [[5, 15], [15, 30], [30, 45], [45, 60], [60, 75]]
+/** Niveau d'un rare : 50 % → bande selon le nb de badges du run (1→5-15 … 5→60-75) ; 50 % → niveau moyen d'équipe. */
+export function fishingRareLevel(badges: number, avgLevel: number, useAvgRand: number, bandRand: number): number {
+    if (Math.max(0, Math.min(0.999999, useAvgRand)) < 0.5) return Math.max(2, Math.min(100, Math.round(avgLevel)))
+    const b = Math.max(1, Math.min(5, Math.floor(badges)))
+    const [lo, hi] = FISHING_BADGE_BANDS[b - 1]
+    return Math.max(2, Math.min(100, lo + Math.floor(Math.max(0, Math.min(0.999999, bandRand)) * (hi - lo + 1))))
 }
 
 /** Niveau du poisson : calé sur le niveau du lead (un peu en dessous), dispersion ±2, borné [5, 100].

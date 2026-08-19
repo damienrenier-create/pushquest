@@ -1,16 +1,35 @@
 import { describe, it, expect } from "vitest"
-import { pickFishSpecies, fishingLevel, rollBiteTime, fishingShinyChance, FISHING_POOL, FISHING_SHINY_BASE, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID } from "./fishing"
+import { fishingCommon, fishingRareOfHour, fishingTier, fishingRareLevel, fishingLevel, rollBiteTime, fishingShinyChance, FISHING_SHINY_BASE, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID } from "./fishing"
 import { hydratePlayer, getPlayer, claimFishingRod } from "../store/playerStore"
 
-describe("Pêche — pool EAU + courbes", () => {
-    it("pickFishSpecies : toujours une espèce du pool, déterministe, pondéré", () => {
-        const ids = FISHING_POOL.map((e) => e.speciesId)
-        expect(ids).toContain(pickFishSpecies(0))
-        expect(pickFishSpecies(0)).toBe("loutrille")        // 1er (poids le + lourd)
-        expect(pickFishSpecies(0.999)).toBe("braisecaille") // dernier (le + rare)
-        expect(pickFishSpecies(0.3)).toBe(pickFishSpecies(0.3)) // déterministe
+describe("Pêche — tirage + courbes", () => {
+    it("fishingCommon : braisécaille ou l'espèce EAU du run (50/50), déterministe", () => {
+        expect(fishingCommon("run1", 0)).toBe("braisecaille")
+        expect(fishingCommon("run1", 0.99)).toBe("loutrille")
+        expect(fishingCommon("run2", 0.99)).toBe("tetardoc")
+        expect(fishingCommon("run3", 0.99)).toBe("gouttiny")
     })
-    it("fishingLevel : borné [5,100], calé sur le lead", () => {
+    it("fishingRareOfHour : Osquille de JOUR (8-20h), Rô de NUIT (20-8h)", () => {
+        expect(fishingRareOfHour(8)).toBe("osquille")
+        expect(fishingRareOfHour(19)).toBe("osquille")
+        expect(fishingRareOfHour(20)).toBe("ro")
+        expect(fishingRareOfHour(3)).toBe("ro")
+    })
+    it("fishingTier : ~40 % rien · Geaucké 1 % (gated) · rare × reps · sinon commun", () => {
+        expect(fishingTier(0.1, 1, true)).toBe("none")            // < 0.40
+        expect(fishingTier(0.405, 1, true)).toBe("geaucke")       // [0.40, 0.41)
+        expect(fishingTier(0.405, 1, false)).toBe("rare")         // Geaucké capturé → sa proba retombe sur le rare
+        expect(fishingTier(0.44, 1, true)).toBe("rare")           // fenêtre rare 6 % à reps=1
+        expect(fishingTier(0.9, 1, true)).toBe("common")
+        expect(fishingTier(0.50, 1, true)).toBe("common")         // hors fenêtre rare à reps=1
+        expect(fishingTier(0.50, 1.8, true)).toBe("rare")         // reps ×1.8 élargit la fenêtre (10.8 %)
+    })
+    it("fishingRareLevel : 50 % bande de badges / 50 % moyenne d'équipe, borné", () => {
+        expect(fishingRareLevel(1, 50, 0.9, 0)).toBe(5)     // bande badge 1 = [5,15], bandRand=0
+        expect(fishingRareLevel(5, 50, 0.9, 0.99)).toBe(75) // bande badge 5 = [60,75], haut
+        expect(fishingRareLevel(3, 42, 0.2, 0)).toBe(42)    // useAvg<0.5 → moyenne d'équipe
+    })
+    it("fishingLevel : borné [5,100], calé sur la moyenne", () => {
         expect(fishingLevel(30, 0.5)).toBeGreaterThanOrEqual(5)
         expect(fishingLevel(30, 0.5)).toBeLessThanOrEqual(100)
         expect(fishingLevel(3, 0)).toBe(5)        // plancher
