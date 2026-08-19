@@ -275,7 +275,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         evolution: { toId: "draconvolt", method: { kind: "LEVEL", level: 38 } },
         catchRate: 3, baseExp: 160, rarity: "RARE", growthRate: "medium_fast",
         description: "Voltriss — stade 2 (secret) de la lignee Dractriss. Evolue de Dractriss.",
-        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+        sprite: "/yellow/sprites/dex/voltriss.png", hiddenUntilCaught: true,
     },
     {   // Draconvolt (dex 531)
         id: "draconvolt", dexNo: 531, name: "Draconvolt", types: ["ELEC", "DRAGON"],
@@ -283,7 +283,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "etincelle" }, { level: 6, moveId: "picpic" }, { level: 12, moveId: "vive_attaque" }, { level: 13, moveId: "draco_souffle" }, { level: 20, moveId: "surtension" }, { level: 28, moveId: "cage_eclair" }, { level: 36, moveId: "griffe_draconique" }, { level: 40, moveId: "danse_lames" }, { level: 46, moveId: "fulgurance" }, { level: 58, moveId: "draco_charge" }, { level: 72, moveId: "ultra_foudre" }, { level: 88, moveId: "souffle_primordial" }],
         catchRate: 3, baseExp: 245, rarity: "RARE", growthRate: "medium_fast",
         description: "Draconvolt — forme finale de la lignee Dractriss (Sweeper physique).",
-        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+        sprite: "/yellow/sprites/dex/draconvolt.png", hiddenUntilCaught: true,
     },
     {   // Éolectre (dex 532)
         id: "eolectre", dexNo: 532, name: "Éolectre", types: ["ELEC", "VOL"],

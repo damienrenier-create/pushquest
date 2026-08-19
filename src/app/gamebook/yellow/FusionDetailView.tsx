@@ -98,6 +98,9 @@ export function FusionSpeciesFiche({ speciesId, onClose }: { speciesId: string; 
     const CAP = 200
     const evoName = sp.evolution ? (getSpecies(sp.evolution.toId)?.name ?? null) : null
     const evoLevel = sp.evolution && sp.evolution.method.kind === "LEVEL" ? sp.evolution.method.level : null
+    // AUTOMATISATION : si le sprite déclaré est encore le placeholder, on TENTE la convention /dex/<id>.png →
+    //   déposer une planche nommée <id>.png suffit à l'afficher (onError → 🧬 si absente). Zéro câblage code requis.
+    const spriteSrc = sp.sprite && !sp.sprite.includes("missingno") ? sp.sprite : `/yellow/sprites/dex/${sp.id}.png`
     return (
         <div style={S.overlay} onClick={onClose}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
@@ -106,8 +109,8 @@ export function FusionSpeciesFiche({ speciesId, onClose }: { speciesId: string; 
                     <button style={S.close} onClick={onClose}>✕</button>
                 </div>
                 <div style={{ ...S.hero, boxShadow: `0 0 0 2px ${ring}55, 0 0 26px ${ring}55`, borderColor: ring }}>
-                    {sp.sprite && !err
-                        ? <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+                    {!err
+                        ? <img src={spriteSrc} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
                         : <span style={{ fontSize: 92 }}>🧬</span>}
                 </div>
                 <div style={S.name}>{sp.name.toUpperCase()}</div>

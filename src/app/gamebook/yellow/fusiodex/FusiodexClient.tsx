@@ -264,10 +264,11 @@ export default function FusiodexClient() {
                                     {ownedFusions.map((sp) => {
                                         const bst = STAT_KEYS.reduce((s, k) => s + (sp.baseStats[k] ?? 0), 0)
                                         const ring = sp.types[0] ? typeColor(sp.types[0]) : "#6a5a8a"
-                                        const hasSprite = !!sp.sprite && !sp.sprite.includes("missingno")
+                                        // Convention : sprite déclaré, sinon /dex/<id>.png (onError → 🧬). Déposer <id>.png suffit.
+                                        const spriteSrc = sp.sprite && !sp.sprite.includes("missingno") ? sp.sprite : `/yellow/sprites/dex/${sp.id}.png`
                                         return (
                                             <button key={sp.id} onClick={() => setFiche(sp.id)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(36,29,56,0.9)", border: `1px solid ${ring}`, borderRadius: 10, padding: "6px 10px 6px 6px", cursor: "pointer", color: "#f3ecff" }}>
-                                                <FusionSprite src={hasSprite ? sp.sprite : undefined} ring={ring} size={40} />
+                                                <FusionSprite src={spriteSrc} ring={ring} size={40} />
                                                 <span style={{ textAlign: "left" }}>
                                                     <span style={{ display: "block", fontSize: 12, fontWeight: 900 }}>{sp.name}</span>
                                                     <span style={{ display: "block", fontSize: 9.5, opacity: 0.7 }}>{sp.types.join(" / ")} · BST {bst}</span>
