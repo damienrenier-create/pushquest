@@ -6,8 +6,12 @@
 // dialogue !== null dans le store. Affiche le nom du PNJ + la ligne courante
 // + un petit triangle clignotant pour indiquer "presse A pour suivre".
 
+import { useEffect, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getTrainer } from "@/lib/gamebook/yellow/data/trainers"
+
+// Pause de réflexion (ms) des dialogues « slow » (GAG cadeau canne) — aligné sur FASHION_REFLECT_MS du store.
+const SLOW_REFLECT_MS = 650
 
 // Palette Johto (cohérente avec MapView)
 const BOX_BG = "#f4ecd4"        // cream lisible
@@ -42,6 +46,16 @@ const DIALOGUE_PORTRAITS: Record<string, string> = {
 
 export default function DialogueBox() {
     const dialogue = useGameStore((s) => s.dialogue)
+    const slow = dialogue?.slow ?? false
+    const lineIndex = dialogue?.lineIndex ?? 0
+    // Ligne « slow » : on masque la flèche pendant la pause (le joueur DOIT lire), puis on la révèle → non-skippable.
+    const [canAdvance, setCanAdvance] = useState(true)
+    useEffect(() => {
+        if (!slow) { setCanAdvance(true); return }
+        setCanAdvance(false)
+        const id = setTimeout(() => setCanAdvance(true), SLOW_REFLECT_MS)
+        return () => clearTimeout(id)
+    }, [slow, lineIndex])
     if (!dialogue) return null
 
     const line = dialogue.lines[dialogue.lineIndex]
@@ -61,7 +75,7 @@ export default function DialogueBox() {
                 {trainerEmoji && <span style={spriteWatermarkStyle} aria-hidden>{trainerEmoji}</span>}
                 <div style={nameStyle}>{dialogue.npcName}</div>
                 <div style={lineStyle}>{line}</div>
-                <div style={blinkArrowStyle}>{isLast ? "▣" : "▼"}</div>
+                <div style={{ ...blinkArrowStyle, ...(slow && !canAdvance ? { animation: "none", opacity: 0.45 } : {}) }}>{slow && !canAdvance ? "⋯" : isLast ? "▣" : "▼"}</div>
             </div>
         </>
     )

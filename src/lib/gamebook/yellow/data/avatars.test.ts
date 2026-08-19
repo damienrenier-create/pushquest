@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest"
 import {
     FASHION_AVATARS, avatarSheet, avatarFilter, encodeAvatar, parseAvatarTint, rollAvatarTint, isValidAvatar,
+    FASHION_PRICES, FASHION_CATALOG_PRICE, dailyFashionOffer, fashionDayKey,
 } from "./avatars"
 
 const BASE = FASHION_AVATARS[0]
@@ -42,6 +43,32 @@ describe("avatars — garde-fou présence (isValidAvatar)", () => {
         expect(isValidAvatar("/evil.png#120,1,1")).toBe(false)
         expect(isValidAvatar(undefined)).toBe(false)
         expect(isValidAvatar(null)).toBe(false)
+    })
+})
+
+describe("avatars — économie (reps)", () => {
+    it("prix attendus", () => {
+        expect([...FASHION_PRICES]).toEqual([50, 100, 200, 300, 400])
+        expect(FASHION_CATALOG_PRICE).toBe(1000)
+    })
+    it("le tirage du jour est déterministe et donne 5 tenues valides du pool", () => {
+        const day = fashionDayKey(1_755_600_000_000)
+        const a = dailyFashionOffer(day)
+        const b = dailyFashionOffer(day)
+        expect(a).toEqual(b) // même jour → même tirage (stable pour tous)
+        expect(a).toHaveLength(5)
+        expect(new Set(a).size).toBe(5) // pas de doublon
+        for (const url of a) expect(FASHION_AVATARS).toContain(url)
+    })
+    it("le tirage change d'un jour à l'autre", () => {
+        const d1 = dailyFashionOffer(fashionDayKey(1_755_600_000_000))
+        const d2 = dailyFashionOffer(fashionDayKey(1_755_600_000_000 + 86_400_000))
+        expect(d1).not.toEqual(d2)
+    })
+    it("fashionDayKey change à minuit UTC", () => {
+        expect(fashionDayKey(0)).toBe(0)
+        expect(fashionDayKey(86_400_000 - 1)).toBe(0)
+        expect(fashionDayKey(86_400_000)).toBe(1)
     })
 })
 

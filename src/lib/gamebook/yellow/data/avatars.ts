@@ -39,6 +39,34 @@ export function parseAvatarTint(p?: string | null): { h: number; s: number; b: n
     return { h: Number.isFinite(h) ? h : 0, s: Number.isFinite(s) ? s : 1, b: Number.isFinite(b) ? b : 1 }
 }
 
+// ═══════════════ ÉCONOMIE (en REPS — les Jetons de Combat n'existent qu'en post-run-3) ═══════════════
+/** Prix (reps) pour ADOPTER une tenue du TIRAGE DU JOUR, par rang (1re à 5e). */
+export const FASHION_PRICES = [50, 100, 200, 300, 400] as const
+/** Prix (reps) pour piocher N'IMPORTE QUELLE planche du catalogue complet. */
+export const FASHION_CATALOG_PRICE = 1000
+export const FASHION_DAILY_COUNT = 5
+
+// Mulberry32 (PRNG déterministe, comme les PNJ) → tirage du jour STABLE et identique pour tous, tourne chaque jour.
+function mulberry32(seed: number) {
+    return function () {
+        let t = (seed += 0x6d2b79f5)
+        t = Math.imul(t ^ (t >>> 15), t | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+/** Clé de jour (entier) à partir d'un timestamp ms → change à minuit UTC. */
+export function fashionDayKey(nowMs: number): number { return Math.floor(nowMs / 86_400_000) }
+/** Les 5 tenues du JOUR (déterministe par `dayKey`) — mélange Fisher-Yates seedé, puis on prend les 5 premières. */
+export function dailyFashionOffer(dayKey: number): string[] {
+    const rnd = mulberry32(dayKey >>> 0)
+    const pool = [...FASHION_AVATARS]
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]] }
+    return pool.slice(0, FASHION_DAILY_COUNT)
+}
+/** Après le GAG (canne offerte), la Fashion Victim arbore SA planche « relookée » fixe (elle a changé de skin, pas toi). */
+export const FASHION_POST_GAG_SPRITE = "/yellow/sprites/fashionvictim_6_gen3.png"
+
 /** Un avatar est-il VALIDE ? Garde-fou : la présence est éphémère/non-fiable (payload d'un autre client) → on ne rend
  *  jamais un chemin arbitraire, seulement une BASE connue (la teinte n'est que des nombres, sans risque). */
 export function isValidAvatar(p?: string | null): p is string {
@@ -68,9 +96,19 @@ export const FASHION_VICTIM_LINES = [
     "« Laisse la Fashion Victim s'occuper de toi : un nouveau look, un VRAI. Et crois-moi — TOUT LE MONDE le verra. »",
 ]
 
-/** Réplique-cadeau : jouée UNE fois, quand la Fashion Victim vient de te relooker (elle t'offre la canne à pêche). */
+/** GAG du 1er achat de skin (1×/run) : tu gardes TA tenue, elle te vanne, c'est ELLE qui se relooke, se vante… puis
+ *  t'offre la CANNE À PÊCHE. Séquence RALLONGÉE et NON-SKIPPABLE (petite pause/ligne) pour appuyer le cadeau. */
 export const FASHION_ROD_GIFT_LINES = [
-    "« Haha wouaw, trop SLAY ton outfit ! On dirait un cheur-pé, hahah ! »",
-    "« Tiens, un p'tit accessoire pour aller avec… une CANNE À PÊCHE ! »",
-    "*Tu reçois la Canne à pêche ! (Sac → 🎣 Pêche. À utiliser face à un plan d'eau !)*",
+    "*La Fashion Victim recule d'un pas, une main sur la bouche, l'autre sur le cœur.*",
+    "« ... »",
+    "« Non. NON. Chéri… tu as VRAIMENT choisi ÇA ? Avec l'argent de tes reps ?! »",
+    "« *pouffe* Haha— pardon, pardon ! Tiens, regarde comment on porte VRAIMENT une pièce. »",
+    "*Elle claque des doigts. En un éclair, c'est ELLE qui change de tenue — plus flashy, plus léchée.*",
+    "« Voilà. TU vois la différence ? Avoue : ça me va quand même carrément mieux à MOI. »",
+    "« Mais garde le tien, va, garde-le ! Franchement avec ça tu SLAYES… un vrai look de cheur-pé ! »",
+    "« Un cheur-pé, un PÊ-CHEUR, tu piges ? Haha ! Bon. Puisque tu tiens le rôle à fond… »",
+    "*Elle fouille dans un sac hors de proportion et en sort un objet long, fuselé, qui brille.*",
+    "« TIENS. Une CANNE À PÊCHE. Une VRAIE. Regarde-moi bien : TRÈS peu de dresseurs en possèdent une. »",
+    "« Ne la perds JAMAIS. C'est un cadeau en or, chéri — tu me remercieras la première fois qu'un truc mordra. »",
+    "*Tu reçois la CANNE À PÊCHE ! 🎣 (Sac → Pêche.) Utilise-la face à un plan d'eau. Un sacré cadeau — prends-en soin !*",
 ]
