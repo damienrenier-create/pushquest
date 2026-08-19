@@ -704,6 +704,10 @@ const NPC40_ROWS = 4
 const NPC40_CELL_TILES = 2.5          // cellule 40 px / 16 px par tuile
 const NPC40_FOOT_OFFSET_TILES = 0.25  // 4 px de vide sous les pieds dans la cellule
 const NPC40_IDLE_COL = 1              // pose neutre (les 2 pieds au sol)
+// AVATAR JOUEUR (Fashion Victim) — animation de marche : les 2 frames de PAS encadrent l'idle (col 1) → col 0 et
+// col 2 = pied gauche / pied droit. Alternées par stepFrame (local) ou parité de case (distant), comme le sprite Red.
+// (Les PNJ statiques gardent NPC40_IDLE_COL — seul l'avatar du joueur s'anime.)
+const NPC40_WALK_COLS: readonly [number, number] = [0, 2]
 const NPC40_ROW_DOWN = 0              // face au joueur (Sud)
 const NPC40_ROW_UP = 1                // de dos (Nord)
 const NPC40_ROW_LEFT = 2              // profil gauche (Ouest)
@@ -1146,7 +1150,8 @@ function RemotePlayerSprite({
         ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
         : { position: "absolute", ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
     const spriteStyle: React.CSSProperties = customSheet
-        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_IDLE_COL, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
+        // Marche : alterne les 2 frames de pas par parité de case (stepFrame non diffusé) → jambes animées à distance.
+        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_WALK_COLS[(rp.posX + rp.posY) % 2], dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
         : {
             position: "absolute",
             inset: 0,
@@ -1384,9 +1389,12 @@ function PlayerSprite({
     const sheet = isValidAvatar(avatar) ? avatar : undefined
     if (sheet) {
         const dirRow = player.direction === "up" ? NPC40_ROW_UP : player.direction === "left" ? NPC40_ROW_LEFT : player.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
+        // ANIMATION DE MARCHE : alterne les 2 frames de pas via stepFrame (bascule à chaque déplacement réel) → les
+        // jambes bougent, comme le sprite Red. (Avant : colonne figée = sprite immobile / direction peu lisible.)
+        const walkCol = NPC40_WALK_COLS[stepFrame]
         return (
             <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
-                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, NPC40_IDLE_COL, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
+                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, walkCol, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
             </div>
         )
     }
