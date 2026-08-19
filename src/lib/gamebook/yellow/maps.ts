@@ -490,6 +490,9 @@ function buildGrotte(): TileType[][] {
     const m = GROTTE_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
     // PORTE SUD percée dans le mur (9,22)+(10,22) → mène à la GROTTE GELÉE (nouvelle chaîne).
     m[22][9] = "grass"; m[22][10] = "grass"
+    // EAU PÊCHABLE (coords validées Sartay) : le « L » 3-5×4-5 puis 3-9×6-8.
+    for (let x = 3; x <= 5; x++) { m[4][x] = "water"; m[5][x] = "water" }
+    for (let y = 6; y <= 8; y++) for (let x = 3; x <= 9; x++) m[y][x] = "water"
     return m
 }
 
@@ -869,6 +872,8 @@ function buildCendrevilleCollisions(): TileType[][] {
     // PORTE DE SORTIE EST (43 × 15-17) : le bord est est peint en mur dans la carte rouge, mais
     // ces 3 cases SONT la sortie (→ ville). On les force walkable pour pouvoir y entrer.
     for (const y of [15, 16, 17]) m[y][CENDREVILLE_W - 1] = "path"
+    // EAU PÊCHABLE (coords validées Sartay) : carré cols 29-33 × rows 24-28.
+    for (let y = 24; y <= 28; y++) for (let x = 29; x <= 33; x++) m[y][x] = "water"
     return m
 }
 
@@ -1160,7 +1165,12 @@ const GELEE_MASK = [
     "######.....##########....#####", "######....############...#####", "#######################..#####",
     "##############################",
 ]
-function buildGelee(): TileType[][] { return GELEE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "grass") as TileType)) }
+function buildGelee(): TileType[][] {
+    const m = GELEE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "grass") as TileType))
+    // EAU PÊCHABLE (coords validées Sartay) : l'escalier 20/6 → 21/9.
+    for (const [x, y] of [[20, 6], [20, 7], [20, 8], [19, 8], [19, 9], [20, 9], [21, 9]] as const) m[y][x] = "water"
+    return m
+}
 
 // PLAGE 24×40 — 'H' = hautes herbes (grassTall, POP) · '.' = sable/chemin (path, walkable SANS pop) · '#' = mur (tree)
 const PLAGE_MASK = [
@@ -1175,7 +1185,13 @@ const PLAGE_MASK = [
     "######HH.###############", "######H.################", "######H.################", "########################",
     "########################", "########################", "########################", "########################",
 ]
-function buildPlage(): TileType[][] { return PLAGE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : ch === "H" ? "grassTall" : "path") as TileType)) }
+function buildPlage(): TileType[][] {
+    const m = PLAGE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : ch === "H" ? "grassTall" : "path") as TileType))
+    // EAU PÊCHABLE (coords validées Sartay) : (19-21 × 28-29) + TOUTE la colonne 22 (la « mer »). Col 23 réservée SURF.
+    for (const [x, y] of [[19, 29], [20, 29], [20, 28], [21, 28]] as const) m[y][x] = "water"
+    for (let y = 0; y < m.length; y++) m[y][22] = "water"
+    return m
+}
 
 // AQUA ARENA (pont du bateau) 24×40 — '.' = deck (path, walkable) · '#' = mur/bassin (tree). Pas de rencontres.
 const AQUA_MASK = [
@@ -1190,7 +1206,12 @@ const AQUA_MASK = [
     "##..###...........######", "#######..##...##########", "###########...##########", "###########...##########",
     "######..##........######", "..####............######", "..######################", "..######################",
 ]
-function buildAquaArena(): TileType[][] { return AQUA_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "path") as TileType)) }
+function buildAquaArena(): TileType[][] {
+    const m = AQUA_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "path") as TileType))
+    // EAU PÊCHABLE (coords validées Sartay) : 2 bandes verticales (parois des bassins) col 7 + col 16, rows 14-27.
+    for (let y = 14; y <= 27; y++) { m[y][7] = "water"; m[y][16] = "water" }
+    return m
+}
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
