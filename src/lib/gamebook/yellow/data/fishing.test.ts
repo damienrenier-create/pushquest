@@ -1,4 +1,24 @@
 import { describe, it, expect } from "vitest"
+import { fishingReelBonus } from "./fishing"
+
+describe("pêche — FERRAGE (mashing → IV)", () => {
+    it("+1 IV par tranche de 10 appuis", () => {
+        expect(fishingReelBonus(0)).toBe(0)
+        expect(fishingReelBonus(9)).toBe(0)
+        expect(fishingReelBonus(10)).toBe(1)
+        expect(fishingReelBonus(19)).toBe(1)
+        expect(fishingReelBonus(35)).toBe(3)
+        expect(fishingReelBonus(150)).toBe(15)
+    })
+    it("robuste aux valeurs négatives", () => {
+        expect(fishingReelBonus(-5)).toBe(0)
+    })
+    it("l'appelant plafonne à 15 : base 12 + bonus (35 taps → +3) = 15", () => {
+        const cap = (base: number, taps: number) => Math.min(15, base + fishingReelBonus(taps))
+        expect(cap(12, 35)).toBe(15)
+        expect(cap(2, 35)).toBe(5)
+    })
+})
 import { fishingCommon, fishingRareOfHour, fishingTier, fishingRareLevel, fishingLevel, rollBiteTime, fishingShinyChance, FISHING_SHINY_BASE, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID } from "./fishing"
 import { hydratePlayer, getPlayer, claimFishingRod } from "../store/playerStore"
 

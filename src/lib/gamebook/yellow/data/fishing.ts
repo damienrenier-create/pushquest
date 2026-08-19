@@ -63,6 +63,10 @@ export function fishingLevel(leadLevel: number, rand: number): number {
 
 /** Durée MAX d'une session (le chrono monte jusqu'ici). Le poisson mord AVANT en général ; l'atteindre = rare. */
 export const FISHING_MAX_WAIT_SEC = 60
+/** Durée (s) du mini-jeu de FERRAGE (mashing) quand ça mord. */
+export const FISHING_REEL_SEC = 10
+/** FERRAGE : bonus d'IV = +1 par tranche de 10 appuis (ajouté aux IV « prévus », cap 15 côté appelant). 0 appui géré à part. */
+export function fishingReelBonus(taps: number): number { return Math.floor(Math.max(0, taps) / 10) }
 /** PLANCHER de shiny = taux normal des rencontres sauvages (« comme les pas », cf. encounters.ts). */
 export const FISHING_SHINY_BASE = 1 / 512
 /** Proba de MORSURE par seconde → médiane ~8 s ; atteindre 60 s (shiny garanti) arrive ~0,7 % du temps (RARE). */

@@ -53,7 +53,7 @@ import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_VICTIM_MAP_2, FASHION_VICTIM_SPOT_2, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, fashionVictimVisibleFor, isValidAvatar, avatarSheet, encodeAvatar } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
-import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
+import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -460,7 +460,7 @@ interface GameStore {
     torchSteps: number // LAMPE TORCHE : pas d'autonomie restants (0 = éteinte). Décrémente sur les maps SOMBRES (HUD)
     torchRadius: number // LAMPE TORCHE : rayon éclairé tant que torchSteps > 0 (sinon on retombe au rayon de base de la map)
     torchOn: boolean // LAMPE : allumée (éclaire + consomme) ou ÉTEINTE (pas d'éclairage NI de conso → pas gardés)
-    fishing: { dir: Direction; biteAt: number; catch: { speciesId: string; level: number; shiny: boolean; hard: boolean } | null } | null // CANNE À PÊCHE : session active. `dir` = pose ; `biteAt` = instant (s) de la morsure ; `catch` = issue PRÉ-TIRÉE (null = « rien ne mord », le chrono va au bout). Transitoire, NON persisté ; l'UI possède le chrono.
+    fishing: { dir: Direction; biteAt: number; catch: { speciesId: string; level: number; shiny: boolean; hard: boolean; baseIvs: { hp: number; atk: number; def: number; spe: number; spc: number } } | null } | null // CANNE À PÊCHE : session active. `dir` = pose ; `biteAt` = instant (s) de la morsure ; `catch` = issue PRÉ-TIRÉE (null = « rien ne mord »). `baseIvs` = IV « prévus » (centrés sur le temps d'attente) que le FERRAGE au mashing remonte (+1/10 taps, cap 15 ; shiny = parfait). Transitoire, NON persisté ; l'UI possède le chrono + le mini-jeu.
 
     // === ACTIONS ===
     /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
@@ -474,6 +474,8 @@ interface GameStore {
     /** PÊCHE — LA MORSURE : le poisson mord (appelé par l'UI quand le chrono atteint biteAt) → combat, shiny d'autant
      *  plus probable qu'on a attendu longtemps (plancher = taux normal ; garanti à 60 s mais rare). Termine la session. */
     hookFish: () => void
+    /** PÊCHE — FERRAGE (mini-jeu) : `taps` appuis en 10 s → +1 IV par tranche de 10 (cap 15), puis combat. 0 = la prise fuit. */
+    reelFish: (taps: number) => void
     /** PÊCHE — annule la session (le joueur range sa canne sans rien ferrer). */
     cancelFishing: () => void
     /** FASHION VICTIM — ACHÈTE une tenue (débit reps ; 0 = gratuit) : pose la base, gag+canne au 1er achat du run. */
@@ -1220,7 +1222,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
         else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
         else { speciesId = fishingCommon(run, Math.random()); level = fishingLevel(avg, Math.random()); hard = false }
-        set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard } } })
+        // IV « PRÉVUS » : priorité au TEMPS D'ATTENTE (aléatoire) — centrés sur biteAt/60, ±2 par stat. Le FERRAGE au
+        //   mashing les remonte ensuite (+1/10 taps, cap 15). Un shiny ignore tout ça (createMonInstance force 15).
+        const center = Math.round(Math.min(1, biteAt / FISHING_MAX_WAIT_SEC) * 15)
+        const rollIv = () => Math.max(0, Math.min(15, center + Math.floor(Math.random() * 5) - 2))
+        const baseIvs = { hp: rollIv(), atk: rollIv(), def: rollIv(), spe: rollIv(), spc: rollIv() }
+        set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs } } })
     },
     hookFish: () => {
         const fishing = get().fishing
@@ -1234,6 +1241,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const inst = createMonInstance(speciesId, level, { owned: false, shiny })
         // Capture DURE (≈ Gékraise) pour rares/Geaucké : affaiblir d'abord (captureRequiresDamage) + valeur de capture ×0.45.
         if (hard) Object.assign(inst, { captureMult: 0.45, captureRequiresDamage: true })
+        const seed = Math.floor(Math.random() * 1e9) >>> 0
+        startWildBattle(getPlayerSave().team, [inst], seed)
+    },
+    reelFish: (taps) => {
+        const fishing = get().fishing
+        if (!fishing || getBattleSnapshot().battle) { set({ fishing: null }); return }
+        set({ fishing: null })
+        const c = fishing.catch
+        if (!c) return // sécurité : le ferrage ne concerne que les prises réelles
+        // 0 appui : la ligne n'est pas remontée → la prise se décroche et s'échappe.
+        if (taps <= 0) { set({ dialogue: { npcId: "y_fishing", npcName: "Pêche", lineIndex: 0, lines: ["Tu n'as pas ferré à temps… la prise se décroche et file dans les profondeurs ! (Il faut MARTELER pour remonter la ligne.)"] } }); return }
+        const team = getPlayerSave().team
+        if (!team.some((m) => m.currentHp > 0)) return
+        // FERRAGE : +1 IV par tranche de 10 appuis, ajouté aux IV PRÉVUS (cap 15). Un shiny reste parfait (factory force 15).
+        const bonus = fishingReelBonus(taps)
+        const up = (v: number) => Math.max(0, Math.min(15, v + bonus))
+        const b = c.baseIvs
+        const ivsByStat = { hp: up(b.hp), atk: up(b.atk), def: up(b.def), spe: up(b.spe), spc: up(b.spc) }
+        const inst = createMonInstance(c.speciesId, c.level, { owned: false, shiny: c.shiny, ivsByStat })
+        if (c.hard) Object.assign(inst, { captureMult: 0.45, captureRequiresDamage: true })
         const seed = Math.floor(Math.random() * 1e9) >>> 0
         startWildBattle(getPlayerSave().team, [inst], seed)
     },
