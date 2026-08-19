@@ -4,8 +4,8 @@
 // L'avatar choisi est PARTAGÉ (rendu local + présence temps réel → les autres joueurs qui te croisent le voient),
 // réutilisant l'infra `PLAYER_GEN3_SPRITE` existante. Planches Gen3 760×160 (comme les PNJ/potes).
 
-/** Les 8 avatars sélectionnables par le joueur (planches Gen3, fournies par Sartay). */
-export const FASHION_AVATARS: string[] = Array.from({ length: 8 }, (_, i) => `/yellow/sprites/avatar_${i + 1}_gen3.png`)
+/** Les 12 avatars sélectionnables par le joueur (planches Gen3 « Sprite Forge », fournies par Sartay). */
+export const FASHION_AVATARS: string[] = Array.from({ length: 12 }, (_, i) => `/yellow/sprites/avatar_${i + 1}_gen3.png`)
 
 /** Les 6 « looks » que le PNJ Fashion Victim arbore lui-même (tirés au hasard à chaque pop). */
 export const FASHION_VICTIM_SPRITES: string[] = Array.from({ length: 6 }, (_, i) => `/yellow/sprites/fashionvictim_${i + 1}_gen3.png`)

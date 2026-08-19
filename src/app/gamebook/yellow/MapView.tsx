@@ -711,10 +711,14 @@ const NPC40_WALK_COLS: readonly [number, number] = [0, 2]
 // AVATAR JOUEUR — pose CANNE À PÊCHE : colonnes 9-12 de la planche Gen3 (canne visible, cf. commentaire de layout).
 // Cyclées pour animer le lancer/l'attente. Row = direction face à l'eau. (N'existe que sur la branche avatar Gen3.)
 const NPC40_FISH_COLS: readonly number[] = [9, 10, 11, 12]
+// ORDRE RÉEL des lignes des planches Gen 3 (outil « Sprite Forge » / hlh-npc, VÉRIFIÉ EN JEU par Sartay) :
+//   ligne 0 = BAS (Sud) · ligne 1 = GAUCHE (Ouest) · ligne 2 = DROITE (Est) · ligne 3 = HAUT (Nord, de dos).
+// ⚠️ NE PAS remettre l'ordre RSE standard (bas/haut/gauche/droite) : ces planches ne le suivent PAS → orientation
+//   inversée (bas OK, mais haut↔gauche↔droite↔haut en rotation). Toutes les planches du jeu suivent CET ordre.
 const NPC40_ROW_DOWN = 0              // face au joueur (Sud)
-const NPC40_ROW_UP = 1                // de dos (Nord)
-const NPC40_ROW_LEFT = 2              // profil gauche (Ouest)
-const NPC40_ROW_RIGHT = 3             // profil droit (Est)
+const NPC40_ROW_LEFT = 1              // profil gauche (Ouest)
+const NPC40_ROW_RIGHT = 2             // profil droit (Est)
+const NPC40_ROW_UP = 3                // de dos (Nord)
 // Cache-buster COMMUN à toutes les planches Gen 3 : à incrémenter dès qu'un PNG est
 // réexporté sous le même nom, sinon les navigateurs gardent l'ancienne version.
 const NPC40_ASSET_VERSION = 2
@@ -882,7 +886,7 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     // DÉFI NÉMÉSIS (vœu du génie) — PNJ personnel au Centre Pokémon Ville Jaune (1,7), regarde vers la DROITE (Est).
     //   ⚠️ npc_nemesis_gen3.png (rip npc66) suit le layout du commentaire d'en-tête (0=Sud, 1=Ouest, 2=Est, 3=Nord),
     //   PAS l'ordre des constantes NPC40_ROW_* → Est/droite = LIGNE 2 (row 3 = dos/Nord = mauvais sens).
-    y_nemesis_challenge: { url: "/yellow/sprites/npc_nemesis_gen3.png", row: 2 },
+    y_nemesis_challenge: { url: "/yellow/sprites/npc_nemesis_gen3.png", row: NPC40_ROW_RIGHT }, // regard Est (droite)
     // Guetteur Raoul (ROUTE DU NORD, 12-18) : regarde vers le SUD (ligne 0 = de face) et
     // interpelle qui entre dans sa ligne de mire — cf. data/trainerSight.ts.
     y_trainer_raoul: { url: "/yellow/sprites/npc_raoul_gen3.png" },
