@@ -51,7 +51,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_VICTIM_MAP_2, FASHION_VICTIM_SPOT_2, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, fashionVictimVisibleFor, isValidAvatar, avatarSheet, encodeAvatar } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_VICTIM_MAP_2, FASHION_VICTIM_SPOT_2, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, fashionVictimVisibleFor, isValidAvatar, avatarSheet, encodeAvatar, dailyFashionOffer, fashionDayKey, fashionRevertCost } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -482,8 +482,8 @@ interface GameStore {
     buyFashionOutfit: (base: string, priceReps: number) => { ok: boolean; reason?: string }
     /** FASHION VICTIM — applique une TEINTE (GRATUIT) sur la tenue actuelle (ne change pas la base). */
     setFashionTint: (h: number, s: number, b: number) => void
-    /** FASHION VICTIM — revient au look par défaut (Red), gratuit. */
-    resetFashionAvatar: () => void
+    /** FASHION VICTIM — revient au look par défaut (Red) : coûte 2000/200/20 reps (dégressif, fort déterrent). */
+    resetFashionAvatar: () => { ok: boolean; reason?: string }
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
@@ -1283,7 +1283,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         setChosenAvatar(neutral ? base : encodeAvatar(base, h, s, b)) // GRATUIT : ne change QUE la teinte (même base)
         persistYellowSave()
     },
-    resetFashionAvatar: () => { setChosenAvatar(undefined); persistYellowSave() },
+    resetFashionAvatar: () => {
+        // Fort déterrent : revenir au look par défaut coûte cher (2000 → 200 → 20). Compteur via marqueurs (sans champ save).
+        const done = getPlayerSave().defeatedTrainers.filter((t) => t.startsWith(FASHION_REVERT_MARKER)).length
+        const cost = fashionRevertCost(done)
+        if (!spendReps(cost)) return { ok: false, reason: `Il faut ${cost} reps pour revenir au look par défaut.` }
+        markTrainerDefeated(`${FASHION_REVERT_MARKER}${done + 1}`)
+        setChosenAvatar(undefined)
+        persistYellowSave()
+        return { ok: true }
+    },
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -2210,9 +2219,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ sageOpen: true })
             return
         }
-        // FASHION VICTIM (Grotte 1F) : ouvre le sélecteur d'avatar (id suffixé par le look → startsWith).
+        // FASHION VICTIM : entrer FORCE la 1re tenue du jour (50 reps) tant qu'on n'a pas de skin → applique + gag/canne
+        //   au 1er achat du run. Déjà un skin → boutique normale. Pas assez de reps → elle refuse (message).
         if (npc.id.startsWith(FASHION_VICTIM_NPC_ID)) {
-            set({ fashionOpen: true })
+            const cur = getPlayerSave().chosenAvatar
+            if (cur) { set({ fashionOpen: true }); return } // a déjà un skin → boutique
+            if (getPlayerSave().reps < FASHION_PRICES[0]) {
+                set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]} reps et je m'occupe de ton cas. »`] } })
+                return
+            }
+            const offer0 = dailyFashionOffer(fashionDayKey(Date.now()))[0]
+            const r = get().buyFashionOutfit(offer0, FASHION_PRICES[0]) // pose la 1re tenue + gag/canne (1re fois du run)
+            if (r.ok && get().dialogue == null) set({ fashionOpen: true }) // pas de gag (canne déjà là) → ouvre la boutique
             return
         }
         // L'ARTISANE (Grotte 1F) : ouvre le panneau de forge d'objet signature.

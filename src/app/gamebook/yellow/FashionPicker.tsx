@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, dailyFashionOffer, fashionDayKey, FASHION_PRICES, FASHION_CATALOG_PRICE } from "@/lib/gamebook/yellow/data/avatars"
+import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, dailyFashionOffer, fashionDayKey, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86", ACCENT = "#e050a0"
 
@@ -57,6 +57,9 @@ export default function FashionPicker() {
         const r = buy(base, price)
         setMsg(r.ok ? null : (r.reason ?? "Impossible."))
     }
+    const revertsDone = player.defeatedTrainers.filter((t) => t.startsWith(FASHION_REVERT_MARKER)).length
+    const revertCost = fashionRevertCost(revertsDone)
+    const doReset = () => { const r = resetAvatar(); if (!r.ok) setMsg(r.reason ?? "Impossible.") }
     const rollTint = () => { const t = rollAvatarTint(Math.random); setH(t.h); setS(t.s); setB(t.b) }
 
     return (
@@ -120,7 +123,7 @@ export default function FashionPicker() {
                         </div>
                     )}
 
-                    <button onClick={resetAvatar} style={resetBtn}>↩︎ Revenir au look par défaut</button>
+                    <button onClick={doReset} style={resetBtn}>↩︎ Revenir au look par défaut ({revertCost} reps)</button>
                 </div>
                 <button onClick={close} style={closeBtn}>FERMER</button>
             </div>

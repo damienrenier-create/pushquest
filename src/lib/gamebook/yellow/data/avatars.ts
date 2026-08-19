@@ -67,6 +67,15 @@ export function dailyFashionOffer(dayKey: number): string[] {
 /** Après le GAG (canne offerte), la Fashion Victim arbore SA planche « relookée » fixe (elle a changé de skin, pas toi). */
 export const FASHION_POST_GAG_SPRITE = "/yellow/sprites/fashionvictim_6_gen3.png"
 
+/** Coût (reps) pour REVENIR AU LOOK PAR DÉFAUT, selon le nb de reverts déjà faits (puis le dernier). Fort déterrent
+ *  → le joueur garde son skin. Entrer chez la FV force déjà la 1re tenue (50 reps), donc revenir en arrière coûte cher. */
+export const FASHION_REVERT_COSTS = [2000, 200, 20] as const
+export function fashionRevertCost(revertsDone: number): number {
+    return FASHION_REVERT_COSTS[Math.min(Math.max(0, revertsDone), FASHION_REVERT_COSTS.length - 1)]
+}
+/** Préfixe des marqueurs (defeatedTrainers) comptant les reverts — persiste SANS nouveau champ de save. */
+export const FASHION_REVERT_MARKER = "fashion_revert_"
+
 /** Un avatar est-il VALIDE ? Garde-fou : la présence est éphémère/non-fiable (payload d'un autre client) → on ne rend
  *  jamais un chemin arbitraire, seulement une BASE connue (la teinte n'est que des nombres, sans risque). */
 export function isValidAvatar(p?: string | null): p is string {
