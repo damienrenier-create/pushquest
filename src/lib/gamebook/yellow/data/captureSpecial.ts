@@ -108,8 +108,11 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
         how: ["Boutique Jetons de Combat de la Zone de Combat (1500 JC) — livré niv 60."],
     },
     geaucke: {
-        note: "Achat boutique.",
-        how: ["Boutique Jetons de Combat de la Zone de Combat (1500 JC) — livré niv 60."],
+        note: "Achat boutique OU giga-rare à la pêche.",
+        how: [
+            "Boutique Jetons de Combat de la Zone de Combat (1500 JC) — livré niv 60.",
+            "OU à la CANNE À PÊCHE : giga-rare (~1 % de touche, niv 30), face à un plan d'eau. Ne réapparaît plus une fois capturé.",
+        ],
     },
     sylvebarbe: {
         note: "Boss statique.",
@@ -136,4 +139,22 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     elefer: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
     cornaive: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
     coccipoing: { note: "Starter du run 3.", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE."] },
+
+    // ── PÊCHE (canne offerte par la Fashion Victim, Grotte 1F — face à un plan d'eau) ──
+    osquille: {
+        note: "PÊCHABLE de JOUR (8h→20h) — rare.",
+        how: ["Canne à pêche face à un plan d'eau, de 8h à 20h. RARE (plus tu as fait de reps aujourd'hui, plus de chances) ; DURE à capturer : affaiblis-la d'abord. Présente aux 3 runs."],
+    },
+    ro: {
+        note: "PÊCHABLE de NUIT (20h→8h) — rare.",
+        how: ["Canne à pêche face à un plan d'eau, de 20h à 8h. RARE (× tes reps du jour) ; DURE à capturer : affaiblis-la d'abord. Présente aux 3 runs."],
+    },
+    braisecaille: {
+        note: "PÊCHABLE uniquement (tous runs).",
+        how: ["À la canne à pêche seulement, face à un plan d'eau (retirée du sauvage). Commune présente aux 3 runs."],
+    },
+    calderont: {
+        note: "Évolution d'un Braisécaille pêché.",
+        how: ["Pêche un Braisécaille (canne, plan d'eau), puis fais-le évoluer (niv 32)."],
+    },
 }

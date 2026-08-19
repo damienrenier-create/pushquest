@@ -464,7 +464,7 @@ export default function BattleScreen() {
                 </div>
                 <div style={S.enemySpot}>
                     {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
-                    {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} gold={lastBallId === "fusio_ball"} />}
+                    {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} topGradient={ballGradient(lastBallId)} />}
                 </div>
                 {/* Joueur : sprite de dos en bas-gauche, fiche + pips en bas-droite. */}
                 <div style={S.playerSpot}>
@@ -948,7 +948,17 @@ function PartyScreen({ team, options, cursor, onPick }: {
 
 // Nexus-Ball animée : lancer (arc) → secousses (×N) → clic (capturé) ou éclatement (raté).
 // "miss" = lancer COMPLÈTEMENT raté : la ball part de travers, frôle la cible et sort de l'écran.
-function BallAnim({ phase, shakes, caught, gold }: { phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean; gold?: boolean }) {
+/** Couleur (dégradé du haut) de la Ball lancée, par PALIER — comme les vraies Poké/Super/Hyper Balls. */
+function ballGradient(id: string): string {
+    if (id === "fusio_ball") return "linear-gradient(#f5d24a,#d4a017)"            // Fusio-Ball : doré
+    if (id === "master_ball") return "linear-gradient(#d24ab0,#a01a80)"          // Master-Éclair : magenta
+    if (id === "super_mega_nexus_ball") return "linear-gradient(#9a5ae0,#6a2ac0)" // Super Méga : violet
+    if (id.startsWith("hyper_ball")) return "linear-gradient(#f2c020,#c89800)"    // Hyper : jaune (Ultra-Ball)
+    if (id.startsWith("super_ball")) return "linear-gradient(#4a90d5,#2a6ab0)"    // Super : bleu (Great-Ball)
+    return "linear-gradient(#e8503a,#c8301a)"                                     // Nexus (poke_ball…) : rouge, défaut
+}
+
+function BallAnim({ phase, shakes, caught, topGradient }: { phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean; topGradient?: string }) {
     const anim = phase === "throw" ? "ballThrow 0.6s ease-out forwards"
         : phase === "shake" ? `ballShake 0.42s ease-in-out ${Math.max(0, shakes)}`
             : phase === "miss" ? "ballMiss 0.9s ease-in forwards"
@@ -957,7 +967,7 @@ function BallAnim({ phase, shakes, caught, gold }: { phase: "throw" | "shake" | 
     return (
         <div style={{ ...S.ball, animation: anim }}>
             {/* FUSIO-BALL = dorée (au lieu de rouge). Bas blanc inchangé. */}
-            <div style={gold ? { ...S.ballTop, background: "linear-gradient(#f5d24a,#d4a017)" } : S.ballTop} />
+            <div style={topGradient ? { ...S.ballTop, background: topGradient } : S.ballTop} />
             <div style={S.ballBand} />
             <div style={S.ballBtn} />
         </div>
