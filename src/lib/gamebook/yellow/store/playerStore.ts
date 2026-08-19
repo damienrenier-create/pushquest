@@ -1042,6 +1042,37 @@ export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
     return res
 }
 
+/**
+ * ÉVOLUTION PAR OBJET (GÉNÉRIQUE) : fait évoluer le Daemon `uid` SI son espèce déclare une évolution
+ * `{ kind: "ITEM", itemId }` correspondant à `itemId` ET que le joueur possède l'objet (consommé à l'évolution).
+ * Renvoie le résultat (toast/anim) ou null si invalide. Ex. Basaltor + Noyau de Métal → Sidérobloc. Même patron
+ * que la Pierre Gékroc / le Noyau de Magmator, mais piloté par la DATA (evolution.method) → réutilisable.
+ */
+export function evolveWithItem(uid: string, itemId: string): EvolutionResult | null {
+    if ((st.items[itemId] ?? 0) <= 0) return null
+    const inTeam = st.team.findIndex((m) => m.uid === uid)
+    const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
+    const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return null
+    const src = (where === "team" ? st.team : st.pc)[idx]
+    const sp = getSpecies(src.speciesId)
+    const evo = sp?.evolution
+    if (!evo || evo.method.kind !== "ITEM" || evo.method.itemId !== itemId) return null // l'espèce n'évolue pas avec CET objet
+    const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
+    const hpBefore = sp ? fullStats(src, sp).hp : src.currentHp
+    const res = applyEvolution(clone, evo.toId)
+    if (!res) return null
+    const toSp = getSpecies(evo.toId)
+    if (toSp) { const hpAfter = fullStats(clone, toSp).hp; clone.currentHp = Math.min(hpAfter, clone.currentHp + Math.max(0, hpAfter - hpBefore)) }
+    const list = [...(where === "team" ? st.team : st.pc)]
+    list[idx] = clone
+    const items = { ...st.items, [itemId]: (st.items[itemId] ?? 0) - 1 } // objet consommé
+    st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
+    markCaught(evo.toId); markCaughtThisRun(evo.toId)
+    emit()
+    return res
+}
+
 export function addItem(itemId: string, qty = 1) {
     st = { ...st, items: { ...st.items, [itemId]: (st.items[itemId] ?? 0) + qty } }
     emit()

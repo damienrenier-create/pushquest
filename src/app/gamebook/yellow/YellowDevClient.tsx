@@ -83,7 +83,7 @@ import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { evolveMagmatorWithChen, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -4647,6 +4647,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     🔩 Utiliser le Noyau de Métal
                                 </button>
                             )}
+                            {/* Noyau de Métal GÉNÉRIQUE (évo par objet, data-driven) : toute espèce dont l'évolution est
+                                { kind: "ITEM", itemId: "noyau_metal" } — ex. Basaltor → Sidérobloc. Magmator garde son handler dédié. */}
+                            {(() => {
+                                const evoM = getSpecies(live.speciesId)?.evolution
+                                const canNoyau = live.speciesId !== "magmator" && evoM?.method.kind === "ITEM" && evoM.method.itemId === "noyau_metal" && (player.items["noyau_metal"] ?? 0) > 0
+                                return canNoyau ? (
+                                    <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => {
+                                        const res = evolveWithItem(live.uid, "noyau_metal")
+                                        if (res) { setToast("Évolution grâce au Noyau de Métal ! 🔩"); setSelected(null); persistYellowSave() }
+                                        else setToast("Impossible d'utiliser le Noyau ici.")
+                                    }}>🔩 Utiliser le Noyau de Métal</button>
+                                ) : null
+                            })()}
                             <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={closeFiche}>← RETOUR</button>
                         </div>
                     </div>

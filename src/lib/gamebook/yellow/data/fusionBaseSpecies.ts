@@ -195,7 +195,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         id: "basaltor", dexNo: 521, name: "Basaltor", types: ["ROCHE", "FEU"],
         baseStats: { hp: 105, atk: 55, def: 130, spe: 32, spc: 47 },
         learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "jet_pierres" }, { level: 6, moveId: "flammeche" }, { level: 12, moveId: "mur_de_fer" }, { level: 18, moveId: "tison" }, { level: 24, moveId: "eboulis" }, { level: 32, moveId: "flamme_ardente" }, { level: 42, moveId: "secousse" }, { level: 52, moveId: "lame_roche" }, { level: 64, moveId: "lance_flammes" }, { level: 78, moveId: "seisme" }, { level: 92, moveId: "roc_titanesque" }],
-        evolution: { toId: "siderobloc", method: { kind: "LEVEL", level: 50 } },
+        evolution: { toId: "siderobloc", method: { kind: "ITEM", itemId: "noyau_metal" } }, // Noyau de Métal (200 JC, rachetable) → fiche du Daemon
         catchRate: 3, baseExp: 230, rarity: "RARE", growthRate: "medium_fast",
         description: "Basaltor — stade 3 de la lignee Mottelave (Mur physique).",
         sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
