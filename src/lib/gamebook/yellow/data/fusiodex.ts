@@ -24,9 +24,15 @@ export const AUTEL_VISITED_MARKER = "autel_visited"
 /** Marker (defeatedTrainers) posé à la 1re ENTRÉE dans la Grotte Puzzle → jauge anti-spoiler des fusions CROSS-JOUEUR. */
 export const GROTTE_ENTERED_MARKER = "grotte_entered"
 const MISSINGNO_SPRITE = "/yellow/sprites/dex/missingno.png"
-/** Une espèce est-elle une FUSION (dexNo ≥ 500, ou Ukognofy) → à masquer pour qui n'a pas vu la Grotte. */
+/** Une espèce est-elle dans la PLAGE fusion/custom (dexNo ≥ 500, ou Ukognofy) ? ⚠️ inclut les Daemons CUSTOM (Créateur),
+ *  qui partagent cette plage sans être des fusions → pour toute logique SPÉCIFIQUE aux fusions, utiliser `isTrueFusion`. */
 export function isFusionSpeciesId(speciesId: string): boolean {
     return (getSpecies(speciesId)?.dexNo ?? 0) >= 500 || speciesId === "ukognofy"
+}
+/** VRAIE fusion (native/capturée) : plage fusion MAIS PAS un Daemon CUSTOM (id « custom_… »). Un custom n'est NI soumis
+ *  à la règle de super-fusion, NI masqué comme une fusion. Discriminant = préfixe d'id (fiable même au runtime). */
+export function isTrueFusion(speciesId: string): boolean {
+    return isFusionSpeciesId(speciesId) && !speciesId.startsWith("custom_")
 }
 
 /** Daemons « stade ULTIME » qui ne peuvent JAMAIS fusionner (ni comme parent). MégamonarX est déjà l'aboutissement.
@@ -40,19 +46,16 @@ export const NON_FUSABLE_IDS: readonly string[] = ["megamonarx"]
 export function fusionPairError(aSpeciesId: string, bSpeciesId: string): string | null {
     if (aSpeciesId === bSpeciesId) return "Impossible de fusionner deux Daemons de la MÊME espèce."
     if (NON_FUSABLE_IDS.includes(aSpeciesId) || NON_FUSABLE_IDS.includes(bSpeciesId)) return "Ce Daemon est un stade ultime : il ne peut pas fusionner."
-    // SUPER-FUSION : la règle « fusion + fusion uniquement » ne vise QUE les VRAIES fusions (natives/capturées). Un
-    //   Daemon CUSTOM (Créateur de Daemon) a un id préfixé « custom_ » et partage la plage dexNo≥500 SANS être une
-    //   fusion → il fusionne comme un normal. (Le préfixe est le discriminant fiable : `isCustomSpeciesId` capte aussi
-    //   les vraies fusions enregistrées au runtime.)
-    const actualFusion = (id: string) => isFusionSpeciesId(id) && !id.startsWith("custom_")
-    if (actualFusion(aSpeciesId) !== actualFusion(bSpeciesId)) return "Une fusion ne peut fusionner qu'avec une AUTRE fusion (native ou capturée)."
+    // SUPER-FUSION : seules les VRAIES fusions (isTrueFusion) sont soumises à « fusion + fusion uniquement ». Un Daemon
+    //   CUSTOM partage la plage dexNo≥500 sans être une fusion → il fusionne comme un normal.
+    if (isTrueFusion(aSpeciesId) !== isTrueFusion(bSpeciesId)) return "Une fusion ne peut fusionner qu'avec une AUTRE fusion (native ou capturée)."
     return null
 }
 /** Vue ANTI-SPOILER d'un Daemon d'AUTRUI : si c'est une fusion ET que le VIEWER n'a jamais mis les pieds dans la
  *  Grotte Puzzle → MissingNo + « ??? ». Sinon le vrai sprite/nom. À utiliser dans espion / échange / classements. */
 export function fusionMaskedView(speciesId: string, viewerEnteredGrotte: boolean): { sprite: string; name: string; masked: boolean } {
     const sp = getSpecies(speciesId)
-    if (!viewerEnteredGrotte && isFusionSpeciesId(speciesId)) return { sprite: MISSINGNO_SPRITE, name: "???", masked: true }
+    if (!viewerEnteredGrotte && isTrueFusion(speciesId)) return { sprite: MISSINGNO_SPRITE, name: "???", masked: true }
     return { sprite: sp?.sprite ?? MISSINGNO_SPRITE, name: sp?.name ?? "Daemon", masked: false }
 }
 

@@ -126,11 +126,12 @@ export function activeNpcs() {
             dialoguesAfter: ["« Tu veux savoir où dénicher un Daemon précis ? Demande-moi. »"],
         }]
     }
-    // VIEUX SAGE SAIYAN (père du Daemomaniaque & de l'Espion) : POP à VILLE JAUNE sur un spot marchand aléatoire,
-    //   UNIQUEMENT tant qu'il reste des points à redistribuer aujourd'hui (budget 20/jour). Spot stable par session.
+    // VIEUX SAGE SAIYAN (père du Daemomaniaque & de l'Espion) : POP à VILLE JAUNE sur une case marchande ALÉATOIRE
+    //   (n'importe où dans la ville), UNIQUEMENT tant qu'il reste des points à redistribuer aujourd'hui (budget 20/jour).
     if (sageAvailableToday()) {
-        if (sageSpotIdx < 0) sageSpotIdx = Math.floor(Math.random() * SAGE_SPOTS.length)
-        const [sgx, sgy] = SAGE_SPOTS[sageSpotIdx]
+        const sageSpots = villeJauneSageSpots()
+        if (sageSpotIdx < 0) sageSpotIdx = Math.floor(Math.random() * sageSpots.length)
+        const [sgx, sgy] = sageSpots[sageSpotIdx % sageSpots.length]
         list = [...list, {
             id: "y_sage_saiyan",
             name: "VIEUX SAGE",
@@ -375,9 +376,32 @@ let galijahStepsLeft = -1
 //   page n'est pas rechargée → le PNJ reste atteignable), re-tiré au prochain chargement → « pop à différents endroits ».
 const DAEMO_SPOTS: ReadonlyArray<readonly [number, number]> = [[26, 15], [8, 17], [17, 29], [36, 4], [22, 2], [7, 8], [30, 29]]
 let daemoSpotIdx = -1
-// VIEUX SAGE SAIYAN : 8 emplacements MARCHABLES connus de Ville Jaune (bandes path/grass rows 17-21, cols 0-22 :
-//   overrides buildViridianCollisions), tirés au hasard PAR SESSION (stable → atteignable), re-tirés au reload.
-const SAGE_SPOTS: ReadonlyArray<readonly [number, number]> = [[5, 18], [11, 18], [18, 18], [9, 17], [15, 19], [10, 20], [15, 20], [19, 21]]
+// VIEUX SAGE SAIYAN : spot tiré au hasard parmi TOUTES les cases marchables ATTEIGNABLES de Ville Jaune (BFS depuis un
+//   spot central connu → jamais dans une poche isolée ; hautes herbes exclues pour ne pas déclencher de rencontre à ses
+//   pieds). Re-tiré à CHAQUE entrée à Ville Jaune (cf. setMap) → il change de place d'une visite à l'autre.
+let sageSpotsCache: [number, number][] | null = null
+function villeJauneSageSpots(): [number, number][] {
+    if (sageSpotsCache) return sageSpotsCache
+    const m = YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+    const inBuildingWall = (x: number, y: number) => (m.buildings ?? []).some((b) => {
+        if (!(x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return false
+        const dw = b.doorW ?? 1
+        return !(x >= b.x + b.doorX && x < b.x + b.doorX + dw && y === b.y + b.doorY) // dans le bâtiment mais pas sur la porte
+    })
+    const walkable = (x: number, y: number) => x >= 0 && y >= 0 && x < m.width && y < m.height && !isBlockingTile(m.tiles[y][x]) && !inBuildingWall(x, y)
+    const seen = new Set<string>(); const stack: [number, number][] = [[18, 18]]; const reach: [number, number][] = []
+    while (stack.length) {
+        const cur = stack.pop()!; const [x, y] = cur; const k = `${x},${y}`
+        if (seen.has(k)) continue
+        seen.add(k)
+        if (!walkable(x, y)) continue
+        reach.push(cur)
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
+    }
+    sageSpotsCache = reach.filter(([x, y]) => m.tiles[y][x] !== "grassTall") // spot final : pas de hautes herbes
+    if (!sageSpotsCache.length) sageSpotsCache = reach.length ? reach : [[18, 18]]
+    return sageSpotsCache
+}
 let sageSpotIdx = -1
 // FASHION VICTIM (Grotte 1F, Mools only) : spot + look (sprite) tirés au hasard, STABLES par session (comme SAGE).
 let fashionSpotIdx = -1
