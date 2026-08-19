@@ -47,6 +47,9 @@ export function isValidAvatar(p?: string | null): p is string {
 
 export const FASHION_VICTIM_NPC_ID = "y_fashion_victim"
 export const FASHION_VICTIM_MAP = "yellow_grotte_nexus"
+/** 2ᵉ apparition (même whitelist Mools) : hub ZONE DE COMBAT, spot fixe choisi par Sartay. */
+export const FASHION_VICTIM_MAP_2 = "yellow_zone_combat"
+export const FASHION_VICTIM_SPOT_2: readonly [number, number] = [16, 10]
 
 /** Pseudos (en minuscule) autorisés à voir le PNJ « pour le moment » (Mools). Extensible → ouvrir à tous plus tard. */
 export const FASHION_VICTIM_WHITELIST = new Set(["mools"])

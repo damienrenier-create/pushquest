@@ -51,7 +51,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, fashionVictimVisibleFor } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_VICTIM_MAP_2, FASHION_VICTIM_SPOT_2, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, fashionVictimVisibleFor } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, FISHING_MAX_WAIT_SEC, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -183,17 +183,14 @@ export function activeNpcs() {
         if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * FASHION_SPOTS.length)
         if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
         const [fvx, fvy] = FASHION_SPOTS[fashionSpotIdx]
-        list = [...list, {
-            id: `${FASHION_VICTIM_NPC_ID}_${fashionSpriteIdx + 1}`, // suffixe = look (planche Gen3 via NPC_SPRITES)
-            name: "FASHION VICTIM",
-            mapId: FASHION_VICTIM_MAP,
-            kind: "static",
-            interaction: "interactive",
-            sprite: { emoji: "👗", color: "#e050a0" }, // repli si le sprite Gen3 manque
-            initialX: fvx,
-            initialY: fvy,
-            dialoguesAfter: FASHION_VICTIM_LINES,
-        }]
+        const fvId = `${FASHION_VICTIM_NPC_ID}_${fashionSpriteIdx + 1}` // suffixe = look (planche Gen3 via NPC_SPRITES)
+        const fvBase = { name: "FASHION VICTIM", kind: "static" as const, interaction: "interactive" as const, sprite: { emoji: "👗", color: "#e050a0" }, dialoguesAfter: FASHION_VICTIM_LINES }
+        list = [...list,
+            // Grotte du Nexus 1F : spot aléatoire (stable par session).
+            { id: fvId, mapId: FASHION_VICTIM_MAP, initialX: fvx, initialY: fvy, ...fvBase },
+            // Hub ZONE DE COMBAT : spot fixe. NPCs trouvés par (map, x, y) → même id sûr (aucune collision).
+            { id: fvId, mapId: FASHION_VICTIM_MAP_2, initialX: FASHION_VICTIM_SPOT_2[0], initialY: FASHION_VICTIM_SPOT_2[1], ...fvBase },
+        ]
     }
     // L'ARTISANE (Grotte du Nexus 1F) : forge des objets tenus SIGNATURE. Visible par TOUS ceux qui atteignent la
     //   Grotte (pas de whitelist — vraie feature). Spot tiré au hasard, STABLE par session. Sprite Gen3 dédié.
