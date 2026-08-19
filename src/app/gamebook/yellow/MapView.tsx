@@ -1127,11 +1127,10 @@ function hashHue(s: string): number {
 // Avatars PERSO de certains joueurs (planches Gen3 19×4) : remplacent le sprite de base « Red »
 // partout où on les VOIT (présence temps réel) ET où on les AFFRONTE en reflet IA (arène + PNJ-joueurs
 // RUN 2 de la Grotte). Clé = pseudo en minuscules. Pour ajouter un pote : 1 planche PNG + 1 ligne ici.
-const PLAYER_GEN3_SPRITE: Record<string, string> = {
-    task1: "/yellow/sprites/npc_task1_gen3.png",
-    franss: "/yellow/sprites/npc_franss_gen3.png",
-    embi: "/yellow/sprites/npc_embi_gen3.png",
-}
+// EX-SKINS HARDCODÉS RETIRÉS : task1/franss/embi rendent désormais le sprite de base (Red) jusqu'à ce qu'ils
+//   s'achètent un skin chez la Fashion Victim. Leur ancien skin est versé au POOL (EX_PLAYER_SKINS) et reproposé
+//   en 2e place à leur 1re visite. Vide pour l'instant (plus aucun skin hardcodé).
+const PLAYER_GEN3_SPRITE: Record<string, string> = {}
 
 function RemotePlayerSprite({
     rp,

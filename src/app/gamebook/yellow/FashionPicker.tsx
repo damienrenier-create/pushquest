@@ -11,7 +11,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, dailyFashionOffer, fashionDayKey, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
+import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, personalFashionOffer, fashionDayKey, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
+import { getCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86", ACCENT = "#e050a0"
 
@@ -49,7 +50,7 @@ export default function FashionPicker() {
     // Resync la teinte locale quand la BASE change (un achat pose une base « propre », teinte neutre).
     useEffect(() => { const t = parseAvatarTint(cur); setH(t.h); setS(t.s); setB(t.b) }, [curBase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const offer = useMemo(() => dailyFashionOffer(fashionDayKey(Date.now())), [])
+    const offer = useMemo(() => personalFashionOffer(fashionDayKey(Date.now()), getCurrentNickname()), [])
     const filter = filterOf(h, s, b)
     const previewBase = curBase ?? offer[0]
 

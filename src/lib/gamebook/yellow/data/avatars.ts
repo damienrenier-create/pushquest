@@ -4,8 +4,17 @@
 // L'avatar choisi est PARTAGÉ (rendu local + présence temps réel → les autres joueurs qui te croisent le voient),
 // réutilisant l'infra `PLAYER_GEN3_SPRITE` existante. Planches Gen3 760×160 (comme les PNJ/potes).
 
-/** Les 75 avatars (planches Gen3 « Sprite Forge », fournies par Sartay). Pool tiré par le ROLL / catalogue complet. */
-export const FASHION_AVATARS: string[] = Array.from({ length: 75 }, (_, i) => `/yellow/sprites/avatar_${i + 1}_gen3.png`)
+/** EX-SKINS de potes (jadis hardcodés dans PLAYER_GEN3_SPRITE) versés au POOL + reproposés à leur ancien porteur (slot 2). */
+export const EX_PLAYER_SKINS: Record<string, string> = {
+    task1: "/yellow/sprites/npc_task1_gen3.png",
+    franss: "/yellow/sprites/npc_franss_gen3.png",
+    embi: "/yellow/sprites/npc_embi_gen3.png",
+}
+/** Les avatars sélectionnables : 75 planches Sprite Forge de Sartay + les ex-skins de potes. Pool ROLL / catalogue / offre. */
+export const FASHION_AVATARS: string[] = [
+    ...Array.from({ length: 75 }, (_, i) => `/yellow/sprites/avatar_${i + 1}_gen3.png`),
+    ...Object.values(EX_PLAYER_SKINS),
+]
 
 /** Les 6 « looks » que le PNJ Fashion Victim arbore lui-même (tirés au hasard à chaque pop). */
 export const FASHION_VICTIM_SPRITES: string[] = Array.from({ length: 6 }, (_, i) => `/yellow/sprites/fashionvictim_${i + 1}_gen3.png`)
@@ -64,6 +73,14 @@ export function dailyFashionOffer(dayKey: number): string[] {
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]] }
     return pool.slice(0, FASHION_DAILY_COUNT)
 }
+/** Offre PERSONNELLE : le tirage du jour, mais si le joueur a un EX-SKIN (ancien pote hardcodé), on le lui remet en
+ *  2e place (slot index 1) pour qu'il puisse le racheter. Sinon = tirage normal. */
+export function personalFashionOffer(dayKey: number, nickname: string): string[] {
+    const base = dailyFashionOffer(dayKey)
+    const ex = EX_PLAYER_SKINS[(nickname ?? "").trim().toLowerCase()]
+    if (ex && !base.includes(ex)) { const o = [...base]; o[1] = ex; return o }
+    return base
+}
 /** Après le GAG (canne offerte), la Fashion Victim arbore SA planche « relookée » fixe (elle a changé de skin, pas toi). */
 export const FASHION_POST_GAG_SPRITE = "/yellow/sprites/fashionvictim_6_gen3.png"
 
@@ -83,20 +100,19 @@ export function isValidAvatar(p?: string | null): p is string {
 }
 
 export const FASHION_VICTIM_NPC_ID = "y_fashion_victim"
-export const FASHION_VICTIM_MAP = "yellow_grotte_nexus"
-/** 2ᵉ apparition (même whitelist Mools) : hub ZONE DE COMBAT, spot fixe choisi par Sartay. */
-export const FASHION_VICTIM_MAP_2 = "yellow_zone_combat"
-export const FASHION_VICTIM_SPOT_2: readonly [number, number] = [16, 10]
+/** La Fashion Victim vit désormais à VILLE JAUNE (couloir sud), visible par TOUT LE MONDE (fini la whitelist + les pops Grotte/Zone de Combat). */
+export const FASHION_VICTIM_MAP = "yellow_entrance"
 
-/** Pseudos (en minuscule) autorisés à voir le PNJ « pour le moment » (Mools). Extensible → ouvrir à tous plus tard. */
-export const FASHION_VICTIM_WHITELIST = new Set(["mools"])
-export function fashionVictimVisibleFor(nickname: string): boolean {
-    return FASHION_VICTIM_WHITELIST.has((nickname ?? "").normalize("NFC").trim().toLowerCase())
-}
+/** OUVERT À TOUS désormais (whitelist Mools levée). Conservé pour compat d'appel. */
+export function fashionVictimVisibleFor(_nickname: string): boolean { return true }
+/** Pseudos à « déflaguer » : leur chosenAvatar est réinitialisé à la 1re interaction FV → ils refont l'onboarding
+ *  (tenue forcée + gag + canne) comme au 1er jour. Marqueur one-time (defeatedTrainers). */
+export const FV_RESET_NICKS = new Set(["mools"])
+export const FV_RESET_MARKER = "fv_reset_done"
 
-/** Spots walkable de la Grotte 1F (près de l'entrée 18,39). ⚠️ à vérifier en jeu (placement approximatif). */
+/** Spots walkable de VILLE JAUNE (couloir sable sud, cols 22-25, où l'on arrive du sud). ⚠️ placement à vérifier en jeu. */
 export const FASHION_SPOTS: ReadonlyArray<readonly [number, number]> = [
-    [18, 38], [18, 37], [17, 39], [19, 39], [18, 36], [17, 38],
+    [22, 36], [23, 36], [24, 36], [25, 36], [22, 37], [24, 37],
 ]
 
 export const FASHION_VICTIM_LINES = [

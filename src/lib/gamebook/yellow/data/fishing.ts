@@ -67,6 +67,22 @@ export const FISHING_MAX_WAIT_SEC = 60
 export const FISHING_REEL_SEC = 10
 /** FERRAGE : bonus d'IV = +1 par tranche de 10 appuis (ajouté aux IV « prévus », cap 15 côté appelant). 0 appui géré à part. */
 export function fishingReelBonus(taps: number): number { return Math.floor(Math.max(0, taps) / 10) }
+
+/** IV « PRÉVUS » d'une prise : priorité au TEMPS D'ATTENTE (centrés sur biteAt/60, ±2 par stat, bornés 0-15).
+ *  Le ferrage au mashing les remonte ensuite. Mutualisé entre le tirage normal et l'onboarding. */
+export function fishingBaseIvs(biteAt: number, rand: () => number): { hp: number; atk: number; def: number; spe: number; spc: number } {
+    const center = Math.round(Math.min(1, biteAt / FISHING_MAX_WAIT_SEC) * 15)
+    const roll = () => Math.max(0, Math.min(15, center + Math.floor(rand() * 5) - 2))
+    return { hp: roll(), atk: roll(), def: roll(), spe: roll(), spc: roll() }
+}
+
+/** ONBOARDING PÊCHE : les 2 premières parties À VIE sont scriptées (braisécaille garanti) pour donner envie de
+ *  pêcher — 1re mord à 8 s, 2e à 21 s, puis le hasard reprend. Compteur via marqueurs (defeatedTrainers, sans champ save). */
+export const FISHING_TUTORIAL: ReadonlyArray<{ biteAt: number; speciesId: string }> = [
+    { biteAt: 8, speciesId: "braisecaille" },
+    { biteAt: 21, speciesId: "braisecaille" },
+]
+export const FISHING_TUTORIAL_MARKER = "fishing_tuto_"
 /** PLANCHER de shiny = taux normal des rencontres sauvages (« comme les pas », cf. encounters.ts). */
 export const FISHING_SHINY_BASE = 1 / 512
 /** Proba de MORSURE par seconde → médiane ~8 s ; atteindre 60 s (shiny garanti) arrive ~0,7 % du temps (RARE). */

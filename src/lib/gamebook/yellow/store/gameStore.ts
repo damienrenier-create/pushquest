@@ -51,9 +51,9 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_VICTIM_MAP_2, FASHION_VICTIM_SPOT_2, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, fashionVictimVisibleFor, isValidAvatar, avatarSheet, encodeAvatar, dailyFashionOffer, fashionDayKey, fashionRevertCost } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, fashionDayKey, fashionRevertCost } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
-import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
+import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -177,9 +177,9 @@ export function activeNpcs() {
             dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
         }]
     }
-    // FASHION VICTIM (Grotte du Nexus 1F) : PNJ excentrique qui propose de CHANGER D'AVATAR. Visible UNIQUEMENT par
-    //   Mools pour l'instant (whitelist, extensible). Spot + look (sprite) tirés au hasard, STABLES par session.
-    if (fashionVictimVisibleFor(getCurrentNickname())) {
+    // FASHION VICTIM — désormais à VILLE JAUNE (couloir sud), visible par TOUS (whitelist levée, pops Grotte/Zone de
+    //   Combat retirés). Spot + look (sprite) tirés au hasard, STABLES par session.
+    {
         if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * FASHION_SPOTS.length)
         if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
         const [fvx, fvy] = FASHION_SPOTS[fashionSpotIdx]
@@ -188,13 +188,10 @@ export function activeNpcs() {
         const fvHasRod = (getPlayerSave().items[FISHING_ROD_ITEM_ID] ?? 0) > 0
         const fvSpriteIdx = (fvHasRod && postGagIdx >= 0) ? postGagIdx : fashionSpriteIdx
         const fvId = `${FASHION_VICTIM_NPC_ID}_${fvSpriteIdx + 1}` // suffixe = look (planche Gen3 via NPC_SPRITES)
-        const fvBase = { name: "FASHION VICTIM", kind: "static" as const, interaction: "interactive" as const, sprite: { emoji: "👗", color: "#e050a0" }, dialoguesAfter: FASHION_VICTIM_LINES }
-        list = [...list,
-            // Grotte du Nexus 1F : spot aléatoire (stable par session).
-            { id: fvId, mapId: FASHION_VICTIM_MAP, initialX: fvx, initialY: fvy, ...fvBase },
-            // Hub ZONE DE COMBAT : spot fixe. NPCs trouvés par (map, x, y) → même id sûr (aucune collision).
-            { id: fvId, mapId: FASHION_VICTIM_MAP_2, initialX: FASHION_VICTIM_SPOT_2[0], initialY: FASHION_VICTIM_SPOT_2[1], ...fvBase },
-        ]
+        list = [...list, {
+            id: fvId, name: "FASHION VICTIM", mapId: FASHION_VICTIM_MAP, kind: "static", interaction: "interactive",
+            sprite: { emoji: "👗", color: "#e050a0" }, initialX: fvx, initialY: fvy, dialoguesAfter: FASHION_VICTIM_LINES,
+        }]
     }
     // L'ARTISANE (Grotte du Nexus 1F) : forge des objets tenus SIGNATURE. Visible par TOUS ceux qui atteignent la
     //   Grotte (pas de whitelist — vraie feature). Spot tiré au hasard, STABLE par session. Sprite Gen3 dédié.
@@ -1210,6 +1207,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         //   les rencontres ; niveau des rares = 50 % bande de badges / 50 % moyenne d'équipe ; commun = calé moyenne.
         const badges = getPlayerSave().badges.length
         const avg = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
+        // ONBOARDING : les 2 premières pêches À VIE sont scriptées (braisécaille garanti : 8 s puis 21 s) → donne envie. Puis hasard.
+        const tutoDone = getPlayerSave().defeatedTrainers.filter((t) => t.startsWith(FISHING_TUTORIAL_MARKER)).length
+        if (tutoDone < FISHING_TUTORIAL.length) {
+            const t = FISHING_TUTORIAL[tutoDone]
+            markTrainerDefeated(`${FISHING_TUTORIAL_MARKER}${tutoDone + 1}`); persistYellowSave()
+            set({ fishing: { dir: player.direction, biteAt: t.biteAt, catch: { speciesId: t.speciesId, level: fishingLevel(avg, Math.random()), shiny: Math.random() < fishingShinyChance(t.biteAt), hard: false, baseIvs: fishingBaseIvs(t.biteAt, Math.random) } } })
+            return
+        }
         const world = effectiveRunWorld()
         const run = world === "run3" ? "run3" : world === "ngplus" ? "run2" : "run1"
         const repsMult = 1 + Math.min(0.8, Math.max(0, getPlayerSave().wildCtx?.overshoot ?? 0))
@@ -1222,12 +1227,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
         else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
         else { speciesId = fishingCommon(run, Math.random()); level = fishingLevel(avg, Math.random()); hard = false }
-        // IV « PRÉVUS » : priorité au TEMPS D'ATTENTE (aléatoire) — centrés sur biteAt/60, ±2 par stat. Le FERRAGE au
-        //   mashing les remonte ensuite (+1/10 taps, cap 15). Un shiny ignore tout ça (createMonInstance force 15).
-        const center = Math.round(Math.min(1, biteAt / FISHING_MAX_WAIT_SEC) * 15)
-        const rollIv = () => Math.max(0, Math.min(15, center + Math.floor(Math.random() * 5) - 2))
-        const baseIvs = { hp: rollIv(), atk: rollIv(), def: rollIv(), spe: rollIv(), spc: rollIv() }
-        set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs } } })
+        // IV « PRÉVUS » (priorité au TEMPS D'ATTENTE, cf. fishingBaseIvs) ; le FERRAGE au mashing les remonte. Shiny → parfait (factory).
+        set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs: fishingBaseIvs(biteAt, Math.random) } } })
     },
     hookFish: () => {
         const fishing = get().fishing
@@ -2222,13 +2223,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // FASHION VICTIM : entrer FORCE la 1re tenue du jour (50 reps) tant qu'on n'a pas de skin → applique + gag/canne
         //   au 1er achat du run. Déjà un skin → boutique normale. Pas assez de reps → elle refuse (message).
         if (npc.id.startsWith(FASHION_VICTIM_NPC_ID)) {
+            // DÉFLAG (ex : Mools) : à la 1re interaction FV, on RÉINITIALISE son skin → il refait l'onboarding comme au 1er jour.
+            if (FV_RESET_NICKS.has(getCurrentNickname().trim().toLowerCase()) && !isTrainerDefeated(FV_RESET_MARKER)) {
+                markTrainerDefeated(FV_RESET_MARKER); setChosenAvatar(undefined); persistYellowSave()
+            }
             const cur = getPlayerSave().chosenAvatar
             if (cur) { set({ fashionOpen: true }); return } // a déjà un skin → boutique
             if (getPlayerSave().reps < FASHION_PRICES[0]) {
                 set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]} reps et je m'occupe de ton cas. »`] } })
                 return
             }
-            const offer0 = dailyFashionOffer(fashionDayKey(Date.now()))[0]
+            const offer0 = personalFashionOffer(fashionDayKey(Date.now()), getCurrentNickname())[0]
             const r = get().buyFashionOutfit(offer0, FASHION_PRICES[0]) // pose la 1re tenue + gag/canne (1re fois du run)
             if (r.ok && get().dialogue == null) set({ fashionOpen: true }) // pas de gag (canne déjà là) → ouvre la boutique
             return

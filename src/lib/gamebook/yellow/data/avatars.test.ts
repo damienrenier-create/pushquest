@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest"
 import {
     FASHION_AVATARS, avatarSheet, avatarFilter, encodeAvatar, parseAvatarTint, rollAvatarTint, isValidAvatar,
     FASHION_PRICES, FASHION_CATALOG_PRICE, dailyFashionOffer, fashionDayKey,
+    EX_PLAYER_SKINS, personalFashionOffer,
 } from "./avatars"
 
 const BASE = FASHION_AVATARS[0]
@@ -69,6 +70,25 @@ describe("avatars — économie (reps)", () => {
         expect(fashionDayKey(0)).toBe(0)
         expect(fashionDayKey(86_400_000 - 1)).toBe(0)
         expect(fashionDayKey(86_400_000)).toBe(1)
+    })
+})
+
+describe("avatars — ex-skins & offre perso", () => {
+    it("les ex-skins de potes sont versés au pool (valides)", () => {
+        for (const url of Object.values(EX_PLAYER_SKINS)) {
+            expect(FASHION_AVATARS).toContain(url)
+            expect(isValidAvatar(url)).toBe(true)
+        }
+    })
+    it("l'offre perso remet l'ex-skin du joueur en 2e place", () => {
+        const day = fashionDayKey(1_755_600_000_000)
+        const o = personalFashionOffer(day, "task1")
+        expect(o[1]).toBe(EX_PLAYER_SKINS.task1)
+        expect(o).toHaveLength(5)
+    })
+    it("un joueur sans ex-skin garde le tirage normal", () => {
+        const day = fashionDayKey(1_755_600_000_000)
+        expect(personalFashionOffer(day, "sartay")).toEqual(dailyFashionOffer(day))
     })
 })
 

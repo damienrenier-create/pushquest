@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest"
-import { fishingReelBonus } from "./fishing"
+import { fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL } from "./fishing"
+
+describe("pêche — onboarding & IV de base", () => {
+    it("2 pêches scriptées : braisécaille à 8 s puis 21 s", () => {
+        expect(FISHING_TUTORIAL.map((t) => t.biteAt)).toEqual([8, 21])
+        for (const t of FISHING_TUTORIAL) expect(t.speciesId).toBe("braisecaille")
+    })
+    it("fishingBaseIvs borné 0-15, plus haut pour une longue attente", () => {
+        const rnd = () => 0.5
+        const low = fishingBaseIvs(6, rnd) // attente courte → IV bas
+        const high = fishingBaseIvs(60, rnd) // attente longue → IV haut
+        for (const v of Object.values(low)) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(15) }
+        for (const v of Object.values(high)) { expect(v).toBeLessThanOrEqual(15) }
+        expect(high.hp).toBeGreaterThan(low.hp)
+    })
+})
 
 describe("pêche — FERRAGE (mashing → IV)", () => {
     it("+1 IV par tranche de 10 appuis", () => {
