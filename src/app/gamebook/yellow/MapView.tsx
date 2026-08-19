@@ -1386,23 +1386,23 @@ function PlayerSprite({
     avatar?: string
 }) {
     const stepFrame = useGameStore((s) => s.stepFrame)
-    const fishing = useGameStore((s) => s.fishing) // Direction | null : session de pêche → pose canne
+    const fishDir = useGameStore((s) => s.fishing?.dir ?? null) // direction de pêche (session active) ou null
     // Animation de la pose de pêche : cycle des colonnes canne tant qu'on pêche.
     const [fishFrame, setFishFrame] = useState(0)
     useEffect(() => {
-        if (!fishing) { setFishFrame(0); return }
+        if (!fishDir) { setFishFrame(0); return }
         const id = setInterval(() => setFishFrame((f) => (f + 1) % NPC40_FISH_COLS.length), 300)
         return () => clearInterval(id)
-    }, [fishing])
+    }, [fishDir])
 
     // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, direction via la ligne), pour que le
     //   joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red (sans pose de pêche).
     const sheet = isValidAvatar(avatar) ? avatar : undefined
     if (sheet) {
         // PÊCHE prioritaire : pose « canne » (colonnes 9-12) face à l'eau, sinon marche (col 0/2 via stepFrame).
-        const dir = fishing ?? player.direction
+        const dir = fishDir ?? player.direction
         const dirRow = dir === "up" ? NPC40_ROW_UP : dir === "left" ? NPC40_ROW_LEFT : dir === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
-        const col = fishing ? NPC40_FISH_COLS[fishFrame] : NPC40_WALK_COLS[stepFrame]
+        const col = fishDir ? NPC40_FISH_COLS[fishFrame] : NPC40_WALK_COLS[stepFrame]
         return (
             <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
                 <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, col, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />

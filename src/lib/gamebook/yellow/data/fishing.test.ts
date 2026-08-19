@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { pickFishSpecies, fishingLevel, fishingBiteChance, fishingShinyChance, FISHING_POOL, FISHING_SHINY_MAX, FISHING_ROD_ITEM_ID } from "./fishing"
+import { pickFishSpecies, fishingLevel, rollBiteTime, fishingShinyChance, FISHING_POOL, FISHING_SHINY_BASE, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID } from "./fishing"
 import { hydratePlayer, getPlayer, claimFishingRod } from "../store/playerStore"
 
 describe("Pêche — pool EAU + courbes", () => {
@@ -16,15 +16,19 @@ describe("Pêche — pool EAU + courbes", () => {
         expect(fishingLevel(3, 0)).toBe(5)        // plancher
         expect(fishingLevel(100, 0.99)).toBe(100) // plafond
     })
-    it("fishingBiteChance : ~35 % tout de suite, 100 % dès ~10 s", () => {
-        expect(fishingBiteChance(0)).toBeCloseTo(0.35, 5)
-        expect(fishingBiteChance(10)).toBe(1)
-        expect(fishingBiteChance(60)).toBe(1)
+    it("rollBiteTime : borné [2,60], tôt en général, 60 s seulement au bout du rand (rare)", () => {
+        expect(rollBiteTime(0)).toBe(2)                       // plancher
+        expect(rollBiteTime(0.999999)).toBe(FISHING_MAX_WAIT_SEC) // ne dépasse jamais 60
+        const med = rollBiteTime(0.5)
+        expect(med).toBeGreaterThanOrEqual(2)
+        expect(med).toBeLessThanOrEqual(15)                   // médiane basse (~9 s) → 60 s rare
+        expect(rollBiteTime(0.3)).toBe(rollBiteTime(0.3))     // déterministe
     })
-    it("fishingShinyChance : 0 à t=0, MAX à 60 s, strictement croissante (patience → shiny)", () => {
-        expect(fishingShinyChance(0)).toBe(0)
-        expect(fishingShinyChance(60)).toBeCloseTo(FISHING_SHINY_MAX, 5)
-        expect(fishingShinyChance(30)).toBeCloseTo(FISHING_SHINY_MAX / 2, 5)
+    it("fishingShinyChance : PLANCHER = taux normal à t=0, GARANTI à 60 s, croissante", () => {
+        expect(fishingShinyChance(0)).toBeCloseTo(FISHING_SHINY_BASE, 6) // plancher = ~1/512 (comme les pas)
+        expect(fishingShinyChance(60)).toBeCloseTo(1, 6)                 // parfait garanti à 60 s
+        expect(fishingShinyChance(10)).toBeLessThan(0.05)               // reste bas la plupart du temps
+        expect(fishingShinyChance(45)).toBeGreaterThan(fishingShinyChance(30)) // strictement croissante
         expect(fishingShinyChance(30)).toBeGreaterThan(fishingShinyChance(10))
     })
 })

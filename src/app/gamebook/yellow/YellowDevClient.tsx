@@ -272,6 +272,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const activateTorch = useGameStore((s) => s.activateTorch)
     const torchSteps = useGameStore((s) => s.torchSteps) // LAMPE TORCHE : pas d'autonomie restants (HUD + sac)
     const castFishingRod = useGameStore((s) => s.castFishingRod) // CANNE À PÊCHE : lance une session de pêche (face à l'eau)
+    const isFishing = useGameStore((s) => s.fishing != null) // PÊCHE en cours → bloque les clics d'adversaire (anti-session-bloquée)
     const torchOn = useGameStore((s) => s.torchOn) // LAMPE : allumée / éteinte (toggle HUD pour économiser les pas)
     const toggleTorch = useGameStore((s) => s.toggleTorch)
     const mapPlayer = useGameStore((s) => s.player)
@@ -456,6 +457,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
+        if (isFishing) return // PÊCHE en cours : on ignore les clics d'adversaire (sinon la session resterait bloquée en combat).
         // PNJ-JOUEUR RUN 2 (Grotte 1F) : combat vs l'équipe run-2 GELÉE d'un autre joueur (traité AVANT le check arène).
         const ghost = run2Ghosts.find((g) => g.userId === uid)
         if (ghost) {

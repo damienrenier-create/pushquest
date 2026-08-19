@@ -32,21 +32,27 @@ export function fishingLevel(leadLevel: number, rand: number): number {
     return Math.max(5, Math.min(100, Math.floor(leadLevel) - 2 + spread))
 }
 
-/** Durée MAX d'une session de pêche (le chrono monte jusqu'ici). Au-delà, moulinet automatique. */
+/** Durée MAX d'une session (le chrono monte jusqu'ici). Le poisson mord AVANT en général ; l'atteindre = rare. */
 export const FISHING_MAX_WAIT_SEC = 60
-/** Shiny MAX atteignable en attendant tout le chrono (patience → chromatique, INDÉPENDANT des reps). */
-export const FISHING_SHINY_MAX = 0.4
+/** PLANCHER de shiny = taux normal des rencontres sauvages (« comme les pas », cf. encounters.ts). */
+export const FISHING_SHINY_BASE = 1 / 512
+/** Proba de MORSURE par seconde → médiane ~8 s ; atteindre 60 s (shiny garanti) arrive ~0,7 % du temps (RARE). */
+const FISHING_BITE_PER_SEC = 0.08
+/** Raideur de la montée du shiny : reste ≈ plancher longtemps, n'explose vers 100 % que tout près de 60 s. */
+const FISHING_SHINY_STEEP = 4
 
-/** Probabilité que « ça morde » quand on remonte la ligne après `sec` d'attente : ~35 % tout de suite, 100 % dès ~10 s.
- *  → remonter trop vite peut ramener une ligne vide ; patienter un peu garantit une touche. */
-export function fishingBiteChance(sec: number): number {
-    const t = Math.max(0, Math.min(FISHING_MAX_WAIT_SEC, sec))
-    return Math.max(0, Math.min(1, 0.35 + (t / 10) * 0.65))
+/** Instant (s) où le poisson MORD, tiré à la volée (loi géométrique → tôt en général, 60 s rarement). `rand`∈[0,1).
+ *  Borné [2, 60]. Déterministe pour un `rand` donné → testable. */
+export function rollBiteTime(rand: number): number {
+    const r = Math.max(0, Math.min(0.999999, rand))
+    const t = Math.ceil(Math.log(1 - r) / Math.log(1 - FISHING_BITE_PER_SEC))
+    return Math.max(2, Math.min(FISHING_MAX_WAIT_SEC, t))
 }
 
-/** Probabilité de SHINY selon l'attente : 0 à t=0, montée linéaire jusqu'à FISHING_SHINY_MAX à 60 s.
- *  « Plus le joueur attend, plus le Daemon est proche du shiny » — sans rapport avec les reps. */
+/** Proba de SHINY selon l'attente jusqu'à la morsure : PLANCHER = taux normal (comme les pas), montée RAIDE vers
+ *  100 % (garanti) à 60 s. → la plupart des touches (précoces) restent au taux de base ; seule une attente rare
+ *  (proche de 60 s) rapproche du « parfait ». « Plus le joueur attend, plus c'est shiny » — sans rapport avec les reps. */
 export function fishingShinyChance(sec: number): number {
     const t = Math.max(0, Math.min(FISHING_MAX_WAIT_SEC, sec))
-    return (t / FISHING_MAX_WAIT_SEC) * FISHING_SHINY_MAX
+    return FISHING_SHINY_BASE + (1 - FISHING_SHINY_BASE) * Math.pow(t / FISHING_MAX_WAIT_SEC, FISHING_SHINY_STEEP)
 }
