@@ -1395,12 +1395,15 @@ function PlayerSprite({
 }) {
     const stepFrame = useGameStore((s) => s.stepFrame)
     const fishDir = useGameStore((s) => s.fishing?.dir ?? null) // direction de pêche (session active) ou null
-    // Animation de la pose de pêche : cycle des colonnes canne tant qu'on pêche.
+    // Pose de pêche : bref LANCER (cols 9→10) puis MAINTIEN de la ligne dans l'eau (col 11) tout le reste de l'attente
+    //   (pas de cycle répété — la canne reste posée dans l'eau les ~60 s, cf. demande Sartay).
     const [fishFrame, setFishFrame] = useState(0)
     useEffect(() => {
         if (!fishDir) { setFishFrame(0); return }
-        const id = setInterval(() => setFishFrame((f) => (f + 1) % NPC40_FISH_COLS.length), 300)
-        return () => clearInterval(id)
+        setFishFrame(0)
+        const t1 = setTimeout(() => setFishFrame(1), 220) // lancer
+        const t2 = setTimeout(() => setFishFrame(2), 480) // ligne posée dans l'eau (maintenue)
+        return () => { clearTimeout(t1); clearTimeout(t2) }
     }, [fishDir])
 
     // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, direction via la ligne), pour que le
