@@ -226,6 +226,8 @@ export interface YellowSave {
     fusionLeagueDefeats?: Record<string, number>
     /** GROTTE/BOUTIQUE JC — cliquet prix par catégorie (nb d'achats par catégorie, CE RUN). Optionnel/additif. */
     grotteShopBuys?: Record<string, number>
+    /** FASHION VICTIM — avatar Gen3 choisi (chemin de planche), préférence cosmétique globale. Optionnel/additif. */
+    chosenAvatar?: string
     /** OBJETS TENUS ENNEMIS — date (YYYY-MM-DD) de la DERNIÈRE tentative de Ligue de Fusion : sert la règle « baies
      *  ennemies seulement à la 1re run du jour » (argent). Optionnel/additif. */
     fusionLeagueTryDate?: string
@@ -694,6 +696,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         grotteShopBuys: o.grotteShopBuys && typeof o.grotteShopBuys === "object" && !Array.isArray(o.grotteShopBuys)
             ? Object.fromEntries(Object.entries(o.grotteShopBuys as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
+        chosenAvatar: typeof o.chosenAvatar === "string" ? o.chosenAvatar : undefined,
         fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
         fusionChampionRoster: o.fusionChampionRoster && typeof o.fusionChampionRoster === "object" && !Array.isArray(o.fusionChampionRoster)
             ? Object.fromEntries(Object.entries(o.fusionChampionRoster as Record<string, unknown>)

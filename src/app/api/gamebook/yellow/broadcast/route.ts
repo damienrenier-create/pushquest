@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         posX: typeof body.posX === "number" ? body.posX : undefined,
         posY: typeof body.posY === "number" ? body.posY : undefined,
         direction: typeof body.direction === "string" ? body.direction : undefined,
+        avatar: typeof body.avatar === "string" ? body.avatar : undefined, // FASHION VICTIM : avatar Gen3 diffusé aux autres joueurs
         targetUserId: typeof body.targetUserId === "string" ? body.targetUserId : undefined,
         accepted: typeof body.accepted === "boolean" ? body.accepted : undefined,
         battleId: typeof body.battleId === "string" ? body.battleId : undefined,

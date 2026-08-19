@@ -51,6 +51,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, fashionVictimVisibleFor } from "../data/avatars"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -172,6 +173,24 @@ export function activeNpcs() {
             initialX: NEMESIS_CHALLENGE_POS.x,
             initialY: NEMESIS_CHALLENGE_POS.y,
             dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
+        }]
+    }
+    // FASHION VICTIM (Grotte du Nexus 1F) : PNJ excentrique qui propose de CHANGER D'AVATAR. Visible UNIQUEMENT par
+    //   Mools pour l'instant (whitelist, extensible). Spot + look (sprite) tirés au hasard, STABLES par session.
+    if (fashionVictimVisibleFor(getCurrentNickname())) {
+        if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * FASHION_SPOTS.length)
+        if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
+        const [fvx, fvy] = FASHION_SPOTS[fashionSpotIdx]
+        list = [...list, {
+            id: `${FASHION_VICTIM_NPC_ID}_${fashionSpriteIdx + 1}`, // suffixe = look (planche Gen3 via NPC_SPRITES)
+            name: "FASHION VICTIM",
+            mapId: FASHION_VICTIM_MAP,
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "👗", color: "#e050a0" }, // repli si le sprite Gen3 manque
+            initialX: fvx,
+            initialY: fvy,
+            dialoguesAfter: FASHION_VICTIM_LINES,
         }]
     }
     return list
@@ -341,6 +360,9 @@ let daemoSpotIdx = -1
 //   overrides buildViridianCollisions), tirés au hasard PAR SESSION (stable → atteignable), re-tirés au reload.
 const SAGE_SPOTS: ReadonlyArray<readonly [number, number]> = [[5, 18], [11, 18], [18, 18], [9, 17], [15, 19], [10, 20], [15, 20], [19, 21]]
 let sageSpotIdx = -1
+// FASHION VICTIM (Grotte 1F, Mools only) : spot + look (sprite) tirés au hasard, STABLES par session (comme SAGE).
+let fashionSpotIdx = -1
+let fashionSpriteIdx = -1
 // ANANAS : 8 cases de HAUTES HERBES (grassTall) garanties marchandes sur la Route Nord (patches initiaux),
 //   tirées au hasard par session (stable → atteignable), re-tirées au chargement.
 const ANANAS_SPOTS: ReadonlyArray<readonly [number, number]> = [[11, 7], [26, 10], [34, 11], [14, 18], [19, 19], [30, 27], [36, 29], [33, 25]]
@@ -363,6 +385,7 @@ interface GameStore {
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     daemomaniaqueOpen: boolean // DAEMOMANIAQUE (Cendreville, post run 3) : guide de capture « où/quand/comment »
     sageOpen: boolean // VIEUX SAGE SAIYAN (Ville Jaune, spot aléatoire 1×/jour) : respec des points Saiyan
+    fashionOpen: boolean // FASHION VICTIM (Grotte 1F, Mools) : sélecteur d'avatar
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
@@ -441,6 +464,7 @@ interface GameStore {
     closeAdvisor: () => void
     closeDaemomaniaque: () => void
     closeSage: () => void
+    closeFashion: () => void
     closeLab: () => void
     closeMoveReminder: () => void
     closeCombatShop: () => void
@@ -1073,6 +1097,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     advisorOpen: false,
     daemomaniaqueOpen: false,
     sageOpen: false,
+    fashionOpen: false,
     labOpen: false,
     moveReminderOpen: false,
     combatShopOpen: false,
@@ -1124,7 +1149,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -2039,6 +2064,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ sageOpen: true })
             return
         }
+        // FASHION VICTIM (Grotte 1F) : ouvre le sélecteur d'avatar (id suffixé par le look → startsWith).
+        if (npc.id.startsWith(FASHION_VICTIM_NPC_ID)) {
+            set({ fashionOpen: true })
+            return
+        }
 
         // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
         if (npc.id === "y_lab_computer") {
@@ -2678,6 +2708,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeAdvisor: () => set({ advisorOpen: false }),
     closeDaemomaniaque: () => set({ daemomaniaqueOpen: false }),
     closeSage: () => set({ sageOpen: false }),
+    closeFashion: () => set({ fashionOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),

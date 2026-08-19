@@ -18,6 +18,7 @@ import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_SPRITE_RECT, SYLVEBARBE_SLEEP_SPRITE }
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
+import { isValidAvatar } from "@/lib/gamebook/yellow/data/avatars"
 import type { ChatBubble } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import DialogueBox from "./DialogueBox"
 
@@ -348,12 +349,14 @@ function computeCamera(playerX: number, playerY: number, map: YellowMapData): Ca
 
 // === Composant principal ==============================================
 
-export default function MapView({ remotePlayers = [], chatBubbles, myUserId, arenaOpponents = [], onArenaClick }: {
+export default function MapView({ remotePlayers = [], chatBubbles, myUserId, arenaOpponents = [], onArenaClick, myAvatar }: {
     remotePlayers?: RemotePlayer[]
     chatBubbles?: Record<string, ChatBubble>
     myUserId?: string
     arenaOpponents?: { userId: string; nickname: string; x: number; y: number }[]
     onArenaClick?: (userId: string) => void
+    /** FASHION VICTIM — avatar Gen3 du JOUEUR LOCAL (pour qu'il se voie lui-même changé). */
+    myAvatar?: string
 }) {
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
@@ -661,7 +664,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     <ArenaOpponentSprite key={o.userId} o={o} screenPos={screenPos} onClick={() => onArenaClick?.(o.userId)} />
                 ))}
 
-                <PlayerSprite player={player} screenPos={screenPos} />
+                <PlayerSprite player={player} screenPos={screenPos} avatar={myAvatar} />
                 {/* #9 — ma propre bulle de chat, au-dessus de mon perso */}
                 {myUserId && chatBubbles?.[myUserId] && (
                     <ChatBubbleSprite
@@ -828,6 +831,13 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
 // PNJ rendus depuis une planche Gen 3 40×40 : cellule UNIQUE, pose neutre, face au
 // joueur (IDLE — ces PNJ ne bougent pas).
 const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }> = {
+    // FASHION VICTIM (Grotte 1F) — 6 looks (planches Gen3) ; le spawn choisit un id suffixé au hasard (cf. gameStore).
+    y_fashion_victim_1: { url: "/yellow/sprites/fashionvictim_1_gen3.png" },
+    y_fashion_victim_2: { url: "/yellow/sprites/fashionvictim_2_gen3.png" },
+    y_fashion_victim_3: { url: "/yellow/sprites/fashionvictim_3_gen3.png" },
+    y_fashion_victim_4: { url: "/yellow/sprites/fashionvictim_4_gen3.png" },
+    y_fashion_victim_5: { url: "/yellow/sprites/fashionvictim_5_gen3.png" },
+    y_fashion_victim_6: { url: "/yellow/sprites/fashionvictim_6_gen3.png" },
     // Dresseur d'Orcaline (HAUTES HERBES, 8-15) : escalade quotidienne + cadeau.
     y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline_gen3.png" },
     // Gamin (HAUTES HERBES, 8-9) : indice Goshendofy de nuit.
@@ -1126,8 +1136,9 @@ function RemotePlayerSprite({
     // chaque déplacement (couplée au glissement CSS).
     const cell = cells[(rp.posX + rp.posY) % 2]
     const topOffset = SPRITE_ASPECT_RATIO - 1
-    // Pote avec avatar perso → sa planche Gen3 (rendue comme un PNJ) ; sinon sprite Red + halo.
-    const customSheet = PLAYER_GEN3_SPRITE[(rp.nickname ?? "").toLowerCase()]
+    // Avatar CHOISI (Fashion Victim, diffusé en présence) prioritaire → sa planche Gen3 ; sinon pote hardcodé
+    //   (PLAYER_GEN3_SPRITE) ; sinon sprite Red + halo. Additif : rp.avatar absent = comportement d'avant.
+    const customSheet = (isValidAvatar(rp.avatar) ? rp.avatar : undefined) ?? PLAYER_GEN3_SPRITE[(rp.nickname ?? "").toLowerCase()]
     const dirRow = rp.direction === "up" ? NPC40_ROW_UP : rp.direction === "left" ? NPC40_ROW_LEFT : rp.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
     const containerStyle: React.CSSProperties = customSheet
         ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
@@ -1358,18 +1369,30 @@ function sheetBgPosition(cell: SpriteCell): string {
 function PlayerSprite({
     player,
     screenPos,
+    avatar,
 }: {
     player: { posX: number; posY: number; direction: string }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+    avatar?: string
 }) {
     const stepFrame = useGameStore((s) => s.stepFrame)
+
+    // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, pose idle, direction via la ligne),
+    //   pour que le joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red.
+    const sheet = isValidAvatar(avatar) ? avatar : undefined
+    if (sheet) {
+        const dirRow = player.direction === "up" ? NPC40_ROW_UP : player.direction === "left" ? NPC40_ROW_LEFT : player.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
+        return (
+            <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
+                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, NPC40_IDLE_COL, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
+            </div>
+        )
+    }
+
     const cells = FIRERED_PLAYER[player.direction] ?? FIRERED_PLAYER.down
     const cell = cells[stepFrame]
-
-    // Container 1 tile wide × 1.1875 tile tall, top à (posY - 0.1875)
-    // pour que le bas s'aligne avec le bas du tile du joueur (les pieds).
+    // Container 1 tile wide × 1.1875 tile tall, top à (posY - 0.1875) pour aligner le bas (les pieds).
     const topOffset = SPRITE_ASPECT_RATIO - 1   // 0.1875
-
     return (
         <div style={{
             position: "absolute",

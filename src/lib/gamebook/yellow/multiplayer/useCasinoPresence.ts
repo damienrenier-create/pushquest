@@ -26,6 +26,8 @@ export interface RemotePlayer {
     posX: number
     posY: number
     direction: string
+    /** FASHION VICTIM — avatar Gen3 choisi, diffusé en présence (les autres te voient avec). Optionnel/rétro-compat. */
+    avatar?: string
     ts: number
 }
 
@@ -39,6 +41,7 @@ interface MovePayload {
     posX?: number
     posY?: number
     direction?: string
+    avatar?: string
 }
 
 export function useCasinoPresence(opts: {
@@ -49,13 +52,15 @@ export function useCasinoPresence(opts: {
     direction: string
     /** Canal de présence. Défaut `yellow_casino` (casino) ; `yellow_autel` pour la salle de fusion. */
     channel?: string
+    /** FASHION VICTIM — avatar Gen3 choisi du joueur local, diffusé aux autres. */
+    avatar?: string
 }): RemotePlayer[] {
-    const { active, myUserId, posX, posY, direction, channel = "yellow_casino" } = opts
+    const { active, myUserId, posX, posY, direction, channel = "yellow_casino", avatar } = opts
     const [players, setPlayers] = useState<Record<string, RemotePlayer>>({})
 
-    // Position courante accessible dans les callbacks (pour répondre à un "hello").
-    const posRef = useRef({ posX, posY, direction })
-    posRef.current = { posX, posY, direction }
+    // Position (+ avatar) courante accessible dans les callbacks (pour répondre à un "hello" / heartbeat).
+    const posRef = useRef({ posX, posY, direction, avatar })
+    posRef.current = { posX, posY, direction, avatar }
 
     /** Poste un message de présence (best-effort, jamais bloquant) sur le canal courant. */
     const post = useCallback((body: Record<string, unknown>, keepalive = false) => {
@@ -82,6 +87,7 @@ export function useCasinoPresence(opts: {
                 posX: p.posX!,
                 posY: p.posY!,
                 direction: p.direction ?? "down",
+                avatar: p.avatar,
                 ts: Date.now(),
             },
         }))
@@ -99,9 +105,9 @@ export function useCasinoPresence(opts: {
         const onHello = (data: MovePayload) => {
             if (!data.userId || data.userId === myUserId) return
             upsert(data)
-            // Quelqu'un arrive : je lui renvoie ma position pour qu'il me voie.
-            const { posX, posY, direction } = posRef.current
-            post({ type: "player:move", posX, posY, direction })
+            // Quelqu'un arrive : je lui renvoie ma position (+ avatar) pour qu'il me voie.
+            const { posX, posY, direction, avatar } = posRef.current
+            post({ type: "player:move", posX, posY, direction, avatar })
         }
         const onDisconnect = (data: MovePayload) => {
             if (!data.userId) return
@@ -137,8 +143,8 @@ export function useCasinoPresence(opts: {
     // === Diffusion de MA position à chaque changement de tuile/direction ===
     useEffect(() => {
         if (!active) return
-        post({ type: "player:move", posX, posY, direction })
-    }, [active, posX, posY, direction, post])
+        post({ type: "player:move", posX, posY, direction, avatar })
+    }, [active, posX, posY, direction, avatar, post])
 
     // === Purge des joueurs muets + disconnect sur fermeture d'onglet ===
     useEffect(() => {
@@ -158,8 +164,8 @@ export function useCasinoPresence(opts: {
         // #12 — HEARTBEAT : re-poste ma position périodiquement pour ne pas être purgé
         // (STALE 20 s) quand je reste immobile → fini le clignotement disparition/retour.
         const heartbeat = setInterval(() => {
-            const { posX, posY, direction } = posRef.current
-            post({ type: "player:move", posX, posY, direction })
+            const { posX, posY, direction, avatar } = posRef.current
+            post({ type: "player:move", posX, posY, direction, avatar })
         }, 10000)
         const onUnload = () => post({ type: "player:disconnect" }, true)
         window.addEventListener("beforeunload", onUnload)

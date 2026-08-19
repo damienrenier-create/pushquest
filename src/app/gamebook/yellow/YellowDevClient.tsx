@@ -45,6 +45,7 @@ import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
 import DaemomaniaquePanel from "./DaemomaniaquePanel"
 import SagePanel from "./SagePanel"
+import FashionPicker from "./FashionPicker"
 import LabPanel from "./LabPanel"
 import MoveReminderPanel from "./MoveReminderPanel"
 import CombatShopModal from "./CombatShopModal"
@@ -310,6 +311,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeDaemomaniaque = useGameStore((s) => s.closeDaemomaniaque)
     const sageOpen = useGameStore((s) => s.sageOpen)
     const closeSage = useGameStore((s) => s.closeSage)
+    const fashionOpen = useGameStore((s) => s.fashionOpen)
+    const closeFashion = useGameStore((s) => s.closeFashion)
     const labOpen = useGameStore((s) => s.labOpen)
     const closeLab = useGameStore((s) => s.closeLab)
     const moveReminderOpen = useGameStore((s) => s.moveReminderOpen)
@@ -589,6 +592,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         posX: mapPlayer.posX,
         posY: mapPlayer.posY,
         direction: mapPlayer.direction,
+        avatar: player.chosenAvatar, // FASHION VICTIM : diffuse mon avatar aux joueurs présents
     })
 
     // === Chat du casino (RECO 8) ===
@@ -2141,6 +2145,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (daemomaniaqueOpen) { closeDaemomaniaque(); return true }
         if (sageOpen) { closeSage(); return true }
+        if (fashionOpen) { closeFashion(); return true }
         if (labOpen) { closeLab(); return true }
         if (moveReminderOpen) { closeMoveReminder(); return true }
         if (pcOpen) { closePc(); return true }
@@ -2237,7 +2242,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <BattleScreen />
                     </BattleBoundary>
                 ) : (
-                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts]} onArenaClick={handleArenaClick} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts]} onArenaClick={handleArenaClick} myAvatar={player.chosenAvatar} />
                 )}
             </GameBoyShell>
 
@@ -3586,6 +3591,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <AdvisorPanel />
             <DaemomaniaquePanel />
             <SagePanel />
+            {fashionOpen && <FashionPicker />}
             <LabPanel />
             <MoveReminderPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 39) }} />}
