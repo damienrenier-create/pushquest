@@ -3165,6 +3165,36 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Une wyverne mauve et corail aux ailes membraneuses, exhalant des vapeurs féeriques toxiques. Patiente et increvable, elle use l'adversaire par le poison.",
         sprite: "/yellow/sprites/dex/wyvortal.png",
     },
+    // ── PÊCHE (Fashion Victim → canne) — 2 rares aquatiques exclusifs à la pêche (cf. data/fishing.ts). ──
+    osquille: {
+        id: "osquille", dexNo: 205, name: "Osquille", types: ["INSECTE", "EAU"],
+        baseStats: { hp: 65, atk: 135, def: 68, spe: 132, spc: 48 },
+        learnset: [
+            { level: 2, moveId: "charge" }, { level: 8, moveId: "jet_de_sable" }, { level: 10, moveId: "dard_nuee" },
+            { level: 13, moveId: "pistolet_a_o" }, { level: 16, moveId: "morsure" }, { level: 18, moveId: "danse_lames" },
+            { level: 25, moveId: "dard_mortel" }, { level: 33, moveId: "essaim_vorace" }, { level: 35, moveId: "frappe_cavitation" },
+            { level: 40, moveId: "dard_fatal" }, { level: 60, moveId: "hydrocanon" }, { level: 80, moveId: "crochet_maitre" },
+        ],
+        catchRate: 30, baseExp: 168, rarity: "RARE", growthRate: "medium_fast",
+        role: "Insecte/Eau — sweeper physique fragile à priorité (revenge-killer). Pêchable de JOUR (8h-20h).",
+        description: "Une squille aux poings soniques : sa frappe déclenche une bulle de cavitation qui implose comme un coup de tonnerre. Rapide, bariolée, létale — mais fragile comme du verre.",
+        sprite: "/yellow/sprites/dex/osquille.png",
+    },
+    ro: {
+        id: "ro", dexNo: 206, name: "Rô", types: ["SOL", "EAU"],
+        baseStats: { hp: 88, atk: 84, def: 88, spe: 106, spc: 82 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 5, moveId: "pistolet_a_o" }, { level: 9, moveId: "jet_boueux" },
+            { level: 14, moveId: "repos" }, { level: 19, moveId: "tunnel" }, { level: 24, moveId: "ultrasons" },
+            { level: 30, moveId: "lame_eau" }, { level: 36, moveId: "hypnose" }, { level: 42, moveId: "sables_voraces" },
+            { level: 49, moveId: "toxik" }, { level: 56, moveId: "osmose" }, { level: 64, moveId: "draco_souffle" },
+            { level: 76, moveId: "hydrocanon" }, { level: 90, moveId: "fracas_colosse" },
+        ],
+        catchRate: 30, baseExp: 168, rarity: "RARE", growthRate: "medium_fast",
+        role: "Sol/Eau — perturbatrice nocturne (sommeil/confusion/poison/enlisement). Pêchable de NUIT (20h-8h).",
+        description: "Une raie sombre tapie dans le sable des fonds à la nuit tombée. Elle endort, empoisonne et enlise ses proies avant qu'elles ne réalisent ce qui les frappe.",
+        sprite: "/yellow/sprites/dex/ro.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
