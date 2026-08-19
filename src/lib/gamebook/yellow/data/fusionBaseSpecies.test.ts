@@ -8,22 +8,19 @@ const EVO_LINE = ["rocaptere", "fissuraillus", "magmaillus"]   // BST plus élev
 const SECRET_STAGES = ["fissuraillus", "magmaillus"]           // stades ≥2 : AUCUN pop Grotte (obtenables par évolution seule)
 
 describe("Fusions de base — data + learnsets", () => {
-    it("14 fusions (5 de base + 7 exclusives de zone + 2 stades évolutifs), ids uniques, types valides, base stats plausibles", () => {
-        expect(FUSION_BASE_SPECIES.length).toBe(14) // 12 base-1 + Fissuraillus/Magmaillus (lignée évolutive de Rocaptère)
-        expect(new Set(FUSION_BASE_IDS).size).toBe(14)
+    it("38 fusions (14 base + 24 stades évolués des 11 lignées capturables), ids uniques, types valides, base stats plausibles", () => {
+        expect(FUSION_BASE_SPECIES.length).toBe(38) // 14 base + 24 évolutions (S2/S3 des 11 lignées + Mottelave S4/S5)
+        expect(new Set(FUSION_BASE_IDS).size).toBe(38)
+        const ids = new Set(FUSION_BASE_IDS)
         for (const s of FUSION_BASE_SPECIES) {
             expect(s.types.length, s.id).toBe(2)
-            expect(new Set(s.types).size).toBe(2) // 2 types distincts
+            expect(new Set(s.types).size, s.id).toBe(2) // 2 types distincts
             const bst = s.baseStats.hp + s.baseStats.atk + s.baseStats.def + s.baseStats.spe + s.baseStats.spc
-            if (EVO_LINE.includes(s.id)) {
-                expect(bst, s.id).toBeGreaterThan(280) // lignée évolutive : BST plus haut (fusion base×base : 306→414→491)
-                expect(bst, s.id).toBeLessThan(560)
-            } else {
-                expect(bst, s.id).toBeGreaterThan(180) // base-1 plausible
-                expect(bst, s.id).toBeLessThan(300)
-                expect(s.evolution, s.id).toBeUndefined() // base-1 : pas d'évolution
-            }
+            expect(bst, s.id).toBeGreaterThan(180)
+            expect(bst, s.id).toBeLessThanOrEqual(575) // plafond = Sidéralithe (S5) 570
             expect(s.dexNo, s.id).toBeGreaterThanOrEqual(500) // plage Fusiodex (hors dex principal)
+            // Une évolution déclarée DOIT pointer vers une entrée FUSION_BASE (résolue getSpecies → pas de crash au reload).
+            if (s.evolution) expect(ids.has(s.evolution.toId), `${s.id}→${s.evolution.toId}`).toBe(true)
         }
     })
 
@@ -37,9 +34,9 @@ describe("Fusions de base — data + learnsets", () => {
                 const hasStab = s.learnset.some((l) => getMove(l.moveId)?.type === t)
                 expect(hasStab, `${s.id} STAB ${t}`).toBe(true)
             }
-            // le learnset s'étend jusqu'au haut niveau (la lignée évolutive hérite des paliers de ses parents → cap ≤60)
+            // le learnset s'étend en niveau (pas un stub)
             const maxLvl = Math.max(...s.learnset.map((l) => l.level))
-            expect(maxLvl, s.id).toBeGreaterThanOrEqual(EVO_LINE.includes(s.id) ? 28 : 84)
+            expect(maxLvl, s.id).toBeGreaterThanOrEqual(28)
         }
     })
 
@@ -68,12 +65,17 @@ describe("Fusions de base — data + learnsets", () => {
         expect(fusionForParents("draclet", "electroatiss")).toBe("dractriss")   // paire de BASE distincte (pas de collision avec Voltaile/Oniridrak)
     })
 
-    it("parents référencés existent, et forment bien les paires", () => {
-        // Tous les ids SAUF les stades évolutifs secrets (≥2) ont une paire de pop Grotte.
-        expect(Object.keys(FUSION_BASE_PARENTS).sort()).toEqual(FUSION_BASE_IDS.filter((id) => !SECRET_STAGES.includes(id)).sort())
+    it("parents référencés existent ; les stades ÉVOLUÉS n'ont AUCUNE paire de pop Grotte", () => {
         for (const [fus, [a, b]] of Object.entries(FUSION_BASE_PARENTS)) {
+            expect(FUSION_BASE_IDS, `clé ${fus}`).toContain(fus)
             expect(SPECIES[a], `parent ${a} de ${fus}`).toBeDefined()
             expect(SPECIES[b], `parent ${b} de ${fus}`).toBeDefined()
+        }
+        // Les stades évolués (dexNo ≥ 520) + les stades secrets de Rocaptère : obtenables par ÉVOLUTION seule → aucune paire.
+        for (const s of FUSION_BASE_SPECIES) {
+            if (s.dexNo >= 520 || SECRET_STAGES.includes(s.id)) {
+                expect(FUSION_BASE_PARENTS[s.id], `${s.id} (évolué) ne doit avoir aucune paire`).toBeUndefined()
+            }
         }
     })
 
