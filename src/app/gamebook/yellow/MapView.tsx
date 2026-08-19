@@ -18,7 +18,7 @@ import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_SPRITE_RECT, SYLVEBARBE_SLEEP_SPRITE }
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
-import { isValidAvatar } from "@/lib/gamebook/yellow/data/avatars"
+import { isValidAvatar, avatarSheet, avatarFilter } from "@/lib/gamebook/yellow/data/avatars"
 import type { ChatBubble } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import DialogueBox from "./DialogueBox"
 
@@ -1151,14 +1151,16 @@ function RemotePlayerSprite({
     const topOffset = SPRITE_ASPECT_RATIO - 1
     // Avatar CHOISI (Fashion Victim, diffusé en présence) prioritaire → sa planche Gen3 ; sinon pote hardcodé
     //   (PLAYER_GEN3_SPRITE) ; sinon sprite Red + halo. Additif : rp.avatar absent = comportement d'avant.
-    const customSheet = (isValidAvatar(rp.avatar) ? rp.avatar : undefined) ?? PLAYER_GEN3_SPRITE[(rp.nickname ?? "").toLowerCase()]
+    const avatarRaw = isValidAvatar(rp.avatar) ? rp.avatar : undefined
+    const customSheet = (avatarRaw ? avatarSheet(avatarRaw) : undefined) ?? PLAYER_GEN3_SPRITE[(rp.nickname ?? "").toLowerCase()]
+    const customTint = avatarRaw ? avatarFilter(avatarRaw) : "" // teinte de PERSONNALISATION (avatar diffusé en présence)
     const dirRow = rp.direction === "up" ? NPC40_ROW_UP : rp.direction === "left" ? NPC40_ROW_LEFT : rp.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
     const containerStyle: React.CSSProperties = customSheet
         ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
         : { position: "absolute", ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
     const spriteStyle: React.CSSProperties = customSheet
         // Marche : alterne les 2 frames de pas par parité de case (stepFrame non diffusé) → jambes animées à distance.
-        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_WALK_COLS[(rp.posX + rp.posY) % 2], dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
+        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_WALK_COLS[(rp.posX + rp.posY) % 2], dirRow), filter: `${customTint} drop-shadow(0 1px 1px rgba(0,0,0,0.45))`.trim() }
         : {
             position: "absolute",
             inset: 0,
@@ -1401,15 +1403,17 @@ function PlayerSprite({
 
     // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, direction via la ligne), pour que le
     //   joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red (sans pose de pêche).
-    const sheet = isValidAvatar(avatar) ? avatar : undefined
-    if (sheet) {
+    const av = isValidAvatar(avatar) ? avatar : undefined
+    if (av) {
+        const sheet = avatarSheet(av) // URL de la planche (sans le fragment de teinte)
+        const tint = avatarFilter(av) // filtre CSS de PERSONNALISATION (teinte/saturation/luminosité) ou ""
         // PÊCHE prioritaire : pose « canne » (colonnes 9-12) face à l'eau, sinon marche (col 0/2 via stepFrame).
         const dir = fishDir ?? player.direction
         const dirRow = dir === "up" ? NPC40_ROW_UP : dir === "left" ? NPC40_ROW_LEFT : dir === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
         const col = fishDir ? NPC40_FISH_COLS[fishFrame] : NPC40_WALK_COLS[stepFrame]
         return (
             <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
-                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, col, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
+                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, col, dirRow), filter: `${tint} drop-shadow(0 1px 1px rgba(0,0,0,0.45))`.trim() }} />
             </div>
         )
     }
