@@ -12,6 +12,7 @@ import { NEMESIS_ARMED_MARKER } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
+import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -223,6 +224,15 @@ interface PlayerState {
     /** FASHION VICTIM — avatar (planche Gen3) choisi par le joueur ; partagé via la présence (les autres le voient).
      *  Préférence COSMÉTIQUE GLOBALE → préservée entre les runs (cf. reset de monde). Optionnel/additif → save-safe. */
     chosenAvatar?: string
+    /** ARTISANE — objets SIGNATURE craftés, liés à un uid. PER-MONDE (liés à des Daemons de ce run) → naturellement
+     *  rattachés au monde. Source de vérité du « sac » ; baké sur le mon en combat. Optionnel/additif → save-safe. */
+    craftedItems?: CraftedItem[]
+    /** ARTISANE — compteur d'objets craftés À VIE (plafond 6 avant Ligue Fusion bronze, 12 après). GLOBAL : réconcilié
+     *  dans TOUS les mondes par snapshot() (comme customDaemons) → le plafond ne se réinitialise pas au run. Additif. */
+    craftsUsed?: number
+    /** ARTISANE — « forge prête » : posée à TRUE à chaque victoire de Ligue (arène/fusion), consommée (FALSE) au craft.
+     *  Le 1er craft est déverrouillé par le simple statut de champion (grandfathering). GLOBAL (réconcilié). Additif. */
+    craftReady?: boolean
     /** LIGUE DE FUSION — inclure MÉGAMONARX (stade ULTIME, « fruit de fusion ») dans l'équipe (1 slot, MAX 1).
      *  PER-RUN (reset avec le roster de fusion, par omission). Optionnel/additif → save-safe. */
     megaInLigue?: boolean
@@ -566,10 +576,17 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         grotteShopBuys: "grotteShopBuys" in p ? p.grotteShopBuys : st.grotteShopBuys,
         chosenAvatar: "chosenAvatar" in p ? p.chosenAvatar : st.chosenAvatar,
+        craftedItems: "craftedItems" in p ? p.craftedItems : st.craftedItems,
+        craftsUsed: "craftsUsed" in p ? p.craftsUsed : st.craftsUsed,
+        craftReady: "craftReady" in p ? p.craftReady : st.craftReady,
         megaInLigue: "megaInLigue" in p ? p.megaInLigue : st.megaInLigue,
         fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
         fusionChampionRoster: "fusionChampionRoster" in p ? p.fusionChampionRoster : st.fusionChampionRoster,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
+    }
+    // ARTISANE — re-dérive l'objet signature ÉQUIPÉ sur chaque instance (champ transient, jamais sérialisé).
+    if (st.craftedItems?.length) {
+        st = { ...st, team: st.team.map((m) => monWithSig(m, st.craftedItems!)), pc: st.pc.map((m) => monWithSig(m, st.craftedItems!)) }
     }
     emit()
 }
@@ -633,7 +650,8 @@ export function setChampion() {
     if (st.isChampion) return
     // BADGE « Ligue 6-shiny » : figé au sacre si l'équipe compte 6 Daemons TOUS shiny (l'équipe peut changer après).
     const sixShiny = st.team.length === 6 && st.team.every((m) => m.shiny === true)
-    st = { ...st, isChampion: true, leagueSixShiny: st.leagueSixShiny || sixShiny }
+    // ARTISANE : devenir champion ARME la forge (craftReady) → autorise un craft. Consommé à chaque objet forgé.
+    st = { ...st, isChampion: true, leagueSixShiny: st.leagueSixShiny || sixShiny, craftReady: true }
     emit()
 }
 
@@ -1432,6 +1450,66 @@ export function setChosenAvatar(path: string | undefined) {
 }
 /** FASHION VICTIM — avatar Gen3 choisi (undefined = sprite par défaut). */
 export function getChosenAvatar(): string | undefined { return st.chosenAvatar }
+// ── ARTISANE — craft d'objets SIGNATURE (voir data/artisane.ts) ────────────────────────────────────────────────
+/** Les objets signature du sac (per-monde). */
+export function getCraftedItems(): CraftedItem[] { return st.craftedItems ?? [] }
+/** Compteur d'objets craftés À VIE (global). */
+export function getCraftsUsed(): number { return st.craftsUsed ?? 0 }
+/** L'objet signature ÉQUIPÉ sur ce Daemon (uid), s'il existe. Un seul équipé par uid. */
+export function getSignatureItemForUid(uid: string): CraftedItem | undefined {
+    return (st.craftedItems ?? []).find((c) => c.boundUid === uid && c.equipped)
+}
+/** A-t-on battu la Ligue de Fusion BRONZE (≥1 palier bronze bouclé) → plafond à vie 12 au lieu de 6. */
+export function craftFusionBronzeBeaten(): boolean { return (st.fusionChampionRoster?.["bronze"]?.length ?? 0) > 0 }
+/** A-t-on remporté AU MOINS une Ligue (arène = champion, ou n'importe quel palier de Fusion) ? */
+export function hasBeatenAnyLeague(): boolean {
+    return st.isChampion === true || Object.values(st.fusionChampionRoster ?? {}).some((r) => (r?.length ?? 0) > 0)
+}
+/** Plafond à vie atteint ? */
+export function craftCapReached(): boolean { return getCraftsUsed() >= craftLifetimeCap(craftFusionBronzeBeaten()) }
+/** Peut-on forger MAINTENANT ? 1er craft = simple statut de champion (grandfathering) ; ensuite = forge réarmée
+ *  (une Ligue rebattue depuis le dernier craft). Renvoie la RAISON du refus pour l'UI. */
+export function canCraftSignature(): { ok: boolean; reason: "ok" | "locked" | "needLeague" | "cap" } {
+    if (craftCapReached()) return { ok: false, reason: "cap" }
+    if (getCraftsUsed() === 0) return hasBeatenAnyLeague() ? { ok: true, reason: "ok" } : { ok: false, reason: "locked" }
+    return st.craftReady ? { ok: true, reason: "ok" } : { ok: false, reason: "needLeague" }
+}
+/** ARTISANE — reflète l'objet signature ÉQUIPÉ (craftedItems) sur l'instance du Daemon : champ TRANSIENT `signatureItem`
+ *  lu par le moteur de combat (fullStats/accuracy). Ni sérialisé ni parsé → re-dérivé à l'hydrate. Idempotent. */
+function monWithSig(m: MonInstance, items: CraftedItem[]): MonInstance {
+    const eq = items.find((c) => c.boundUid === m.uid && c.equipped)
+    if (!eq) return m.signatureItem ? { ...m, signatureItem: undefined } : m
+    return { ...m, signatureItem: { stat: eq.stat, pct: eq.pct, precision: eq.precision } }
+}
+/** Forge un objet signature (état CLIENT uniquement — le débit JC est géré par l'appelant via postSpend). Crée
+ *  l'objet lié à `boundUid`, l'ajoute au sac ÉQUIPÉ, incrémente le compteur À VIE, CONSOMME la forge (craftReady).
+ *  Renvoie l'objet créé, ou null si le plafond est déjà atteint (garde-fou). */
+export function addCraftedItem(input: { stat: CraftStat; pct: number; precision: number; boundUid: string; boundName: string; boundSpeciesId: string; name: string }): CraftedItem | null {
+    if (craftCapReached()) return null
+    const n = getCraftsUsed()
+    const item: CraftedItem = {
+        id: `sig_${n}_${input.boundUid.slice(0, 6)}`,
+        name: input.name, stat: input.stat, pct: input.pct, precision: input.precision,
+        boundUid: input.boundUid, boundName: input.boundName, boundSpeciesId: input.boundSpeciesId, equipped: true,
+    }
+    const items = [...(st.craftedItems ?? []), item]
+    st = { ...st, craftedItems: items, craftsUsed: n + 1, craftReady: false, team: st.team.map((m) => monWithSig(m, items)), pc: st.pc.map((m) => monWithSig(m, items)) }
+    emit()
+    return item
+}
+/** (Dés)équipe un objet signature. Équiper un objet DÉSÉQUIPE tout autre objet du MÊME Daemon (1 seul actif par uid). */
+export function setCraftedItemEquipped(id: string, equipped: boolean) {
+    const cur = st.craftedItems ?? []
+    const target = cur.find((c) => c.id === id)
+    if (!target) return
+    const items = cur.map((c) => {
+        if (c.id === id) return { ...c, equipped }
+        if (equipped && c.boundUid === target.boundUid) return { ...c, equipped: false }
+        return c
+    })
+    st = { ...st, craftedItems: items, team: st.team.map((m) => monWithSig(m, items)), pc: st.pc.map((m) => monWithSig(m, items)) }
+    emit()
+}
 /** LIGUE DE FUSION — (dés)active l'inclusion de MÉGAMONARX dans l'équipe de Ligue (1 slot). */
 export function setMegaInLigue(on: boolean) { st = { ...st, megaInLigue: on }; emit() }
 /** HAUT FAIT Ligue de Fusion — défaites cumulées sur un palier (bronze/argent/or). */
@@ -1475,7 +1553,8 @@ export function snapshotFusionChampionRoster(tier: string) {
         if (a && b) flat.push(JSON.parse(JSON.stringify(a)) as MonInstance, JSON.parse(JSON.stringify(b)) as MonInstance)
     }
     if (!flat.length) return
-    st = { ...st, fusionChampionRoster: { ...(st.fusionChampionRoster ?? {}), [tier]: flat } }
+    // ARTISANE : boucler un palier de Ligue de Fusion RÉARME la forge (« rebattre une Ligue entre deux crafts »).
+    st = { ...st, fusionChampionRoster: { ...(st.fusionChampionRoster ?? {}), [tier]: flat }, craftReady: true }
     emit()
 }
 /** Le roster de fusion gelé d'un palier (parents à plat [a,b,a,b,…]) — vide si aucun sacre de ce palier. */

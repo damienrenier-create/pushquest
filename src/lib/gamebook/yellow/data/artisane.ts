@@ -33,6 +33,21 @@ export const CRAFT_STAT_LABEL: Record<CraftStat, string> = {
     hp: "PV", atk: "Attaque", def: "Défense", spe: "Vitesse", spc: "Spécial (att. & déf.)", eva: "Esquive",
 }
 
+/** Un objet SIGNATURE crafté, LIÉ à un Daemon précis (boundUid) — ne servira qu'à LUI. Vit dans le « sac »
+ *  (craftedItems du save, per-monde car lié à des uid de ce run) ; au combat il est BAKÉ sur l'instance du mon
+ *  (signatureItem) pour voyager en PvP. `equipped` = donné au Daemon (donc actif au combat). */
+export interface CraftedItem {
+    id: string               // ex. `sig_<index>_<uid6>` — déterministe (pas de RNG)
+    name: string             // choisi dans CRAFT_ITEM_NAMES[stat]
+    stat: CraftStat
+    pct: number              // amélioration demandée (10–40 %)
+    precision: number        // % de chance d'application (stats : jet PAR TOUR ; PV : 100 %, PAR COMBAT)
+    boundUid: string         // uid du Daemon pour lequel il a été forgé
+    boundName: string        // surnom/nom affiché au moment du craft
+    boundSpeciesId: string   // espèce (pour l'icône dans le sac)
+    equipped: boolean        // donné au Daemon (1 seul équipé par uid)
+}
+
 /** Pools de noms d'objets par stat (~10 chacun). Un des noms est choisi de façon déterministe au craft. */
 export const CRAFT_ITEM_NAMES: Record<CraftStat, string[]> = {
     hp: ["Ration de fer", "Festin royal", "Nectar vital", "Baie nourricière", "Gâteau d'endurance", "Miel revigorant", "Pain des cimes", "Bouillon ancestral", "Fruit de vie", "Élixir nourricier"],

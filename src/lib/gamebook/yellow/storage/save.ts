@@ -8,6 +8,7 @@ import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/type
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 import { isHeldItem } from "../data/heldItems"
+import { CRAFT_STATS, type CraftStat, type CraftedItem } from "../data/artisane"
 import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
 
 export interface YellowSave {
@@ -228,6 +229,12 @@ export interface YellowSave {
     grotteShopBuys?: Record<string, number>
     /** FASHION VICTIM — avatar Gen3 choisi (chemin de planche), préférence cosmétique globale. Optionnel/additif. */
     chosenAvatar?: string
+    /** ARTISANE — objets signature craftés (per-monde : liés à des uid de ce run). Optionnel/additif. */
+    craftedItems?: CraftedItem[]
+    /** ARTISANE — compteur d'objets craftés À VIE (GLOBAL, réconcilié dans tous les mondes par snapshot()). Additif. */
+    craftsUsed?: number
+    /** ARTISANE — « forge prête » (GLOBAL) : posée à la victoire de Ligue, consommée au craft. Optionnel/additif. */
+    craftReady?: boolean
     /** LIGUE DE FUSION — MÉGAMONARX inclus dans l'équipe (per-run). Optionnel/additif. */
     megaInLigue?: boolean
     /** OBJETS TENUS ENNEMIS — date (YYYY-MM-DD) de la DERNIÈRE tentative de Ligue de Fusion : sert la règle « baies
@@ -553,6 +560,28 @@ function parseNestedWorld(raw: unknown): YellowSave | null {
     return parseSave(raw, true)
 }
 
+/** ARTISANE — sanitize la liste d'objets signature (défensif : une entrée cassée est ignorée, jamais bloquante). */
+function sanitizeCraftedItems(raw: unknown): CraftedItem[] | undefined {
+    if (!Array.isArray(raw)) return undefined
+    const out: CraftedItem[] = []
+    for (const it of raw) {
+        if (!it || typeof it !== "object") continue
+        const o = it as Record<string, unknown>
+        if (typeof o.id !== "string" || typeof o.name !== "string" || typeof o.boundUid !== "string") continue
+        if (typeof o.stat !== "string" || !CRAFT_STATS.includes(o.stat as CraftStat)) continue
+        out.push({
+            id: o.id, name: o.name, stat: o.stat as CraftStat,
+            pct: typeof o.pct === "number" ? Math.max(0, Math.floor(o.pct)) : 0,
+            precision: typeof o.precision === "number" ? Math.max(0, Math.min(100, Math.floor(o.precision))) : 100,
+            boundUid: o.boundUid,
+            boundName: typeof o.boundName === "string" ? o.boundName : "",
+            boundSpeciesId: typeof o.boundSpeciesId === "string" ? o.boundSpeciesId : "",
+            equipped: o.equipped === true,
+        })
+    }
+    return out.length ? out : undefined
+}
+
 /** Parse défensif d'une sauvegarde complète. `nested` = on parse un monde NG+ imbriqué → on n'y REparse
  *  pas de sous-monde (activeWorld forcé "live", ngplusWorld/ngplusOldTeam null) pour borner la récursion. */
 export function parseSave(raw: unknown, nested = false): YellowSave {
@@ -699,6 +728,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             ? Object.fromEntries(Object.entries(o.grotteShopBuys as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
         chosenAvatar: typeof o.chosenAvatar === "string" ? o.chosenAvatar : undefined,
+        craftedItems: sanitizeCraftedItems(o.craftedItems),
+        craftsUsed: typeof o.craftsUsed === "number" ? Math.max(0, Math.floor(o.craftsUsed)) : undefined,
+        craftReady: o.craftReady === true ? true : undefined,
         megaInLigue: o.megaInLigue === true ? true : undefined,
         fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
         fusionChampionRoster: o.fusionChampionRoster && typeof o.fusionChampionRoster === "object" && !Array.isArray(o.fusionChampionRoster)

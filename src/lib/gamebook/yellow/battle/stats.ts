@@ -31,7 +31,7 @@ export function computeStat(base: number, iv: number, level: number, ev = 0): nu
 
 /** Les 5 stats absolues : Gen-1 (base+IV) + EV (⌊EV/4⌋, plafonné) + bonus Saiyan (à plat). */
 export function fullStats(
-    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny" | "frozenStats"> & { speciesId?: string; heldItem?: string; heldItem2?: string },
+    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny" | "frozenStats" | "signatureItem"> & { speciesId?: string; heldItem?: string; heldItem2?: string; sigActive?: boolean },
     species: SpeciesData,
 ): Record<StatKey, number> {
     // STATS FIGÉES (Hall of Fame) : le champion combat avec ses stats EXACTES du sacre — aucun recalcul.
@@ -47,6 +47,13 @@ export function fullStats(
     const hm = { ...heldStatMult(inst) }
     const tsm = talentSpeedMult(inst)
     if (tsm !== 1) hm.spe = (hm.spe ?? 1) * tsm
+    // ARTISANE — objet signature : PV TOUJOURS actif (per-combat) ; atk/def/spe/spc seulement si `sigActive` (jet PAR
+    // TOUR, posé par le moteur). L'esquive (eva) n'est pas une base-stat → gérée dans accuracy.ts (incomingAccMult).
+    const sig = inst.signatureItem
+    if (sig && sig.stat !== "eva" && (sig.stat === "hp" || inst.sigActive === true)) {
+        const k = sig.stat as StatKey
+        hm[k] = (hm[k] ?? 1) * (1 + sig.pct / 100)
+    }
     const it = (n: number, k: StatKey) => sh(Math.floor(n * (hm[k] ?? 1)))
     return {
         hp: it(maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0), "hp"),

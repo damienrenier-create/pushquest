@@ -52,6 +52,7 @@ import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTr
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, fashionVictimVisibleFor } from "../data/avatars"
+import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -191,6 +192,23 @@ export function activeNpcs() {
             initialX: fvx,
             initialY: fvy,
             dialoguesAfter: FASHION_VICTIM_LINES,
+        }]
+    }
+    // L'ARTISANE (Grotte du Nexus 1F) : forge des objets tenus SIGNATURE. Visible par TOUS ceux qui atteignent la
+    //   Grotte (pas de whitelist — vraie feature). Spot tiré au hasard, STABLE par session. Sprite Gen3 dédié.
+    {
+        if (artisaneSpotIdx < 0) artisaneSpotIdx = Math.floor(Math.random() * ARTISANE_SPOTS.length)
+        const [ax, ay] = ARTISANE_SPOTS[artisaneSpotIdx]
+        list = [...list, {
+            id: ARTISANE_NPC_ID,
+            name: "L'ARTISANE",
+            mapId: ARTISANE_MAP,
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "🔨", color: "#b5732e" }, // repli si le sprite Gen3 manque
+            initialX: ax,
+            initialY: ay,
+            dialoguesAfter: ARTISANE_LINES,
         }]
     }
     return list
@@ -363,6 +381,8 @@ let sageSpotIdx = -1
 // FASHION VICTIM (Grotte 1F, Mools only) : spot + look (sprite) tirés au hasard, STABLES par session (comme SAGE).
 let fashionSpotIdx = -1
 let fashionSpriteIdx = -1
+// L'ARTISANE (Grotte 1F) : spot tiré au hasard, STABLE par session (comme SAGE/FASHION).
+let artisaneSpotIdx = -1
 // ANANAS : 8 cases de HAUTES HERBES (grassTall) garanties marchandes sur la Route Nord (patches initiaux),
 //   tirées au hasard par session (stable → atteignable), re-tirées au chargement.
 const ANANAS_SPOTS: ReadonlyArray<readonly [number, number]> = [[11, 7], [26, 10], [34, 11], [14, 18], [19, 19], [30, 27], [36, 29], [33, 25]]
@@ -386,6 +406,7 @@ interface GameStore {
     daemomaniaqueOpen: boolean // DAEMOMANIAQUE (Cendreville, post run 3) : guide de capture « où/quand/comment »
     sageOpen: boolean // VIEUX SAGE SAIYAN (Ville Jaune, spot aléatoire 1×/jour) : respec des points Saiyan
     fashionOpen: boolean // FASHION VICTIM (Grotte 1F, Mools) : sélecteur d'avatar
+    artisaneOpen: boolean // L'ARTISANE (Grotte 1F) : panneau de forge d'objet signature
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
@@ -465,6 +486,7 @@ interface GameStore {
     closeDaemomaniaque: () => void
     closeSage: () => void
     closeFashion: () => void
+    closeArtisane: () => void
     closeLab: () => void
     closeMoveReminder: () => void
     closeCombatShop: () => void
@@ -1098,6 +1120,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     daemomaniaqueOpen: false,
     sageOpen: false,
     fashionOpen: false,
+    artisaneOpen: false,
     labOpen: false,
     moveReminderOpen: false,
     combatShopOpen: false,
@@ -1149,7 +1172,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -2069,6 +2092,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ fashionOpen: true })
             return
         }
+        // L'ARTISANE (Grotte 1F) : ouvre le panneau de forge d'objet signature.
+        if (npc.id === ARTISANE_NPC_ID) {
+            set({ artisaneOpen: true })
+            return
+        }
 
         // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
         if (npc.id === "y_lab_computer") {
@@ -2709,6 +2737,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeDaemomaniaque: () => set({ daemomaniaqueOpen: false }),
     closeSage: () => set({ sageOpen: false }),
     closeFashion: () => set({ fashionOpen: false }),
+    closeArtisane: () => set({ artisaneOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),

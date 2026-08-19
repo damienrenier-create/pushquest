@@ -342,6 +342,8 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         actorUid: active(state.player).uid,
     }
 
+    // ARTISANE — activation par-tour des objets signature (avant l'ordre : la Vitesse boostée peut le changer).
+    rollSignatures(state, rng)
     // Les switchs passent AVANT les attaques.
     const order = orderActions(state, playerResolved, enemyAction, rng)
 
@@ -435,6 +437,8 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
         moveIndex: a.kind === "move" ? a.moveIndex : undefined,
         teamIndex: a.kind === "switch" ? a.teamIndex : undefined,
     })
+    // ARTISANE — activation par-tour des objets signature (identique au solo, RNG seedé → checksum PvP préservé).
+    rollSignatures(state, rng)
     const order = orderActions(state, toResolved("player", actionA), toResolved("enemy", actionB), rng)
     for (const act of order) {
         if (state.phase === "ended") break
@@ -470,6 +474,18 @@ function actionPriority(state: BattleState, a: ResolvedAction): number {
 function effectiveSpeed(mon: BattleMon): number {
     const raw = fullStats(mon, speciesOf(mon)).spe
     return effectiveStat(raw, "spe", mon.stages.spe, mon.status)
+}
+
+/** ARTISANE — roule l'activation de l'objet signature (atk/def/spe/spc/eva) des 2 actifs POUR CE TOUR, sur le RNG
+ *  SEEDÉ (déterministe → PvP-safe, même flux des 2 côtés). Les PV sont exclus (toujours actifs, gérés dans fullStats).
+ *  Court-circuit : AUCUN tirage RNG si l'actif n'a pas de signature (stat ≠ hp) → les combats sans objet signature
+ *  restent BYTE-IDENTIQUES à avant (flux RNG inchangé). Appelé une fois par tour AVANT l'ordre d'action (la Vitesse
+ *  boostée peut changer l'ordre). */
+function rollSignatures(state: BattleState, rng: Rng) {
+    for (const side of ["player", "enemy"] as const) {
+        const m = active(state[side])
+        m.sigActive = !!m.signatureItem && m.signatureItem.stat !== "hp" && rng.chance(m.signatureItem.precision)
+    }
 }
 
 function orderActions(

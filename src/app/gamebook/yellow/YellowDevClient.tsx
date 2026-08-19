@@ -46,6 +46,7 @@ import AdvisorPanel from "./AdvisorPanel"
 import DaemomaniaquePanel from "./DaemomaniaquePanel"
 import SagePanel from "./SagePanel"
 import FashionPicker from "./FashionPicker"
+import ArtisanePanel from "./ArtisanePanel"
 import LabPanel from "./LabPanel"
 import MoveReminderPanel from "./MoveReminderPanel"
 import CombatShopModal from "./CombatShopModal"
@@ -313,6 +314,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeSage = useGameStore((s) => s.closeSage)
     const fashionOpen = useGameStore((s) => s.fashionOpen)
     const closeFashion = useGameStore((s) => s.closeFashion)
+    const artisaneOpen = useGameStore((s) => s.artisaneOpen)
+    const closeArtisane = useGameStore((s) => s.closeArtisane)
     const labOpen = useGameStore((s) => s.labOpen)
     const closeLab = useGameStore((s) => s.closeLab)
     const moveReminderOpen = useGameStore((s) => s.moveReminderOpen)
@@ -2153,6 +2156,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (daemomaniaqueOpen) { closeDaemomaniaque(); return true }
         if (sageOpen) { closeSage(); return true }
         if (fashionOpen) { closeFashion(); return true }
+        if (artisaneOpen) { closeArtisane(); return true }
         if (labOpen) { closeLab(); return true }
         if (moveReminderOpen) { closeMoveReminder(); return true }
         if (pcOpen) { closePc(); return true }
@@ -3606,6 +3610,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <DaemomaniaquePanel />
             <SagePanel />
             {fashionOpen && <FashionPicker />}
+            {artisaneOpen && <ArtisanePanel onClose={closeArtisane} />}
             <LabPanel />
             <MoveReminderPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 39) }} />}

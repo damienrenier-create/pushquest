@@ -33,9 +33,12 @@ export function hitChance(move: MoveData, attacker: BattleMon, defender: BattleM
     // lanceur/cible (rapide → +précis, lent → -précis), bornée [SPEED_ACC_MIN, SPEED_ACC_MAX].
     // OBJET TENU — Poudre Claire (×0.9) / Encens Doux (×0.95) : baisse la précision des attaques visant le porteur.
     // + TALENTS : Voile/Anguille (−5 % précision entrante, défenseur) × Œil de lynx (+5 % précision, attaquant).
+    // ARTISANE — objet signature « Esquive » : réduit la précision des attaques visant le porteur, si actif CE TOUR.
+    const sigEva = defender.signatureItem?.stat === "eva" && defender.sigActive ? 1 - defender.signatureItem.pct / 100 : 1
     const itemMod = (heldEffect(defender)?.incomingAccMult ?? 1)
         * (talentEffect(defender)?.incomingAccMult ?? 1)
         * (talentEffect(attacker)?.accOutMult ?? 1)
+        * sigEva
     if (move.effect?.speedScaledAcc) {
         const sCaster = effectiveSpeed(attacker)
         const sTarget = Math.max(1, effectiveSpeed(defender))

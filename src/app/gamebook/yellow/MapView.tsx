@@ -838,6 +838,8 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_fashion_victim_4: { url: "/yellow/sprites/fashionvictim_4_gen3.png" },
     y_fashion_victim_5: { url: "/yellow/sprites/fashionvictim_5_gen3.png" },
     y_fashion_victim_6: { url: "/yellow/sprites/fashionvictim_6_gen3.png" },
+    // L'ARTISANE (Grotte 1F) : forge d'objets signature. Planche Gen 3 760×160. Face au joueur (défauts col1/row0).
+    y_artisane: { url: "/yellow/sprites/npc_artisane_gen3.png" },
     // Dresseur d'Orcaline (HAUTES HERBES, 8-15) : escalade quotidienne + cadeau.
     y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline_gen3.png" },
     // Gamin (HAUTES HERBES, 8-9) : indice Goshendofy de nuit.

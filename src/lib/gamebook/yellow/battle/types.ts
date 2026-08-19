@@ -302,11 +302,19 @@ export interface MonInstance {
     /** SAUVAGE (Grotte du Nexus) : capture IMPOSSIBLE tant que le Daemon est à PLEINS PV — il faut d'abord
      *  l'affaiblir. La Master Ball shunte. Posé sur le spawn (gameStore), lu dans engine.performCapture. Runtime. */
     captureRequiresDamage?: boolean
+    /** ARTISANE — objet tenu SIGNATURE ÉQUIPÉ : boost de stat (+pct %) dont la PRÉCISION conditionne l'activation.
+     *  PV = toujours actif (lu dans fullStats, per-combat) ; atk/def/spe/spc/eva = jet PAR TOUR (sigActive, RNG seedé).
+     *  DÉRIVÉ de craftedItems (synchronisé dans playerStore) → TRANSIENT (re-dérivé à l'hydrate, jamais sérialisé).
+     *  Voyage avec l'instance (spread toBattleMon) → PvE + PvP déterministes. */
+    signatureItem?: { stat: "hp" | "atk" | "def" | "spe" | "spc" | "eva"; pct: number; precision: number }
 }
 
 export interface BattleMon extends MonInstance {
     stages: StatStages
     volatiles: Partial<Record<VolatileStatus, number>>
+    /** ARTISANE — l'objet signature (atk/def/spe/spc/eva) s'active-t-il CE TOUR ? Roulé à chaque tour sur le RNG
+     *  seedé (jet de précision) → PvP-safe. Les PV ignorent ce drapeau (toujours actifs). Runtime, non persisté. */
+    sigActive?: boolean
     /** BÉNÉDICTION barman (secret, SOLO) : le PROCHAIN coup de ce Daemon est un COUP CRITIQUE garanti,
      *  puis le flag est consommé. Posé quand il boit une potion "triple prix". Runtime, non persisté. */
     nextCritGuaranteed?: boolean
