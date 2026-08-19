@@ -40,7 +40,12 @@ export const NON_FUSABLE_IDS: readonly string[] = ["megamonarx"]
 export function fusionPairError(aSpeciesId: string, bSpeciesId: string): string | null {
     if (aSpeciesId === bSpeciesId) return "Impossible de fusionner deux Daemons de la MÊME espèce."
     if (NON_FUSABLE_IDS.includes(aSpeciesId) || NON_FUSABLE_IDS.includes(bSpeciesId)) return "Ce Daemon est un stade ultime : il ne peut pas fusionner."
-    if (isFusionSpeciesId(aSpeciesId) !== isFusionSpeciesId(bSpeciesId)) return "Une fusion ne peut fusionner qu'avec une AUTRE fusion (native ou capturée)."
+    // SUPER-FUSION : la règle « fusion + fusion uniquement » ne vise QUE les VRAIES fusions (natives/capturées). Un
+    //   Daemon CUSTOM (Créateur de Daemon) a un id préfixé « custom_ » et partage la plage dexNo≥500 SANS être une
+    //   fusion → il fusionne comme un normal. (Le préfixe est le discriminant fiable : `isCustomSpeciesId` capte aussi
+    //   les vraies fusions enregistrées au runtime.)
+    const actualFusion = (id: string) => isFusionSpeciesId(id) && !id.startsWith("custom_")
+    if (actualFusion(aSpeciesId) !== actualFusion(bSpeciesId)) return "Une fusion ne peut fusionner qu'avec une AUTRE fusion (native ou capturée)."
     return null
 }
 /** Vue ANTI-SPOILER d'un Daemon d'AUTRUI : si c'est une fusion ET que le VIEWER n'a jamais mis les pieds dans la
