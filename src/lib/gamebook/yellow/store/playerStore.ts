@@ -2759,9 +2759,14 @@ export function sageSaiyanPointsLeftToday(): number {
 export function sageAvailableToday(): boolean {
     return sageSaiyanPointsLeftToday() > 0
 }
-/** Barème du k-ième point Saiyan déplacé DANS LA JOURNÉE (1-indexé) — TRÈS cher (Sartay). Au-delà de 8 → 480. */
-const SAGE_COST_TABLE = [5, 10, 15, 30, 60, 120, 240, 480]
-function sagePointCost(k: number): number { return SAGE_COST_TABLE[Math.min(Math.max(1, k), SAGE_COST_TABLE.length) - 1] }
+/** Barème du k-ième point Saiyan déplacé DANS LA JOURNÉE (1-indexé) — TRÈS cher (Sartay) : 5, 10, 15, puis
+ *  DOUBLE (30, 60, 120, 240, 480, 960, …) jusqu'au cap journalier → le coût explose = auto-limitation. */
+function sagePointCost(k: number): number {
+    const n = Math.max(1, Math.floor(k))
+    if (n === 1) return 5
+    if (n === 2) return 10
+    return 15 * Math.pow(2, n - 3) // k≥3 : 15, 30, 60, 120, 240, 480, 960, …
+}
 /** Multiplicateur lié à la RÉSERVE d'énergie (repsCap) : ×1 à 5000, +0,1 par tranche de +1000 (×1,1 à 6000…),
  *  −0,1 par tranche de −1000 (×0,9 à 4000…). Borné [0,5 ; 3]. Les gros réservoirs (endgame) paient plus cher. */
 export function sageEnergyMult(reserve: number = st.repsCap): number {
