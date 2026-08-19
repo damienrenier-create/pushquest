@@ -846,7 +846,7 @@ export const TRAINERS: TrainerData[] = [
         id: "y_arena_g3", name: "GARDE SÈVE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
         mapId: "yellow_arena", x: 11, y: 1, run3X: 4, run3Y: 7,
-        team: [{ speciesId: "tamanpousse", level: 10 }, { speciesId: "pantheon", level: 8 }],
+        team: [{ speciesId: "tamanpousse", level: 10 }, { speciesId: "karmaki", level: 8 }], // teaser: Karmaki (PLANTE) remplace un pantheon redondant
         reward: 90, aiLevel: "trainer",
         intro: ["*Le garde caresse un étrange tamanoir feuillu.*", "Des créatures inédites veillent ici…"],
         defeat: ["Le Druide t'attend."],
@@ -920,7 +920,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_roche", x: 10, y: 5, run3X: 4, run3Y: 7,
         team: [
             { speciesId: "lavapetit", level: 15 },
-            { speciesId: "lavapetit", level: 15 },
+            { speciesId: "rocosaure", level: 15 }, // teaser: Rocosaure (ROCHE) remplace le doublon lavapetit
             { speciesId: "fissuralave", level: 17 },
         ],
         reward: 120, aiLevel: "trainer",
@@ -1114,7 +1114,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_elec", x: 11, y: 3, run3X: 4, run3Y: 7,
         team: [
             { speciesId: "oragron", level: 35 },
-            { speciesId: "pantheon", level: 20 },
+            { speciesId: "fulguror", level: 20 }, // teaser: Fulguror (ÉLEC) remplace un pantheon redondant
             { speciesId: "namicha", level: 28 },
             { speciesId: "voltapanthe", level: 30 },
         ],
@@ -1241,14 +1241,14 @@ export const TRAINERS: TrainerData[] = [
         id: "y_eauarena_g3", name: "PÊCHEUR ABYSSE", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
         mapId: "yellow_arena_eau", x: 11, y: 8, run3X: 4, run3Y: 7,
-        // Trois colosses des profondeurs (3 lignées différentes : crapaud-titan, tortue feu/eau, colosse abyssal).
+        // Gardiens des profondeurs : crapaud-titan, CREVETTE-MANTE inédite (Osquille, pêchable), colosse abyssal.
         team: [
             { speciesId: "crapotaure", level: 47 },  // ROCHE/EAU
-            { speciesId: "calderont", level: 48 },   // FEU/EAU
+            { speciesId: "osquille", level: 48 },    // INSECTE/EAU — teaser de l'espèce pêchable (remplace calderont, redondant avec l'arène feu)
             { speciesId: "leviathonn", level: 49 },  // EAU/ÉLEC (colosse abyssal)
         ],
         reward: 280, aiLevel: "trainer",
-        intro: ["*Des bulles géantes crèvent la surface.* Trois titans des abysses te barrent la route d'ONDINE."],
+        intro: ["*Des bulles géantes crèvent la surface.* Trois gardiens des abysses te barrent la route d'ONDINE."],
         defeat: ["Tu nages plus fort que le courant…"],
     },
     {
