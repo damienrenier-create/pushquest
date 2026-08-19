@@ -58,6 +58,7 @@ export default function BattleScreen() {
     const [menu, setMenu] = useState<Menu>("root")
     const [reviveItemId, setReviveItemId] = useState<string | null>(null) // RAPPEL : objet en attente d'une cible K.O.
     const [itemTargetId, setItemTargetId] = useState<string | null>(null) // SOIN/ANTI-STATUT : objet en attente d'une cible (actif OU banc)
+    const [lastBallId, setLastBallId] = useState("") // dernière Ball lancée → couleur de l'anim (Fusio-Ball = dorée)
     const [disp, setDisp] = useState<DispHp | null>(null)
     // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
     // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
@@ -255,7 +256,7 @@ export default function BattleScreen() {
     const doSwitch = (i: number) => tryAct(() => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") })
     // Fenêtre d'envoi adverse : GARDER son Daemon (l'ennemi annoncé entre ensuite, sans coup offert).
     const doStay = () => tryAct(() => { submitPlayerAction({ kind: "stay" }); setMenu("root") })
-    const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
+    const throwBall = (itemId: string) => tryAct(() => { setLastBallId(itemId); submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
     const doItem = (itemId: string, targetIndex?: number) => tryAct(() => { submitPlayerAction({ kind: "item", itemId, targetIndex }); setItemTargetId(null); setMenu("root") })
     const doRevive = (itemId: string, targetIndex: number) => tryAct(() => { submitPlayerAction({ kind: "item", itemId, targetIndex }); setReviveItemId(null); setMenu("root") })
     const run = () => tryAct(() => submitPlayerAction({ kind: "run" }))
@@ -463,7 +464,7 @@ export default function BattleScreen() {
                 </div>
                 <div style={S.enemySpot}>
                     {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
-                    {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
+                    {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} gold={lastBallId === "fusio_ball"} />}
                 </div>
                 {/* Joueur : sprite de dos en bas-gauche, fiche + pips en bas-droite. */}
                 <div style={S.playerSpot}>
@@ -947,7 +948,7 @@ function PartyScreen({ team, options, cursor, onPick }: {
 
 // Nexus-Ball animée : lancer (arc) → secousses (×N) → clic (capturé) ou éclatement (raté).
 // "miss" = lancer COMPLÈTEMENT raté : la ball part de travers, frôle la cible et sort de l'écran.
-function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean }) {
+function BallAnim({ phase, shakes, caught, gold }: { phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean; gold?: boolean }) {
     const anim = phase === "throw" ? "ballThrow 0.6s ease-out forwards"
         : phase === "shake" ? `ballShake 0.42s ease-in-out ${Math.max(0, shakes)}`
             : phase === "miss" ? "ballMiss 0.9s ease-in forwards"
@@ -955,7 +956,8 @@ function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "resul
                     : "ballEscape 0.6s ease-out forwards"
     return (
         <div style={{ ...S.ball, animation: anim }}>
-            <div style={S.ballTop} />
+            {/* FUSIO-BALL = dorée (au lieu de rouge). Bas blanc inchangé. */}
+            <div style={gold ? { ...S.ballTop, background: "linear-gradient(#f5d24a,#d4a017)" } : S.ballTop} />
             <div style={S.ballBand} />
             <div style={S.ballBtn} />
         </div>

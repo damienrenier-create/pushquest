@@ -2759,11 +2759,21 @@ export function sageSaiyanPointsLeftToday(): number {
 export function sageAvailableToday(): boolean {
     return sageSaiyanPointsLeftToday() > 0
 }
+/** Barème du k-ième point Saiyan déplacé DANS LA JOURNÉE (1-indexé) — TRÈS cher (Sartay). Au-delà de 8 → 480. */
+const SAGE_COST_TABLE = [5, 10, 15, 30, 60, 120, 240, 480]
+function sagePointCost(k: number): number { return SAGE_COST_TABLE[Math.min(Math.max(1, k), SAGE_COST_TABLE.length) - 1] }
+/** Multiplicateur lié à la RÉSERVE d'énergie (repsCap) : ×1 à 5000, +0,1 par tranche de +1000 (×1,1 à 6000…),
+ *  −0,1 par tranche de −1000 (×0,9 à 4000…). Borné [0,5 ; 3]. Les gros réservoirs (endgame) paient plus cher. */
+export function sageEnergyMult(reserve: number = st.repsCap): number {
+    return Math.max(0.5, Math.min(3, 1 + (reserve - 5000) / 10000))
+}
 /** Coût en reps pour déplacer `points` points de plus alors qu'on en a déjà bougé `used` aujourd'hui :
- *  Σ de (used+1) à (used+points) = points·used + points·(points+1)/2 (le k-ième point du jour coûte k). */
+ *  Σ du barème SAGE_COST_TABLE sur les points (used+1 … used+points), × le multiplicateur de réserve d'énergie. */
 export function sageRespecCost(points: number, used: number = st.sageSaiyanPointsToday ?? 0): number {
     const n = Math.max(0, Math.floor(points)), u = Math.max(0, Math.floor(used))
-    return n * u + (n * (n + 1)) / 2
+    let base = 0
+    for (let i = 1; i <= n; i++) base += sagePointCost(u + i) // les points u+1 … u+n du jour
+    return Math.round(base * sageEnergyMult())
 }
 
 /**
