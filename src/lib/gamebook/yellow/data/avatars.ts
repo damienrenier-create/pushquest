@@ -35,3 +35,10 @@ export const FASHION_VICTIM_LINES = [
     "« Oh là là, CHÉRI… ce look ! Enfin… ce NON-look. On ne peut PAS te laisser te balader comme ça. »",
     "« Laisse la Fashion Victim s'occuper de toi : un nouveau look, un VRAI. Et crois-moi — TOUT LE MONDE le verra. »",
 ]
+
+/** Réplique-cadeau : jouée UNE fois, quand la Fashion Victim vient de te relooker (elle t'offre la canne à pêche). */
+export const FASHION_ROD_GIFT_LINES = [
+    "« Haha wouaw, trop SLAY ton outfit ! On dirait un cheur-pé, hahah ! »",
+    "« Tiens, un p'tit accessoire pour aller avec… une CANNE À PÊCHE ! »",
+    "*Tu reçois la Canne à pêche ! (Sac → 🎣 Pêche. À utiliser face à un plan d'eau !)*",
+]

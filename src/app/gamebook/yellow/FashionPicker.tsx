@@ -5,8 +5,7 @@
 // FASHION VICTIM — sélecteur d'avatar. Le joueur choisit une des 8 planches ; l'avatar est stocké (chosenAvatar)
 // puis diffusé via la présence → les autres joueurs le voient. Miniature = cellule IDLE-DOWN de la planche Gen3.
 
-import { usePlayer, setChosenAvatar } from "@/lib/gamebook/yellow/store/playerStore"
-import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { FASHION_AVATARS } from "@/lib/gamebook/yellow/data/avatars"
 
@@ -27,7 +26,8 @@ function thumbStyle(url: string): React.CSSProperties {
 export default function FashionPicker() {
     const player = usePlayer()
     const close = useGameStore((s) => s.closeFashion)
-    const pick = (path?: string) => { setChosenAvatar(path); persistYellowSave(); close() }
+    // confirmFashionPick : pose le skin, offre la canne à pêche (1×) + réplique, puis ferme le sélecteur (cf. gameStore).
+    const pick = useGameStore((s) => s.confirmFashionPick)
 
     return (
         <div onClick={close} style={overlay}>

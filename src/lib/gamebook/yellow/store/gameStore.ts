@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -51,8 +51,9 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, fashionVictimVisibleFor } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, fashionVictimVisibleFor } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
+import { pickFishSpecies, fishingLevel, fishingBiteChance, fishingShinyChance, FISHING_MAX_WAIT_SEC } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
@@ -453,6 +454,7 @@ interface GameStore {
     torchSteps: number // LAMPE TORCHE : pas d'autonomie restants (0 = éteinte). Décrémente sur les maps SOMBRES (HUD)
     torchRadius: number // LAMPE TORCHE : rayon éclairé tant que torchSteps > 0 (sinon on retombe au rayon de base de la map)
     torchOn: boolean // LAMPE : allumée (éclaire + consomme) ou ÉTEINTE (pas d'éclairage NI de conso → pas gardés)
+    fishing: Direction | null // CANNE À PÊCHE : session de pêche active (direction face à l'eau = aussi la pose de pêche). null = pas en train de pêcher. Transitoire, NON persisté. L'UI (FishingOverlay) possède le chrono.
 
     // === ACTIONS ===
     /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
@@ -461,6 +463,15 @@ interface GameStore {
     activateTorch: (radius: number, steps: number) => void
     /** Éteint / rallume la lampe : éteinte = aucune conso (les pas restants sont GARDÉS pour plus tard). */
     toggleTorch: () => void
+    /** CANNE À PÊCHE — utilisée face à un plan d'eau : OUVRE la session de pêche (chrono géré par l'UI). Hors eau → réplique. */
+    castFishingRod: () => void
+    /** PÊCHE — le joueur remonte sa ligne après `elapsedSec` : selon l'attente, ferre (ou non) un Daemon aquatique
+     *  (shiny d'autant plus probable qu'on a attendu). Termine la session. */
+    reelIn: (elapsedSec: number) => void
+    /** PÊCHE — annule la session (le joueur range sa canne sans rien ferrer). */
+    cancelFishing: () => void
+    /** FASHION VICTIM — confirme le choix d'avatar : pose le skin, offre la canne à pêche (1×) + réplique du PNJ. */
+    confirmFashionPick: (path?: string) => void
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
@@ -1163,16 +1174,66 @@ export const useGameStore = create<GameStore>((set, get) => ({
     torchSteps: 0,
     torchRadius: 0,
     torchOn: true,
+    fishing: null,
     activateRepel: (steps) => set({ repelSteps: Math.max(0, Math.floor(steps)) }),
     activateTorch: (radius, steps) => set({ torchRadius: Math.max(0, Math.floor(radius)), torchSteps: Math.max(0, Math.floor(steps)), torchOn: true }),
     toggleTorch: () => set({ torchOn: !get().torchOn }),
+    castFishingRod: () => {
+        const { player, map } = get()
+        if (getBattleSnapshot().battle || get().fishing) return
+        // Doit faire FACE à un plan d'eau : l'eau ("water") est bloquante → le joueur est toujours À CÔTÉ, face à elle.
+        const front = getFacingTile(player)
+        if (map.tiles[front.y]?.[front.x] !== "water") {
+            // Hors de l'eau : réprimande du DIEU SPAGHETTI (avec le pseudo du joueur).
+            const who = getCurrentNickname() || "l'ami"
+            set({ dialogue: { npcId: "y_fishing", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [`« Mais… ${who}… ce n'est pas le moment de faire ÇA. Trouve-moi d'abord un plan d'eau, veux-tu ? »`] } })
+            return
+        }
+        const team = getPlayerSave().team
+        if (!team.some((m) => m.currentHp > 0)) {
+            set({ dialogue: { npcId: "y_fishing", npcName: "Canne à pêche", lineIndex: 0, lines: ["Ton équipe est K.O. — impossible de ferrer quoi que ce soit."] } })
+            return
+        }
+        // Ouvre la SESSION de pêche (face à l'eau). L'UI (FishingOverlay) affiche le chrono (jusqu'à 60 s) puis appelle
+        //   reelIn(elapsed). La direction sert AUSSI de pose de pêche (sprite). Rien n'est ferré ici.
+        set({ fishing: player.direction })
+    },
+    reelIn: (elapsedSec) => {
+        const dir = get().fishing
+        if (!dir || getBattleSnapshot().battle) { set({ fishing: null }); return }
+        set({ fishing: null })
+        const team = getPlayerSave().team
+        if (!team.some((m) => m.currentHp > 0)) return
+        const t = Math.max(0, Math.min(FISHING_MAX_WAIT_SEC, elapsedSec))
+        // Ça mord ? Probabilité croissante avec l'attente. Sinon : ligne remontée vide.
+        if (Math.random() >= fishingBiteChance(t)) {
+            set({ dialogue: { npcId: "y_fishing", npcName: "Pêche", lineIndex: 0, lines: ["Ta ligne remonte… vide. Rien n'a mordu cette fois."] } })
+            return
+        }
+        // Ça mord ! Shiny d'autant plus probable qu'on a attendu (INDÉPENDANT des reps).
+        const shiny = Math.random() < fishingShinyChance(t)
+        const leadLevel = team.find((m) => m.currentHp > 0)?.level ?? 10
+        const speciesId = pickFishSpecies(Math.random())
+        const lvl = fishingLevel(leadLevel, Math.random())
+        const seed = Math.floor(Math.random() * 1e9) >>> 0
+        startWildBattle(getPlayerSave().team, [createMonInstance(speciesId, lvl, { owned: false, shiny })], seed)
+    },
+    cancelFishing: () => set({ fishing: null }),
+    confirmFashionPick: (path) => {
+        setChosenAvatar(path)
+        // Cadeau ONE-TIME : la 1re fois qu'on repart avec un skin, la Fashion Victim offre la canne à pêche + réplique.
+        const got = path ? claimFishingRod() : false
+        persistYellowSave()
+        if (got) set({ fashionOpen: false, dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: FASHION_ROD_GIFT_LINES } })
+        else set({ fashionOpen: false })
+    },
 
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
         // trainerAlertId : le « ! » d'un dresseur qui vient de nous repérer gèle le joueur
         // jusqu'à l'ouverture de son intro (sinon on pourrait sortir du cadre entre-temps).
-        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().signOpen !== null) return
+        if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().fishing || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)

@@ -8,7 +8,7 @@
 //
 // Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
-import { useSyncExternalStore } from "react"
+import { useSyncExternalStore, useState, useEffect } from "react"
 import { useGameStore, activeNpcs } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
@@ -708,6 +708,9 @@ const NPC40_IDLE_COL = 1              // pose neutre (les 2 pieds au sol)
 // col 2 = pied gauche / pied droit. Alternées par stepFrame (local) ou parité de case (distant), comme le sprite Red.
 // (Les PNJ statiques gardent NPC40_IDLE_COL — seul l'avatar du joueur s'anime.)
 const NPC40_WALK_COLS: readonly [number, number] = [0, 2]
+// AVATAR JOUEUR — pose CANNE À PÊCHE : colonnes 9-12 de la planche Gen3 (canne visible, cf. commentaire de layout).
+// Cyclées pour animer le lancer/l'attente. Row = direction face à l'eau. (N'existe que sur la branche avatar Gen3.)
+const NPC40_FISH_COLS: readonly number[] = [9, 10, 11, 12]
 const NPC40_ROW_DOWN = 0              // face au joueur (Sud)
 const NPC40_ROW_UP = 1                // de dos (Nord)
 const NPC40_ROW_LEFT = 2              // profil gauche (Ouest)
@@ -1383,18 +1386,26 @@ function PlayerSprite({
     avatar?: string
 }) {
     const stepFrame = useGameStore((s) => s.stepFrame)
+    const fishing = useGameStore((s) => s.fishing) // Direction | null : session de pêche → pose canne
+    // Animation de la pose de pêche : cycle des colonnes canne tant qu'on pêche.
+    const [fishFrame, setFishFrame] = useState(0)
+    useEffect(() => {
+        if (!fishing) { setFishFrame(0); return }
+        const id = setInterval(() => setFishFrame((f) => (f + 1) % NPC40_FISH_COLS.length), 300)
+        return () => clearInterval(id)
+    }, [fishing])
 
-    // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, pose idle, direction via la ligne),
-    //   pour que le joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red.
+    // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, direction via la ligne), pour que le
+    //   joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red (sans pose de pêche).
     const sheet = isValidAvatar(avatar) ? avatar : undefined
     if (sheet) {
-        const dirRow = player.direction === "up" ? NPC40_ROW_UP : player.direction === "left" ? NPC40_ROW_LEFT : player.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
-        // ANIMATION DE MARCHE : alterne les 2 frames de pas via stepFrame (bascule à chaque déplacement réel) → les
-        // jambes bougent, comme le sprite Red. (Avant : colonne figée = sprite immobile / direction peu lisible.)
-        const walkCol = NPC40_WALK_COLS[stepFrame]
+        // PÊCHE prioritaire : pose « canne » (colonnes 9-12) face à l'eau, sinon marche (col 0/2 via stepFrame).
+        const dir = fishing ?? player.direction
+        const dirRow = dir === "up" ? NPC40_ROW_UP : dir === "left" ? NPC40_ROW_LEFT : dir === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
+        const col = fishing ? NPC40_FISH_COLS[fishFrame] : NPC40_WALK_COLS[stepFrame]
         return (
             <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
-                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, walkCol, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
+                <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, col, dirRow), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }} />
             </div>
         )
     }

@@ -47,6 +47,7 @@ import DaemomaniaquePanel from "./DaemomaniaquePanel"
 import SagePanel from "./SagePanel"
 import FashionPicker from "./FashionPicker"
 import ArtisanePanel from "./ArtisanePanel"
+import FishingOverlay from "./FishingOverlay"
 import LabPanel from "./LabPanel"
 import MoveReminderPanel from "./MoveReminderPanel"
 import CombatShopModal from "./CombatShopModal"
@@ -270,6 +271,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const repelSteps = useGameStore((s) => s.repelSteps) // REPOUSSE : pas restants (HUD + garde anti-double)
     const activateTorch = useGameStore((s) => s.activateTorch)
     const torchSteps = useGameStore((s) => s.torchSteps) // LAMPE TORCHE : pas d'autonomie restants (HUD + sac)
+    const castFishingRod = useGameStore((s) => s.castFishingRod) // CANNE À PÊCHE : lance une session de pêche (face à l'eau)
     const torchOn = useGameStore((s) => s.torchOn) // LAMPE : allumée / éteinte (toggle HUD pour économiser les pas)
     const toggleTorch = useGameStore((s) => s.toggleTorch)
     const mapPlayer = useGameStore((s) => s.player)
@@ -2663,10 +2665,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )
                                     })()}
+                                    {/* 🎣 Poche Pêche : la CANNE s'utilise HORS combat, FACE À UN PLAN D'EAU (OUTIL réutilisable, jamais consommé). */}
+                                    {(() => {
+                                        const rods = Object.values(ITEMS).filter((it) => it.fishingRod && (player.items[it.id] ?? 0) > 0)
+                                        return rods.length > 0 && (
+                                            <div>
+                                                <div style={pocketHdrStyle}>🎣 Pêche</div>
+                                                {rods.map((it) => (
+                                                    <button key={it.id} style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto" }}
+                                                        onClick={() => { setMenu("none"); setBagItem(null); castFishingRod() }}>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name} · Pêcher ▸</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                        {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -3611,6 +3631,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <SagePanel />
             {fashionOpen && <FashionPicker />}
             {artisaneOpen && <ArtisanePanel onClose={closeArtisane} />}
+            <FishingOverlay />
             <LabPanel />
             <MoveReminderPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 39) }} />}

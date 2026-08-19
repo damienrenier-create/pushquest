@@ -13,6 +13,7 @@ import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
+import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -1450,6 +1451,14 @@ export function setChosenAvatar(path: string | undefined) {
 }
 /** FASHION VICTIM — avatar Gen3 choisi (undefined = sprite par défaut). */
 export function getChosenAvatar(): string | undefined { return st.chosenAvatar }
+/** FASHION VICTIM — offre la CANNE À PÊCHE UNE fois (si le joueur n'en a pas déjà une). Renvoie true si donnée
+ *  (→ l'appelant joue la réplique-cadeau). Basé sur la POSSESSION (pas de champ save) : le sac se réinitialise par
+ *  run → la canne est re-donnable dans un nouveau run. La canne est un OUTIL réutilisable (jamais consommée). */
+export function claimFishingRod(): boolean {
+    if ((st.items[FISHING_ROD_ITEM_ID] ?? 0) > 0) return false
+    addItem(FISHING_ROD_ITEM_ID, 1)
+    return true
+}
 // ── ARTISANE — craft d'objets SIGNATURE (voir data/artisane.ts) ────────────────────────────────────────────────
 /** Les objets signature du sac (per-monde). */
 export function getCraftedItems(): CraftedItem[] { return st.craftedItems ?? [] }

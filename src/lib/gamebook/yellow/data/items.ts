@@ -33,6 +33,9 @@ export interface ItemData {
     /** LAMPE TORCHE (MISC, s'utilise HORS combat) : dans une map SOMBRE, étend le rayon de vision (cases) pour torchSteps pas. */
     torchRadius?: number
     torchSteps?: number
+    /** CANNE À PÊCHE (MISC, s'utilise HORS combat, FACE À L'EAU) : ferre un Daemon aquatique. OUTIL réutilisable
+     *  (jamais consommé). La présence de ce marqueur range l'objet dans la poche « Pêche » + lui donne son handler. */
+    fishingRod?: boolean
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -185,6 +188,12 @@ export const ITEMS: Record<string, ItemData> = {
     lampe_rouillee: {
         id: "lampe_rouillee", name: "Lampe rouillée", category: "MISC",
         description: "Une vieille lampe sale et poussiéreuse. On dirait qu'un bon frottage ne lui ferait pas de mal…", price: 0,
+    },
+    // CANNE À PÊCHE — offerte par la Fashion Victim (Grotte 1F) avec le nouveau skin. OUTIL réutilisable : à utiliser
+    //   depuis le sac en étant FACE À UN PLAN D'EAU → ferre un Daemon aquatique. Cf. data/fishing.ts + castFishingRod().
+    canne_a_peche: {
+        id: "canne_a_peche", name: "Canne à pêche", category: "MISC",
+        description: "Un petit accessoire trop stylé signé Fashion Victim. À utiliser face à un plan d'eau pour ferrer un Daemon aquatique !", price: 0, fishingRod: true,
     },
 }
 
