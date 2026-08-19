@@ -1369,14 +1369,13 @@ const SPRITE_ASPECT_RATIO = SPRITE_H / SPRITE_W   // 1.1875 (hauteur en tiles)
 
 interface SpriteCell { x: number; y: number }
 
-// ⚠️ Ordre RÉEL des lignes de firered_player_t.png : y=55 Sud, y=88 Ouest, y=121 Est, y=154 Nord
-//   (down/left/right/up — comme les planches Gen3, PAS l'ordre classique down/up/left/right). Vérifié en jeu :
-//   avant correctif, marcher haut→regardait à gauche, gauche→droite, droite→haut. Chaque direction pointe SA ligne.
+// firered_player_t.png : ordre STANDARD down/up/left/right (y=55/88/121/154). NE PAS toucher — vérifié correct en jeu.
+//   (Contrairement aux planches Gen3/npc40 qui, elles, sont dans l'ordre down/left/right/up.)
 const FIRERED_PLAYER: Record<string, [SpriteCell, SpriteCell]> = {
-    down:  [{ x: 8,  y: 55  }, { x: 42, y: 55  }],   // Sud
-    left:  [{ x: 8,  y: 88  }, { x: 42, y: 88  }],   // Ouest
-    right: [{ x: 8,  y: 121 }, { x: 42, y: 121 }],   // Est
-    up:    [{ x: 8,  y: 154 }, { x: 42, y: 154 }],   // Nord
+    down:  [{ x: 8,  y: 55  }, { x: 42, y: 55  }],
+    up:    [{ x: 8,  y: 88  }, { x: 42, y: 88  }],
+    left:  [{ x: 8,  y: 121 }, { x: 42, y: 121 }],
+    right: [{ x: 8,  y: 154 }, { x: 42, y: 154 }],
 }
 
 function sheetBgPosition(cell: SpriteCell): string {
