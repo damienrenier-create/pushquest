@@ -2820,6 +2820,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
+        if (mapId === "yellow_entrance") sageSpotIdx = -1 // VIEUX SAGE : re-tire son spot à CHAQUE entrée à Ville Jaune → il bouge d'une visite à l'autre (plus « tout le temps au même endroit »)
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null, fishing: null }) // fishing null : garde-fou anti-session-bloquée à la transition de carte
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
