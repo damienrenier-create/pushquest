@@ -86,6 +86,64 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
     )
 }
 
+// FICHE d'une ESPÈCE-FUSION POSSÉDÉE (Dractriss/Voltriss/Draconvolt…) à son VRAI stade — lue depuis getSpecies
+//   (baseStats + learnset COMPLET + évolution), PAS recalculée depuis les parents. Sert au Fusiodex « Mes fusions »
+//   pour consulter la fiche de tes fusionnés, y compris les stades évolués.
+export function FusionSpeciesFiche({ speciesId, onClose }: { speciesId: string; onClose: () => void }) {
+    const [err, setErr] = useState(false)
+    const sp = getSpecies(speciesId)
+    if (!sp) return null
+    const bst = STAT_ROWS.reduce((s, [k]) => s + (sp.baseStats[k] ?? 0), 0)
+    const ring = sp.types[0] ? tc(sp.types[0]) : "#6a5a8a"
+    const CAP = 200
+    const evoName = sp.evolution ? (getSpecies(sp.evolution.toId)?.name ?? null) : null
+    const evoLevel = sp.evolution && sp.evolution.method.kind === "LEVEL" ? sp.evolution.method.level : null
+    return (
+        <div style={S.overlay} onClick={onClose}>
+            <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+                <div style={S.header}>
+                    <span style={S.no}>🐉 FUSION · N°{String(sp.dexNo).padStart(3, "0")}</span>
+                    <button style={S.close} onClick={onClose}>✕</button>
+                </div>
+                <div style={{ ...S.hero, boxShadow: `0 0 0 2px ${ring}55, 0 0 26px ${ring}55`, borderColor: ring }}>
+                    {sp.sprite && !err
+                        ? <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+                        : <span style={{ fontSize: 92 }}>🧬</span>}
+                </div>
+                <div style={S.name}>{sp.name.toUpperCase()}</div>
+                <div style={S.chips}>{sp.types.map((t) => <span key={t} style={{ ...S.chip, background: tc(t) }}>{t}</span>)}</div>
+                <div style={S.bst}>Total des stats : <b style={{ color: bst >= 500 ? "#f0c840" : "#d9b8ff" }}>{bst}</b></div>
+                <div style={S.stats}>
+                    {STAT_ROWS.map(([k, lbl]) => {
+                        const v = sp.baseStats[k] ?? 0
+                        const pct = Math.max(4, Math.min(100, (v / CAP) * 100))
+                        const col = v >= 130 ? "#7ee0a0" : v >= 90 ? "#e6d36a" : "#c79cff"
+                        return (
+                            <div key={k} style={S.statLine}>
+                                <span style={S.statLbl}>{lbl}</span>
+                                <span style={S.statVal}>{v}</span>
+                                <span style={S.statTrack}><span style={{ ...S.statFill, width: `${pct}%`, background: col }} /></span>
+                            </div>
+                        )
+                    })}
+                </div>
+                {evoName && <div style={S.evo}>🧬 Évolue en <b>{evoName}</b>{evoLevel ? ` au niveau ${evoLevel}` : ""}.</div>}
+                <div style={S.section}>⚔️ CAPACITÉS APPRISES</div>
+                <div style={S.learn}>
+                    {sp.learnset.map((l, i) => (
+                        <div key={`${l.level}-${l.moveId}-${i}`} style={S.learnRow}>
+                            <span style={S.learnLvl}>Niv {l.level}</span>
+                            <span>{getMove(l.moveId)?.name ?? l.moveId}</span>
+                        </div>
+                    ))}
+                </div>
+                <div style={S.note}>Stats de BASE de l'espèce. Au combat, elles se recalculent sur ton Daemon (niveau, EV/IV, Saiyan).</div>
+                <button style={S.doneBtn} onClick={onClose}>← Retour</button>
+            </div>
+        </div>
+    )
+}
+
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,6,14,0.93)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "14px 10px", fontFamily: "'Courier New', monospace" },
     sheet: { width: "100%", maxWidth: 440, background: "radial-gradient(700px 360px at 50% -6%, #2a1c50 0%, #170f28 55%, #0f0b18 100%)", border: "2px solid #6a5a8a", borderRadius: 16, padding: "12px 16px 18px", color: "#f3ecff", boxShadow: "0 12px 44px rgba(0,0,0,0.5)" },
@@ -109,4 +167,8 @@ const S: Record<string, React.CSSProperties> = {
     parents: { fontSize: 13, marginTop: 4, fontWeight: 700 },
     note: { fontSize: 10.5, opacity: 0.65, fontStyle: "italic", lineHeight: 1.45, marginTop: 12 },
     doneBtn: { width: "100%", marginTop: 12, background: "linear-gradient(180deg,#8a5ae0,#6a3ac8)", border: "1px solid #c79cff", borderRadius: 10, color: "#fff", fontFamily: "'Courier New', monospace", fontSize: 13, fontWeight: 800, padding: "9px", cursor: "pointer" },
+    evo: { textAlign: "center", fontSize: 11.5, marginTop: 10, padding: "6px 10px", borderRadius: 9, background: "rgba(36,29,56,0.55)", border: "1px solid #4a3a6a" },
+    learn: { marginTop: 4, background: "rgba(36,29,56,0.55)", borderRadius: 8, padding: "6px 11px", maxHeight: 230, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 },
+    learnRow: { display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" },
+    learnLvl: { opacity: 0.55, fontVariantNumeric: "tabular-nums" },
 }

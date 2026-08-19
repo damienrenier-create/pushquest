@@ -16,7 +16,7 @@ import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import { useFusionSprite } from "../useFusionSprite"
-import { FusionDetailView } from "../FusionDetailView"
+import { FusionDetailView, FusionSpeciesFiche } from "../FusionDetailView"
 import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 
 type Tab = "rules" | "official" | "mine"
@@ -135,6 +135,15 @@ export default function FusiodexClient() {
         return { ...f, aId, bId, sprite: off?.sprite ?? MISSINGNO_SPRITE, official: !!off?.sprite, aSprite: getSpecies(aId)?.sprite, bSprite: getSpecies(bId)?.sprite, displayName: off?.name ?? f.name }
     }), [player.fusionHistory])
 
+    // TES FUSIONNÉS POSSÉDÉS (équipe + PC) au STADE RÉEL (Dractriss/Voltriss/Draconvolt…) → fiche complète (BST + learnset).
+    const ownedFusions = useMemo(() => {
+        const box = [...player.team, ...player.pc]
+        const seen = new Map<string, ReturnType<typeof getSpecies>>()
+        for (const m of box) { const sp = getSpecies(m.speciesId); if (sp && sp.dexNo >= 500 && !seen.has(sp.id)) seen.set(sp.id, sp) }
+        return [...seen.values()].filter((sp): sp is NonNullable<typeof sp> => !!sp).sort((a, b) => a.dexNo - b.dexNo)
+    }, [player.team, player.pc])
+    const [fiche, setFiche] = useState<string | null>(null) // fiche d'espèce-fusion possédée (plein écran)
+
     // TRI de « Mes fusions » (défaut : plus récentes d'abord). Clic sur le tri actif = inverse le sens.
     const [sortKey, setSortKey] = useState<SortKey>("recent")
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
@@ -248,6 +257,27 @@ export default function FusiodexClient() {
                 ) : (
                     <div style={S.list}>
                         <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais. Le bouton <b>⚔️ Équiper</b> la charge dans ton équipe de Ligue (retrouve 2 Daemons possédés de ces espèces).</div>
+                        {ownedFusions.length > 0 && (
+                            <div style={{ background: "rgba(32,26,48,0.7)", border: "1px solid #6a5a8a", borderRadius: 10, padding: "9px 12px" }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, marginBottom: 8, color: "#d9b8ff" }}>🐉 TES FUSIONNÉS (stade actuel) — touche pour la fiche complète (BST + learnset)</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                    {ownedFusions.map((sp) => {
+                                        const bst = STAT_KEYS.reduce((s, k) => s + (sp.baseStats[k] ?? 0), 0)
+                                        const ring = sp.types[0] ? typeColor(sp.types[0]) : "#6a5a8a"
+                                        const hasSprite = !!sp.sprite && !sp.sprite.includes("missingno")
+                                        return (
+                                            <button key={sp.id} onClick={() => setFiche(sp.id)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(36,29,56,0.9)", border: `1px solid ${ring}`, borderRadius: 10, padding: "6px 10px 6px 6px", cursor: "pointer", color: "#f3ecff" }}>
+                                                <FusionSprite src={hasSprite ? sp.sprite : undefined} ring={ring} size={40} />
+                                                <span style={{ textAlign: "left" }}>
+                                                    <span style={{ display: "block", fontSize: 12, fontWeight: 900 }}>{sp.name}</span>
+                                                    <span style={{ display: "block", fontSize: 9.5, opacity: 0.7 }}>{sp.types.join(" / ")} · BST {bst}</span>
+                                                </span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
                         {equipMsg && <div style={{ ...S.equipMsg, background: equipMsg.ok ? "rgba(46,160,90,0.16)" : "rgba(200,60,60,0.14)", borderColor: equipMsg.ok ? "#2ea05a" : "#c83c3c", color: equipMsg.ok ? "#8ff0b5" : "#ffb0b0" }}>{equipMsg.text}</div>}
                         {created.length > 1 && (
                             <div style={S.sortBar}>
@@ -291,6 +321,7 @@ export default function FusiodexClient() {
                 )}
             </div>
             {detail && <FusionDetailView aId={detail.aId} bId={detail.bId} onClose={() => setDetail(null)} />}
+            {fiche && <FusionSpeciesFiche speciesId={fiche} onClose={() => setFiche(null)} />}
         </div>
     )
 }
