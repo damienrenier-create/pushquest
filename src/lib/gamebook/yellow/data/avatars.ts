@@ -10,11 +10,23 @@ export const EX_PLAYER_SKINS: Record<string, string> = {
     franss: "/yellow/sprites/npc_franss_gen3.png",
     embi: "/yellow/sprites/npc_embi_gen3.png",
 }
-/** Les avatars sélectionnables : 75 planches Sprite Forge de Sartay + les ex-skins de potes. Pool ROLL / catalogue / offre. */
+/** TENUES DE SURFEUR (7 planches) — nécessaires pour SURFER (cf. surferTrainer) : la Fashion Victim en propose au
+ *  moins une dès que le joueur approche des 150 espèces (≥145). Portées, elles débloquent le combat du surfeur + le surf. */
+export const SURF_OUTFITS: string[] = Array.from({ length: 7 }, (_, i) => `/yellow/sprites/surf_outfit_${i + 1}_gen3.png`)
+/** Un avatar (avec ou sans teinte) est-il une TENUE DE SURFEUR ? (base ∈ SURF_OUTFITS). */
+export function isSurfOutfit(p?: string | null): boolean {
+    return typeof p === "string" && SURF_OUTFITS.includes(avatarSheet(p))
+}
+
+/** Les avatars sélectionnables : 75 planches Sprite Forge + ex-skins de potes + 7 tenues surfeur. Pool ROLL / catalogue / offre. */
 export const FASHION_AVATARS: string[] = [
     ...Array.from({ length: 75 }, (_, i) => `/yellow/sprites/avatar_${i + 1}_gen3.png`),
     ...Object.values(EX_PLAYER_SKINS),
+    ...SURF_OUTFITS,
 ]
+
+/** Seuil (espèces distinctes capturées) à partir duquel la Fashion Victim GARANTIT ≥1 tenue de surfeur dans l'offre. */
+export const SURF_OUTFIT_DEX_HINT = 145
 
 /** Les 6 « looks » que le PNJ Fashion Victim arbore lui-même (tirés au hasard à chaque pop). */
 export const FASHION_VICTIM_SPRITES: string[] = Array.from({ length: 6 }, (_, i) => `/yellow/sprites/fashionvictim_${i + 1}_gen3.png`)
@@ -79,11 +91,17 @@ export function dailyFashionOffer(dayKey: number): string[] {
 }
 /** Offre PERSONNELLE : le tirage du jour, mais si le joueur a un EX-SKIN (ancien pote hardcodé), on le lui remet en
  *  2e place (slot index 1) pour qu'il puisse le racheter. Sinon = tirage normal. */
-export function personalFashionOffer(dayKey: number, nickname: string): string[] {
-    const base = dailyFashionOffer(dayKey)
+export function personalFashionOffer(dayKey: number, nickname: string, opts?: { includeSurf?: boolean }): string[] {
+    const offer = [...dailyFashionOffer(dayKey)]
     const ex = EX_PLAYER_SKINS[(nickname ?? "").trim().toLowerCase()]
-    if (ex && !base.includes(ex)) { const o = [...base]; o[1] = ex; return o }
-    return base
+    if (ex && !offer.includes(ex)) offer[1] = ex // ex-skin d'un pote → slot 2
+    // ≥1 TENUE DE SURFEUR garantie dès l'approche des 150 espèces (si aucune n'est déjà tirée). Slot 0 = le moins
+    //   cher (50 reps) → accessible pour progresser vers le surf. Graine dérivée → tenue variée par visite.
+    if (opts?.includeSurf && !offer.some((p) => SURF_OUTFITS.includes(p))) {
+        const rnd = mulberry32((dayKey >>> 0) ^ 0x51234)
+        offer[0] = SURF_OUTFITS[Math.floor(rnd() * SURF_OUTFITS.length)]
+    }
+    return offer
 }
 /** Après le GAG (canne offerte), la Fashion Victim arbore SA planche « relookée » fixe (elle a changé de skin, pas toi). */
 export const FASHION_POST_GAG_SPRITE = "/yellow/sprites/fashionvictim_6_gen3.png"

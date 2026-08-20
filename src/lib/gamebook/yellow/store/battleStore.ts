@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -36,7 +36,7 @@ import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SURFER_NPC_ID, SURFER_NAME, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
@@ -883,9 +883,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             recordPnj5Defeat()
             rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
         } else if (storeState.trainer.trainerId === SURFER_NPC_ID) {
-            // LE SURFEUR : « petit combat » ré-affrontable (PAS de markTrainerDefeated). La CT Surf se gagne au DÉFI
-            //   des 150 espèces (côté interaction), pas au combat → ici juste un mot amical post-victoire.
-            rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REMATCH_WIN_LINES] }
+            // LE SURFEUR : ré-affrontable (PAS de markTrainerDefeated). 1re VICTOIRE (le joueur portait forcément la
+            //   tenue → gate d'engagement côté interaction) → CT SURF. Ensuite : rematch amical 1×/jour (day-scopé).
+            if (!hasSurfCt()) {
+                grantSurfCt()
+                rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REWARD_LINES] }
+            } else {
+                markSurferRematchDone(new Date().toISOString().slice(0, 10))
+                rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REMATCH_WIN_LINES] }
+            }
         } else if (storeState.trainer.trainerId === ANANAS_TRAINER_ID) {
             // ANANAS (chercheur de baies) : le ticket a été consommé au LANCEMENT (gameStore.markAnanasStarted).
             //   VICTOIRE → récompense selon le run : rien (run 1), Baie Phénix (run 2/3), baie au hasard 20 % Phénix (run 4).

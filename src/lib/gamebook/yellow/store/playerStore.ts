@@ -903,10 +903,17 @@ export function grantCt(ctId: string): boolean {
 export function hasSurfCt(): boolean {
     return st.ownedCts.includes("ct66") || st.boughtCts.includes("ct66")
 }
-/** Octroie la CT SURF (cadeau du surfeur, 150 espèces). true si nouvellement remise (jamais un 2e don). */
+/** Octroie la CT SURF (cadeau du surfeur, à la 1re victoire). true si nouvellement remise (jamais un 2e don). */
 export function grantSurfCt(): boolean {
     if (hasSurfCt()) return false
     return grantCt("ct66")
+}
+/** Rematch quotidien du SURFEUR (post-CT) : dispo si pas déjà affronté aujourd'hui. Marqueur day-scopé (0 bloat). */
+export function surferRematchAvailableToday(day: string): boolean {
+    return !st.defeatedTrainers.includes(`surfer_rematch_${day}`)
+}
+export function markSurferRematchDone(day: string): void {
+    setDailyMarker("surfer_rematch_", `surfer_rematch_${day}`)
 }
 
 /** Remplace l'équipe (utilisé pour resynchroniser après un combat : XP/PV/niveaux). */

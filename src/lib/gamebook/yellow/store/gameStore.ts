@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -49,10 +49,10 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, A
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_TEAM_LEVEL, SURFER_DEX_THRESHOLD, surferChallengeLines, SURFER_REWARD_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES } from "../data/surferTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_DEX_THRESHOLD, SURFER_CHALLENGE_LINES, SURFER_NEED_OUTFIT_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -1042,6 +1042,11 @@ const SURF_MOVE_ID = "surf"
 function teamKnowsSurf(): boolean {
     return getPlayerSave().team.some((m) => m.moves.some((mv) => mv.moveId === SURF_MOVE_ID))
 }
+/** Le joueur porte-t-il une TENUE DE SURFEUR ? (requis pour surfer — sinon nudge « pas la bonne tenue »). */
+function wearsSurfOutfit(): boolean { return isSurfOutfit(getPlayerSave().chosenAvatar) }
+/** Peut-il RÉELLEMENT surfer ? Il faut CONNAÎTRE Surf (CT) ET porter une tenue de surfeur. */
+function canSurfNow(): boolean { return teamKnowsSurf() && wearsSurfOutfit() }
+const SURF_NO_OUTFIT_LINES = ["Hmm… tu sais surfer, mais tu n'es pas franchement en tenue pour ça.", "Passe voir la FASHION VICTIM : sans une tenue de surfeur digne de ce nom, pas question de te jeter à l'eau ! 🏄"]
 
 // DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
 function tryLaunchOrcaline(): ActiveDialogue | null {
@@ -1069,10 +1074,13 @@ function tryLaunchSurfer(): ActiveDialogue | null {
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lineIndex: 0, lines: SURFER_NO_TEAM_LINES }
     }
+    // Niveau calé sur la MOYENNE de l'équipe du joueur, ±6 tiré au hasard sur CHAQUE Daemon (pas de coup fourré).
+    const avg = Math.max(5, Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length)))
     const enemyTeam = SURFER_TEAM.map((id) => {
-        const auto = (getSpecies(id)?.learnset ?? []).filter((l) => l.level <= SURFER_TEAM_LEVEL).map((l) => l.moveId)
+        const lvl = Math.max(2, Math.min(100, avg + (Math.floor(Math.random() * 13) - 6))) // avg + [-6..+6]
+        const auto = (getSpecies(id)?.learnset ?? []).filter((l) => l.level <= lvl).map((l) => l.moveId)
         const moveIds = [...auto.slice(-3), "surf"] // 3 attaques naturelles + SURF garanti (slice(-4) le conserve)
-        return createMonInstance(id, SURFER_TEAM_LEVEL, { owned: false, moveIds, ...trainerBoost(id, SURFER_TEAM_LEVEL, "guard") })
+        return createMonInstance(id, lvl, { owned: false, moveIds, ...trainerBoost(id, lvl, "guard") })
     })
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: SURFER_NPC_ID, reward: 0, aiLevel: "trainer" })
@@ -1366,7 +1374,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().fishing || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
-        const next = tryMove(player, dir, map, { canSurf: teamKnowsSurf() })
+        const next = tryMove(player, dir, map, { canSurf: canSurfNow() })
+
+        // SURF SANS TENUE : le joueur connaît Surf mais n'est pas en tenue de surfeur → l'eau reste bloquante + nudge
+        //   (va t'équiper chez la Fashion Victim). Uniquement s'il a VRAIMENT tenté d'entrer dans l'eau (case face = eau).
+        if (next.posX === player.posX && next.posY === player.posY && teamKnowsSurf() && !wearsSurfOutfit() && get().dialogue == null) {
+            const fx = player.posX + (dir === "left" ? -1 : dir === "right" ? 1 : 0)
+            const fy = player.posY + (dir === "up" ? -1 : dir === "down" ? 1 : 0)
+            if (map.tiles[fy]?.[fx] === "water" && map.id !== "yellow_aqua_arena") {
+                set({ player: { ...player, direction: next.direction }, dialogue: { npcId: "surf_outfit", npcName: "SURF", lineIndex: 0, lines: SURF_NO_OUTFIT_LINES } })
+                return
+            }
+        }
 
         // Les PNJ ne sont JAMAIS traversables : si la case cible est occupée par un
         // PNJ, on tourne sur place (comme un mur). tryMove ne connaît pas les PNJ.
@@ -1764,6 +1783,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 //   le joueur APPROCHE le PNJ pour combattre (pressA) ou RESSORT par l'échelle sans risquer de tentative.
                 const enteringUkognofyChamber = targetMapId === UKOGNOFY_CHAMBER_MAP
                 if (enteringUkognofyChamber) ukognofyChamberFought = false // reset par visite
+                // ÎLE ÉMERAUDE — arrivée AVANT 150 espèces : présage « quelque chose de puissant… mais pas maintenant »
+                //   (Galijah ne pope qu'à partir de 150 espèces distinctes ; on entre quand même, on peut explorer).
+                const islandTooEarly = targetMapId === "yellow_ile_emeraude" && getActiveWorld() !== "replay" && getPokedex().caught.length < SURFER_DEX_THRESHOLD
                 const ukognofyFails = enteringUkognofyChamber ? ukognofyFailCount(isTrainerDefeated) : 0
                 const ukognofyAutoAmbush = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated)
                     && ukognofyFails === 0 && getPlayerSave().team.some((m) => m.currentHp > 0)
@@ -1784,6 +1806,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     } : ukognofyWarn ? {
                         // 2ᵉ visite+ : avertissement d'enjeu + rappel du choix APPROCHER / RESSORTIR (pas de combat auto).
                         npcId: UKOGNOFY_NPC_ID, npcName: "UKOGNOFY", lineIndex: 0, lines: ukognofyWarnLines(ukognofyRemainingTries(isTrainerDefeated)),
+                    } : islandTooEarly ? {
+                        npcId: "y_ile_presage", npcName: "🌊 ÎLE ÉMERAUDE", lineIndex: 0, lines: ISLAND_TOO_EARLY_LINES,
                     } : null,
                 })
                 // UKOGNOFY — 1ʳᵉ visite (0 échec) : EMBUSCADE, le légendaire surgit immédiatement (strict, Fusio-Ball).
@@ -1872,6 +1896,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const gTeam = getPlayerSave().team
                 const gAvg = gTeam.length ? Math.round(gTeam.reduce((s, m) => s + m.level, 0) / gTeam.length) : 40
                 poseGalijahEncounter(gAvg); persistYellowSave(); galijahStepsLeft = -1
+            }
+        }
+        // ÎLE ÉMERAUDE — LANCEMENT DIRECT de Galijah sur l'herbe haute : le bloc sauvage normal ci-dessous ne se
+        //   déclenche PAS ici (l'île n'a AUCUNE entrée ZONES → rollWildEncounter renvoie null), donc on consomme la
+        //   rencontre forcée à la main. Aucune autre espèce ne pop sur l'île — SEULE Galijah, et seulement dès 150 esp.
+        if (moved && map.id === "yellow_ile_emeraude" && isWildTile && !combatLockedByDebt() && getActiveWorld() !== "replay") {
+            const forcedRaw = getPlayerSave().forcedEncounter
+            if (forcedRaw) {
+                try {
+                    const fe = JSON.parse(forcedRaw) as { speciesId?: string; level?: number; hard?: boolean }
+                    const gTeam = getPlayerSave().team
+                    if (fe?.speciesId === "galijah" && getSpecies("galijah") && gTeam.some((m) => m.currentHp > 0)) {
+                        const gspawn = buildForcedSpawn("galijah", fe.level ?? 50, !!fe.hard)
+                        clearForcedEncounter(); persistYellowSave()
+                        set({ encounterCooldown: 1 })
+                        startWildBattle(gTeam, [gspawn], Math.floor(Math.random() * 1e9) >>> 0)
+                        return
+                    }
+                } catch { /* JSON invalide → ignoré (le forcé reste, retentera) */ }
             }
         }
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
@@ -2165,6 +2208,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
         }
 
+        // 🌴 PALMIER DE L'ÎLE ÉMERAUDE : de temps en temps (≈1 jour sur 3) une BAIE PHÉNIX y mûrit. Face au palmier
+        //    (12,14) + A → 1 récolte/jour. Marqueur day-scopé (setDailyMarker → 0 bloat). Aucune autre chose ne pousse ici.
+        if (player.mapId === "yellow_ile_emeraude") {
+            const front = getFacingTile(player)
+            if (front.x === 12 && front.y === 14) {
+                const day = new Date().toISOString().slice(0, 10)
+                if (isTrainerDefeated(`ile_palm_${day}`)) {
+                    set({ dialogue: { npcId: "ile_palm", npcName: "🌴 Palmier", lineIndex: 0, lines: ["Tu as déjà secoué le palmier aujourd'hui. Reviens un autre jour ! 🌴"] } })
+                    return
+                }
+                if (Math.floor(Date.now() / 86_400_000) % 3 === 0) { // « de temps en temps » (déterministe, ~1j/3)
+                    setDailyMarker("ile_palm_", `ile_palm_${day}`); addItem("baie_phenix", 1); persistYellowSave()
+                    set({ dialogue: { npcId: "ile_palm", npcName: "🌴 Palmier", lineIndex: 0, lines: [
+                        "Tu secoues le palmier… 🔥 une BAIE PHÉNIX bien mûre te tombe dans les mains !",
+                        "Une fois en combat : survit à 1 PV au lieu de tomber K.O. Fais-la tenir à un Daemon (fiche → objet tenu).",
+                    ] } })
+                    return
+                }
+                set({ dialogue: { npcId: "ile_palm", npcName: "🌴 Palmier", lineIndex: 0, lines: ["Le palmier se balance dans la brise iodée… rien de mûr aujourd'hui. Reviens un autre jour ! 🌴"] } })
+                return
+            }
+        }
+
         // 🍒 ARBRE FERTILE (post-Ligue) : face à un arbre portant une baie AUJOURD'HUI → A la récolte (→ sac).
         //    Gate : secret des baies connu (Druide run 2 / assistant CHEN). Cartes : Route Nord & Ville Jaune.
         if (isBerrySecretKnown() && BERRY_MAP_IDS.includes(player.mapId)) {
@@ -2307,7 +2373,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // TIRAGE ALÉATOIRE À CHAQUE VISITE (≠ tirage du jour identique pour tous) → chacun tombe sur des skins
             //   différents, c'est plus drôle. Tiré UNE fois ici + partagé au picker (fashionOffer) pour rester cohérent
             //   (la 1re tenue forcée = slot 0 de ce que la boutique affichera).
-            const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname())
+            const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname(), { includeSurf: getPokedex().caught.length >= SURF_OUTFIT_DEX_HINT })
             const cur = getPlayerSave().chosenAvatar
             if (cur) { set({ fashionOpen: true, fashionOffer: offer }); return } // a déjà un skin → boutique
             if (getPlayerSave().reps < FASHION_PRICES[0]) {
@@ -2682,19 +2748,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // LE SURFEUR (Route Nord, post-Sylvebarbe) : défi 150 espèces → CT SURF. Déjà la CT → petit combat amical ;
-        //   150 atteintes → remet la CT (une fois) ; sinon → défi (progression) + petit combat à la fermeture.
+        // LE SURFEUR (Route Nord, post-Sylvebarbe) : n'engage le combat QUE si le joueur porte une TENUE DE SURFEUR.
+        //   1re victoire → CT Surf (géré en battleStore). Ensuite : rematch amical 1×/jour. (Le seuil 150 ne concerne
+        //   QUE le pop de Galijah sur l'île, pas la CT.)
         if (npc.id === SURFER_NPC_ID) {
             if (hasSurfCt()) {
+                if (!surferRematchAvailableToday(new Date().toISOString().slice(0, 10))) {
+                    set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_TODAY_LINES, lineIndex: 0 } })
+                    return
+                }
                 set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_LINES, lineIndex: 0 }, pendingSurfer: true })
                 return
             }
-            if (getPokedex().caught.length >= SURFER_DEX_THRESHOLD) {
-                grantSurfCt(); persistYellowSave() // CT Surf remise (grantSurfCt idempotent : jamais un 2e don)
-                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_REWARD_LINES, lineIndex: 0 } })
+            if (!wearsSurfOutfit()) { // pas de tenue → il attend patiemment que le joueur s'équipe (Fashion Victim)
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_NEED_OUTFIT_LINES, lineIndex: 0 } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: surferChallengeLines(getPokedex().caught.length), lineIndex: 0 }, pendingSurfer: true })
+            set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_CHALLENGE_LINES, lineIndex: 0 }, pendingSurfer: true })
             return
         }
 

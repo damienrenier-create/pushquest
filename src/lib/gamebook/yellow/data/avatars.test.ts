@@ -4,6 +4,7 @@ import {
     FASHION_AVATARS, avatarSheet, avatarFilter, encodeAvatar, parseAvatarTint, rollAvatarTint, isValidAvatar,
     FASHION_PRICES, FASHION_CATALOG_PRICE, dailyFashionOffer, fashionDayKey,
     EX_PLAYER_SKINS, personalFashionOffer, randomFashionSeed,
+    SURF_OUTFITS, isSurfOutfit,
 } from "./avatars"
 
 const BASE = FASHION_AVATARS[0]
@@ -105,6 +106,34 @@ describe("avatars — ex-skins & offre perso", () => {
     it("un joueur sans ex-skin garde le tirage normal", () => {
         const day = fashionDayKey(1_755_600_000_000)
         expect(personalFashionOffer(day, "sartay")).toEqual(dailyFashionOffer(day))
+    })
+})
+
+describe("avatars — TENUES DE SURFEUR", () => {
+    it("les 7 tenues surfeur sont au pool + valides", () => {
+        expect(SURF_OUTFITS).toHaveLength(7)
+        for (const url of SURF_OUTFITS) {
+            expect(FASHION_AVATARS).toContain(url)
+            expect(isValidAvatar(url)).toBe(true)
+        }
+    })
+    it("isSurfOutfit : true pour une tenue surf (avec/sans teinte), false pour un avatar normal", () => {
+        expect(isSurfOutfit(SURF_OUTFITS[0])).toBe(true)
+        expect(isSurfOutfit(encodeAvatar(SURF_OUTFITS[0], 120, 1.2, 1))).toBe(true) // avec teinte
+        expect(isSurfOutfit(FASHION_AVATARS[0])).toBe(false) // avatar_1 (pas une tenue surf)
+        expect(isSurfOutfit(undefined)).toBe(false)
+        expect(isSurfOutfit(null)).toBe(false)
+    })
+    it("includeSurf GARANTIT ≥1 tenue surf dans l'offre (sinon aucune garantie)", () => {
+        for (let k = 0; k < 30; k++) {
+            const offer = personalFashionOffer(randomFashionSeed(), "sartay", { includeSurf: true })
+            expect(offer.some((p) => isSurfOutfit(p))).toBe(true)
+            expect(offer).toHaveLength(5)
+        }
+    })
+    it("sans includeSurf, l'offre reste le tirage normal (identité préservée pour une graine donnée)", () => {
+        const day = fashionDayKey(1_755_600_000_000)
+        expect(personalFashionOffer(day, "sartay", { includeSurf: false })).toEqual(personalFashionOffer(day, "sartay"))
     })
 })
 
