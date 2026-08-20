@@ -1060,8 +1060,8 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
         // Statut résiduel
         const res = Status.residualDamage(mon.status, maxHpOf(mon), displayName(mon), mon.statusCounter)
         if (res.damage > 0) {
+            if (res.message) events.push({ kind: "message", text: res.message }) // ANNONCE le statut AVANT les dégâts (ordre naturel : « X souffre du poison » PUIS la barre de PV baisse)
             applyDamage(state, side, res.damage, events, /*breaksFocus*/ false)
-            if (res.message) events.push({ kind: "message", text: res.message })
             if (mon.status === "TOXIC") mon.statusCounter += 1
         }
         // Vampigraine (SEEDED) : draine vers l'adversaire
