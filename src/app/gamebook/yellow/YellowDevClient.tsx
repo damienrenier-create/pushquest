@@ -77,7 +77,9 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons } from "@/lib/gamebook/yellow/store/playerStore"
+import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
+import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
 import EspionPanel from "./EspionPanel"
 import TrocPanel from "./TrocPanel"
@@ -677,6 +679,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (pairs.length) void prefetchFusionSprites(pairs)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [player.fusionRoster, player.team, player.pc])
+    // AUTO-GÉNÉRATION des sprites de STADES ÉVOLUÉS de fusion POSSÉDÉS (S2→S5 sans sprite maison) : le joueur les a
+    //   obtenus par évolution → engagement → on génère (chaîné depuis le stade précédent). GET-first (gratuit) puis
+    //   POST (facturé, plafonné). À résolution : ré-enregistre les espèces (injecte l'URL dans getSpecies) + rafraîchit.
+    //   Couvre AUSSI les possédés d'avant la feature (l'effet tourne au montage + à chaque changement d'équipe/PC).
+    const [, bumpEvoSprites] = useState(0)
+    useEffect(() => {
+        const ids = [...player.team, ...player.pc].map((m) => m.speciesId).filter((id) => isEvolvedFusionStage(id) && fusionStageNeedsGenSprite(id))
+        if (!ids.length) return
+        void syncOwnedEvoSprites(ids).then((changed) => { if (changed) { reregisterCustomDaemons(); bumpEvoSprites((n) => n + 1) } })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [player.team, player.pc])
     const challenge = useCasinoChallenge({
         // Borne Kart ouverte → on ne REÇOIT plus de défi (sinon combat PvP invisible sous la course,
         // forfait fantôme au démontage). Réciproque : on bloque l'ouverture de la borne si un défi/combat

@@ -12,6 +12,7 @@ import { NEMESIS_ARMED_MARKER } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
+import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
@@ -434,7 +435,9 @@ export function reregisterCustomDaemons(): void {
     // FUSIONS DE BASE PERMANENTES (Grotte du Nexus) : enregistrées comme espèces custom → résolvables (getSpecies /
     //   createMonInstance) pour les rencontres sauvages, MAIS invisibles du Pokédex principal (visibleDexSpecies
     //   n'itère que SPECIES, jamais le registre custom) → anti-spoiler par construction. Le Fusiodex les listera à part.
-    registerCustomSpecies(FUSION_BASE_SPECIES)
+    // Injecte le sprite GÉNÉRÉ des stades évolués (auto-gen chaîné) s'il est déjà résolu en mémoire → getSpecies().sprite
+    //   le renvoie partout (combat/équipe/PC/fiche). Sinon on garde le sprite déclaré (maison ou MissingNo placeholder).
+    registerCustomSpecies(FUSION_BASE_SPECIES.map((s) => { const u = getEvoSpriteFromMemory(s.id); return u ? { ...s, sprite: u } : s }))
     registerCustomSpecies([UKOGNOFY_SPECIES]) // légendaire ultime : espèce permanente (capture keepable, hors dex principal)
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
 }
