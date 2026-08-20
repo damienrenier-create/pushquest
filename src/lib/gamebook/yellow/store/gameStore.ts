@@ -51,7 +51,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLU
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, fashionDayKey, fashionRevertCost } from "../data/avatars"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -434,6 +434,7 @@ interface GameStore {
     daemomaniaqueOpen: boolean // DAEMOMANIAQUE (Cendreville, post run 3) : guide de capture « où/quand/comment »
     sageOpen: boolean // VIEUX SAGE SAIYAN (Ville Jaune, spot aléatoire 1×/jour) : respec des points Saiyan
     fashionOpen: boolean // FASHION VICTIM (Grotte 1F, Mools) : sélecteur d'avatar
+    fashionOffer: string[] // 5 tenues TIRÉES À LA VISITE (aléatoire, ≠ tirage du jour) — partagé store↔picker le temps du passage
     artisaneOpen: boolean // L'ARTISANE (Grotte 1F) : panneau de forge d'objet signature
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
@@ -1166,6 +1167,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     daemomaniaqueOpen: false,
     sageOpen: false,
     fashionOpen: false,
+    fashionOffer: [],
     artisaneOpen: false,
     labOpen: false,
     moveReminderOpen: false,
@@ -2259,15 +2261,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (FV_RESET_NICKS.has(getCurrentNickname().trim().toLowerCase()) && !isTrainerDefeated(FV_RESET_MARKER)) {
                 markTrainerDefeated(FV_RESET_MARKER); setChosenAvatar(undefined); persistYellowSave()
             }
+            // TIRAGE ALÉATOIRE À CHAQUE VISITE (≠ tirage du jour identique pour tous) → chacun tombe sur des skins
+            //   différents, c'est plus drôle. Tiré UNE fois ici + partagé au picker (fashionOffer) pour rester cohérent
+            //   (la 1re tenue forcée = slot 0 de ce que la boutique affichera).
+            const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname())
             const cur = getPlayerSave().chosenAvatar
-            if (cur) { set({ fashionOpen: true }); return } // a déjà un skin → boutique
+            if (cur) { set({ fashionOpen: true, fashionOffer: offer }); return } // a déjà un skin → boutique
             if (getPlayerSave().reps < FASHION_PRICES[0]) {
                 set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]} reps et je m'occupe de ton cas. »`] } })
                 return
             }
-            const offer0 = personalFashionOffer(fashionDayKey(Date.now()), getCurrentNickname())[0]
-            const r = get().buyFashionOutfit(offer0, FASHION_PRICES[0]) // pose la 1re tenue + gag/canne (1re fois du run)
-            if (r.ok && get().dialogue == null) set({ fashionOpen: true }) // pas de gag (canne déjà là) → ouvre la boutique
+            const r = get().buyFashionOutfit(offer[0], FASHION_PRICES[0]) // pose la 1re tenue + gag/canne (1re fois du run)
+            if (r.ok && get().dialogue == null) set({ fashionOpen: true, fashionOffer: offer }) // pas de gag (canne déjà là) → ouvre la boutique
             return
         }
         // L'ARTISANE (Grotte 1F) : ouvre le panneau de forge d'objet signature.

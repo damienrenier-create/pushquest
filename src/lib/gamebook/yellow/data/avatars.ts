@@ -64,8 +64,12 @@ function mulberry32(seed: number) {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296
     }
 }
-/** Clé de jour (entier) à partir d'un timestamp ms → change à minuit UTC. */
+/** Clé de jour (entier) à partir d'un timestamp ms → change à minuit UTC. (Legacy : plus utilisée pour l'offre.) */
 export function fashionDayKey(nowMs: number): number { return Math.floor(nowMs / 86_400_000) }
+/** Graine ALÉATOIRE tirée à CHAQUE VISITE chez la Fashion Victim (≠ tirage du jour identique pour tous). Chaque
+ *  passage propose donc des skins DIFFÉRENTS → variété entre joueurs (sinon tout le monde finit avec le même skin,
+ *  pas drôle). Runtime only (Math.random) ; les fonctions d'offre restent PURES/déterministes pour une graine donnée. */
+export function randomFashionSeed(): number { return Math.floor(Math.random() * 0x1_0000_0000) >>> 0 }
 /** Les 5 tenues du JOUR (déterministe par `dayKey`) — mélange Fisher-Yates seedé, puis on prend les 5 premières. */
 export function dailyFashionOffer(dayKey: number): string[] {
     const rnd = mulberry32(dayKey >>> 0)

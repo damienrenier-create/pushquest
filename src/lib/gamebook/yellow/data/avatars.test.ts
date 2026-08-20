@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest"
 import {
     FASHION_AVATARS, avatarSheet, avatarFilter, encodeAvatar, parseAvatarTint, rollAvatarTint, isValidAvatar,
     FASHION_PRICES, FASHION_CATALOG_PRICE, dailyFashionOffer, fashionDayKey,
-    EX_PLAYER_SKINS, personalFashionOffer,
+    EX_PLAYER_SKINS, personalFashionOffer, randomFashionSeed,
 } from "./avatars"
 
 const BASE = FASHION_AVATARS[0]
@@ -70,6 +70,22 @@ describe("avatars — économie (reps)", () => {
         expect(fashionDayKey(0)).toBe(0)
         expect(fashionDayKey(86_400_000 - 1)).toBe(0)
         expect(fashionDayKey(86_400_000)).toBe(1)
+    })
+    it("randomFashionSeed : uint32, et une offre par graine reste 5 tenues valides distinctes", () => {
+        for (let k = 0; k < 20; k++) {
+            const seed = randomFashionSeed()
+            expect(Number.isInteger(seed)).toBe(true)
+            expect(seed).toBeGreaterThanOrEqual(0)
+            expect(seed).toBeLessThanOrEqual(0xffffffff)
+            const o = personalFashionOffer(seed, "sartay")
+            expect(o).toHaveLength(5)
+            expect(new Set(o).size).toBe(5)
+            for (const url of o) expect(FASHION_AVATARS).toContain(url)
+        }
+    })
+    it("le tirage À LA VISITE varie (plusieurs graines → offres différentes, pas toutes identiques)", () => {
+        const offers = Array.from({ length: 12 }, () => personalFashionOffer(randomFashionSeed(), "sartay").join("|"))
+        expect(new Set(offers).size).toBeGreaterThan(1) // variété entre visites/joueurs (sinon tout le monde le même skin)
     })
 })
 

@@ -3,7 +3,7 @@
 // src/app/gamebook/yellow/FashionPicker.tsx
 //
 // FASHION VICTIM — BOUTIQUE de tenues (paie en REPS ⚡ ; les Jetons de Combat n'existent qu'en post-run-3).
-//   • TENUES DU JOUR : 5 planches tirées (déterministe/jour), prix par rang 50/100/200/300/400 reps.
+//   • TENUES DU MOMENT : 5 planches tirées AU HASARD À CHAQUE VISITE (variété entre joueurs), prix par rang 50→400 reps.
 //   • CATALOGUE COMPLET : n'importe quelle planche du pool pour 1000 reps.
 //   • TEINTE : curseurs Teinte/Éclat/Lumière — GRATUIT (surcouche couleur sur la tenue actuelle).
 // Au 1ER ACHAT du run : gag non-skippable + cadeau de la CANNE (géré côté store).
@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, personalFashionOffer, fashionDayKey, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
+import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, personalFashionOffer, randomFashionSeed, FASHION_DAILY_COUNT, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
 import { getCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86", ACCENT = "#e050a0"
@@ -50,7 +50,10 @@ export default function FashionPicker() {
     // Resync la teinte locale quand la BASE change (un achat pose une base « propre », teinte neutre).
     useEffect(() => { const t = parseAvatarTint(cur); setH(t.h); setS(t.s); setB(t.b) }, [curBase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const offer = useMemo(() => personalFashionOffer(fashionDayKey(Date.now()), getCurrentNickname()), [])
+    // Offre tirée à la visite (aléatoire, partagée par le store) → chacun voit des skins différents. Repli défensif :
+    //   si le store n'a rien posé (ouverture inattendue), on tire une offre aléatoire locale.
+    const storeOffer = useGameStore((s) => s.fashionOffer)
+    const offer = useMemo(() => (storeOffer.length >= FASHION_DAILY_COUNT ? storeOffer : personalFashionOffer(randomFashionSeed(), getCurrentNickname())), [storeOffer])
     const filter = filterOf(h, s, b)
     const previewBase = curBase ?? offer[0]
 
@@ -92,7 +95,7 @@ export default function FashionPicker() {
                     </div>
 
                     {/* TENUES DU JOUR — 5 tirées, prix par rang */}
-                    <div style={{ fontSize: 11, color: INK, fontWeight: 800, margin: "14px 0 6px" }}>👗 TENUES DU JOUR <span style={{ fontWeight: 600, opacity: 0.65 }}>· en ⚡ reps</span></div>
+                    <div style={{ fontSize: 11, color: INK, fontWeight: 800, margin: "14px 0 6px" }}>👗 TENUES DU MOMENT <span style={{ fontWeight: 600, opacity: 0.65 }}>· tirage au hasard · en ⚡ reps</span></div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                         {offer.map((url, i) => {
                             const price = FASHION_PRICES[i], owned = curBase === url, afford = player.reps >= price
