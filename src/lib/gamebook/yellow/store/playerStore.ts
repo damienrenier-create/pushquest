@@ -1370,6 +1370,20 @@ export function isGalijahArmed(): boolean {
     const caught = getPokedex().caught
     return caught.length >= GALIJAH_CAPTURE_THRESHOLD && !caught.includes("galijah")
 }
+export const GALIJAH_APPEARED_MARKER = "galijah_appeared"    // Galijah A DÉJÀ apparu sur l'île → re-gated jusqu'à 200 espèces
+export const GALIJAH_REAPPEAR_THRESHOLD = 200                // espèces distinctes pour qu'il REVIENNE après une 1re apparition manquée
+/** GALIJAH — peut-il APPARAÎTRE sur l'île MAINTENANT ? Pas capturé, ≥150 espèces, ET (jamais apparu OU ≥200 espèces).
+ *  (Le tirage 25 %/combat + « jamais au 1er combat du jour » est côté gameStore.) */
+export function galijahCanAppear(): boolean {
+    const dex = getPokedex().caught
+    if (dex.includes("galijah") || dex.length < GALIJAH_CAPTURE_THRESHOLD) return false
+    if (st.defeatedTrainers.includes(GALIJAH_APPEARED_MARKER) && dex.length < GALIJAH_REAPPEAR_THRESHOLD) return false
+    return true
+}
+/** GALIJAH — marque qu'il vient d'APPARAÎTRE (→ re-gated jusqu'à 200 espèces s'il n'est pas capturé). Idempotent. */
+export function markGalijahAppeared(): void {
+    if (!st.defeatedTrainers.includes(GALIJAH_APPEARED_MARKER)) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_APPEARED_MARKER] }; emit() }
+}
 /** GALIJAH — désarme la chasse (une fois le spawn forcé posé, ou après capture/fuite). */
 export function disarmGalijah() {
     if (!st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) return

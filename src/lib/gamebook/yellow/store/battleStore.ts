@@ -59,7 +59,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { armGalijahByDex, grantGalijahIfDexMilestone, grantMegamonarx, hasMegamonarx } from "./playerStore"
+import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
@@ -299,10 +299,10 @@ export function dispatchBattleInput(a: BattleInput) {
 // Actions (mutent l'état via le moteur pur)
 // ============================================================
 
-export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
+export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, opts?: { fleeChance?: number }) {
     // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance(), playerBadgeCount: getPlayer().badges.length })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
@@ -620,11 +620,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
-            // 🐈‍⬛ GALIJAH : à 150 ESPÈCES DIFFÉRENTES au Pokédex → arme sa chasse (spawn posé par gameStore) ; puis
-            //   cadeau de secours au 200ᵉ dex. Le SPAWN ne s'arme JAMAIS en bulle de REJEU (jetable) : sinon Galijah
-            //   surgirait dans un monde jeté à la sortie → légendaire perdu. (Le décompte, lui, compte quand même les
-            //   espèces vues en rejeu : markCaught marque le dex GLOBAL, non gaté — « au total, peu importe la manière ».)
-            if (getActiveWorld() !== "replay") { armGalijahByDex(); grantGalijahIfDexMilestone() }
+            // 🐈‍⬛ GALIJAH : à 150 ESPÈCES → arme sa chasse (décompte UI). Il se CAPTURE sur l'ÎLE ÉMERAUDE (rencontre
+            //   25 %/combat, cf. gameStore) — plus de CADEAU au 200ᵉ dex (grantGalijahIfDexMilestone RETIRÉ) : à 200 il
+            //   RÉAPPARAÎT sur l'île s'il avait été manqué. (Le dex global compte même les espèces vues en rejeu.)
+            if (getActiveWorld() !== "replay") armGalijahByDex()
         }
     }
 

@@ -57,9 +57,14 @@ export default function FashionPicker() {
     const filter = filterOf(h, s, b)
     const previewBase = curBase ?? offer[0]
 
-    const doBuy = (base: string, price: number) => {
-        const r = buy(base, price)
+    // ACHAT en 2 temps : clic sur une tenue → CONFIRMATION (aperçu + prix) → seulement alors on dépense les reps.
+    const [pendingBuy, setPendingBuy] = useState<{ base: string; price: number } | null>(null)
+    const askBuy = (base: string, price: number) => { if (curBase === base) return; setMsg(null); setPendingBuy({ base, price }) } // déjà porté → no-op
+    const confirmBuy = () => {
+        if (!pendingBuy) return
+        const r = buy(pendingBuy.base, pendingBuy.price)
         setMsg(r.ok ? null : (r.reason ?? "Impossible."))
+        setPendingBuy(null)
     }
     const revertsDone = player.defeatedTrainers.filter((t) => t.startsWith(FASHION_REVERT_MARKER)).length
     const revertCost = fashionRevertCost(revertsDone)
@@ -100,7 +105,7 @@ export default function FashionPicker() {
                         {offer.map((url, i) => {
                             const price = FASHION_PRICES[i], owned = curBase === url, afford = player.reps >= price
                             return (
-                                <button key={url} onClick={() => doBuy(url, price)} disabled={!afford && !owned} title={`${price} reps`}
+                                <button key={url} onClick={() => askBuy(url, price)} disabled={!afford && !owned} title={`${price} reps`}
                                     style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: 5, background: "#fff8e8", border: `2px solid ${owned ? ACCENT : DARK}`, borderRadius: 8, cursor: afford || owned ? "pointer" : "not-allowed", opacity: afford || owned ? 1 : 0.5 }}>
                                     <div style={cellStyle(url, 42, "")} />
                                     <span style={{ fontSize: 9.5, fontWeight: 800, color: owned ? ACCENT : afford ? INK : "#a33" }}>{owned ? "✓ à toi" : `${price}⚡`}</span>
@@ -118,7 +123,7 @@ export default function FashionPicker() {
                             {FASHION_AVATARS.map((url) => {
                                 const owned = curBase === url, afford = player.reps >= FASHION_CATALOG_PRICE
                                 return (
-                                    <button key={url} onClick={() => doBuy(url, FASHION_CATALOG_PRICE)} disabled={!afford && !owned} title={`${FASHION_CATALOG_PRICE} reps`}
+                                    <button key={url} onClick={() => askBuy(url, FASHION_CATALOG_PRICE)} disabled={!afford && !owned} title={`${FASHION_CATALOG_PRICE} reps`}
                                         style={{ padding: 3, background: "#fff8e8", border: `2px solid ${owned ? ACCENT : DARK}`, borderRadius: 6, cursor: afford || owned ? "pointer" : "not-allowed", opacity: afford || owned ? 1 : 0.55 }}>
                                         <div style={cellStyle(url, 34, "")} />
                                     </button>
@@ -130,16 +135,36 @@ export default function FashionPicker() {
                     <button onClick={doReset} style={resetBtn}>↩︎ Revenir au look par défaut ({revertCost} reps)</button>
                 </div>
                 <button onClick={close} style={closeBtn}>FERMER</button>
+                {/* CONFIRMATION D'ACHAT : aperçu + prix avant de dépenser les reps. */}
+                {pendingBuy && (
+                    <div onClick={() => setPendingBuy(null)} style={confirmOverlay}>
+                        <div onClick={(e) => e.stopPropagation()} style={confirmBox}>
+                            <div style={{ padding: 8, background: "#fff8e8", border: `2px solid ${ACCENT}`, borderRadius: 10 }}>
+                                <div style={cellStyle(pendingBuy.base, 66, "")} />
+                            </div>
+                            <div style={{ fontSize: 13, color: INK, textAlign: "center", fontWeight: 700, lineHeight: 1.4 }}>
+                                Adopter cette tenue pour <b style={{ color: "#a05" }}>{pendingBuy.price} ⚡</b> ?
+                                {player.reps < pendingBuy.price && <div style={{ color: "#a33", fontSize: 11, marginTop: 4 }}>Pas assez de reps.</div>}
+                            </div>
+                            <div style={{ display: "flex", gap: 10, width: "100%" }}>
+                                <button onClick={() => setPendingBuy(null)} style={{ ...miniBtn, flex: 1 }}>Annuler</button>
+                                <button onClick={confirmBuy} disabled={player.reps < pendingBuy.price} style={{ ...miniBtn, flex: 1, background: ACCENT, color: "#fff", borderColor: INK, opacity: player.reps < pendingBuy.price ? 0.5 : 1 }}>✓ Confirmer</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
 }
 
 const overlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 12 }
-const box: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 380, maxHeight: "90%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
+const box: React.CSSProperties = { position: "relative", background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 380, maxHeight: "90%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
 const header: React.CSSProperties = { padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }
 const miniBtn: React.CSSProperties = { flex: 1, padding: "6px 0", background: "#fff8e8", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 11, cursor: "pointer" }
 const linkBtn: React.CSSProperties = { width: "100%", padding: "7px 0", background: "#fff8e8", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }
 const errStyle: React.CSSProperties = { fontSize: 11.5, color: "#8a1c1c", background: "#f6d9d9", border: "1px solid #d88", borderRadius: 8, padding: "6px 9px", marginBottom: 8, fontWeight: 700 }
 const resetBtn: React.CSSProperties = { marginTop: 12, width: "100%", padding: "7px 0", background: "transparent", color: "#a05", border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }
 const closeBtn: React.CSSProperties = { margin: 10, marginTop: 0, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }
+const confirmOverlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, zIndex: 5, padding: 16 }
+const confirmBox: React.CSSProperties = { background: CREAM, border: `3px solid ${ACCENT}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, maxWidth: 260, boxShadow: "0 8px 28px rgba(0,0,0,0.55)" }

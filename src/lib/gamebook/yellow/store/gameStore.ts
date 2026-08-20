@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -44,6 +44,7 @@ import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
+import type { MonInstance } from "../battle/types"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_PASS_MARKER_PREFIX, ACE_PASS_MAX_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
@@ -1039,6 +1040,7 @@ function tryLaunchAce(): ActiveDialogue | null {
 // SURF : id de la CT-move + « un membre de l'équipe connaît-il Surf ? ». Vrai → l'eau devient franchissable
 //   hors combat (tryMove opts.canSurf) → accès à l'île cachée depuis la mer de la plage (col 22).
 const SURF_MOVE_ID = "surf"
+const ILE_ENC_RATE = 0.12 // ÎLE ÉMERAUDE : proba de rencontre par pas (surf/herbe) — modérée (Galijah = 25% de ces rencontres)
 function teamKnowsSurf(): boolean {
     return getPlayerSave().team.some((m) => m.moves.some((mv) => mv.moveId === SURF_MOVE_ID))
 }
@@ -1783,9 +1785,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 //   le joueur APPROCHE le PNJ pour combattre (pressA) ou RESSORT par l'échelle sans risquer de tentative.
                 const enteringUkognofyChamber = targetMapId === UKOGNOFY_CHAMBER_MAP
                 if (enteringUkognofyChamber) ukognofyChamberFought = false // reset par visite
-                // ÎLE ÉMERAUDE — arrivée AVANT 150 espèces : présage « quelque chose de puissant… mais pas maintenant »
-                //   (Galijah ne pope qu'à partir de 150 espèces distinctes ; on entre quand même, on peut explorer).
-                const islandTooEarly = targetMapId === "yellow_ile_emeraude" && getActiveWorld() !== "replay" && getPokedex().caught.length < SURFER_DEX_THRESHOLD
+                // ÎLE ÉMERAUDE — présage « quelque chose de puissant… mais pas maintenant » quand Galijah ne peut PAS
+                //   apparaître (Pokédex < 150, OU déjà apparu et < 200). Pas capturé (sinon plus de présage). On entre
+                //   quand même (fillers + baie palmier accessibles).
+                const islandTooEarly = targetMapId === "yellow_ile_emeraude" && getActiveWorld() !== "replay"
+                    && !getPokedex().caught.includes("galijah") && !galijahCanAppear()
                 const ukognofyFails = enteringUkognofyChamber ? ukognofyFailCount(isTrainerDefeated) : 0
                 const ukognofyAutoAmbush = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated)
                     && ukognofyFails === 0 && getPlayerSave().team.some((m) => m.currentHp > 0)
@@ -1885,36 +1889,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
         //   par N'IMPORTE QUEL moyen (capture, ÉVOLUTION, fusion, cadeau, échange…), pas seulement une capture sauvage.
         //   Idempotent (no-op si déjà armé / <150 / déjà capturé). Garde l'armement synchrone avec le décompte affiché.
         if (moved && getActiveWorld() !== "replay") armGalijahByDex()
-        // Chasse armée → après 3-4 pas EFFECTIFS, on pose la rencontre forcée (niveau moyen d'équipe, capture légendaire).
-        //   JAMAIS dans une bulle de rejeu (monde jetable → légendaire perdu) même si le marqueur y subsistait.
-        //   GATE ÎLE : Galijah n'apparaît QUE sur l'ÎLE ÉMERAUDE (derrière le bateau, accès surf). Hors île, le décompte
-        //   gèle et reprend au retour. (L'armement, lui, reste global → le compteur affiché reste correct partout.)
-        if (moved && isGalijahArmed() && getActiveWorld() !== "replay" && map.id === "yellow_ile_emeraude") {
-            if (galijahStepsLeft < 0) galijahStepsLeft = 3 + Math.floor(Math.random() * 2) // 3 ou 4 pas
-            if (galijahStepsLeft > 0) galijahStepsLeft--
-            if (galijahStepsLeft === 0) {
-                const gTeam = getPlayerSave().team
-                const gAvg = gTeam.length ? Math.round(gTeam.reduce((s, m) => s + m.level, 0) / gTeam.length) : 40
-                poseGalijahEncounter(gAvg); persistYellowSave(); galijahStepsLeft = -1
-            }
-        }
-        // ÎLE ÉMERAUDE — LANCEMENT DIRECT de Galijah sur l'herbe haute : le bloc sauvage normal ci-dessous ne se
-        //   déclenche PAS ici (l'île n'a AUCUNE entrée ZONES → rollWildEncounter renvoie null), donc on consomme la
-        //   rencontre forcée à la main. Aucune autre espèce ne pop sur l'île — SEULE Galijah, et seulement dès 150 esp.
-        if (moved && map.id === "yellow_ile_emeraude" && isWildTile && !combatLockedByDebt() && getActiveWorld() !== "replay") {
-            const forcedRaw = getPlayerSave().forcedEncounter
-            if (forcedRaw) {
-                try {
-                    const fe = JSON.parse(forcedRaw) as { speciesId?: string; level?: number; hard?: boolean }
-                    const gTeam = getPlayerSave().team
-                    if (fe?.speciesId === "galijah" && getSpecies("galijah") && gTeam.some((m) => m.currentHp > 0)) {
-                        const gspawn = buildForcedSpawn("galijah", fe.level ?? 50, !!fe.hard)
-                        clearForcedEncounter(); persistYellowSave()
-                        set({ encounterCooldown: 1 })
-                        startWildBattle(gTeam, [gspawn], Math.floor(Math.random() * 1e9) >>> 0)
-                        return
-                    }
-                } catch { /* JSON invalide → ignoré (le forcé reste, retentera) */ }
+        // ÎLE ÉMERAUDE — RENCONTRES : surfer sur l'eau (ou marcher dans l'herbe haute) = rencontre sauvage. L'île n'a
+        //   AUCUNE entrée ZONES → géré à la main. Pool FILLER faible (plumiot / ruffiant / mimimoy si pas capturé /
+        //   obscurène très rare, niv 5) + GALIJAH légendaire. TOUT est NO-FLEE. Galijah : JAMAIS au 1er combat du jour,
+        //   puis 25 %/combat s'il est éligible (galijahCanAppear : ≥150 esp, pas capturé, pas déjà apparu OU ≥200 esp).
+        //   Apparu → re-gated jusqu'à 200 (le message de non-apparition revient). Niv 70, capture LÉGENDAIRE.
+        if (moved && map.id === "yellow_ile_emeraude" && (onWildTile === "water" || onWildTile === "grassTall")
+            && !map.encountersPaused && !combatLockedByDebt() && getActiveWorld() !== "replay"
+            && get().encounterCooldown <= 0 && get().repelSteps <= 0) {
+            const iTeam = getPlayerSave().team
+            if (iTeam.some((m) => m.currentHp > 0) && Math.random() < ILE_ENC_RATE) {
+                const day = new Date().toISOString().slice(0, 10)
+                const firstOfDay = !isTrainerDefeated(`ile_enc_${day}`)
+                setDailyMarker("ile_enc_", `ile_enc_${day}`)
+                const dex = getPokedex().caught
+                let spawn: MonInstance
+                if (!firstOfDay && galijahCanAppear() && Math.random() < 0.25) {
+                    spawn = buildForcedSpawn("galijah", 70, true); Object.assign(spawn, { captureMult: 0.3 }) // capture LÉGENDAIRE (très faible)
+                    markGalijahAppeared(); persistYellowSave() // apparu → re-gated jusqu'à 200 espèces s'il est manqué
+                } else {
+                    const pool = ["plumiot", "ruffiant"]
+                    if (!dex.includes("mimimoy")) pool.push("mimimoy") // Mimimoy seulement s'il n'est pas encore capturé
+                    const pick = Math.random() < 0.04 ? "obscurene" : pool[Math.floor(Math.random() * pool.length)] // Obscurène TRÈS RARE
+                    spawn = createMonInstance(pick, 5, { owned: false })
+                }
+                set({ encounterCooldown: 1 })
+                startWildBattle(iTeam, [spawn], Math.floor(Math.random() * 1e9) >>> 0, { fleeChance: 0 }) // impossible de fuir
+                return
             }
         }
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
@@ -2373,7 +2374,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // TIRAGE ALÉATOIRE À CHAQUE VISITE (≠ tirage du jour identique pour tous) → chacun tombe sur des skins
             //   différents, c'est plus drôle. Tiré UNE fois ici + partagé au picker (fashionOffer) pour rester cohérent
             //   (la 1re tenue forcée = slot 0 de ce que la boutique affichera).
-            const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname(), { includeSurf: getPokedex().caught.length >= SURF_OUTFIT_DEX_HINT })
+            // ≥1 tenue de surfeur GARANTIE dès 145 espèces, TANT QUE le joueur n'en porte pas déjà une (« jusqu'à l'achat »).
+            const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname(), { includeSurf: getPokedex().caught.length >= SURF_OUTFIT_DEX_HINT && !isSurfOutfit(getPlayerSave().chosenAvatar) })
             const cur = getPlayerSave().chosenAvatar
             if (cur) { set({ fashionOpen: true, fashionOffer: offer }); return } // a déjà un skin → boutique
             if (getPlayerSave().reps < FASHION_PRICES[0]) {

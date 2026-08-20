@@ -68,30 +68,31 @@ describe("ÎLE ÉMERAUDE — carte + warps", () => {
         expect(ile.tiles.every((r) => r.length === 19)).toBe(true)
         expect(ile.backgroundImage).toBe("/yellow/sprites/ile_emeraude.png")
     })
-    it("case d'arrivée (5,16) = sable marchable ; case de retour (3,16) = eau", () => {
-        expect(ile.tiles[16][5]).toBe("path")   // spawn plage→île, marchable
-        expect(ile.tiles[16][3]).toBe("water")  // warp île→plage, atteint EN SURF
+    it("COL 0 (bord ouest) = eau = arrivée + retour ; centre = sable ; herbes hautes présentes", () => {
+        expect(ile.tiles[16][0]).toBe("water") // col 0 = arrivée (spawn) + bord de retour, surfable
+        expect(ile.tiles[16][5]).toBe("path")  // sable marchable (ouest du blob)
+        expect(ile.tiles.some((row) => row.some((t) => t === "grassTall"))).toBe(true) // herbes hautes (fillers + rare)
     })
-    it("l'île a des HERBES HAUTES (seul spawn de Galijah)", () => {
-        const hasTall = ile.tiles.some((row) => row.some((t) => t === "grassTall"))
-        expect(hasTall).toBe(true)
-    })
-    it("warp ALLER : plage (22,18)/(22,19) = mer → île", () => {
-        for (const y of [18, 19]) {
-            expect(plage.tiles[y][22]).toBe("water") // case mer (surfable)
-            const ex = plage.exits!.find((e) => e.x === 22 && e.y === y)
+    it("warp ALLER LIGNE PAR LIGNE : plage col 23 (rows 0-31) = eau → île col 0 MÊME LIGNE", () => {
+        for (const y of [0, 12, 18, 31]) {
+            expect(plage.tiles[y][23]).toBe("water") // passage SURF (est de la mer col 22)
+            const ex = plage.exits!.find((e) => e.x === 23 && e.y === y)
             expect(ex?.targetMapId).toBe("yellow_ile_emeraude")
-            expect([ex?.targetSpawnX, ex?.targetSpawnY]).toEqual([5, 16])
+            expect([ex?.targetSpawnX, ex?.targetSpawnY]).toEqual([0, y]) // → col 0, même ligne
         }
+        expect(plage.exits!.filter((e) => e.x === 23 && e.targetMapId === "yellow_ile_emeraude")).toHaveLength(32)
     })
-    it("warp RETOUR : île (3,16) → plage, atterrit sur une case marchable (18,29)", () => {
-        const ex = ile.exits!.find((e) => e.x === 3 && e.y === 16)
-        expect(ex?.targetMapId).toBe("yellow_plage")
-        expect([ex?.targetSpawnX, ex?.targetSpawnY]).toEqual([18, 29])
-        expect(isBlock(plage, 18, 29)).toBe(false) // spawn de retour NON bloquant
+    it("warp RETOUR LIGNE PAR LIGNE : île col 0 → plage col 22 MÊME LIGNE (mer, on re-surfe)", () => {
+        for (const y of [0, 12, 18, 31]) {
+            const ex = ile.exits!.find((e) => e.x === 0 && e.y === y)
+            expect(ex?.targetMapId).toBe("yellow_plage")
+            expect([ex?.targetSpawnX, ex?.targetSpawnY]).toEqual([22, y])
+            expect(plage.tiles[y][22]).toBe("water") // atterrit sur la mer (surf) → regagne la crique
+        }
+        expect(ile.exits!.filter((e) => e.x === 0 && e.targetMapId === "yellow_plage")).toHaveLength(32)
     })
 
-    it("ACCESSIBILITÉ : EN SURF, on atteint la case-warp (22,18) depuis la terre de la plage (crique 18,29)", () => {
+    it("ACCESSIBILITÉ : EN SURF, on atteint le passage (23,15) depuis la terre de la plage (crique 18,29)", () => {
         // BFS : depuis (18,29) [terre], en marchant sur la terre ET en surfant sur l'eau (arbre = mur).
         const W = plage.width, H = plage.height
         const enterable = (x: number, y: number) => { const t = plage.tiles[y][x]; return t !== "tree" && t !== "fence" } // eau OK (surf), arbre non
@@ -106,7 +107,7 @@ describe("ÎLE ÉMERAUDE — carte + warps", () => {
                 seen.add(k); q.push([nx, ny])
             }
         }
-        expect(seen.has("22,18")).toBe(true) // la case-warp de l'île est bien atteignable en surfant
-        expect(seen.has("22,19")).toBe(true)
+        expect(seen.has("23,15")).toBe(true) // passage vers l'île atteignable en surfant
+        expect(seen.has("22,10")).toBe(true) // la mer (col 22) est une voie libre le long de la carte
     })
 })

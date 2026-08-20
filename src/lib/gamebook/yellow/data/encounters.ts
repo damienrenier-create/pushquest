@@ -497,7 +497,7 @@ const ZONES: Record<string, Zone> = {
         minLevel: 5,
         pool: [
             { speciesId: "cornaissant", base: COMMON },
-            { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "givroptere", base: VERY_RARE, rare: true }, // remplace Loutrille (Sartay) — VOL/GLACE, TRÈS RARE
             { speciesId: "piouflot", base: UNCOMMON },
             { speciesId: "auroruff", base: UNCOMMON },
             { speciesId: "marmoterre", base: UNCOMMON },
@@ -514,7 +514,7 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "draclet", base: UNCOMMON },                               // Vol/Dragon : PLUS commun ici (reste super-rare en Route Nord)
             { speciesId: "crocavern", base: UNCOMMON },
             { speciesId: "sepulcru", base: UNCOMMON, hourRange: [8, 20] },          // JOUR (8h→20h)
-            { speciesId: "obscurene", base: UNCOMMON, hourRange: [20, 8] },         // NUIT (20h→8h)
+            { speciesId: "obscurene", base: RARE, rare: true, hourRange: [20, 8] },  // NUIT (20h→8h) — RÉDUIT (UNCOMMON→RARE) : Obscurène pop désormais aussi sur l'île Émeraude
             { speciesId: "karmaki", base: RARE, rare: true, hourRange: [0, 12] },   // rare, matinée (0h→12h)
             { speciesId: "hypnoppo", base: RARE, rare: true, hourRange: [12, 24] }, // rare, après-midi/soir (12h→24h)
         ],
@@ -791,7 +791,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
         rate: 0.16, minLevel: 5,
         pool: [
             { speciesId: "tetardoc", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
-            { speciesId: "glacirex", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON }, { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "glacirex", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON }, { speciesId: "givroptere", base: VERY_RARE, rare: true }, // Loutrille → Givroptère TRÈS RARE (Sartay)
             { speciesId: "gouttiny", base: RARE, rare: true },
             { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
         ],

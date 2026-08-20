@@ -867,16 +867,21 @@ function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
     )
 }
 
-// Petit sprite statique pour la liste d'équipe (sans anim, repli sur l'initiale).
+// Petit sprite statique pour la liste d'équipe (sans anim, repli sur l'initiale). Résout AUSSI le sprite GÉNÉRÉ d'une
+//   fusion (comme MonSprite) : sans ça, un fusionné dont le sprite maison n'est pas figé affiche MissingNo au switch.
 function PartySprite({ mon }: { mon: BattleMon }) {
     const sp = speciesOf(mon)
-    const [err, setErr] = useState(false)
-    const broken = err || !sp.sprite // sprite vide → initiale, sans dépendre d'onError (peu fiable sur src="")
+    const [realErr, setRealErr] = useState(false)
+    const [genErr, setGenErr] = useState(false)
+    const fusionGen = useFusionSprite(sp.fusionParents?.[0], sp.fusionParents?.[1])
+    const realSrc = sp.sprite && sp.sprite !== MISSINGNO_SPRITE && !realErr ? sp.sprite : null
+    const genSrc = !realSrc && sp.fusionParents && fusionGen.url && !genErr ? fusionGen.url : null
+    const src = realSrc ?? genSrc
     return (
         <div style={S.partySprite}>
-            {broken
+            {!src
                 ? <span style={{ fontSize: 16, fontWeight: 900 }}>{sp.name[0]}</span>
-                : <img src={sp.sprite} alt="" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+                : <img src={src} alt="" onError={() => (realSrc ? setRealErr(true) : setGenErr(true))} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
         </div>
     )
 }

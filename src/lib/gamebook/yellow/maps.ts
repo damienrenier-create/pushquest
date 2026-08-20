@@ -1190,9 +1190,12 @@ const PLAGE_MASK = [
 ]
 function buildPlage(): TileType[][] {
     const m = PLAGE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : ch === "H" ? "grassTall" : "path") as TileType))
-    // EAU PÊCHABLE (coords validées Sartay) : (19-21 × 28-29) + TOUTE la colonne 22 (la « mer »). Col 23 réservée SURF.
+    // EAU PÊCHABLE (coords validées Sartay) : (19-21 × 28-29) + TOUTE la colonne 22 (la « mer »).
     for (const [x, y] of [[19, 29], [20, 29], [20, 28], [21, 28]] as const) m[y][x] = "water"
     for (let y = 0; y < m.length; y++) m[y][22] = "water"
+    // COL 23 = passage SURF vers l'ÎLE ÉMERAUDE (rows 0-31 = hauteur de l'île). Le joueur surfe la col 22 (mer libre)
+    //   puis franchit vers l'est (col 23) → il arrive sur la COL 0 de l'île à la MÊME LIGNE. Retour symétrique par la col 22.
+    for (let y = 0; y <= 31; y++) m[y][23] = "water"
     return m
 }
 
@@ -1728,9 +1731,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [
             ...([[3, 19], [4, 19]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_gelee", targetSpawnX: 19, targetSpawnY: 23 })),     // → Gelée (arche)
             ...([[15, 19], [15, 20]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_aqua_arena", targetSpawnX: 1, targetSpawnY: 19 })),      // → Bateau (Aqua Arena)
-            // MER col 22 (surfable seulement) → ÎLE ÉMERAUDE. Le joueur surfe depuis la crique (18,29→…→col 22) et
-            //   remonte/descend la colonne d'eau ; ces 2 cases ouvrent l'île. Atterrit sur le sable ouest de l'île (5,16).
-            ...([[22, 18], [22, 19]] as const).map(([x, y]) => ({ x, y, targetMapId: ILE_EMERAUDE_MAP_ID, targetSpawnX: 5, targetSpawnY: 16 })),       // → Île Émeraude (SURF)
+            // COL 23 → ÎLE ÉMERAUDE, LIGNE PAR LIGNE : le joueur surfe la mer (col 22) puis franchit vers l'EST →
+            //   il débarque sur la COL 0 de l'île à la MÊME ligne (rows 0-31). Retour symétrique (île col 0 → plage col 22).
+            ...Array.from({ length: 32 }, (_, y) => ({ x: 23, y, targetMapId: ILE_EMERAUDE_MAP_ID, targetSpawnX: 0, targetSpawnY: y })),               // → Île Émeraude (SURF, ligne par ligne)
         ],
         backgroundImage: "/yellow/sprites/plage.png",
         backgroundImageWidth: 960,
@@ -1761,8 +1764,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: ILE_W,
         height: ILE_H,
         exits: [
-            // Bord OUEST (eau) → on re-surfe vers la plage : atterrit sur la plage à (18,29) (terre, à côté de la mer).
-            { x: 3, y: 16, targetMapId: "yellow_plage", targetSpawnX: 18, targetSpawnY: 29 },
+            // COL 0 (bord OUEST, eau) → RETOUR PLAGE, LIGNE PAR LIGNE : on re-surfe vers l'ouest → on ressort sur la mer
+            //   de la plage (col 22) à la MÊME ligne, d'où l'on regagne la crique/plage en surfant. Symétrique de l'aller.
+            ...Array.from({ length: 32 }, (_, y) => ({ x: 0, y, targetMapId: "yellow_plage", targetSpawnX: 22, targetSpawnY: y })),
         ],
         backgroundImage: "/yellow/sprites/ile_emeraude.png",
         backgroundImageWidth: 760,
