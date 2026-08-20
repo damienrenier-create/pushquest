@@ -110,7 +110,7 @@ import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, frontierEnergyRefund, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier, distributeDomeTraining, roundBudget } from "@/lib/gamebook/yellow/frontier/domeBudgets"
-import { DOME_TIERS, isDanTier, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
+import { DOME_TIERS, DAN_TIERS, DOME_ONLY_TIERS, isDanTier, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
 import { DOME_BLINDS, clampBet, domeEnergyRefund, domeJcReward, domeFinalPlacement } from "@/lib/gamebook/yellow/frontier/domeEconomy"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
@@ -291,6 +291,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closePc = useGameStore((s) => s.closePc)
     const domeMenuOpen = useGameStore((s) => s.domeMenuOpen)   // carrousel du Maître du Dôme
     const closeDomeMenu = useGameStore((s) => s.closeDomeMenu)
+    const danMenuOpen = useGameStore((s) => s.danMenuOpen)     // carrousel JUMEAU du Gardien des Dan (Salle des Dan)
+    const closeDanMenu = useGameStore((s) => s.closeDanMenu)
     const espionOpen = useGameStore((s) => s.espionOpen)
     const closeEspion = useGameStore((s) => s.closeEspion)
     const trocOpen = useGameStore((s) => s.trocOpen)
@@ -369,10 +371,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
     const domeLaunchingRef = useRef(false) // anti double-débit de la mise (double-tap mobile)
     const [domeRegisterOpen, setDomeRegisterOpen] = useState(false) // le SÉLECTEUR de tier ne s'affiche qu'après « S'inscrire » (via le mage), pas tout seul
+    const [danMode, setDanMode] = useState(false) // sélecteur/carrousel courant : true = tiers DAN (Gardien des Dan), false = tiers Dôme (Maître du Dôme)
     const [domeTab, setDomeTab] = useState<"inscrire" | "regles" | "stats">("inscrire") // onglet actif du carrousel du mage
     // Quitter la map du Dôme (marcher pour sortir) réinitialise l'écran de mise + le sélecteur → on repasse par le mage au retour.
     useEffect(() => {
-        if (mapPlayer.mapId !== "yellow_combat_dome") { if (domeSetup) setDomeSetup(null); if (domeRegisterOpen) setDomeRegisterOpen(false); domeLaunchingRef.current = false }
+        if (mapPlayer.mapId !== "yellow_combat_dome" && mapPlayer.mapId !== "yellow_dome_dan") { if (domeSetup) setDomeSetup(null); if (domeRegisterOpen) setDomeRegisterOpen(false); setDanMode(false); domeLaunchingRef.current = false }
     }, [mapPlayer.mapId, domeSetup, domeRegisterOpen])
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
@@ -3051,10 +3054,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
             {/* ZONE DE COMBAT — DÔME : tournoi à élimination (bracket de 8), TON équipe, 3 manches */}
-            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && domeRegisterOpen && (() => {
+            {!battle && !dome && (mapPlayer.mapId === "yellow_combat_dome" || mapPlayer.mapId === "yellow_dome_dan") && !dialogue && player.team.length > 0 && domeRegisterOpen && (() => {
                 const champs = player.domeChampionships ?? 0
-                const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
-                const frontierTier = DOME_TIERS[maxRank] // ton palier = le tier le + haut débloqué (on y REPREND, jamais Bronze)
+                const globalMaxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
+                const maitreRank = DOME_TIERS.indexOf("MAITRE")
+                const tierList = danMode ? DAN_TIERS : DOME_ONLY_TIERS // Dôme = Bronze→Maître ; Dan = DAN_1..4
+                const viewFrontierRank = danMode ? globalMaxRank : Math.min(globalMaxRank, maitreRank) // le Dôme plafonne à Maître
+                const frontierTier = DOME_TIERS[Math.max(0, viewFrontierRank)] // palier de reprise (jamais depuis le bas)
                 const box: React.CSSProperties = { position: "absolute", left: "50%", top: 14, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22f2", color: "#fff", border: "3px solid #f1c40f", borderRadius: 14, padding: "18px 22px", textAlign: "center", width: "min(460px, 94vw)", boxShadow: "0 8px 30px #000b" }
                 // ÉTAPE 2 — MISE (buy-in poker) pour le tier choisi.
                 if (domeSetup) {
@@ -3105,7 +3111,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // ÉTAPE 1 — choix du TIER.
                 return (
                     <div style={box}>
-                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
+                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{danMode ? "🎴 VOIE DU MAÎTRE — LES DAN" : "🏆 DÔME DE COMBAT"}</div>
                         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Palmarès : <b>{champs}</b> tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
                         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8, lineHeight: 1.45 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. <b style={{ color: "#7dffa0" }}>Ton palier est ACQUIS À VIE</b> : tu reprends toujours à ton rang, jamais depuis Bronze (≠ Tour de Combat, où on perd tout). Gagne le tier <b style={{ color: "#7dffa0" }}>⭐ à battre</b> pour le titre suivant.</div>
                         <button onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier: frontierTier, bet: DOME_BLINDS[frontierTier].min }) }}
@@ -3114,14 +3120,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </button>
                         <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>ou choisis un palier :</div>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                            {DOME_TIERS.map((tier, i) => {
+                            {tierList.map((tier) => {
+                                const gi = DOME_TIERS.indexOf(tier)
                                 const bud = DOME_BUDGETS[tier]
-                                const locked = i > maxRank
-                                const frontier = i === maxRank && champs < DOME_TIERS.length // le tier à BATTRE pour un nouveau titre
+                                const locked = gi > globalMaxRank
+                                const frontier = gi === globalMaxRank && champs < DOME_TIERS.length // le tier à BATTRE pour un nouveau titre
                                 return (
                                     <button key={tier} disabled={locked} onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier, bet: DOME_BLINDS[tier].min }) }}
                                         style={{ background: locked ? "#332e4a" : "#f1c40f", color: locked ? "#8f88b5" : "#1a1a22", fontWeight: 800, border: frontier ? "2px solid #4cd964" : "2px solid transparent", borderRadius: 10, padding: "10px 13px", minWidth: 70, cursor: locked ? "not-allowed" : "pointer", fontSize: 14, lineHeight: 1.3, opacity: locked ? 0.7 : 1, boxShadow: frontier ? "0 0 10px #4cd96488" : "none" }}>
-                                        {frontier ? "⭐ " : ""}{locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 10, opacity: 0.78 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : bud.shiny === "full" ? "✨✨ full shiny" : bud.shiny === "half" ? "✨ mi-shiny" : isDanTier(tier) ? `Saiyan ${bud.saiyanPerMon}` : frontier ? "à battre" : `Niv ${bud.level}`}</span>
+                                        {frontier ? "⭐ " : ""}{locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 10, opacity: 0.78 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[globalMaxRank]]}` : bud.shiny === "full" ? "✨✨ full shiny" : bud.shiny === "half" ? "✨ mi-shiny" : isDanTier(tier) ? `Saiyan ${bud.saiyanPerMon}` : frontier ? "à battre" : `Niv ${bud.level}`}</span>
                                     </button>
                                 )
                             })}
@@ -3131,9 +3138,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 )
             })()}
             {/* CARROUSEL DU MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats */}
-            {!battle && domeMenuOpen && (() => {
+            {!battle && (domeMenuOpen || danMenuOpen) && (() => {
+                const isDan = danMenuOpen // carrousel du GARDIEN DES DAN (sinon MAÎTRE DU DÔME)
                 const champs = getPlayer().domeChampionships ?? 0
-                const cur = maxUnlockedTier(champs)
+                const globalCur = maxUnlockedTier(champs)
+                const cur = isDan ? globalCur : DOME_TIERS[Math.min(DOME_TIERS.indexOf(globalCur), DOME_TIERS.indexOf("MAITRE"))] // le Dôme plafonne à Maître
                 const curIdx = DOME_TIERS.indexOf(cur)
                 const nextT = DOME_TIERS[Math.min(DOME_TIERS.length - 1, curIdx + 1)]
                 const dome = player.domeStats ?? { wins: 0, losses: 0, daemonUse: {} as Record<string, number>, moveUse: {} as Record<string, number> }
@@ -3144,7 +3153,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ width: "min(460px, 94vw)", maxHeight: "88dvh", overflowY: "auto", background: "#1a1a22f2", color: "#fff", border: "3px solid #7c4d9e", borderRadius: 14, padding: "16px 18px", boxShadow: "0 8px 30px #000b" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
                                 <img src="/yellow/sprites/npc_dome_mage.png" alt="" style={{ width: 40, height: 40, imageRendering: "pixelated" }} />
-                                <div style={{ fontWeight: 800, fontSize: 16 }}>LE MAÎTRE DU DÔME</div>
+                                <div style={{ fontWeight: 800, fontSize: 16 }}>{isDan ? "LE GARDIEN DES DAN" : "LE MAÎTRE DU DÔME"}</div>
                             </div>
                             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                                 {(([["inscrire", "🎟️ S'inscrire"], ["regles", "📜 Règles"], ["stats", "📊 Stats"]]) as [typeof domeTab, string][]).map(([k, lbl]) => (
@@ -3153,15 +3162,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {domeTab === "inscrire" && (
                                 <div style={{ textAlign: "center" }}>
-                                    {isDomeChampion() && !isMasterCtClaimed("dome") && (
+                                    {isDan && isDomeChampion() && !isMasterCtClaimed("dome") && (
                                         <div style={{ textAlign: "left", background: "rgba(255,215,74,.08)", border: "1.5px solid #ffd54a", borderRadius: 10, padding: 10, marginBottom: 14 }}>
                                             <div style={{ fontWeight: 800, color: "#ffd54a", fontSize: 13, marginBottom: 4 }}>🏆 MAÎTRE DU DÔME — ta récompense t'attend !</div>
                                             <div style={{ fontSize: 10.5, opacity: 0.85, marginBottom: 8, lineHeight: 1.4 }}>Tu as vaincu les 11 tiers, jusqu'au 4ᵉ Dan. Ton nom est gravé dans l'histoire du Dôme. Reçois une CT INÉDITE du Maître :</div>
-                                            <MasterCtChoice facility="dome" onClaimed={(name) => { setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DU DÔME. 🏆`); closeDomeMenu() }} />
+                                            <MasterCtChoice facility="dome" onClaimed={(name) => { setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DU DÔME. 🏆`); closeDanMenu() }} />
                                         </div>
                                     )}
                                     <div style={{ fontSize: 12, opacity: 0.88, marginBottom: 14, lineHeight: 1.55 }}>« Ton palier : <b style={{ color: "#c9a0ff" }}>{DOME_TITLES[cur]}</b>. Prêt à te battre, aspirant ? »<br /><span style={{ fontSize: 10.5, opacity: 0.8 }}>Tu reprends toujours à ton rang — jamais depuis Bronze.</span></div>
-                                    <button onClick={() => { closeDomeMenu(); setDomeRegisterOpen(true) }} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 10, padding: "12px 20px", cursor: "pointer", fontSize: 14, boxShadow: "0 0 10px #4cd96466" }}>▶ S'inscrire au tournoi</button>
+                                    <button onClick={() => { setDanMode(isDan); if (isDan) closeDanMenu(); else closeDomeMenu(); setDomeRegisterOpen(true) }} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 10, padding: "12px 20px", cursor: "pointer", fontSize: 14, boxShadow: "0 0 10px #4cd96466" }}>▶ S'inscrire au tournoi</button>
                                 </div>
                             )}
                             {domeTab === "regles" && (
@@ -3190,7 +3199,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     <div style={{ fontSize: 10, opacity: 0.6, marginTop: 8 }}>Bientôt : top coups les + forts · top némésis.</div>
                                 </div>
                             )}
-                            <button onClick={() => closeDomeMenu()} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "9px", cursor: "pointer", fontSize: 12 }}>✕ Fermer</button>
+                            <button onClick={() => { if (isDan) closeDanMenu(); else closeDomeMenu() }} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "9px", cursor: "pointer", fontSize: 12 }}>✕ Fermer</button>
                         </div>
                     </div>
                 )

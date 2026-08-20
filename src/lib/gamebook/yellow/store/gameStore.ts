@@ -438,7 +438,8 @@ interface GameStore {
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     moveReminderOpen: boolean // MAÎTRE DES CAPACITÉS (étage de l'infirmerie) : réapprendre une attaque du learnset
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
-    domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
+    domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats (tiers Bronze→Maître)
+    danMenuOpen: boolean // carrousel JUMEAU du GARDIEN DES DAN (Salle des Dan) : mêmes onglets, tournois DAN_1..4
     espionOpen: boolean // USINE — L'ESPION : consulter (payant) les rosters d'autres joueurs
     trocOpen: boolean // USINE — LE GRAND MARCHAND : échange asynchrone de Daemons
     usineMenuOpen: boolean // USINE — panneau de série (location) : n'ouvre QUE via le Maître de l'Usine
@@ -535,6 +536,7 @@ interface GameStore {
     closeMoveReminder: () => void
     closeCombatShop: () => void
     closeDomeMenu: () => void
+    closeDanMenu: () => void
     closeEspion: () => void
     closeTroc: () => void
     closeUsineMenu: () => void
@@ -1169,6 +1171,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     moveReminderOpen: false,
     combatShopOpen: false,
     domeMenuOpen: false,
+    danMenuOpen: false,
     espionOpen: false,
     trocOpen: false,
     usineMenuOpen: false,
@@ -2144,9 +2147,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ pcOpen: true })
             return
         }
-        // MAÎTRE DU DÔME (mage central) : ouvre le carrousel (S'inscrire / Règles / Stats).
+        // MAÎTRE DU DÔME (mage central) : ouvre le carrousel (S'inscrire / Règles / Stats) — tiers Bronze→Maître.
         if (npc.id === "y_dome_maitre") {
             set({ domeMenuOpen: true })
+            return
+        }
+        // GARDIEN DES DAN (Salle des Dan) : carrousel JUMEAU → tournois de la VOIE DU MAÎTRE (DAN_1..4).
+        if (npc.id === "y_dome_dan_maitre") {
+            set({ danMenuOpen: true })
             return
         }
         // COUPE DU DÔME (Salle du Sacre) : ouvre le même panneau → le champion y choisit sa CT du Maître (bannière reward).
@@ -2914,6 +2922,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeMoveReminder: () => set({ moveReminderOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
     closeDomeMenu: () => set({ domeMenuOpen: false }),
+    closeDanMenu: () => set({ danMenuOpen: false }),
     closeEspion: () => set({ espionOpen: false }),
     closeTroc: () => set({ trocOpen: false }),
     closeUsineMenu: () => set({ usineMenuOpen: false }),
