@@ -27,6 +27,22 @@ export function setGauntletBossBeaten(v: boolean): void { gauntletBossBeaten = v
 /** Le Dieu Spaghetti est-il vaincu dans la run en cours ? (porte du miroir → salle ultime) */
 export function getGauntletBossBeaten(): boolean { return gauntletBossBeaten }
 
+// PERSISTANCE INSTANTANÉE (anti-refresh) : l'usure du gauntlet est mirroir-ée en localStorage À CHAQUE TOUR
+//   (synchrone, sans réseau, sans débounce) → un refresh EN PLEIN COMBAT reprend l'équipe avec son usure RÉELLE
+//   (fini le soin gratuit / la résurrection des K.O. entre deux salles). Le save serveur (fusionLeagueCarry) reste
+//   la source DURABLE/cross-device ; le miroir LS est prioritaire au reload car TOUJOURS le plus frais.
+const CARRY_LS_KEY = "yellow_fusion_gauntlet_carry"
+/** Écrit (ou efface si null) le miroir localStorage de l'usure du gauntlet. Synchrone, fail-safe (quota/SSR). */
+export function writeGauntletCarryLs(json: string | null): void {
+    if (typeof window === "undefined") return
+    try { if (json) window.localStorage.setItem(CARRY_LS_KEY, json); else window.localStorage.removeItem(CARRY_LS_KEY) } catch { /* quota / hors-navigateur : on ignore */ }
+}
+/** Lit le miroir localStorage de l'usure du gauntlet (null si absent). */
+export function readGauntletCarryLs(): string | null {
+    if (typeof window === "undefined") return null
+    try { return window.localStorage.getItem(CARRY_LS_KEY) } catch { return null }
+}
+
 /** L'équipe-gauntlet courante (null = pas de Ligue de Fusion en cours). */
 export function getGauntletTeam(): BuiltFusion[] | null { return team }
 /** Pose l'équipe-gauntlet (à l'entrée) ou la vide (fin de run — le dispose des espèces est fait par l'appelant). */
@@ -79,8 +95,13 @@ export function reorderGauntletMoves(fusionUid: string, from: number, to: number
  *  (donc PV/PP entamés, K.O. conservés). Ne touche pas frozenStats (les stats de combat sont figées). */
 export function writeBackGauntlet(finalTeam: ReadonlyArray<BattleMon>): void {
     if (!team) return
+    const pairKey = (p?: [string, string]) => (p ? (p[0] < p[1] ? `${p[0]}|${p[1]}` : `${p[1]}|${p[0]}`) : "")
     for (const f of team) {
+        // uid EXACT (même session) → sinon PAIRE DE PARENTS (stable au reload) : après une REPRISE de combat, les uids
+        //   de l'équipe de combat (instantané) diffèrent de l'équipe-gauntlet reconstruite, mais les parents sont identiques.
+        const fk = pairKey((f.instance as { fusionParents?: [string, string] }).fusionParents)
         const bm = finalTeam.find((m) => m.uid === f.instance.uid)
+            ?? (fk ? finalTeam.find((m) => pairKey((m as { fusionParents?: [string, string] }).fusionParents) === fk) : undefined)
         if (!bm) continue
         f.instance.currentHp = Math.max(0, bm.currentHp)
         f.instance.status = bm.status

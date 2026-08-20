@@ -1923,6 +1923,18 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
 
 export const YELLOW_MAP_IDS = Object.keys(YELLOW_MAPS)
 
+// LIGUE DE FUSION — salle du Dieu Spaghetti en BRONZE : le boss EST la fin (pas de salle ultime), donc fond SANS
+//   PORTE (cul-de-sac) + AUCUNE porte droite (seule la porte gauche = retraite Autel). MÊME id "yellow_fusion_miroir"
+//   → tout le câblage (trainer, sacre, dialogues) reste INCHANGÉ. Résolue par gameStore.resolveActiveMap() UNIQUEMENT
+//   quand le palier actif est le BRONZE. Argent/or gardent le fond AVEC porte (fusion_dome_champion.jpg) → porte
+//   droite gated vers la salle ultime (ton reflet).
+export const FUSION_MIROIR_BRONZE: YellowMapData = {
+    ...YELLOW_MAPS.yellow_fusion_miroir,
+    exits: [{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }], // porte GAUCHE (retraite) seule — pas de porte droite
+    backgroundImage: "/yellow/sprites/fusion_dome_champion_bronze.png",
+    backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128,
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RUN 3 — VARIANTES d'arène re-thémées (glace / combat / spectre).
 // MÊME id de carte que le run 1/2 → TOUT le câblage (équipes re-typées, badges, score, entrée via

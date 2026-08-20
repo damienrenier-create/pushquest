@@ -18,7 +18,7 @@ import {
     type SideId,
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
-import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
+import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone } from "./playerStore"
 import { getItem } from "../data/items"
@@ -32,7 +32,7 @@ import { run3ArenaForBoss } from "../data/run3Arenas"
 import { bossEnemyKey, leagueEnemyKey } from "../data/run3Score"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
-import { getSpecies } from "../data/species"
+import { getSpecies, registerCustomSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
@@ -57,7 +57,7 @@ import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
-import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten } from "./fusionGauntlet"
+import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
@@ -130,6 +130,7 @@ interface BattleStoreState {
     loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
+    fusionDefeat: { koLog: { victim: string; move: string; by: string }[] } | null // LIGUE DE FUSION — DÉFAITE : générique 5s (récap : quelle attaque a mis chaque fusion K.O.) avant le renvoi à l'Autel (transitoire)
     megamonarxReveal: boolean // 🐉🪨 MÉGAMONARX : signal one-shot « Dracolithe niv100 a transcendé » → cinématique + persist côté client (transitoire)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
@@ -187,7 +188,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, fusionDefeat: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -238,10 +239,11 @@ const BATTLE_LS_MAX_AGE_MS = 24 * 3600 * 1000 // au-delà → instantané ignor�
 function battlePersistable(b: BattleState | null, ctx: TrainerContext | null): boolean {
     if (!b || b.phase === "ended" || b.pvp) return false
     if (ctx?.trainerId?.startsWith("frontier:")) return false // série de vagues : pas reprenable ici
-    // FUSION (Autel + Ligue) : les espèces sont ÉPHÉMÈRES (registre mémoire, perdu au reload) → un instantané ne
-    //   pourrait JAMAIS être repris (getSpecies null → resumeBattleFromStorage l'efface). On ne persiste donc PAS
-    //   (au lieu d'un instantané mort) : un refresh en plein combat de fusion = on refait le combat, sans reliquat.
-    if (isFusionBattleTrainer(ctx?.trainerId)) return false
+    // ÉPREUVE DE FUSION (Autel, fusion:TRIAL) : bac à sable jetable → pas d'instantané (refresh = on refait, sans reliquat).
+    //   La LIGUE DE FUSION (y_fusion_*), elle, EST reprenable : persistBattleSnapshot embarque la DÉFINITION des espèces
+    //   ÉPHÉMÈRES (fusions joueur + ennemi) dans l'instantané → resumeBattleFromStorage les ré-enregistre AVANT de valider
+    //   (sinon getSpecies=null l'effacerait). Le combat exact (PV des 2 camps + statuts) reprend pile où il en était.
+    if (ctx?.trainerId?.startsWith("fusion:")) return false
     return true
 }
 
@@ -250,11 +252,26 @@ function persistBattleSnapshot(): void {
     if (typeof window === "undefined") return
     try {
         const { battle, trainer, energySpent } = storeState
-        if (!battlePersistable(battle, trainer)) { window.localStorage.removeItem(BATTLE_LS_KEY); return }
+        if (!battlePersistable(battle, trainer) || !battle) { window.localStorage.removeItem(BATTLE_LS_KEY); return } // `|| !battle` : narrow TS (battlePersistable garantit déjà non-null)
         // events = file de playback UI du DERNIER tour (déjà vue par le joueur) → on la VIDE dans
         // l'instantané pour reprendre DIRECTEMENT au point de décision (sinon le tour se rejoue).
         const snap = { ...battle, events: [] }
-        window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent }))
+        // LIGUE DE FUSION : les espèces (fusions JOUEUR + ENNEMI) sont ÉPHÉMÈRES (registre mémoire, perdu au reload).
+        //   On EMBARQUE leur définition (types/stats/moves) dans l'instantané → resumeBattleFromStorage les ré-enregistre
+        //   avant de valider (sinon getSpecies=null l'effacerait). Sprite en data-URI RETIRÉ (poids LS) : le client le
+        //   re-résout via son hook / le placeholder Chimère (fusionParents).
+        let fusionSpecies: SpeciesData[] | undefined
+        if (isFusionLeagueTrainer(trainer?.trainerId)) {
+            const seen = new Set<string>(); const chain: SpeciesData[] = []
+            for (const m of [...battle.player.team, ...battle.enemy.team]) {
+                if (seen.has(m.speciesId)) continue
+                seen.add(m.speciesId)
+                const sp = getSpecies(m.speciesId)
+                if (sp) chain.push({ ...sp, sprite: sp.sprite.startsWith("data:") ? "" : sp.sprite })
+            }
+            fusionSpecies = chain
+        }
+        window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent, fusionSpecies }))
     } catch { /* quota / sérialisation : on ignore (au pire = comportement d'avant) */ }
 }
 
@@ -272,10 +289,13 @@ export function resumeBattleFromStorage(): boolean {
     try { raw = window.localStorage.getItem(BATTLE_LS_KEY) } catch { return false }
     if (!raw) return false
     try {
-        const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number }
+        const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number; fusionSpecies?: SpeciesData[] }
         if (o.v !== 1 || !o.battle) { clearBattleSnapshot(); return false }
         if (typeof o.ts === "number" && Date.now() - o.ts > BATTLE_LS_MAX_AGE_MS) { clearBattleSnapshot(); return false }
         const b = o.battle
+        // LIGUE DE FUSION : ré-enregistre les espèces ÉPHÉMÈRES embarquées (fusions joueur + ENNEMI) AVANT la validation
+        //   getSpecies ci-dessous — sinon l'instantané serait jugé « mort » et effacé (le combat de Ligue ne reprendrait pas).
+        if (o.fusionSpecies?.length) registerCustomSpecies(o.fusionSpecies)
         // Validation défensive : combat en cours, équipes saines, espèces résolubles.
         if (b.phase === "ended" || b.pvp || !b.player?.team?.length || !b.enemy?.team?.length) { clearBattleSnapshot(); return false }
         for (const m of [...b.player.team, ...b.enemy.team]) if (!getSpecies(m.speciesId)) { clearBattleSnapshot(); return false }
@@ -553,7 +573,24 @@ export function submitPlayerAction(action: PlayerAction) {
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
     if (next.phase === "ended") finishBattle(next, newEntry)
-    else persistBattleSnapshot() // #8 : on rafraîchit l'instantané anti-fuite tant que le combat dure
+    else {
+        persistBattleSnapshot() // #8 : on rafraîchit l'instantané anti-fuite tant que le combat dure
+        // LIGUE DE FUSION — BUG SOIN/REFRESH : l'usure du gauntlet est persistée À CHAQUE TOUR (pas seulement à la
+        //   victoire de salle) → un refresh en plein combat NE PEUT PLUS ressusciter/soigner les fusions K.O. (l'équipe
+        //   est reprise avec son usure RÉELLE, cf. restoreFusionGauntletFromCarry). Scopé Ligue (pas l'épreuve Autel).
+        if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) persistFusionGauntletWear(next.player.team)
+    }
+}
+
+/** LIGUE DE FUSION — persiste l'usure COURANTE du gauntlet (PV/statut/PP/K.O.) : miroir localStorage (INSTANTANÉ,
+ *  anti-refresh) + save serveur (durable, débouncé). Appelé À CHAQUE TOUR + à la fin de chaque salle. */
+function persistFusionGauntletWear(finalTeam: ReadonlyArray<BattleMon>): void {
+    writeBackGauntlet(finalTeam)
+    const carry = serializeGauntletCarry()
+    const json = carry ? JSON.stringify({ team: carry }) : null
+    setFusionLeagueCarry(json)   // save serveur (durable, cross-device)
+    writeGauntletCarryLs(json)   // miroir localStorage (instantané → repris tel quel au refresh)
+    persistYellowSave()          // POST débouncé (durabilité serveur)
 }
 
 /** Fin de combat : resync équipe (XP/PV/niveaux), capture, évolutions, sauvegarde. */
@@ -608,10 +645,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 ? `Tes fusionnés ont entraîné leurs parents ! ${grew.join(" · ")}`
                 : `Tes fusionnés ont transmis de l'expérience à leurs parents.`
         }
-        // GAUNTLET : recopie PV/PP/K.O. finaux vers l'équipe-gauntlet persistante → la salle suivante hérite de l'usure.
-        writeBackGauntlet(b.player.team)
-        // REPRISE AU RELOAD : persiste l'usure du gauntlet dans la save (repris tel quel au rechargement, sans soin gratuit).
-        const carry = serializeGauntletCarry(); setFusionLeagueCarry(carry ? JSON.stringify({ team: carry }) : null)
+        // GAUNTLET : recopie PV/PP/K.O. finaux vers l'équipe-gauntlet persistante (save + miroir LS) → la salle
+        //   suivante hérite de l'usure, et un reload la reprend tel quel (sans soin gratuit).
+        persistFusionGauntletWear(b.player.team)
     }
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
@@ -1274,8 +1310,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   sauvage… tout ce qui te met KO total grignote le badge du palier ACTIF (activeFusionTier). Le palier se fige à sa
     //   complétion (bronze bouclé → les wipes comptent pour argent). Voulu par Sartay (« tout ce qui entraîne + KO total »).
     if (isLose && isTrainerDefeated(FUSION_UNLOCK_MARKER)) recordFusionLeagueDefeat(activeFusionTier((m) => isTrainerDefeated(m)))
+    // GÉNÉRIQUE DE DÉFAITE (Ligue de Fusion) : à la défaite d'une salle, on liste PAR QUELLE ATTAQUE chaque fusion est
+    //   tombée (record __lastHitBy posé par le moteur) → overlay 5s thématique avant le renvoi à l'Autel. null sinon.
+    const fusionDefeat = (isFusionLeague && b.outcome === "lose")
+        ? { koLog: b.player.team.filter((m) => m.currentHp <= 0).map((m) => {
+                const hit = (m as { __lastHitBy?: { move: string; by: string } }).__lastHitBy
+                return { victim: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: hit?.move ?? "—", by: hit?.by ?? "—" }
+            }) }
+        : null
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1879,6 +1923,18 @@ export function useFusionSacre(): { tier: string; team: FusionChampionMon[] } | 
 }
 export function clearFusionSacre() {
     setStore({ fusionSacre: null })
+}
+
+/** LIGUE DE FUSION — DÉFAITE : récap des attaques fatales (générique 5s), ou null. Cleared après l'overlay → whiteout. */
+export function useFusionDefeat(): { koLog: { victim: string; move: string; by: string }[] } | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().fusionDefeat,
+        () => getSnapshot().fusionDefeat,
+    )
+}
+export function clearFusionDefeat() {
+    setStore({ fusionDefeat: null })
 }
 
 /** 🐉🪨 MÉGAMONARX — un Dracolithe niv100 vient-il de transcender (à la victoire de la Ligue de Fusion) ? Le client

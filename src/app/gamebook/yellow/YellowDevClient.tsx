@@ -33,6 +33,7 @@ import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import RunScoreboardPanel from "./RunScoreboardPanel"
 import RunBadgesPanel from "./RunBadgesPanel"
 import FusionEpiloguePanel, { type EpilogueRosterMon } from "./FusionEpiloguePanel"
+import { FusionDefeatOverlay } from "./FusionDefeatOverlay"
 import RustyLampModal from "./RustyLampModal"
 import GeniePanel from "./GeniePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
@@ -66,7 +67,7 @@ import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useFusionDefeat, clearFusionDefeat, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -441,6 +442,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const loopOffer = useLoopOffer() // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (post-capture Ukognofy / sacre OR)
     const fusionParentReward = useFusionParentReward() // LIGUE DE FUSION : XP reversée aux parents (fin de combat)
     const fusionSacre = useFusionSacre() // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (sacre Dieu Spaghetti)
+    const fusionDefeat = useFusionDefeat() // LIGUE DE FUSION : générique de défaite (5s) → récap des attaques fatales avant le renvoi Autel
     const megamonarxReveal = useMegamonarxReveal() // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vient de transcender → cinématique historique
     const pnj6TradeOffer = usePnj6TradeOffer() // PNJ 6 : offre d'échange Crocavern ↔ team[0] (post-victoire)
     const justCaught = useJustCaught()
@@ -1250,7 +1252,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // DEPUIS LA 1re SALLE), MAIS on ressort quand même au Centre Daemon : ainsi on peut se soigner et
     // aller se ré-entraîner entre deux tentatives (la Ligue est sans retour à l'intérieur).
     useEffect(() => {
-        if (whiteout && !battle) {
+        // LIGUE DE FUSION — DÉFAITE : on ATTEND la fin du générique (fusionDefeat != null) avant de renvoyer à l'Autel.
+        //   L'overlay appelle clearFusionDefeat → ce garde retombe → le whiteout s'applique alors normalement.
+        if (whiteout && !battle && !fusionDefeat) {
             const aceTaunt = getAceLossTaunt() // lu AVANT clearWhiteout (qui l'efface) — null si défaite hors ACE
             const nemTaunt = getNemesisLossTaunt() // DÉFI NÉMÉSIS perdu → Caninombre scellé à jamais (lu AVANT clearWhiteout)
             if (mapPlayer.mapId.startsWith("yellow_fusion_")) {
@@ -1273,7 +1277,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             else if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
             else if (nemTaunt) showDialogue("y_nemesis_challenge", "LE NÉMÉSIS", [nemTaunt]) // défaite au défi némésis
         }
-    }, [whiteout, battle, setMap, mapPlayer.mapId, showDialogue])
+    }, [whiteout, battle, fusionDefeat, setMap, mapPlayer.mapId, showDialogue])
 
     // DUEL reflet terminé (Viridian/arène eau) → récompenses post-combat, une fois le combat quitté
     // ET les éventuelles évolutions jouées. Victoire : cadeau Dieu des Nouilles + Nexus Ball (+ cadeau
@@ -2258,6 +2262,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         const target = facingRemote()
                         if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                     }
+                    // ARÈNE JOUEUR / PNJ-joueur run 2 : A près d'un REFLET (≤1 case, diagonales incl.) → le défie, comme le
+                    //   clic/tap ET le clavier (le bouton A tactile l'ignorait → il fallait CLIQUER le reflet). Bug corrigé.
+                    const chebR = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
+                    const oppR = [...arenaOpponents, ...visibleGhosts].filter((o) => chebR(o) <= 1).sort((a, b) => chebR(a) - chebR(b))[0]
+                    if (oppR) { handleArenaClick(oppR.userId); return }
                     pressA()
                 }}
                 onB={() => { if (kartOpen) return; if (battle) { if (menu !== "none") { goBack(); return } dispatchBattleInput("b"); return } if (!goBack()) pressB() }}
@@ -4900,6 +4909,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     })}
                     onClose={() => { setFusionEpilogue(null); setEpiloguePending(false) }}
                 />
+            )}
+
+            {/* LIGUE DE FUSION — GÉNÉRIQUE DE DÉFAITE (5s) : après avoir QUITTÉ le combat perdu (!battle), on joue le récap
+                thématique « par quelle attaque chaque fusion est tombée » ; à la fin (onDone → clearFusionDefeat) le
+                whiteout reprend et renvoie à l'Autel. zIndex 9999 (au-dessus de tout). */}
+            {fusionDefeat && !battle && (
+                <FusionDefeatOverlay koLog={fusionDefeat.koLog} onDone={clearFusionDefeat} />
             )}
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en

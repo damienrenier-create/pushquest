@@ -71,7 +71,11 @@ interface TrainingGrid {
 /** SOUS-ZONE RECTANGULAIRE (biotope) : dans une map à `rects`, le POOL dépend du rectangle contenant (x,y).
  *  Hors de tout rectangle → aucune rencontre. Sert aux biotopes de la Grotte du Nexus B1F. Bornes INCLUSIVES. */
 interface RectZone { x1: number; y1: number; x2: number; y2: number; pool: WildEntry[] }
-interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid; rects?: RectZone[] }
+/** RENCONTRE FÉÉ DÉTERMINISTE (plage run 2) : une fraction `chance` des rencontres = UNE fée, l'espèce choisie
+ *  par le DERNIER CHIFFRE du niveau du lead (0-3 → bases[0] · 4-6 → bases[1] · 7-9 → bases[2]). Le stade suit
+ *  le niveau (speciesAtLevel). Pas de gate Ligue de Fusion ici : la crique EST leur habitat run 2. */
+interface LevelDigitFairy { chance: number; bases: readonly [string, string, string] }
+interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid; rects?: RectZone[]; levelDigitFairy?: LevelDigitFairy }
 
 /** Le rectangle-biotope contenant (x,y), ou null (hors biotope). Bornes inclusives. */
 function rectAt(rects: RectZone[], x: number, y: number): RectZone | null {
@@ -848,6 +852,58 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "oragron", base: VERY_RARE, player: "elec", rare: true }, // Vol/Élec (pépite)
         ],
     },
+    // PLAGE run 2 — LA CRIQUE HANTÉE. Les oiseaux Vol ont fui vers la Route Nord : jour comme nuit, la plage
+    //   grouille de SPECTRES (déplacés depuis le Manoir, désormais ténébreux). Dans les hautes herbes rôdent
+    //   aussi 3 FÉES rarissimes — laquelle apparaît dépend du DERNIER CHIFFRE du niveau de ton 1er Daemon
+    //   (0-3 Rosdrakis · 4-6 Archéoptix · 7-9 Toxyrm ; cf. levelDigitFairy). Les spectres ÉVOLUENT avec le
+    //   niveau (run 2 = plus coriace). Draclet/Plumiot restent dispo ailleurs en run 2 (Route Nord).
+    yellow_plage: {
+        rate: 0.14, minLevel: 8,
+        levelDigitFairy: { chance: 0.10, bases: ["rosdrakis", "archeoptix", "toxyrm"] },
+        pool: [
+            { speciesId: "brook", base: COMMON },                       // spectre commun
+            { speciesId: "hibouh", base: COMMON },                      // chouette spectre
+            { speciesId: "shady", base: UNCOMMON },
+            { speciesId: "sporbeo", base: UNCOMMON },
+            { speciesId: "revemante", base: UNCOMMON },
+            { speciesId: "bouh", base: RARE, rare: true },
+            { speciesId: "ombrapanthe", base: RARE, rare: true },       // panthère spectrale (finale mono-stade) — belle prise
+            { speciesId: "phoechaudi", base: VERY_RARE, rare: true },   // Feu/Spectre, pépite (évolue en Phoéchaudiii)
+        ],
+    },
+    // AQUA ARENA (« LE BATEAU ») run 2 — le pont grouille de faune AQUATIQUE. Devient une zone de rencontres
+    //   EAU : le SOL DU PONT (path) déclenche en NG+ (cf. isWildTile dans gameStore) ; en run 1 le pont reste
+    //   calme (AUCUNE rencontre). Loutrille y retrouve enfin un habitat sauvage. Les lignées évoluent au niveau.
+    yellow_aqua_arena: {
+        rate: 0.12, minLevel: 10,
+        pool: [
+            { speciesId: "gouttiny", base: COMMON },
+            { speciesId: "loutrille", base: COMMON },                   // enfin un habitat sauvage
+            { speciesId: "tetardoc", base: UNCOMMON },
+            { speciesId: "otama", base: UNCOMMON },
+            { speciesId: "belunode", base: RARE },
+            { speciesId: "guizer", base: RARE },
+            { speciesId: "aquapanthe", base: RARE, rare: true },        // finale mono-stade
+            { speciesId: "orcaline", base: VERY_RARE, noEvolve: true, rare: true }, // Glace/Eau, pépite
+        ],
+    },
+    // MAISON HANTÉE run 2 — LE MANOIR DES TÉNÈBRES. Les spectres ont migré vers la crique (plage) : le manoir
+    //   est désormais le repaire des TÉNÈBRES. Règle « PLUS C'EST FORT, PLUS C'EST RARE » : bases communes
+    //   (N16-24) → mi-évos peu communes (N30) → finales rares (N44, capture dure) → GÉCKÈBRE giga-rare (N50,
+    //   capture très dure, Hyper Ball+). ⭐ Obscurène (Eau/Ténèbres) hante la NUIT.
+    yellow_maison_hantee: {
+        rate: 0.12, minLevel: 14, maxLevel: 50,
+        pool: [
+            { speciesId: "caninombre", base: COMMON, noEvolve: true, levelRange: [16, 24] },
+            { speciesId: "sepulcru", base: COMMON, noEvolve: true, levelRange: [16, 24] },
+            { speciesId: "obscurene", base: UNCOMMON, noEvolve: true, levelRange: [18, 26], hourRange: [20, 8] }, // Eau/Ténèbres, la NUIT
+            { speciesId: "lycanfer", base: RARE, noEvolve: true, levelFixed: 30 },   // mi-évo
+            { speciesId: "macabour", base: RARE, noEvolve: true, levelFixed: 30 },   // mi-évo
+            { speciesId: "tenebrir", base: VERY_RARE, noEvolve: true, levelFixed: 44, captureMult: 0.4 }, // finale
+            { speciesId: "condombre", base: VERY_RARE, noEvolve: true, levelFixed: 44, captureMult: 0.4 }, // finale
+            { speciesId: "geckebre", base: GIGA_RARE, noEvolve: true, levelFixed: 50, captureMult: 0.3, captureMinBallBonus: 4 }, // ⭐ ULTRA RARE
+        ],
+    },
 }
 
 // ═══════════════ RENCONTRES DU RUN 3 (concours) ═══════════════
@@ -1005,6 +1061,18 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // RATTRAPAGE run 3 (LIVE post-Ligue) : Wistree rôde dans la Grotte (ultra-rare / rare selon run3Used).
     const grotteCatch = run3LiveCatchupGrotte(ctx, rng)
     if (grotteCatch) return grotteCatch
+
+    // FÉÉ DÉTERMINISTE (plage run 2) : une petite fraction des rencontres = UNE fée choisie par le DERNIER
+    //   CHIFFRE du niveau du lead (0-3 · 4-6 · 7-9). Rare (pop 1-2 crans au-dessus), stade suivant le niveau.
+    if (zone.levelDigitFairy && rng() < zone.levelDigitFairy.chance) {
+        const d = (((ctx.leadLevel % 10) + 10) % 10)
+        const pick = d <= 3 ? zone.levelDigitFairy.bases[0] : d <= 6 ? zone.levelDigitFairy.bases[1] : zone.levelDigitFairy.bases[2]
+        let lvl = Math.round(ctx.leadLevel * (0.66 + rng() * 0.34)) + intIn(rng, 1, 2)
+        if (ctx.levelCap != null) lvl = Math.min(lvl, ctx.levelCap)
+        if (zone.maxLevel != null) lvl = Math.min(lvl, zone.maxLevel)
+        lvl = Math.max(zone.minLevel ?? 2, Math.min(100, lvl))
+        return finalizeSpawn({ speciesId: pick, base: 1, rare: true }, lvl, rng, ctx)
+    }
 
     // BIOTOPES (Grotte B1F) : le pool dépend du RECTANGLE contenant (x,y). Hors de tout biotope → aucune rencontre.
     const pool = zone.rects ? (rectAt(zone.rects, ctx.x, ctx.y)?.pool ?? null) : zone.pool

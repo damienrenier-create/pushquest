@@ -840,6 +840,9 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         events.push({ kind: "message", text: defHeld?.survive1hpPct ? `${displayName(defender)} se raccroche à 1 PV grâce à son ${defHeld.name} !` : `${displayName(defender)} s'accroche à 1 PV !` })
     }
     applyDamage(state, other(side), dealt, events)
+    // GÉNÉRIQUE DE DÉFAITE (Ligue de Fusion) : mémorise sur le défenseur le DERNIER coup encaissé (attaque + auteur).
+    //   Écrasé à chaque coup → au KO, c'est bien l'attaque FATALE. Lu par finishBattle pour lister comment chaque fusion tombe.
+    if (dealt > 0) (defender as { __lastHitBy?: { move: string; by: string } }).__lastHitBy = { move: move.name, by: displayName(attacker) }
     // Record À VIE de l'attaquant (flavor affiché dans la fiche, persisté).
     if (dealt > (attacker.bestDmg ?? 0)) { attacker.bestDmg = dealt; attacker.bestDmgMove = move.name }
     // Record de CE COMBAT uniquement (runtime, repart de 0 à chaque combat) → débrief GOAT.

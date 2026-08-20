@@ -14,7 +14,7 @@ import { tryMove } from "../engine/movement"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS, RUN3_ARENA_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
+import { YELLOW_MAPS, RUN3_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
 import { currentGymBadge } from "../data/arenaInfos"
 import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
@@ -25,7 +25,7 @@ import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion 
 import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
 import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
-import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, type GauntletCarryMon } from "./fusionGauntlet"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
@@ -78,6 +78,9 @@ import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, H
 // pour couvrir aussi le reload direct dans l'arène.
 function resolveActiveMap(mapId: string): YellowMapData | undefined {
     if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[mapId]) return RUN3_ARENA_MAPS[mapId]
+    // LIGUE DE FUSION — salle du Dieu Spaghetti en BRONZE (le boss EST la fin) : fond SANS PORTE (cul-de-sac).
+    //   Argent/or gardent le fond AVEC porte (→ salle ultime, gated). Résolu à chaque pose de carte.
+    if (mapId === "yellow_fusion_miroir" && activeFusionTier((m) => isTrainerDefeated(m)) === "bronze") return FUSION_MIROIR_BRONZE
     return YELLOW_MAPS[mapId]
 }
 
@@ -277,16 +280,22 @@ function disposeFusionGauntlet() {
     getGauntletTeam()?.forEach((f) => disposeFusion(f.speciesId))
     setGauntletTeam(null)
     clearFusionLeagueCarry() // plus de run en cours → on efface l'usure persistée (pas de reprise fantôme)
+    writeGauntletCarryLs(null) // …et le miroir localStorage (sinon un vieux carry ressusciterait la Ligue au reload)
 }
+/** Persiste l'usure du gauntlet dans la save serveur ET son miroir localStorage (source la + fraîche au reload). */
+function setGauntletCarry(json: string | null): void { setFusionLeagueCarry(json); writeGauntletCarryLs(json) }
 
 /** RELOAD en pleine Ligue de Fusion — RECONSTRUIT l'équipe-gauntlet depuis le roster + RÉ-APPLIQUE l'usure persistée
  *  (PV/statut/PP) par PAIRE DE PARENTS (clé stable). Renvoie true si au moins une fusion est debout (→ on RESTE dans la
  *  salle) ; false = pas de carry / roster incompatible / toutes K.O. → l'appelant renvoie à l'Autel (fail-safe). */
 export function restoreFusionGauntletFromCarry(): boolean {
     const save = getPlayerSave()
-    if (!save.fusionLeagueCarry) return false
+    // Miroir localStorage PRIORITAIRE (persisté à chaque TOUR → plus frais que la save serveur, qui peut être en
+    //   retard d'un tour au moment d'un refresh) ; repli sur la save serveur (cross-device / LS vidé).
+    const rawCarry = readGauntletCarryLs() ?? save.fusionLeagueCarry
+    if (!rawCarry) return false
     let carry: GauntletCarryMon[]
-    try { const parsed = JSON.parse(save.fusionLeagueCarry); carry = Array.isArray(parsed?.team) ? parsed.team : (Array.isArray(parsed) ? parsed : []) } catch { return false }
+    try { const parsed = JSON.parse(rawCarry); carry = Array.isArray(parsed?.team) ? parsed.team : (Array.isArray(parsed) ? parsed : []) } catch { return false }
     if (!carry.length) return false
     const all = [...save.team, ...save.pc]
     const byU = (uid: string) => all.find((m) => m.uid === uid)
@@ -328,14 +337,14 @@ function ensureFusionGauntletBuilt(): boolean {
         .filter((x): x is BuiltFusion => x !== null)
     if (built.length === 0) return false
     setGauntletTeam(built)
-    const c0 = serializeGauntletCarry(); setFusionLeagueCarry(c0 ? JSON.stringify({ team: c0 }) : null)
+    const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null)
     return true
 }
 
 /** LIGUE DE FUSION (onglet Équipe) — persiste l'usure COURANTE du gauntlet dans la save (après réordonnancement). */
 function persistGauntletCarry() {
     const c = serializeGauntletCarry()
-    setFusionLeagueCarry(c ? JSON.stringify({ team: c }) : null)
+    setGauntletCarry(c ? JSON.stringify({ team: c }) : null)
 }
 /** Réordonne l'ÉQUIPE de fusionnés (échange 2 positions) : gauntlet + roster (pour la reprise) + carry + save. */
 export function reorderFusionGauntletTeam(uidA: string, uidB: string): boolean {
@@ -667,7 +676,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
         setGauntletBerries(startTier === "or" || (startTier === "argent" && firstTryToday))
         setGauntletBossBeaten(false) // SALLE ULTIME : nouvelle run → le Dieu Spaghetti n'est pas encore vaincu (porte ultime fermée)
-        const c0 = serializeGauntletCarry(); setFusionLeagueCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
+        const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
         // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
         //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
         //   Dé-doublonné côté client + serveur (paires déjà READY/en mémoire ignorées) → aucun coût en double.
@@ -1496,10 +1505,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             let spawnX = exit.targetSpawnX
             let spawnY = exit.targetSpawnY
             // SALLE ULTIME — la porte droite du miroir ne mène à la salle ultime (ton reflet) qu'APRÈS avoir vaincu le
-            //   Dieu Spaghetti DANS CETTE run (argent/or, flag transient). Sinon (boss pas encore battu, OU bronze déjà
-            //   sacré au boss, OU save d'avant la feature en fallback) → cette porte renvoie à l'Autel comme avant.
+            //   Dieu Spaghetti DANS CETTE run (argent/or, flag transient). Sinon (BRONZE — le boss EST la fin —, boss pas
+            //   encore battu, ou save d'avant la feature) → la porte est SCELLÉE : CUL-DE-SAC (on annule le pas au lieu de
+            //   téléporter à l'Autel, qui laissait croire à une salle « après » le boss). Le joueur sort par la gauche.
             if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten()) {
-                targetMapId = "yellow_combat_autel"; spawnX = 9; spawnY = 8
+                set({ player: { ...player, direction: next.direction } }) // reste sur place, face à la porte murée
+                return
             }
             // RETOUR DYNAMIQUE des intérieurs PARTAGÉS (shop / Centre) : on ressort dans la VILLE
             // d'où l'on vient (Ville Jaune OU Cendreville), pas systématiquement yellow_entrance.
@@ -1884,6 +1895,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const onWildTile = map.tiles[next.posY]?.[next.posX]
         const isWildTile = onWildTile === "grassTall"
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
+            // « BATEAU » (Aqua Arena) run 2 : le sol du PONT déclenche des rencontres EAU (NGPLUS_ZONES) — run 1 : rien.
+            || (map.id === "yellow_aqua_arena" && onWildTile === "path" && effectiveRunWorld() === "ngplus")
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
         if (moved && !!map.darkness && get().torchOn && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
         // 🐈‍⬛ GALIJAH : à chaque pas hors rejeu, on (ré)arme la chasse dès 150 ESPÈCES DIFFÉRENTES au Pokédex — atteintes
