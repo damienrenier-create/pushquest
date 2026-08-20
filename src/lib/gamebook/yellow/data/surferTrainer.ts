@@ -1,16 +1,18 @@
 // src/lib/gamebook/yellow/data/surferTrainer.ts
 //
 // LE SURFEUR — PNJ de la Route Nord (38,8), visible SEULEMENT après avoir atteint la Zone de Combat (post-Sylvebarbe).
-// Il n'engage le combat QUE si le joueur porte une TENUE DE SURFEUR (offertes par la Fashion Victim dès ~145 espèces).
-// Son équipe (6 Daemons aquatiques, TOUS avec la CT Surf) se cale sur le niveau MOYEN de l'équipe du joueur ±6.
-// À la 1re VICTOIRE (le joueur porte forcément la tenue → gate d'engagement) → il offre sa CT SURF. Ensuite : rematch
-// amical 1×/jour. Surf → permet d'atteindre l'île secrète (Galijah y pope dès 150 espèces distinctes). React-free.
+// Il CONSENT au combat dès 135 espèces distinctes (peu importe la tenue), MAIS prévient : il ne lâche sa précieuse CT
+// SURF qu'à qui le bat EN TENUE DE SURFEUR (offertes par la Fashion Victim). Battu SANS tenue → raillerie, pas de cadeau.
+// Son équipe (6 Daemons aquatiques, tous avec Surf) se cale sur le niveau MOYEN de l'équipe du joueur ±6. Après la CT :
+// rematch amical 1×/jour. Surf → île secrète (Galijah y pope dès 150 espèces). React-free.
 
 export const SURFER_NPC_ID = "y_surfer"
 export const SURFER_MAP_ID = "yellow_route_nord"
 export const SURFER_POS = { x: 38, y: 8 } // Route Nord, au bord d'un plan d'eau (naturel pour un surfeur)
 export const SURFER_NAME = "LE SURFEUR"
 export const SURF_CT_ID = "ct66"
+/** Espèces distinctes à partir desquelles le surfeur CONSENT au combat (peu importe la tenue). */
+export const SURFER_SPECIES_GATE = 135
 /** Seuil d'espèces distinctes pour que GALIJAH pope sur l'île (indépendant de l'obtention de Surf). */
 export const SURFER_DEX_THRESHOLD = 150
 /** Marqueur (jour) du rematch quotidien post-CT (via setDailyMarker → un seul marqueur conservé). */
@@ -20,23 +22,27 @@ export const SURFER_REMATCH_PREFIX = "surfer_rematch_"
 export const SURFER_TEAM: readonly string[] = ["aquapanthe", "ro", "geaucke", "orcaline", "osquille", "uzumaro"] as const
 
 // ── Dialogues ────────────────────────────────────────────────────────────────
-/** Pas de tenue de surfeur → il attend patiemment que le joueur s'équipe (Fashion Victim). */
-export const SURFER_NEED_OUTFIT_LINES = [
-    "Yo, dude ! 🏄 Belle énergie… mais franchement, tu comptes surfer HABILLÉ comme ÇA ?",
-    "Écoute : va voir la FASHION VICTIM. Quand t'auras une tenue de surfeur ULTRA SLAY sur le dos, reviens — et là on cause.",
-    "Pas de style, pas de vague, dude. C'est la règle de l'océan. 🌊",
+/** Moins de 135 espèces → pas encore prêt pour la vague (teaser, pas de combat). */
+export const SURFER_NOT_READY_LINES = [
+    "Yo, dude. 🏄 Je te sens pas encore ASSEZ dans le trip pour rider avec moi.",
+    "Reviens quand t'auras croisé plus de Daemons — l'océan récompense les curieux. On se capte ! 🌊",
 ]
-/** A la tenue, pas encore la CT → défi + combat (1re victoire = CT). */
+/** ≥135 espèces, pas encore la CT → il combat, MAIS prévient : cadeau réservé à qui le bat en TENUE de surfeur. */
 export const SURFER_CHALLENGE_LINES = [
-    "Ohhh, MAINTENANT tu parles ! 🤙 Cette tenue déchire, dude.",
-    "Le deal est simple : tu bats mes potes de la vague, et ma CT SURF est à toi. Elle t'ouvrira… disons… des horizons.",
-    "Mes Daemons se calent sur ton niveau, pas de coup fourré. On surfe ? 🌊",
+    "Yo ! 🤙 Ouais, on peut se tirer une bourre, dude — j'dis jamais non à une session.",
+    "Mais joue franc-jeu : ma précieuse CT SURF, je la lâche QUE si tu me bats en vraie TENUE DE SURFEUR (la Fashion Victim en vend).",
+    "Sans le style, tu peux gagner… mais tu repartiras les mains vides. Mes Daemons se calent sur ton niveau. On surfe ? 🌊",
 ]
-/** 1re VICTOIRE (tenue portée) → remise de la CT SURF. */
+/** 1re VICTOIRE EN TENUE → remise de la CT SURF. */
 export const SURFER_REWARD_LINES = [
-    "…WHOA. T'as ridé cette session comme un dieu, dude. 🏄🔥",
+    "…WHOA. T'as ridé cette session comme un dieu, dude — ET avec le STYLE. 🏄🔥",
     "Marché tenu : la CT SURF est à toi ! Apprends-la à un Daemon compatible.",
     "Avec Surf ET ce style, l'eau ne te barrera plus jamais la route. On se voit sur la vague ! 🌊",
+]
+/** Victoire SANS tenue de surfeur → raillerie, AUCUN cadeau (reviens habillé). */
+export const SURFER_WIN_NO_OUTFIT_LINES = [
+    "Belle glisse !… mais sérieux, dude, tu m'as affronté HABILLÉ comme ça ? 😅",
+    "Pas de tenue de surfeur, pas de CT — je te l'avais dit. Va voir la FASHION VICTIM et reviens rider avec CLASSE. 🌊",
 ]
 /** Déjà la CT → rematch amical (rematch dispo aujourd'hui). */
 export const SURFER_DONE_LINES = [

@@ -36,7 +36,8 @@ import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_WIN_NO_OUTFIT_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
+import { isSurfOutfit } from "../data/avatars"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
@@ -882,14 +883,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             recordPnj5Defeat()
             rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
         } else if (storeState.trainer.trainerId === SURFER_NPC_ID) {
-            // LE SURFEUR : ré-affrontable (PAS de markTrainerDefeated). 1re VICTOIRE (le joueur portait forcément la
-            //   tenue → gate d'engagement côté interaction) → CT SURF. Ensuite : rematch amical 1×/jour (day-scopé).
-            if (!hasSurfCt()) {
-                grantSurfCt()
-                rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REWARD_LINES] }
-            } else {
+            // LE SURFEUR : ré-affrontable (PAS de markTrainerDefeated). Il ne lâche sa CT SURF QU'À qui le bat EN TENUE
+            //   de surfeur. Battu SANS tenue → raillerie, aucun cadeau (reviens habillé). Après la CT → rematch 1×/jour.
+            if (hasSurfCt()) {
                 markSurferRematchDone(new Date().toISOString().slice(0, 10))
                 rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REMATCH_WIN_LINES] }
+            } else if (isSurfOutfit(getPlayer().chosenAvatar)) {
+                grantSurfCt() // vaincu EN TENUE → CT SURF
+                rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_REWARD_LINES] }
+            } else {
+                rematchReward = { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lines: [...SURFER_WIN_NO_OUTFIT_LINES] } // vaincu sans tenue → pas de cadeau
             }
         } else if (storeState.trainer.trainerId === ANANAS_TRAINER_ID) {
             // ANANAS (chercheur de baies) : le ticket a été consommé au LANCEMENT (gameStore.markAnanasStarted).

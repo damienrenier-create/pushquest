@@ -50,7 +50,7 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, A
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_DEX_THRESHOLD, SURFER_CHALLENGE_LINES, SURFER_NEED_OUTFIT_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
@@ -2751,9 +2751,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // LE SURFEUR (Route Nord, post-Sylvebarbe) : n'engage le combat QUE si le joueur porte une TENUE DE SURFEUR.
-        //   1re victoire → CT Surf (géré en battleStore). Ensuite : rematch amical 1×/jour. (Le seuil 150 ne concerne
-        //   QUE le pop de Galijah sur l'île, pas la CT.)
+        // LE SURFEUR (Route Nord, post-Sylvebarbe) : CONSENT au combat dès 135 espèces (peu importe la tenue), MAIS
+        //   prévient qu'il ne lâche sa CT SURF qu'à qui le bat EN TENUE de surfeur (géré en battleStore). Après la CT :
+        //   rematch 1×/jour. (Le seuil 150 ne concerne QUE le pop de Galijah.)
         if (npc.id === SURFER_NPC_ID) {
             if (hasSurfCt()) {
                 if (!surferRematchAvailableToday(new Date().toISOString().slice(0, 10))) {
@@ -2763,10 +2763,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_LINES, lineIndex: 0 }, pendingSurfer: true })
                 return
             }
-            if (!wearsSurfOutfit()) { // pas de tenue → il attend patiemment que le joueur s'équipe (Fashion Victim)
-                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_NEED_OUTFIT_LINES, lineIndex: 0 } })
+            if (getPokedex().caught.length < SURFER_SPECIES_GATE) { // < 135 espèces → pas encore prêt (teaser, pas de combat)
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_NOT_READY_LINES, lineIndex: 0 } })
                 return
             }
+            // ≥135, pas de CT → combat (peu importe la tenue) ; il prévient que le cadeau exige la tenue (cf. SURFER_CHALLENGE_LINES).
             set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_CHALLENGE_LINES, lineIndex: 0 }, pendingSurfer: true })
             return
         }
