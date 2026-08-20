@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { CTS } from "@/lib/gamebook/yellow/data/cts"
-import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
 
@@ -42,6 +42,7 @@ const LEARNED_BY: Record<string, Learner[]> = {}
 {
     const tmp: Record<string, Map<string, Learner>> = {}
     for (const sp of Object.values(SPECIES)) {
+        if (DEX_ULTRA_SECRET.has(sp.id)) continue // ANTI-SPOILER : MégamonarX/Galijah n'apparaissent jamais dans la liste des « qui apprend ce move »
         for (const { level, moveId } of sp.learnset) {
             const byId = (tmp[moveId] ??= new Map())
             const prev = byId.get(sp.id)

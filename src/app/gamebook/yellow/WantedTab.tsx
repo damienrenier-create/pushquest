@@ -5,13 +5,14 @@
 //   ne bloque/paie que quand il est EN LIGNE. Reps de l'acheteur = ajustés côté client autour de l'appel.
 
 import { useEffect, useState } from "react"
-import { SPECIES_IDS, getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES_IDS, getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getPlayer, spendReps, grantReps, listMonForTrade } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchWanted, postWanted, cancelWanted, offerWanted, counterWanted, cancelOffer, acceptWanted, type WantedState, type WantedAd, type WantedOffer, type PriceKind } from "@/lib/gamebook/yellow/frontier/wantedApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
-const SPECIES_SORTED = [...SPECIES_IDS].sort((a, b) => (getSpecies(a)?.dexNo ?? 0) - (getSpecies(b)?.dexNo ?? 0))
+// ANTI-SPOILER : les légendaires ULTRA-SECRETS (MégamonarX/Galijah) ne sont JAMAIS proposés au marché (ni spoiler, ni troc).
+const SPECIES_SORTED = [...SPECIES_IDS].filter((id) => !DEX_ULTRA_SECRET.has(id)).sort((a, b) => (getSpecies(a)?.dexNo ?? 0) - (getSpecies(b)?.dexNo ?? 0))
 const box: React.CSSProperties = { background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }
 const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#15151f", border: "none", borderRadius: 7, padding: "5px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 })
 const sect: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: "#e0a458", margin: "10px 0 5px", textTransform: "uppercase", letterSpacing: 0.4 }

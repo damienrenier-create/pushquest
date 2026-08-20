@@ -187,12 +187,13 @@ export function activeNpcs() {
             dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
         }]
     }
-    // FASHION VICTIM — désormais à VILLE JAUNE (couloir sud), visible par TOUS (whitelist levée, pops Grotte/Zone de
-    //   Combat retirés). Spot + look (sprite) tirés au hasard, STABLES par session.
+    // FASHION VICTIM — à VILLE JAUNE, visible par TOUS. Spot tiré au hasard parmi TOUTES les cases WALKABLE de la ville
+    //   (flood-fill, comme le Sage) → elle bouge vraiment d'une visite à l'autre (fini les 2 spots fixes). Look re-tiré aussi.
     {
-        if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * FASHION_SPOTS.length)
+        const fashionSpots = villeJauneSageSpots()
+        if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * fashionSpots.length)
         if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
-        const [fvx, fvy] = FASHION_SPOTS[fashionSpotIdx]
+        const [fvx, fvy] = fashionSpots[fashionSpotIdx % fashionSpots.length]
         // GAG : après le cadeau (canne obtenue CE RUN), c'est ELLE qui s'est relookée → planche « post-gag » fixe.
         const postGagIdx = FASHION_VICTIM_SPRITES.indexOf(FASHION_POST_GAG_SPRITE)
         const fvHasRod = (getPlayerSave().items[FISHING_ROD_ITEM_ID] ?? 0) > 0
@@ -2990,7 +2991,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
-        if (mapId === "yellow_entrance") sageSpotIdx = -1 // VIEUX SAGE : re-tire son spot à CHAQUE entrée à Ville Jaune → il bouge d'une visite à l'autre (plus « tout le temps au même endroit »)
+        if (mapId === "yellow_entrance") { sageSpotIdx = -1; fashionSpotIdx = -1; fashionSpriteIdx = -1 } // SAGE + FASHION VICTIM : re-tirent leur spot (+ look) à CHAQUE entrée à Ville Jaune → ils bougent d'une visite à l'autre
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null, fishing: null }) // fishing null : garde-fou anti-session-bloquée à la transition de carte
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

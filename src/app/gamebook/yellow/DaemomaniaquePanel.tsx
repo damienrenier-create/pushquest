@@ -13,7 +13,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getSpecies, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getSpecies, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
 import { ECLAIREUR_PRECISION_MARKER } from "@/lib/gamebook/yellow/data/pnj7"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
@@ -69,7 +69,9 @@ export default function DaemomaniaquePanel() {
             list = visibleDexSpecies(caught, true, true, true, true, seen)
         }
         const uniq = new Set<string>()
-        list = list.filter((sp) => sp && sp.dexNo < 500 && !uniq.has(sp.id) && uniq.add(sp.id))
+        // ANTI-SPOILER : les LÉGENDAIRES ULTRA-SECRETS (MégamonarX/Galijah, obtention hors-normes) n'apparaissent JAMAIS
+        //   dans le guide de capture tant qu'ils ne sont pas CAPTURÉS (sinon on spoile leur existence + méthode).
+        list = list.filter((sp) => sp && sp.dexNo < 500 && !(DEX_ULTRA_SECRET.has(sp.id) && !caught.includes(sp.id)) && !uniq.has(sp.id) && uniq.add(sp.id))
         list.sort((a, b) => a.dexNo - b.dexNo)
         const needle = q.trim().toLowerCase()
         if (needle) list = list.filter((sp) => sp.name.toLowerCase().includes(needle))
