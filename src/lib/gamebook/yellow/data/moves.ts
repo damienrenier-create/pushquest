@@ -24,6 +24,7 @@ export const MOVES: Record<string, MoveData> = {
 
     pistolet_a_o: { id: "pistolet_a_o", name: "Pistolet à O", type: "EAU", power: 40, accuracy: 100, pp: 25, description: "Un jet d'eau." },
     hydrocanon: { id: "hydrocanon", name: "Hydrocanon", type: "EAU", power: 110, accuracy: 80, pp: 5, description: "Déluge surpuissant." },
+    surf: { id: "surf", name: "Surf", type: "EAU", power: 80, accuracy: 100, pp: 15, effect: { chance: 50, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Une immense vague déferle : gros dégâts EAU fiables, 50% de baisser le Spécial de la cible. CT du surfeur — permet aussi de SURFER sur l'eau hors combat." },
 
     fouet_lianes: { id: "fouet_lianes", name: "Fouet Lianes", type: "PLANTE", power: 45, accuracy: 100, pp: 25, description: "Cingle avec des lianes." },
     tempete_verte: { id: "tempete_verte", name: "Tempête Verte", type: "PLANTE", power: 90, accuracy: 100, pp: 10, description: "Rafale de feuilles." },

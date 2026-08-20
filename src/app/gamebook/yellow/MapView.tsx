@@ -711,6 +711,9 @@ const NPC40_WALK_COLS: readonly [number, number] = [0, 2]
 // AVATAR JOUEUR — pose CANNE À PÊCHE : colonnes 9-12 de la planche Gen3 (canne visible, cf. commentaire de layout).
 // Cyclées pour animer le lancer/l'attente. Row = direction face à l'eau. (N'existe que sur la branche avatar Gen3.)
 const NPC40_FISH_COLS: readonly number[] = [9, 10, 11, 12]
+// AVATAR JOUEUR — pose SURF : colonnes 13-14 de la planche Gen3 (sur la planche de surf, cf. layout). Alternées par
+//   stepFrame pour animer le surf. Row = direction. (N'existe que sur la branche avatar Gen3, pas sur le sprite Red.)
+const NPC40_SURF_COLS: readonly [number, number] = [13, 14]
 // ORDRE RÉEL des lignes des planches Gen 3 (outil « Sprite Forge » / hlh-npc, VÉRIFIÉ EN JEU par Sartay) :
 //   ligne 0 = BAS (Sud) · ligne 1 = GAUCHE (Ouest) · ligne 2 = DROITE (Est) · ligne 3 = HAUT (Nord, de dos).
 // ⚠️ NE PAS remettre l'ordre RSE standard (bas/haut/gauche/droite) : ces planches ne le suivent PAS → orientation
@@ -918,6 +921,7 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_plage_pecheur: { url: "/yellow/sprites/npc_plage1_gen3.png" },                       // regarde ↓ (Sud)
     y_plage_nageuse: { url: "/yellow/sprites/npc_plage2_gen3.png", row: NPC40_ROW_LEFT },  // regarde ← (Ouest)
     y_plage_marin: { url: "/yellow/sprites/npc_plage3_gen3.png", row: NPC40_ROW_UP },      // regarde ↑ (Nord)
+    y_surfer: { url: "/yellow/sprites/npc_surfer_gen3.png", row: NPC40_ROW_DOWN },         // LE SURFEUR (Route Nord 38,8) — regarde ↓ (Sud, vers le joueur)
     // Aqua Arena (bateau) — 4 dresseurs à vue + 2 boss (row = facing ; boss sur estrade = face Sud par défaut)
     y_aqua_n1: { url: "/yellow/sprites/npc_aqua_50_gen3.png" },                           // MATELOT ↓
     y_aqua_n2: { url: "/yellow/sprites/npc_aqua_51_gen3.png", row: NPC40_ROW_LEFT },      // VIGIE ←
@@ -1407,16 +1411,20 @@ function PlayerSprite({
         return () => { clearTimeout(t1); clearTimeout(t2) }
     }, [fishDir])
 
+    // SURF : le joueur se tient SUR une case d'eau → pose « planche de surf » (cols 13-14). N'arrive que si l'équipe
+    //   connaît Surf (l'eau est sinon infranchissable). Lu depuis la carte courante.
+    const onWater = useGameStore((s) => s.map.tiles[player.posY]?.[player.posX] === "water")
+
     // FASHION VICTIM — avatar Gen3 CHOISI : rendu comme un PNJ (planche npc40, direction via la ligne), pour que le
     //   joueur se voie lui-même changé (les autres le voient via la présence). Sinon → sprite Red (sans pose de pêche).
     const av = isValidAvatar(avatar) ? avatar : undefined
     if (av) {
         const sheet = avatarSheet(av) // URL de la planche (sans le fragment de teinte)
         const tint = avatarFilter(av) // filtre CSS de PERSONNALISATION (teinte/saturation/luminosité) ou ""
-        // PÊCHE prioritaire : pose « canne » (colonnes 9-12) face à l'eau, sinon marche (col 0/2 via stepFrame).
+        // PÊCHE prioritaire (pose « canne » 9-12), puis SURF (planche 13-14 quand on est sur l'eau), sinon marche (0/2).
         const dir = fishDir ?? player.direction
         const dirRow = dir === "up" ? NPC40_ROW_UP : dir === "left" ? NPC40_ROW_LEFT : dir === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
-        const col = fishDir ? NPC40_FISH_COLS[fishFrame] : NPC40_WALK_COLS[stepFrame]
+        const col = fishDir ? NPC40_FISH_COLS[fishFrame] : onWater ? NPC40_SURF_COLS[stepFrame] : NPC40_WALK_COLS[stepFrame]
         return (
             <div style={{ ...npc40ContainerStyle(screenPos, player.posX, player.posY), zIndex: 3, pointerEvents: "none" }}>
                 <div style={{ position: "absolute", inset: 0, ...npc40CellStyle(sheet, col, dirRow), filter: `${tint} drop-shadow(0 1px 1px rgba(0,0,0,0.45))`.trim() }} />

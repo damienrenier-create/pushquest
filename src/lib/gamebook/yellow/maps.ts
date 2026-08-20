@@ -743,6 +743,9 @@ function buildNorthRoute(): NorthBuild {
     // Ouverture de la GROTTE creusée dans le flanc de la montagne nord (12,3) :
     // case walkable pour pouvoir y entrer (le sprite "bouche" est posé par-dessus).
     m[3][12] = "grass"
+    // LE SURFEUR (38,8) : case NETTE (au bord du plan d'eau haut-droite) + approche sud garantie (pas de décor random
+    //   qui bloquerait l'accès au PNJ). Il pop ici post-Sylvebarbe (cf. activeNpcs) pour offrir la CT Surf.
+    m[8][38] = "grass"; m[9][38] = "grass"; m[10][38] = "grass"
     return { tiles: m, trees, flowers, bushes, signs }
 }
 
@@ -1210,6 +1213,27 @@ function buildAquaArena(): TileType[][] {
     const m = AQUA_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "path") as TileType))
     // EAU PÊCHABLE (coords validées Sartay) : 2 bandes verticales (parois des bassins) col 7 + col 16, rows 14-27.
     for (let y = 14; y <= 27; y++) { m[y][7] = "water"; m[y][16] = "water" }
+    return m
+}
+
+// ÎLE ÉMERAUDE (« EMERALD EASTERN PATH ») 19×32 — île de sable cernée par la MER, à l'EST de la plage. Accessible
+//   UNIQUEMENT EN SURF (depuis la mer de la plage, col 22). Fond = image (ile_emeraude.png) ; la collision (invisible
+//   sous l'image) = mer autour + blob de sable central marchable + carré d'HERBES HAUTES au centre (SEUL endroit du
+//   jeu où GALIJAH peut apparaître) + palmier/bois flotté bloquants. Retour plage par la case eau ouest (surf).
+const ILE_EMERAUDE_MAP_ID = "yellow_ile_emeraude"
+const ILE_W = 19, ILE_H = 32
+function buildIleEmeraude(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: ILE_H }, () => Array.from({ length: ILE_W }, () => "water" as TileType))
+    // Blob de sable ELLIPTIQUE (centre (9.5,16), rayons 6×8) → épouse l'île de l'art.
+    const cx = 9.5, cy = 16, rx = 6, ry = 8
+    for (let y = 0; y < ILE_H; y++) for (let x = 0; x < ILE_W; x++) {
+        const dx = (x - cx) / rx, dy = (y - cy) / ry
+        if (dx * dx + dy * dy <= 1) m[y][x] = "path" // sable marchable (convention plage : '.' = path)
+    }
+    // HERBES HAUTES centrales (seul spawn de GALIJAH) — cluster calé sur les patchs verts de l'art.
+    for (let y = 14; y <= 17; y++) for (let x = 8; x <= 11; x++) if (m[y]?.[x] === "path") m[y][x] = "grassTall"
+    // Palmier + bois flotté = décor BLOQUANT (l'art les dessine ; la collision empêche d'y marcher).
+    for (const [tx, ty] of [[12, 14], [4, 21]] as const) if (m[ty]?.[tx] === "path") m[ty][tx] = "tree"
     return m
 }
 
@@ -1704,6 +1728,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [
             ...([[3, 19], [4, 19]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_gelee", targetSpawnX: 19, targetSpawnY: 23 })),     // → Gelée (arche)
             ...([[15, 19], [15, 20]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_aqua_arena", targetSpawnX: 1, targetSpawnY: 19 })),      // → Bateau (Aqua Arena)
+            // MER col 22 (surfable seulement) → ÎLE ÉMERAUDE. Le joueur surfe depuis la crique (18,29→…→col 22) et
+            //   remonte/descend la colonne d'eau ; ces 2 cases ouvrent l'île. Atterrit sur le sable ouest de l'île (5,16).
+            ...([[22, 18], [22, 19]] as const).map(([x, y]) => ({ x, y, targetMapId: ILE_EMERAUDE_MAP_ID, targetSpawnX: 5, targetSpawnY: 16 })),       // → Île Émeraude (SURF)
         ],
         backgroundImage: "/yellow/sprites/plage.png",
         backgroundImageWidth: 960,
@@ -1724,6 +1751,24 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 1536,
         backgroundImageHeight: 2560,
         backgroundImageTileSize: 64,
+    },
+    // ÎLE ÉMERAUDE (« EMERALD EASTERN PATH ») — île secrète à l'EST de la plage, accessible UNIQUEMENT EN SURF (mer
+    //   col 22). SEUL endroit où GALIJAH peut apparaître (herbes hautes centrales). Retour plage = case eau ouest (3,16).
+    [ILE_EMERAUDE_MAP_ID]: {
+        id: ILE_EMERAUDE_MAP_ID,
+        name: "EMERALD EASTERN PATH",
+        tiles: buildIleEmeraude(),
+        width: ILE_W,
+        height: ILE_H,
+        exits: [
+            // Bord OUEST (eau) → on re-surfe vers la plage : atterrit sur la plage à (18,29) (terre, à côté de la mer).
+            { x: 3, y: 16, targetMapId: "yellow_plage", targetSpawnX: 18, targetSpawnY: 29 },
+        ],
+        backgroundImage: "/yellow/sprites/ile_emeraude.png",
+        backgroundImageWidth: 760,
+        backgroundImageHeight: 1280,
+        backgroundImageTileSize: 40,
+        encountersPaused: false, // GALIJAH (rencontre forcée) doit pouvoir se consommer sur l'herbe haute ; AUCUNE entrée ZONES → 0 rencontre aléatoire
     },
     // GROTTE DU NEXUS (casse-tête endgame, Mt. Moon 3 étages) — SÉPARÉE de la GROTTE ROCHEUSE. Accès PAYANT (50 JC)
     // via le MARCHAND (Zone de Combat). SORTIES : porte 1F (18,39) → hub · échelle du Dôme (B1F 45,5) · KO d'équipe

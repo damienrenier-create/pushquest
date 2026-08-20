@@ -32,7 +32,7 @@ function isBuildingWall(buildings: YellowBuilding[] | undefined, x: number, y: n
     return false
 }
 
-export function tryMove(player: PlayerState, dir: Direction, map: YellowMapData): PlayerState {
+export function tryMove(player: PlayerState, dir: Direction, map: YellowMapData, opts?: { canSurf?: boolean }): PlayerState {
     const { dx, dy } = DIR_DELTAS[dir]
     const nx = player.posX + dx
     const ny = player.posY + dy
@@ -42,9 +42,11 @@ export function tryMove(player: PlayerState, dir: Direction, map: YellowMapData)
         return { ...player, direction: dir }
     }
 
-    // Tile bloquante (mur, arbre…)
+    // Tile bloquante (mur, arbre…). SURF : l'eau devient franchissable si un membre de l'équipe connaît Surf —
+    //   SAUF les bassins du bateau (Aqua Arena), qui restent infranchissables (on ne surfe pas dans le bateau).
     const tile = map.tiles[ny][nx]
-    if (isBlockingTile(tile)) {
+    const canSurfHere = !!opts?.canSurf && tile === "water" && map.id !== "yellow_aqua_arena"
+    if (isBlockingTile(tile) && !canSurfHere) {
         return { ...player, direction: dir }
     }
 

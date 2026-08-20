@@ -899,6 +899,16 @@ export function grantCt(ctId: string): boolean {
     return true
 }
 
+/** CT SURF (ct66) déjà en poche OU déjà apprise ? (teachCt déplace ownedCts→boughtCts → on teste les deux.) */
+export function hasSurfCt(): boolean {
+    return st.ownedCts.includes("ct66") || st.boughtCts.includes("ct66")
+}
+/** Octroie la CT SURF (cadeau du surfeur, 150 espèces). true si nouvellement remise (jamais un 2e don). */
+export function grantSurfCt(): boolean {
+    if (hasSurfCt()) return false
+    return grantCt("ct66")
+}
+
 /** Remplace l'équipe (utilisé pour resynchroniser après un combat : XP/PV/niveaux). */
 export function setTeam(team: MonInstance[]) {
     st = { ...st, team }

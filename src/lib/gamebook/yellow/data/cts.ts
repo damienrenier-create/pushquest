@@ -168,6 +168,7 @@ export const CTS: CtData[] = [
     //   drop 5% en battant le reflet d'un autre joueur (jamais en vente : gift). Apprenable Ténèbres + Spectre/Psy.
     { id: "ct60", label: "CT60", moveId: "reflet_fatal", price: 0, gift: true, alsoTypes: ["SPECTRE", "PSY"] },
     { id: "ct61", label: "CT61", moveId: "voile_de_givre", price: 0, gift: true, alsoTypes: ["EAU"] }, // récompense des 5 frères Glaçon (Grotte Gelée) — exclusive
+    { id: "ct66", label: "CT66", moveId: "surf", price: 0, gift: true, alsoTypes: ["NORMAL", "GLACE", "VOL", "DRAGON", "SOL", "ROCHE", "PSY"] }, // CADEAU du SURFEUR (150 espèces) — jamais en vente ; apprise → permet de surfer
 ]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —
@@ -206,7 +207,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
  *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
  *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
 export function run2BlackjackCtPool(): string[] {
-    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58", "ct61"]) // signatures de boss + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon)
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58", "ct61", "ct66"]) // signatures de boss + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon) + Surf (surfeur)
     return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 

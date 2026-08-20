@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -49,6 +49,7 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, A
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_TEAM_LEVEL, SURFER_DEX_THRESHOLD, surferChallengeLines, SURFER_REWARD_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost } from "../data/avatars"
@@ -88,6 +89,13 @@ export function activeNpcs() {
     // SYLVEBARBE battu : on retire le PNJ invisible (il n'a plus de dialogue utile ni de sprite endormi) → sa case
     //   (23,38) entre Ville Jaune et la Zone de Combat REDEVIENT MARCHABLE (fini le « reste » qui bloquait dans le vide).
     if (getPlayerSave().sylvebarbeAwake) list = list.filter((n) => n.id !== SYLVEBARBE_NPC_ID)
+    // LE SURFEUR (Route Nord, 38,8) : APPARAÎT SEULEMENT une fois la Zone de Combat atteinte (Sylvebarbe battu).
+    //   Défi « 150 espèces → CT Surf » + petit combat. Interaction interceptée par id (dialoguesAfter = repli).
+    if (getPlayerSave().sylvebarbeAwake) list = [...list, {
+        id: SURFER_NPC_ID, name: SURFER_NAME, mapId: SURFER_MAP_ID, kind: "static", interaction: "interactive",
+        sprite: { emoji: "🏄", color: "#2aa5d0" }, initialX: SURFER_POS.x, initialY: SURFER_POS.y,
+        dialoguesAfter: ["Yo, dude ! 🏄"],
+    }]
     if (effectiveRunWorld() === "run3") {
         list = list.map((n) => (n.run3X != null
             ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
@@ -464,6 +472,7 @@ interface GameStore {
     trainerAlertId: string | null
     pendingNgplusAbandon: boolean // NG+ : offre d'abandon de CHEN en cours → confirmation UI à la fermeture du dialogue
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
+    pendingSurfer: boolean // défi/dialogue du SURFEUR en cours → petit combat à la fermeture
     pendingAnanas: boolean // intro d'ANANAS en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
@@ -1027,6 +1036,13 @@ function tryLaunchAce(): ActiveDialogue | null {
     return null
 }
 
+// SURF : id de la CT-move + « un membre de l'équipe connaît-il Surf ? ». Vrai → l'eau devient franchissable
+//   hors combat (tryMove opts.canSurf) → accès à l'île cachée depuis la mer de la plage (col 22).
+const SURF_MOVE_ID = "surf"
+function teamKnowsSurf(): boolean {
+    return getPlayerSave().team.some((m) => m.moves.some((mv) => mv.moveId === SURF_MOVE_ID))
+}
+
 // DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
 function tryLaunchOrcaline(): ActiveDialogue | null {
     const team = getPlayerSave().team
@@ -1043,6 +1059,23 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
     const enemyTeam = [0, 1].map(() => createMonInstance(sp, lvl, { owned: false, ...trainerBoost(sp, lvl, "guard") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: ORCALINE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
+    return null
+}
+
+// LE SURFEUR (Route Nord) : « petit combat » ré-affrontable — 6 Daemons aquatiques, TOUS équipés de la CT Surf
+//   (3 attaques naturelles + surf). La vraie récompense (CT Surf) se gagne au DÉFI des 150 espèces, pas au combat.
+function tryLaunchSurfer(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: SURFER_NPC_ID, npcName: SURFER_NAME, lineIndex: 0, lines: SURFER_NO_TEAM_LINES }
+    }
+    const enemyTeam = SURFER_TEAM.map((id) => {
+        const auto = (getSpecies(id)?.learnset ?? []).filter((l) => l.level <= SURFER_TEAM_LEVEL).map((l) => l.moveId)
+        const moveIds = [...auto.slice(-3), "surf"] // 3 attaques naturelles + SURF garanti (slice(-4) le conserve)
+        return createMonInstance(id, SURFER_TEAM_LEVEL, { owned: false, moveIds, ...trainerBoost(id, SURFER_TEAM_LEVEL, "guard") })
+    })
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: SURFER_NPC_ID, reward: 0, aiLevel: "trainer" })
     return null
 }
 
@@ -1193,6 +1226,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     trainerAlertId: null,
     pendingNgplusAbandon: false,
     pendingOrcaline: false,
+    pendingSurfer: false,
     pendingAnanas: false,
     pendingGekroc: false,
     pendingSylvebarbe: false,
@@ -1332,7 +1366,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().fishing || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
-        const next = tryMove(player, dir, map)
+        const next = tryMove(player, dir, map, { canSurf: teamKnowsSurf() })
 
         // Les PNJ ne sont JAMAIS traversables : si la case cible est occupée par un
         // PNJ, on tourne sur place (comme un mur). tryMove ne connaît pas les PNJ.
@@ -1829,7 +1863,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (moved && getActiveWorld() !== "replay") armGalijahByDex()
         // Chasse armée → après 3-4 pas EFFECTIFS, on pose la rencontre forcée (niveau moyen d'équipe, capture légendaire).
         //   JAMAIS dans une bulle de rejeu (monde jetable → légendaire perdu) même si le marqueur y subsistait.
-        if (moved && isGalijahArmed() && getActiveWorld() !== "replay") {
+        //   GATE ÎLE : Galijah n'apparaît QUE sur l'ÎLE ÉMERAUDE (derrière le bateau, accès surf). Hors île, le décompte
+        //   gèle et reprend au retour. (L'armement, lui, reste global → le compteur affiché reste correct partout.)
+        if (moved && isGalijahArmed() && getActiveWorld() !== "replay" && map.id === "yellow_ile_emeraude") {
             if (galijahStepsLeft < 0) galijahStepsLeft = 3 + Math.floor(Math.random() * 2) // 3 ou 4 pas
             if (galijahStepsLeft > 0) galijahStepsLeft--
             if (galijahStepsLeft === 0) {
@@ -1975,11 +2011,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   la prochaine rencontre devient l'espèce demandée puis se CONSOMME (« tant pis » s'il la rate).
                     const forcedRaw = getPlayerSave().forcedEncounter
                     if (forcedRaw) {
+                        let keepForced = false
                         try {
                             const fe = JSON.parse(forcedRaw) as { speciesId?: string; level?: number; hard?: boolean }
-                            if (fe?.speciesId && getSpecies(fe.speciesId)) spawn = buildForcedSpawn(fe.speciesId, fe.level ?? 50, !!fe.hard)
+                            // GALIJAH = ÎLE ÉMERAUDE UNIQUEMENT : si le joueur quitte l'île avant de croiser l'herbe haute,
+                            //   on NE consomme PAS (sinon il popperait sur l'herbe de la plage) → on le garde pour l'île.
+                            //   Spécifique à galijah : les vœux du génie (partagent ce chemin) doivent, eux, se déclencher partout.
+                            if (fe?.speciesId === "galijah" && next.mapId !== "yellow_ile_emeraude") keepForced = true
+                            else if (fe?.speciesId && getSpecies(fe.speciesId)) spawn = buildForcedSpawn(fe.speciesId, fe.level ?? 50, !!fe.hard)
                         } catch { /* JSON invalide → ignoré, mais on consomme quand même pour ne pas rester bloqué */ }
-                        clearForcedEncounter(); persistYellowSave()
+                        if (!keepForced) { clearForcedEncounter(); persistYellowSave() }
                     }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
                     // GROTTE DU NEXUS (tous les étages puzzle) : aucune capture tant que le sauvage est à PLEINS PV
@@ -2072,6 +2113,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
                 } else if (get().pendingOrcaline) {
                     set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
+                } else if (get().pendingSurfer) {
+                    set({ dialogue: tryLaunchSurfer(), pendingSurfer: false })
                 } else if (get().pendingAnanas) {
                     set({ dialogue: tryLaunchAnanas(), pendingAnanas: false })
                 } else if (get().pendingGekroc) {
@@ -2639,6 +2682,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // LE SURFEUR (Route Nord, post-Sylvebarbe) : défi 150 espèces → CT SURF. Déjà la CT → petit combat amical ;
+        //   150 atteintes → remet la CT (une fois) ; sinon → défi (progression) + petit combat à la fermeture.
+        if (npc.id === SURFER_NPC_ID) {
+            if (hasSurfCt()) {
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_LINES, lineIndex: 0 }, pendingSurfer: true })
+                return
+            }
+            if (getPokedex().caught.length >= SURFER_DEX_THRESHOLD) {
+                grantSurfCt(); persistYellowSave() // CT Surf remise (grantSurfCt idempotent : jamais un 2e don)
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_REWARD_LINES, lineIndex: 0 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: surferChallengeLines(getPokedex().caught.length), lineIndex: 0 }, pendingSurfer: true })
+            return
+        }
+
         // ANANAS (chercheur de baies, Route Nord) : intro → combat à la fermeture. Le PNJ n'apparaît que s'il
         //   propose un combat (ananasAvailable), donc pas de garde « déjà fait » à dupliquer.
         if (npc.id === ANANAS_NPC_ID) {
@@ -2806,6 +2865,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchAce(), pendingAce: false })
         } else if (get().pendingOrcaline) {
             set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
+        } else if (get().pendingSurfer) {
+            set({ dialogue: tryLaunchSurfer(), pendingSurfer: false })
         } else if (get().pendingAnanas) {
             set({ dialogue: tryLaunchAnanas(), pendingAnanas: false })
         } else if (get().pendingGekroc) {
