@@ -139,7 +139,9 @@ function buildParent(speciesId: string, level: number, saiyan: number, role?: Fu
 //   Un même parent (kangoudead) peut nourrir plusieurs murs : invisible au joueur (cf. en-tête). Noms de fusion uniques.
 const ANTITRIO_ARGENT_OR: Record<string, { replace: string; with: FusionPairDef }[]> = {
     will: [
-        { replace: "Hippofer", with: { a: "omnhippo", b: "kangoudead", name: "Omnikang", moves: ["vague_mentale", "devoreur_ombres", "repos", "hypnose"] } },            // PSY/TÉNÈBRES — immune Psy ×0 ; Dévoreur d'Ombres tape ton Spectre/Psy ×2 + draine
+        // (Ex-remplacement Hippofer→Omnikang RETIRÉ : WILL avait 2 murs kangoudead d'affilée → sprites auto-générés
+        //  quasi identiques, effet « matraquage kangoudead ». On garde HIPPOFER (bronze, sprite maison, PSY/METAL —
+        //  lui aussi mur anti-Ténèbres/Spectre + debuff) → WILL n'a plus qu'UN seul kangoudead (Géckang).)
         { replace: "Morrinpâte", with: { a: "geckebre", b: "kangoudead", name: "Géckang", moves: ["morsure_sombre", "seisme", "repos", "toxik"] } },                     // SOL/TÉNÈBRES — mur anti-Jerbiwat increvable (PV699/Déf305 ; immune Psy ×0 ET Élec ×0, résiste Spectre ; seul le Feu passe neutre)
     ],
     koga: [{ replace: "Mérovortal", with: { a: "kangoudead", b: "merorem", name: "Mérodead", moves: ["toxik", "devoreur_ombres", "repos", "bombe_beurk"] } }],            // TÉNÈBRES/POISON — staller PV882, immune Psy, résiste Spectre/Ténèbres ×0.5
