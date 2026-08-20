@@ -39,10 +39,25 @@ export async function GET() {
         })) as { userId: string; nickname: string; team: string; wonAt: Date; world: string | null }[]
         // Les sacres de FUSION vivent dans la même table (world "fusion:*") mais ont leur propre onglet
         //   (fusion-hall-of-fame) → on les EXCLUT ici pour ne pas polluer le HoF de la Ligue classique.
-        const champions = rows.filter((r) => !(r.world ?? "").startsWith("fusion:")).slice(0, 150).map((r) => {
+        const filtered = rows.filter((r) => !(r.world ?? "").startsWith("fusion:")).slice(0, 150)
+        // AVATARS COURANTS : un reflet run-2 (PNJ-joueur de la Grotte) doit afficher le SKIN ACTUEL du joueur
+        //   (chosenAvatar), pas un Red générique. On joint GamebookProgress.flags par userId (best-effort).
+        const uids = [...new Set(filtered.map((r) => r.userId).filter(Boolean))]
+        const avatarByUid = new Map<string, string>()
+        try {
+            const saves = (await (prisma as any).gamebookProgress.findMany({
+                where: { chapterId: YELLOW_CHAPTER_ID, userId: { in: uids } },
+                select: { userId: true, flags: true },
+            })) as { userId: string; flags: unknown }[]
+            for (const s of saves) {
+                const m = JSON.stringify(s.flags ?? {}).match(/"chosenAvatar":\s*"([^"]+)"/)
+                if (m) avatarByUid.set(s.userId, m[1])
+            }
+        } catch { /* best-effort : pas d'avatar, on retombe sur le comportement d'avant */ }
+        const champions = filtered.map((r) => {
             let team: unknown = []
             try { team = JSON.parse(r.team) } catch { team = [] }
-            return { userId: r.userId, nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live" } // world : run 1/2/3 (défaut live)
+            return { userId: r.userId, nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live", avatar: avatarByUid.get(r.userId) ?? null } // world : run 1/2/3 (défaut live)
         })
         return NextResponse.json({ ok: true, champions })
     } catch {

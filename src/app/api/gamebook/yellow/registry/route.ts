@@ -66,6 +66,7 @@ export async function GET() {
                 aceWins: s.aceWins,
                 favoriteDaemon: topKey(s.pvpStats.daemonUse),
                 favoriteMove: topKey(s.pvpStats.moveUse),
+                chosenAvatar: s.chosenAvatar ?? null, // FASHION VICTIM : skin adopté → le reflet l'affiche partout
             }
         })
         .filter((p) => p.team.length > 0) // uniquement ceux qui ont vraiment commencé

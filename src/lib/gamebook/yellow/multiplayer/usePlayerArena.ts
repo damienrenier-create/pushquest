@@ -12,6 +12,7 @@ export interface ArenaOpponent {
     nickname: string
     x: number
     y: number
+    avatar?: string // skin adopté (chosenAvatar) → le reflet l'affiche partout
     player: RegistryPlayer
 }
 
@@ -57,6 +58,7 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
         nickname: mode === "mirror" ? mirrorName(p.nickname) : p.nickname,
         x: positions[i][0],
         y: positions[i][1],
+        avatar: p.chosenAvatar ?? undefined,
         player: p,
     }))
     return { mode, opponents }

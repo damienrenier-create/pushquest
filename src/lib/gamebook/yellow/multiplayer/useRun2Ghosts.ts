@@ -18,10 +18,11 @@ export interface Run2Ghost {
     nickname: string
     x: number
     y: number
+    avatar?: string // skin adopté (chosenAvatar) → le PNJ-joueur l'affiche partout (pas un Red générique)
     team: ChampionMon[]
 }
 
-interface ChampionEntry { userId?: string; nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
+interface ChampionEntry { userId?: string; nickname: string; wonAt: string; team: ChampionMon[]; world?: string; avatar?: string | null }
 
 /** Renvoie les PNJ-joueurs run 2 à afficher sur la Grotte 1F (vide ailleurs). 1 équipe run-2 par joueur (la plus
  *  récente), soi-même exclu, jusqu'à 5 placées aux coords fixes. */
@@ -47,7 +48,7 @@ export function useRun2Ghosts(mapId: string, myUserId: string): Run2Ghost[] {
                     const pos = GHOST_POSITIONS[list.length]
                     if (!pos) break // déjà 5 → on s'arrête (les autres attendront une place)
                     seen.add(uid)
-                    list.push({ userId: uid, nickname: c.nickname, x: pos[0], y: pos[1], team: c.team })
+                    list.push({ userId: uid, nickname: c.nickname, x: pos[0], y: pos[1], avatar: c.avatar ?? undefined, team: c.team })
                 }
                 setGhosts(list)
             })

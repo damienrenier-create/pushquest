@@ -353,7 +353,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     remotePlayers?: RemotePlayer[]
     chatBubbles?: Record<string, ChatBubble>
     myUserId?: string
-    arenaOpponents?: { userId: string; nickname: string; x: number; y: number }[]
+    arenaOpponents?: { userId: string; nickname: string; x: number; y: number; avatar?: string }[]
     onArenaClick?: (userId: string) => void
     /** FASHION VICTIM — avatar Gen3 du JOUEUR LOCAL (pour qu'il se voie lui-même changé). */
     myAvatar?: string
@@ -1224,20 +1224,22 @@ function ArenaOpponentSprite({
     screenPos,
     onClick,
 }: {
-    o: { userId: string; nickname: string; x: number; y: number }
+    o: { userId: string; nickname: string; x: number; y: number; avatar?: string }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     onClick: () => void
 }) {
     const hue = hashHue(o.userId)
     const cell = FIRERED_PLAYER.down[0]
     const topOffset = SPRITE_ASPECT_RATIO - 1
-    const customSheet = PLAYER_GEN3_SPRITE[(o.nickname ?? "").toLowerCase()]
+    const avatarRaw = isValidAvatar(o.avatar) ? o.avatar : undefined // SKIN ADOPTÉ (chosenAvatar) prioritaire → affiché partout
+    const customSheet = (avatarRaw ? avatarSheet(avatarRaw) : undefined) ?? PLAYER_GEN3_SPRITE[(o.nickname ?? "").toLowerCase()]
+    const customTint = avatarRaw ? avatarFilter(o.avatar) : ""
     const containerStyle: React.CSSProperties = customSheet
         ? { ...npc40ContainerStyle(screenPos, o.x, o.y), zIndex: 4, cursor: "pointer" }
         : { position: "absolute", ...screenPos(o.x, o.y - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 4, cursor: "pointer" }
     // Reflet statique face caméra (rangée DOWN) : l'avatar « regarde » le joueur, comme le Red d'origine.
     const spriteStyle: React.CSSProperties = customSheet
-        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_IDLE_COL, NPC40_ROW_DOWN), filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45))" }
+        ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_IDLE_COL, NPC40_ROW_DOWN), filter: `${customTint} drop-shadow(0 1px 1px rgba(0,0,0,0.45))`.trim() }
         : {
             position: "absolute",
             inset: 0,

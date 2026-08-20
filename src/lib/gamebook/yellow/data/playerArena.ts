@@ -38,6 +38,7 @@ export interface RegistryPlayer {
     badges?: string[]
     favoriteDaemon?: string // espèce la + jouée (pvpStats.daemonUse) → le miroir MÈNE avec (habitudes)
     favoriteMove?: string   // attaque la + jouée (réservé à une future couche de mimétisme de moves)
+    chosenAvatar?: string | null // FASHION VICTIM — skin adopté → le reflet du joueur l'affiche PARTOUT (pas un Red générique)
 }
 
 /** Enregistre les Daemons CUSTOM de tous les joueurs de la registry → getSpecies résout leurs reflets (sprite +
