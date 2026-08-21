@@ -2933,19 +2933,25 @@ export function sageSaiyanPointsLeftToday(): number {
 export function sageAvailableToday(): boolean {
     return sageSaiyanPointsLeftToday() > 0
 }
-/** Coût FIXE d'un point Saiyan redistribué. ÉQUITABLE + prévisible : 40 points = 2000 reps pile (plafond 20/jour →
- *  1000/jour sur 2 jours). Fini l'escalade exponentielle (qui s'envolait) ET le multiplicateur de réserve. */
-export const SAGE_POINT_COST = 50
-function sagePointCost(_k: number): number { return SAGE_POINT_COST }
+// RAMPE DOUCE (« fun ») : dans la journée, le 1er point coûte SAGE_COST_BASE, +SAGE_COST_STEP par point suivant
+//   → 12, 16, 20, …, 88 (20e point du jour). Σ sur les 20 points/jour = 1000, donc 40 points (2 jours au plafond)
+//   = 2000 pile. Ça MONTE (tension/décision) mais reste abordable (fini l'exponentielle « impayable »). Reset la nuit.
+export const SAGE_COST_BASE = 12
+export const SAGE_COST_STEP = 4
+/** Coût du k-ième point Saiyan déplacé DANS LA JOURNÉE (1-indexé). Rampe linéaire douce, remise à 0 chaque nuit. */
+function sagePointCost(k: number): number {
+    const n = Math.max(1, Math.floor(k))
+    return SAGE_COST_BASE + SAGE_COST_STEP * (n - 1)
+}
 /** Multiplicateur de réserve — NEUTRALISÉ (retourne toujours 1). Conservé exporté pour compat ; le coût du Sage
  *  ne dépend plus de la réserve d'énergie (rendait l'endgame « impayable »). */
 export function sageEnergyMult(_reserve: number = st.repsCap): number { return 1 }
-/** Coût en reps pour déplacer `points` points : FIXE à SAGE_POINT_COST par point (équitable). Indépendant de `used`
- *  et de la réserve → 40 points coûtent toujours 40 × 50 = 2000 reps. Le plafond quotidien (20/j) limite le rythme. */
-export function sageRespecCost(points: number, _used: number = st.sageSaiyanPointsToday ?? 0): number {
-    const n = Math.max(0, Math.floor(points))
+/** Coût en reps pour déplacer `points` points alors qu'on en a déjà bougé `used` aujourd'hui : Σ de la rampe sur les
+ *  points (used+1 … used+points) du jour. 20 points/jour = 1000 ⚡ ; 40 points (2 jours) = 2000 ⚡. Sans multiplicateur. */
+export function sageRespecCost(points: number, used: number = st.sageSaiyanPointsToday ?? 0): number {
+    const n = Math.max(0, Math.floor(points)), u = Math.max(0, Math.floor(used))
     let base = 0
-    for (let i = 1; i <= n; i++) base += sagePointCost(i)
+    for (let i = 1; i <= n; i++) base += sagePointCost(u + i) // le point (u+i) de la journée
     return base
 }
 

@@ -5,18 +5,18 @@ import {
 } from "../store/playerStore"
 import { hydratePokedex, markSeen, markCaught, recordSeenZone, daemonCompareTier } from "../store/pokedexStore"
 
-// SAGE SAIYAN — repricing : coût FIXE 50/point (équitable), indépendant du compteur du jour ET de la réserve →
-// 40 points = 2000 reps pile (plafond 20/j = 2 jours).
-describe("Sage Saiyan — coût plat 50/point", () => {
+// SAGE SAIYAN — repricing : rampe douce « fun » (12,16,…,88/jour), sans multiplicateur de réserve → 20 points/jour
+// = 1000 ⚡, donc 40 points (plafond 20/j = 2 jours) = 2000 ⚡ pile.
+describe("Sage Saiyan — rampe douce (fun)", () => {
     beforeEach(() => resetForIntro())
-    it("40 points = 2000 reps ; 20 = 1000 ; 1 = 50 (linéaire, équitable)", () => {
-        expect(sageRespecCost(1)).toBe(50)
-        expect(sageRespecCost(20)).toBe(1000)
-        expect(sageRespecCost(40)).toBe(2000)
+    it("une journée pleine (20 points) = 1000 ⚡ ; 2 jours (40 points) = 2000 ⚡", () => {
+        expect(sageRespecCost(20, 0)).toBe(1000)
+        expect(sageRespecCost(20, 0) + sageRespecCost(20, 0)).toBe(2000) // après reset nocturne, used repart à 0
     })
-    it("indépendant de `used` (plus d'escalade dans la journée)", () => {
-        expect(sageRespecCost(5, 0)).toBe(250)
-        expect(sageRespecCost(5, 15)).toBe(250) // même prix quel que soit le nb déjà déplacé aujourd'hui
+    it("rampe dans la journée : 1er point = 12, 20e = 88 (ça monte, mais reste abordable)", () => {
+        expect(sageRespecCost(1, 0)).toBe(12)   // 1er point du jour
+        expect(sageRespecCost(1, 19)).toBe(88)  // 20e point du jour
+        expect(sageRespecCost(2, 0)).toBe(12 + 16) // 1er + 2e = 28
     })
 })
 
