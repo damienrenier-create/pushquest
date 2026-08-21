@@ -19,8 +19,8 @@ import {
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
-import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone } from "./playerStore"
+import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -87,7 +87,13 @@ function syncPokedex(b: BattleState) {
     const caught = b.outcome === "caught"
     // SURPRISE : Gékroc / Goshendofy restent MASQUÉS du Pokédex (même pas « vu ») tant que NON capturés.
     if (caught || !getSpecies(sp)?.hiddenUntilCaught) markSeen(sp)
-    if (caught) { markCaught(sp); markCaughtThisRun(sp) } // Pokédex GLOBAL + overlay « capturé ce run » (per-monde)
+    // LOCALISATION « premium » : on n'enregistre la ZONE que pour une vraie rencontre SAUVAGE (pas un combat de dresseur)
+    //   → la fiche montre « où j'ai croisé cette créature », jamais un indice de chasse (réservé au Daemomaniaque).
+    if (b.isWild && !getSpecies(sp)?.hiddenUntilCaught) { const mid = getCurrentMapId(); if (mid) recordSeenZone(sp, mid) }
+    if (caught) {
+        markCaught(sp); markCaughtThisRun(sp) // Pokédex GLOBAL + overlay « capturé ce run » (per-monde)
+        const mid = getCurrentMapId(); if (mid) recordFirstCatch(sp, mid, new Date().toISOString().slice(0, 10)) // 1re capture (idempotent)
+    }
 }
 
 /** Contexte d'un combat de dresseur (récompense + marquage "battu"). */

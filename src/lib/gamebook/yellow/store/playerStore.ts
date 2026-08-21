@@ -807,6 +807,8 @@ let currentMapId = ""
 export function setCurrentPlayerId(id: string) { currentPlayerId = id || "" }
 export function getCurrentPlayerId(): string { return currentPlayerId }
 export function setCurrentMapId(id: string) { currentMapId = id || "" }
+/** Carte courante (pour la localisation « premium » : zone de rencontre / lieu de 1re capture). "" si inconnue. */
+export function getCurrentMapId(): string { return currentMapId }
 
 /** Renseigne les stats d'effort du jour (fetchées au chargement). */
 export function setWildCtx(ctx: WildPlayerCtx | null) {

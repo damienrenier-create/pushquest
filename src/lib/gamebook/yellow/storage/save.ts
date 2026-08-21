@@ -45,7 +45,7 @@ export interface YellowSave {
     pastaDayBonus: number
     /** DÔME de Combat : nombre de TOURNOIS gagnés (titres) — pilote le tier MAX débloqué + le palmarès. Additif. */
     domeChampionships: number
-    pokedex: { seen: string[]; caught: string[] }
+    pokedex: { seen: string[]; caught: string[]; seenAt?: Record<string, string[]>; firstCatch?: Record<string, { mapId: string; at: string }> }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
     /** Ids des dresseurs déjà RE-battus (match retour / rematch fait). */
@@ -288,7 +288,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -620,7 +620,20 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         casinoSpentToday: typeof o.casinoSpentToday === "number" ? Math.max(0, Math.floor(o.casinoSpentToday)) : 0,
         pastaDayBonus: typeof o.pastaDayBonus === "number" ? Math.max(0, Math.floor(o.pastaDayBonus)) : 0,
         domeChampionships: typeof o.domeChampionships === "number" ? Math.max(0, Math.floor(o.domeChampionships)) : 0,
-        pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
+        pokedex: {
+            seen: strArr(dex.seen),
+            caught: strArr(dex.caught),
+            seenAt: (() => { // LOCALISATION (additif) : Record<speciesId, mapId[]> ; défensif, vieilles saves = absent → {}
+                const out: Record<string, string[]> = {}
+                if (dex.seenAt && typeof dex.seenAt === "object") for (const [k, v] of Object.entries(dex.seenAt as Record<string, unknown>)) { const a = strArr(v); if (a.length) out[k] = a }
+                return out
+            })(),
+            firstCatch: (() => { // Record<speciesId, {mapId, at}> ; défensif
+                const out: Record<string, { mapId: string; at: string }> = {}
+                if (dex.firstCatch && typeof dex.firstCatch === "object") for (const [k, v] of Object.entries(dex.firstCatch as Record<string, unknown>)) { if (v && typeof v === "object") { const e = v as Record<string, unknown>; if (typeof e.mapId === "string") out[k] = { mapId: e.mapId, at: typeof e.at === "string" ? e.at : "" } } }
+                return out
+            })(),
+        },
         defeatedTrainers: strArr(o.defeatedTrainers),
         rematchedTrainers: strArr(o.rematchedTrainers),
         badges: strArr(o.badges),

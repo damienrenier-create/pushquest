@@ -10,9 +10,15 @@ import { visibleDexSpecies, isDexHidden, getSpecies, isCustomSpeciesId } from ".
 export interface PokedexState {
     seen: string[]    // speciesId
     caught: string[]  // speciesId
+    /** LOCALISATION « premium » (additif, save-safe) : zones (mapId) où le joueur a DÉJÀ croisé l'espèce à l'état
+     *  SAUVAGE. Alimenté à la rencontre sauvage (gameStore). Absent sur les vieilles saves → fiche sans zone. */
+    seenAt?: Record<string, string[]>
+    /** Lieu + date de la PREMIÈRE capture par espèce (écrit une seule fois, idempotent). Rétro-rempli depuis les
+     *  Daemons possédés au chargement. Absent sur les vieilles saves → pas de marqueur 1re capture. */
+    firstCatch?: Record<string, { mapId: string; at: string }>
 }
 
-let dex: PokedexState = { seen: [], caught: [] }
+let dex: PokedexState = { seen: [], caught: [], seenAt: {}, firstCatch: {} }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -44,9 +50,48 @@ export function markCaught(speciesId: string) {
     emit()
 }
 
-/** Restauration depuis la sauvegarde. */
+/** LOCALISATION — enregistre une ZONE de rencontre SAUVAGE (idempotent, dédupliqué). N'affecte JAMAIS le moteur ;
+ *  sert uniquement à la fiche « zones où j'ai déjà croisé cette créature ». Marque aussi l'espèce comme vue. */
+export function recordSeenZone(speciesId: string, mapId: string) {
+    if (!speciesId || !mapId) return
+    const seenAt = { ...(dex.seenAt ?? {}) }
+    const zones = seenAt[speciesId] ?? []
+    const seen = dex.seen.includes(speciesId) ? dex.seen : [...dex.seen, speciesId]
+    if (zones.includes(mapId) && seen === dex.seen) return
+    if (!zones.includes(mapId)) seenAt[speciesId] = [...zones, mapId]
+    dex = { ...dex, seen, seenAt }
+    emit()
+}
+
+/** LOCALISATION — enregistre la PREMIÈRE capture d'une espèce (carte + date). IDEMPOTENT : ne réécrit jamais une
+ *  entrée existante → la « première » capture est réellement préservée. Ajoute aussi la zone aux zones croisées. */
+export function recordFirstCatch(speciesId: string, mapId: string, at: string) {
+    if (!speciesId || !mapId) return
+    const fc = dex.firstCatch ?? {}
+    if (fc[speciesId]) { if (mapId) recordSeenZone(speciesId, mapId); return } // déjà connu → on garde la 1re
+    dex = { ...dex, firstCatch: { ...fc, [speciesId]: { mapId, at } } }
+    emit()
+    recordSeenZone(speciesId, mapId)
+}
+
+/** Zones (mapId) où le joueur a DÉJÀ croisé l'espèce à l'état sauvage (vide si jamais / vieille save). */
+export function seenZonesOf(speciesId: string): string[] {
+    return dex.seenAt?.[speciesId] ? [...dex.seenAt[speciesId]] : []
+}
+
+/** Lieu + date de la 1re capture d'une espèce, ou null. */
+export function firstCatchOf(speciesId: string): { mapId: string; at: string } | null {
+    return dex.firstCatch?.[speciesId] ?? null
+}
+
+/** Restauration depuis la sauvegarde (défensif : champs optionnels tolérés absents). */
 export function hydratePokedex(state: PokedexState) {
-    dex = { seen: [...state.seen], caught: [...state.caught] }
+    dex = {
+        seen: [...state.seen],
+        caught: [...state.caught],
+        seenAt: state.seenAt ? { ...state.seenAt } : {},
+        firstCatch: state.firstCatch ? { ...state.firstCatch } : {},
+    }
     emit()
 }
 

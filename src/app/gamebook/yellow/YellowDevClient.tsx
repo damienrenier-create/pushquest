@@ -26,6 +26,7 @@ import { FusionPickerView } from "./FusionPickerView"
 import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
+import { EvolvedFicheModal } from "./EvolvedFicheModal"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
 import HallOfFameViewer from "./HallOfFameViewer"
@@ -506,6 +507,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const ficheTouchY = useRef<number | null>(null) // + axe Y : un swipe ne compte que s'il DOMINE le scroll vertical
     const [selected, setSelected] = useState<MonInstance | null>(null)
+    // FIN DE COMBAT — file des Daemons fraîchement évolués, présentés en fiche « premium » APRÈS la cinématique.
+    const [postEvoQueue, setPostEvoQueue] = useState<MonInstance[]>([])
     const [pcSwapMon, setPcSwapMon] = useState<MonInstance | null>(null) // SWAP 1-action PC→équipe : équipe pleine → qui remplacer par ce Daemon PC
     const [calepinOpen, setCalepinOpen] = useState(false) // 📓 CALEPIN : carnet UNIQUE (astuces + notes) — menu pause + sac
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
@@ -4727,11 +4730,27 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Cinématique d'évolution (post-combat, après QUITTER) */}
             {!battle && evolutions.length > 0 && (
-                <EvolutionScreen evolutions={evolutions} onCancel={cancelEvolution} onDone={clearEvolutions} />
+                <EvolutionScreen
+                    evolutions={evolutions}
+                    onCancel={cancelEvolution}
+                    onDone={() => {
+                        // Récupère les instances RÉELLEMENT évoluées (non annulées) : le speciesId vivant == evo.toId.
+                        const evolved = evolutions
+                            .map((e) => getPlayer().team.find((m) => m.uid === e.uid))
+                            .filter((m): m is MonInstance => !!m && evolutions.some((e) => e.uid === m.uid && e.toId === m.speciesId))
+                        clearEvolutions()
+                        if (evolved.length > 0) setPostEvoQueue(evolved) // arme les fiches post-évolution
+                    }}
+                />
+            )}
+
+            {/* FICHE POST-ÉVOLUTION : le nouveau stade présenté en fiche premium, une par une, après la cinématique. */}
+            {!battle && evolutions.length === 0 && postEvoQueue.length > 0 && (
+                <EvolvedFicheModal mon={postEvoQueue[0]} onDone={() => setPostEvoQueue((q) => q.slice(1))} />
             )}
 
             {/* APPRENTISSAGE post-combat (après les évolutions) : « X veut apprendre Y — oublier laquelle ? » */}
-            {pendingLearn && !battle && evolutions.length === 0 && !championRun && !newDexEntry && !arenaFight && (
+            {pendingLearn && !battle && evolutions.length === 0 && postEvoQueue.length === 0 && !championRun && !newDexEntry && !arenaFight && (
                 <MoveLearnScreen onDone={clearPendingLearn} />
             )}
 
@@ -4856,7 +4875,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
 
-            {!battle && evolutions.length === 0 && championRun && (
+            {!battle && evolutions.length === 0 && postEvoQueue.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()
                     // REJEU (« run bis ») : un sacre dans la bulle = TA fin de rejeu. Pas de créateur, pas de méga-fusion,
@@ -4920,7 +4939,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en
                 même temps : on attend que la file d'évolutions soit vidée). */}
-            {!battle && evolutions.length === 0 && newDexEntry && (
+            {!battle && evolutions.length === 0 && postEvoQueue.length === 0 && newDexEntry && (
                 <DexEntryScreen entry={newDexEntry} onDone={clearNewDexEntry} />
             )}
             {/* Carrousel génétique one-shot (Dieu Spaghetti) — après la 1re capture, explique le potentiel/IV. */}

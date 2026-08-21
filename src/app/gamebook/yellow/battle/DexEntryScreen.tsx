@@ -8,6 +8,7 @@
 import { useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getPunchline } from "@/lib/gamebook/yellow/data/dexPunchlines"
+import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { renameDaemon } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
@@ -51,7 +52,7 @@ export default function DexEntryScreen({ entry, onDone }: { entry: { speciesId: 
                 </div>
 
                 <div style={{ padding: "6px 16px 0" }}>
-                    <p style={descTxt}>{sp.description}</p>
+                    <p style={descTxt}>{dexLore(sp.id)?.ecology ?? sp.description}</p>
                     {punch && <p style={punchTxt}>« {punch} »</p>}
                 </div>
 

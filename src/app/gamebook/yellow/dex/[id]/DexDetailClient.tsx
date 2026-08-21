@@ -7,7 +7,9 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SPECIES, isDexHidden, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
-import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
+import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
@@ -130,7 +132,35 @@ export default function DexDetailClient({ id }: { id: string }) {
                     </div>
                 </div>
 
-                <p style={S.desc}>{sp.description}</p>
+                {/* LORE « premium » : Biologie & Écologie · Le Dicton · Note de l'explorateur (repli sur description). */}
+                {(() => {
+                    const lore = dexLore(sp.id)
+                    return lore ? (
+                        <div style={S.desc}>
+                            <div style={{ fontWeight: 800, marginBottom: 3 }}>🔬 Biologie &amp; Écologie</div>
+                            <div style={{ marginBottom: 8 }}>{lore.ecology}</div>
+                            <div style={{ fontStyle: "italic", opacity: 0.85, marginBottom: 8 }}>« {lore.dicton} »</div>
+                            <div style={{ fontWeight: 800, marginBottom: 3 }}>🧭 Note de l'explorateur</div>
+                            <div>{lore.note}</div>
+                        </div>
+                    ) : <p style={S.desc}>{sp.description}</p>
+                })()}
+
+                {/* LOCALISATION — historique du JOUEUR uniquement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
+                {(() => {
+                    const first = firstCatchOf(sp.id)
+                    const firstName = first ? (YELLOW_MAPS[first.mapId]?.name ?? first.mapId) : null
+                    const seen = seenZonesOf(sp.id).map((mid) => YELLOW_MAPS[mid]?.name ?? mid)
+                    return (
+                        <div style={S.panel}>
+                            <div style={S.panelTitle}>📍 OÙ TU L'AS CROISÉ</div>
+                            <div style={{ fontSize: 12, opacity: 0.9, padding: "2px 2px", lineHeight: 1.5 }}>
+                                {seen.length ? seen.map((n, i) => <span key={i}>{i > 0 ? " · " : ""}{n}{firstName && firstName === n ? " ⭐" : ""}</span>) : <span style={{ opacity: 0.55 }}>nulle part encore</span>}
+                                {first && <div style={{ marginTop: 4, opacity: 0.8 }}>🎣 Première capture : {firstName}{first.at ? ` · ${first.at}` : ""}</div>}
+                            </div>
+                        </div>
+                    )
+                })()}
 
                 {/* Méta */}
                 <div style={S.metaRow}>

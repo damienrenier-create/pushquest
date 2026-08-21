@@ -6,13 +6,13 @@
 
 import { useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePokedex, pokedexCompletion, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { galijahCounterStyle, megamonarxHint } from "../dex/dexShared"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
-import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
+import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
@@ -47,8 +47,12 @@ function DexIcon({ sp, seen, caught, big }: { sp: SpeciesData; seen: boolean; ca
 // Fiche détaillée (modale).
 function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; onClose: () => void }) {
     const r = RARITY[sp.rarity ?? "COMMON"] ?? RARITY.COMMON
-    const zones = speciesZones(sp.id).map((mid) => YELLOW_MAPS[mid]?.name ?? mid)
-    const locText = zones.length ? zones.join(" · ") : "Obtenu par évolution ou événement"
+    // LOCALISATION — UNIQUEMENT l'historique du joueur : zones DÉJÀ croisées + lieu de 1re capture. Aucun indice de
+    //   chasse (rôle exclusif du Daemomaniaque). Rien n'est révélé sur les habitats non encore rencontrés.
+    const first = firstCatchOf(sp.id)
+    const firstName = first ? (YELLOW_MAPS[first.mapId]?.name ?? first.mapId) : null
+    const seenNames = seenZonesOf(sp.id).map((mid) => YELLOW_MAPS[mid]?.name ?? mid)
+    const lore = dexLore(sp.id)
     const bst = Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
     return (
         <div style={S.overlay} onClick={onClose}>
@@ -65,9 +69,22 @@ function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; 
                     </div>
                 </div>
 
-                {/* Toujours visible : lieu + lore */}
-                <div style={S.section}>📍 <b>Localisation</b> : {locText}</div>
-                {sp.description && <div style={{ ...S.section, fontStyle: "italic", opacity: 0.85 }}>« {sp.description} »</div>}
+                {/* LOCALISATION — historique du joueur seulement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
+                <div style={S.section}>
+                    📍 <b>Où tu l'as croisé</b> : {seenNames.length
+                        ? seenNames.map((n, i) => <span key={i}>{i > 0 ? " · " : ""}{n}{firstName && firstName === n ? " ⭐" : ""}</span>)
+                        : <span style={{ opacity: 0.55 }}>nulle part encore</span>}
+                    {first && <div style={{ marginTop: 4, fontSize: 11.5, opacity: 0.8 }}>🎣 <b>Première capture</b> : {firstName}{first.at ? ` · ${first.at}` : ""}</div>}
+                </div>
+
+                {/* LORE « premium » : Biologie & Écologie · Le Dicton · Note de l'explorateur (repli sur description). */}
+                {lore ? (
+                    <>
+                        <div style={S.section}>🔬 <b>Biologie &amp; Écologie</b><div style={{ marginTop: 3, opacity: 0.9 }}>{lore.ecology}</div></div>
+                        <div style={{ ...S.section, fontStyle: "italic", opacity: 0.85 }}>« {lore.dicton} »</div>
+                        <div style={S.section}>🧭 <b>Note de l'explorateur</b><div style={{ marginTop: 3, opacity: 0.9 }}>{lore.note}</div></div>
+                    </>
+                ) : (sp.description && <div style={{ ...S.section, fontStyle: "italic", opacity: 0.85 }}>« {sp.description} »</div>)}
 
                 {!caught ? (
                     <div style={{ ...S.section, opacity: 0.6, textAlign: "center", padding: "14px 8px" }}>
