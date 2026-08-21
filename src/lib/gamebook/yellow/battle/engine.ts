@@ -285,7 +285,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         events.push({ kind: "message", text: "Impossible de fuir !" })
         const ea = chooseEnemyAction(state, rng)
         // L'ennemi profite du tour — SAUF s'il dort / est gelé / paralysé / apeuré (canAct, comme la boucle normale).
-        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), events, rng)) {
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), "enemy", events, rng)) {
             performMove(state, "enemy", ea.moveIndex!, events, rng)
             checkFaints(state, events)
         }
@@ -304,7 +304,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         // Capture ratée → l'adversaire prend quand même son tour.
         const ea = chooseEnemyAction(state, rng)
         // L'ennemi profite du tour — SAUF s'il dort / est gelé / paralysé / apeuré (canAct, comme la boucle normale).
-        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), events, rng)) {
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), "enemy", events, rng)) {
             performMove(state, "enemy", ea.moveIndex!, events, rng)
             checkFaints(state, events)
         }
@@ -319,7 +319,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (active(state.enemy).currentHp > 0) {
             if (ea.kind === "switch") doSwitch(state, "enemy", ea.teamIndex!, events)
             // SAUF s'il dort / est gelé / paralysé / apeuré (canAct).
-            else if (ea.kind === "move" && canAct(active(state.enemy), events, rng)) { performMove(state, "enemy", ea.moveIndex!, events, rng); checkFaints(state, events) }
+            else if (ea.kind === "move" && canAct(active(state.enemy), "enemy", events, rng)) { performMove(state, "enemy", ea.moveIndex!, events, rng); checkFaints(state, events) }
         }
         if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
         return commit(state, events, rng, prev.turn, true)
@@ -382,7 +382,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
             }
             // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir : si le Daemon ne peut PAS
             // agir, l'attaque N'A PAS LIEU → playerActed reste false → le store rembourse les reps.
-            if (!disobeyed && canAct(cur, events, rng)) {
+            if (!disobeyed && canAct(cur, act.side, events, rng)) {
                 if (act.side === "player") playerActed = true
                 performMove(state, act.side, act.moveIndex!, events, rng)
             }
@@ -448,7 +448,7 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
         // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir — IDENTIQUE au solo (resolveTurn).
         // SANS ça, en PvP un Daemon endormi/gelé/paralysé/apeuré attaquait quand même (bug). canAct
         // consomme le RNG seedé de la même façon sur les 2 clients → déterminisme/checksum préservés.
-        else if (act.kind === "move" && canAct(cur, events, rng)) performMove(state, act.side, act.moveIndex!, events, rng)
+        else if (act.kind === "move" && canAct(cur, act.side, events, rng)) performMove(state, act.side, act.moveIndex!, events, rng)
         checkFaints(state, events)
     }
     if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
@@ -674,10 +674,12 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         }
         // AROMATHÉRAPIE (façon Glas de Soin) : soigne les statuts majeurs de TOUTE l'équipe du lanceur (banc compris).
         if (move.effect?.healTeamStatus) {
+            const activeHadStatus = active(state[side]).status !== "NONE" // seul le badge de l'ACTIF est affiché
             let cured = 0
             for (const m of state[side].team) {
                 if (m.status !== "NONE") { m.status = "NONE"; m.statusCounter = 0; cured++ }
             }
+            if (activeHadStatus) events.push({ kind: "status", side, status: "NONE" }) // retire le badge de l'actif soigné
             events.push({ kind: "message", text: cured > 0 ? `Un parfum apaisant dissipe les altérations de toute l'équipe !` : `Un parfum apaisant se répand… mais personne n'était affecté.` })
             return
         }
@@ -711,6 +713,7 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
             active(defSide).status = "NONE"
             active(defSide).statusCounter = 0
             events.push({ kind: "message", text: `${displayName(active(defSide))} est dégelé par la chaleur !` })
+            events.push({ kind: "status", side: other(side), status: "NONE" }) // dégel par le FEU : badge FREEZE retiré (défenseur)
         }
         // Drain / recul basés sur les dégâts de CE coup.
         if (move.effect?.drainPct && res.dealt > 0) {
@@ -956,6 +959,7 @@ function tryInflictStatus(state: BattleState, targetSide: SideId, status: Exclud
     if (cure?.berryCureStatus) {
         mon.status = "NONE"; mon.statusCounter = 0
         mon.heldItem = undefined
+        events.push({ kind: "status", side: targetSide, status: "NONE" }) // baie neutralise le statut à peine infligé : le badge repart aussitôt
         events.push({ kind: "message", text: `${displayName(mon)} : la ${cure.name} neutralise le statut !` })
     }
 }
@@ -1012,7 +1016,7 @@ function applyStatChange(state: BattleState, side: SideId, stat: StageKey, delta
 // Pré-checks de statut (le mon peut-il agir ?)
 // ============================================================
 
-function canAct(mon: BattleMon, events: BattleEvent[], rng: Rng): boolean {
+function canAct(mon: BattleMon, side: SideId, events: BattleEvent[], rng: Rng): boolean {
     if (mon.volatiles.FLINCH) {
         delete mon.volatiles.FLINCH
         events.push({ kind: "message", text: `${displayName(mon)} a peur et ne peut pas agir !` })
@@ -1023,6 +1027,7 @@ function canAct(mon: BattleMon, events: BattleEvent[], rng: Rng): boolean {
         if (mon.statusCounter <= 0) {
             mon.status = "NONE"
             events.push({ kind: "message", text: `${displayName(mon)} se réveille !` })
+            events.push({ kind: "status", side, status: "NONE" }) // RÉVEIL : le badge SLEEP disparaît MAINTENANT (avant l'attaque) → fini le « j'attaque en dormant »
             return true
         }
         events.push({ kind: "message", text: `${displayName(mon)} dort profondément.` })
@@ -1036,6 +1041,7 @@ function canAct(mon: BattleMon, events: BattleEvent[], rng: Rng): boolean {
         if (!stayFrozen) {
             mon.status = "NONE"
             events.push({ kind: "message", text: `${displayName(mon)} dégèle !` })
+            events.push({ kind: "status", side, status: "NONE" }) // DÉGEL : le badge FREEZE disparaît ici (avant d'agir)
             return true
         }
         events.push({ kind: "message", text: `${displayName(mon)} est gelé !` })
@@ -1579,6 +1585,7 @@ function applyItem(state: BattleState, itemId: string, events: BattleEvent[], ta
         if (tgt && tgt.status !== "NONE" && heals) {
             tgt.status = "NONE"
             tgt.statusCounter = 0
+            if (targetIndex == null || targetIndex === state.player.activeIndex) events.push({ kind: "status", side: "player", status: "NONE" }) // badge retiré si c'est l'ACTIF qu'on soigne
             events.push({ kind: "message", text: `${displayName(tgt)} n'a plus de problème de statut !` })
         } else {
             events.push({ kind: "message", text: "Mais ça n'a aucun effet…" })
