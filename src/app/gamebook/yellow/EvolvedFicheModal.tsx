@@ -7,6 +7,7 @@
 import { useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
+import { dexSize, computeMensuration, formatSize, formatWeight } from "@/lib/gamebook/yellow/data/dexMensurations"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
 const TYPE_COLOR: Record<string, string> = {
@@ -56,6 +57,12 @@ export function EvolvedFicheModal({ mon, onDone }: { mon: MonInstance; onDone: (
                 <div className="chips">
                     {sp.types.map((t) => <span key={t} className="chip" style={{ background: TYPE_COLOR[t] ?? "#888" }}>{t}</span>)}
                 </div>
+                {(() => {
+                    const r = dexSize(sp.id)
+                    if (!r) return null
+                    const m = computeMensuration(r, mon.ivs, sp.baseStats)
+                    return <div className="sub" style={{ marginTop: 4 }}>📏 {formatSize(m.sizeM)} · ⚖️ {formatWeight(m.weightKg)}</div>
+                })()}
                 {lore ? (
                     <>
                         <div className="sec">🔬 <b>Biologie &amp; Écologie</b><div style={{ marginTop: 3, opacity: 0.92 }}>{lore.ecology}</div></div>

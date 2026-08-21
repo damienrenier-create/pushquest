@@ -27,6 +27,7 @@ import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import { EvolvedFicheModal } from "./EvolvedFicheModal"
+import { dexSize, computeMensuration, formatSize, formatWeight, sizeTag } from "@/lib/gamebook/yellow/data/dexMensurations"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
 import HallOfFameViewer from "./HallOfFameViewer"
@@ -4502,6 +4503,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     🔄 Reçu par échange{live.originalTrainerName ? ` · dresseur d'origine : ${live.originalTrainerName}` : ""}{live.originalNickname ? ` · surnom d'origine « ${live.originalNickname} »` : ""}
                                 </div>
                             )}
+                            {/* MENSURATIONS DYNAMIQUES : taille & poids RÉELS de CET individu, dérivés de ses IV (cf. dexMensurations). */}
+                            {sp && dexSize(sp.id) && (() => {
+                                const r = dexSize(sp.id)!
+                                const m = computeMensuration(r, live.ivs, sp.baseStats)
+                                const tag = sizeTag(m.sizeM, r)
+                                return (
+                                    <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
+                                        📏 {formatSize(m.sizeM)} · ⚖️ {formatWeight(m.weightKg)}{tag ? ` · ${tag}` : ""}
+                                        <span style={{ display: "block", opacity: 0.85, marginTop: 1 }}>{r.quip}</span>
+                                    </div>
+                                )
+                            })()}
                             {live.bestDmgMove && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
                                     💥 Plus gros coup : {live.bestDmgMove} ({live.bestDmg} dégâts)

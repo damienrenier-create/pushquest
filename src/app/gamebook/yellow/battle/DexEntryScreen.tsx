@@ -9,7 +9,8 @@ import { useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getPunchline } from "@/lib/gamebook/yellow/data/dexPunchlines"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
-import { renameDaemon } from "@/lib/gamebook/yellow/store/playerStore"
+import { dexSize, computeMensuration, formatSize, formatWeight, sizeTag } from "@/lib/gamebook/yellow/data/dexMensurations"
+import { renameDaemon, getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 
@@ -53,6 +54,15 @@ export default function DexEntryScreen({ entry, onDone }: { entry: { speciesId: 
 
                 <div style={{ padding: "6px 16px 0" }}>
                     <p style={descTxt}>{dexLore(sp.id)?.ecology ?? sp.description}</p>
+                    {/* MENSURATIONS : le clou du spectacle à la capture — taille & poids RÉELS de CE spécimen (selon ses IV). */}
+                    {(() => {
+                        const r = dexSize(sp.id)
+                        const mon = getPlayer().team.find((m) => m.uid === entry.uid) ?? getPlayer().pc.find((m) => m.uid === entry.uid)
+                        if (!r || !mon) return null
+                        const m = computeMensuration(r, mon.ivs, sp.baseStats)
+                        const tag = sizeTag(m.sizeM, r)
+                        return <p style={{ ...punchTxt, fontStyle: "normal", fontWeight: 700 }}>📏 {formatSize(m.sizeM)} · ⚖️ {formatWeight(m.weightKg)}{tag ? ` · ${tag}` : ""}</p>
+                    })()}
                     {punch && <p style={punchTxt}>« {punch} »</p>}
                 </div>
 

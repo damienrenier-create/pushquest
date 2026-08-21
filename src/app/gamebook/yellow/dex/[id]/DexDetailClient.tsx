@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import { SPECIES, isDexHidden, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
+import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -157,6 +158,23 @@ export default function DexDetailClient({ id }: { id: string }) {
                             <div style={{ fontSize: 12, opacity: 0.9, padding: "2px 2px", lineHeight: 1.5 }}>
                                 {seen.length ? seen.map((n, i) => <span key={i}>{i > 0 ? " · " : ""}{n}{firstName && firstName === n ? " ⭐" : ""}</span>) : <span style={{ opacity: 0.55 }}>nulle part encore</span>}
                                 {first && <div style={{ marginTop: 4, opacity: 0.8 }}>🎣 Première capture : {firstName}{first.at ? ` · ${first.at}` : ""}</div>}
+                            </div>
+                        </div>
+                    )
+                })()}
+
+                {/* MENSURATIONS — fourchette d'espèce + règle IV (la valeur exacte s'affiche sur la fiche d'un individu). */}
+                {(() => {
+                    const sz = dexSize(sp.id)
+                    if (!sz) return null
+                    const phys = weightModeOf(sz, sp.baseStats) === "physical"
+                    return (
+                        <div style={S.panel}>
+                            <div style={S.panelTitle}>📏 MENSURATIONS</div>
+                            <div style={{ fontSize: 12.5, padding: "2px 2px", lineHeight: 1.5 }}>
+                                📏 <b>Taille</b> : {formatSizeRange(sz)} &nbsp;·&nbsp; ⚖️ <b>Poids</b> : {formatWeightRange(sz)}
+                                <div style={{ marginTop: 4, opacity: 0.8, fontStyle: "italic" }}>{sz.quip}</div>
+                                <div style={{ marginTop: 5, fontSize: 11, opacity: 0.6 }}>✨ Selon les IV : meilleurs IV → plus grand ; {phys ? "archétype de force → plus lourd" : "archétype de vitesse → plus léger"}.</div>
                             </div>
                         </div>
                     )

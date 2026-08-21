@@ -13,6 +13,7 @@ import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
+import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
@@ -53,6 +54,8 @@ function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; 
     const firstName = first ? (YELLOW_MAPS[first.mapId]?.name ?? first.mapId) : null
     const seenNames = seenZonesOf(sp.id).map((mid) => YELLOW_MAPS[mid]?.name ?? mid)
     const lore = dexLore(sp.id)
+    const size = dexSize(sp.id)
+    const phys = size ? weightModeOf(size, sp.baseStats) === "physical" : true // sens du poids selon l'archétype
     const bst = Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
     return (
         <div style={S.overlay} onClick={onClose}>
@@ -85,6 +88,17 @@ function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; 
                         <div style={S.section}>🧭 <b>Note de l'explorateur</b><div style={{ marginTop: 3, opacity: 0.9 }}>{lore.note}</div></div>
                     </>
                 ) : (sp.description && <div style={{ ...S.section, fontStyle: "italic", opacity: 0.85 }}>« {sp.description} »</div>)}
+
+                {/* MENSURATIONS — fourchette d'espèce + règle IV (la valeur exacte d'un individu s'affiche sur SA fiche). */}
+                {size && (
+                    <div style={S.section}>
+                        📏 <b>Taille</b> : {formatSizeRange(size)} &nbsp;·&nbsp; ⚖️ <b>Poids</b> : {formatWeightRange(size)}
+                        <div style={{ marginTop: 3, fontSize: 11, opacity: 0.7 }}>{size.quip}</div>
+                        <div style={{ marginTop: 4, fontSize: 10.5, opacity: 0.55 }}>
+                            ✨ Mensurations selon les IV : meilleurs IV → plus grand ; {phys ? "archétype de force → plus lourd" : "archétype de vitesse → plus léger"}.
+                        </div>
+                    </div>
+                )}
 
                 {!caught ? (
                     <div style={{ ...S.section, opacity: 0.6, textAlign: "center", padding: "14px 8px" }}>
