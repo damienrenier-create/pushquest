@@ -7,7 +7,7 @@
 // paroles. La VUE DE TABLE (felt, cartes qui flippent, jetons, glow) est partagée avec la table multi.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, creditReps, markPokerFirstGameDone } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, creditReps, logEnergyIncome, markPokerFirstGameDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useLocalPoker } from "@/lib/gamebook/yellow/multiplayer/useLocalPoker"
 import { FIRST_GAME_GIFT } from "@/lib/gamebook/yellow/poker/soloSession"
@@ -72,7 +72,7 @@ export default function SoloPokerPanel({ onDone, myUserId }: { onDone: () => voi
         if (cashingRef.current) return
         cashingRef.current = true
         const kept = await leave()
-        if (kept > 0) creditReps(kept) // crédit INTÉGRAL : « encaisse tout » respecté (jamais rogné par le cap)
+        if (kept > 0) logEnergyIncome("🃏 Poker", creditReps(kept)) // crédit INTÉGRAL : « encaisse tout » respecté (jamais rogné par le cap)
         markPokerFirstGameDone()
         persistYellowSave()
         setPhase("done")

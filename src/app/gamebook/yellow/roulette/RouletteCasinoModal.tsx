@@ -6,7 +6,7 @@
 // l'ancien casino (transition douce / A-B test). Le numéro gagnant est local en solo (serveur en multi).
 
 import { useState } from "react"
-import { usePlayer, spendCasinoBet, isCasinoRestricted, CASINO_VOW_MAX_BET, casinoRemainingToday, grantReps, creditReps, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendCasinoBet, isCasinoRestricted, CASINO_VOW_MAX_BET, casinoRemainingToday, grantReps, creditReps, logEnergyIncome, consumeTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import RouletteTable from "./RouletteTable"
 
@@ -35,7 +35,7 @@ export default function RouletteCasinoModal({ onClose }: { onClose: () => void }
         const gain = Math.max(0, finalBalance - caisse)   // gain réel = solde final au-delà du chargé
         const principal = finalBalance - gain             // = min(finalBalance, caisse)
         if (principal > 0) grantReps(principal)
-        if (gain > 0) creditReps(gain)
+        if (gain > 0) logEnergyIncome("🎰 Roulette", creditReps(gain))
         persistYellowSave(); onClose()
     }
 

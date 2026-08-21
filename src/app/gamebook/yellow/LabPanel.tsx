@@ -12,7 +12,7 @@
 import { useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
-    usePlayer, startLabDefi, clearLabDefi, grantReps, grantCt, recordCtEarned,
+    usePlayer, startLabDefi, clearLabDefi, grantReps, logEnergyIncome, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
     physWinCount, recordPhysWin, casinoPillar, useActiveWorld,
 } from "@/lib/gamebook/yellow/store/playerStore"
@@ -92,11 +92,11 @@ export default function LabPanel() {
             setMsg(`✅ Quota doublé ! Tes énergies de demain seront ×${QUOTA2X_MULT}.`)
         } else if (activePhys.kind === "squat150") {
             markSquat150Done() // one-shot à vie (pas de scaling)
-            const got = grantReps(PHYSICAL_ENERGY_REWARD)
+            const got = grantReps(PHYSICAL_ENERGY_REWARD); logEnergyIncome("🏋️ Défi physique", got)
             setMsg(`✅ Défi réussi ! +${got} énergie.`)
         } else {
             // pushup1h : défi répétable → récompense scalée (×1,05 par réussite) puis on durcit le suivant.
-            const got = grantReps(physScaledReward(PHYSICAL_ENERGY_REWARD, wins))
+            const got = grantReps(physScaledReward(PHYSICAL_ENERGY_REWARD, wins)); logEnergyIncome("🏋️ Défi physique", got)
             recordPhysWin(activePhys.kind)
             setMsg(`✅ Défi réussi ! +${got} énergie. Le prochain sera un cran plus dur. 💪`)
         }

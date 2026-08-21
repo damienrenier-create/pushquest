@@ -10,8 +10,18 @@ import type { ChampionMon } from "../storage/save"
 
 export const RUN2_GHOST_MAP_ID = "yellow_grotte_nexus" // Grotte 1F
 export const RUN2_GHOST_TRAINER_PREFIX = "run2ghost:"
-// Coords fixes des 5 PNJ sur la Grotte 1F (choix Sartay).
-const GHOST_POSITIONS: readonly [number, number][] = [[7, 15], [45, 27], [29, 38], [7, 25], [21, 4]]
+// 7 spots CANDIDATS sur la Grotte 1F (choix Sartay). À CHAQUE entrée on mélange ces 7 spots et on place les PNJ
+//   sur les premiers → leur position CHANGE à chaque visite (plus de coords figées). 5 PNJ max, 7 spots = toujours assez.
+const GHOST_SPOTS: readonly [number, number][] = [[9, 32], [37, 28], [14, 32], [44, 38], [43, 18], [40, 4], [3, 17]]
+/** Fisher-Yates : copie mélangée des spots (nouveau tirage à chaque appel = à chaque entrée dans la Grotte). */
+function shuffledSpots(): [number, number][] {
+    const a = GHOST_SPOTS.map((p) => [p[0], p[1]] as [number, number])
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const t = a[i]; a[i] = a[j]; a[j] = t
+    }
+    return a
+}
 
 export interface Run2Ghost {
     userId: string
@@ -40,12 +50,13 @@ export function useRun2Ghosts(mapId: string, myUserId: string): Run2Ghost[] {
                 // rows triées wonAt desc → la 1re ligne d'un joueur = son sacre run-2 le PLUS RÉCENT.
                 const seen = new Set<string>()
                 const list: Run2Ghost[] = []
+                const spots = shuffledSpots() // placement ALÉATOIRE re-tiré à chaque entrée dans la Grotte
                 for (const c of champions) {
                     if ((c.world ?? "live") !== "ngplus") continue
                     const uid = c.userId
                     if (!uid || uid === myUserId || seen.has(uid)) continue
                     if (!Array.isArray(c.team) || c.team.length === 0) continue
-                    const pos = GHOST_POSITIONS[list.length]
+                    const pos = spots[list.length]
                     if (!pos) break // déjà 5 → on s'arrête (les autres attendront une place)
                     seen.add(uid)
                     list.push({ userId: uid, nickname: c.nickname, x: pos[0], y: pos[1], avatar: c.avatar ?? undefined, team: c.team })

@@ -8,7 +8,7 @@
 // (date + flag) est géré par YellowDevClient ; ici on gère le quiz + le don.
 
 import { useState } from "react"
-import { grantReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { grantReps, logEnergyIncome } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 
 const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
@@ -26,7 +26,7 @@ export default function DiablesRougesQuiz({ onClose }: { onClose: () => void }) 
         setPicked(s)
         if (s === GOOD) {
             try { window.localStorage.setItem(CLAIM_KEY, "1") } catch { /* quota */ }
-            grantReps(REWARD)
+            logEnergyIncome("🎲 Quiz Diables Rouges", grantReps(REWARD))
             persistYellowSave()
         }
     }

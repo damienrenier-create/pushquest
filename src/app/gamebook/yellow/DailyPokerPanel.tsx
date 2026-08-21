@@ -5,7 +5,7 @@
 // et revient demain. Aucune triche — vrai cash game. Jouable tant qu'il reste des boss non ruinés.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, creditReps, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, creditReps, logEnergyIncome, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCashPoker } from "@/lib/gamebook/yellow/multiplayer/useCashPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -88,7 +88,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
         const { playerTapis, bossStacks } = leaveCash()
         // Règlement du NET (buy-in jamais débité à l'assise) : on crédite le gain, ou on débite la perte.
         const net = playerTapis - spentRef.current
-        if (net > 0) creditReps(net)          // crédit INTÉGRAL (jamais tronqué par le cap)
+        if (net > 0) logEnergyIncome("🃏 Poker", creditReps(net))          // crédit INTÉGRAL (jamais tronqué par le cap)
         else if (net < 0) spendReps(-net)     // perte réelle (≤ buy-in ≤ tes reps → toujours possible)
         savePokerBossStacks(bossStacks)
         persistYellowSave()

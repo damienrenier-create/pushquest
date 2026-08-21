@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -742,7 +742,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const run3 = getActiveWorld() === "run3"
             const r = aceReward(winNum, run3) // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie)
             if (r.itemId) addItem(r.itemId, 1)
-            if (r.reps) grantReps(r.reps)
+            if (r.reps) logEnergyIncome("⚔️ Rival (ACE)", grantReps(r.reps))
             let gaveNemesis = false
             if (r.gift === "pantheon") {
                 const lvls = getPlayer().team.map((m) => m.level)
@@ -775,26 +775,26 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // Récompense selon la victoire DU JOUR (6 combats) : reps / balls croissantes / CT au 6e.
             const todayWins = getPlayer().sbireDefeatsToday
             if (todayWins === 1) {
-                const added = grantReps(SBIRE_REWARD_REPS)
+                const added = grantReps(SBIRE_REWARD_REPS); logEnergyIncome("⚔️ Sbire", added)
                 sbireRewardMsg = `⚡ Et tiens, ${added} d'énergie pour ta peine !`
             } else if (todayWins === 2) {
                 addItem(SBIRE_REWARD_BALL_ID, 1)
                 sbireRewardMsg = `🎁 Et prends donc cette Nexus Ball, tu l'as méritée !`
             } else if (todayWins === 3) {
-                const added = grantReps(SBIRE_REWARD_REPS_3)
+                const added = grantReps(SBIRE_REWARD_REPS_3); logEnergyIncome("⚔️ Sbire", added)
                 sbireRewardMsg = `⚡ ${added} d'énergie pour ce combat à trois !`
             } else if (todayWins === 4) {
                 addItem(SBIRE_REWARD_BALL_ID_4, 1)
                 sbireRewardMsg = `🎁 Une Super Nexus Ball, tu l'as bien gagnée !`
             } else if (todayWins === 5) {
-                const added = grantReps(SBIRE_REWARD_REPS_5)
+                const added = grantReps(SBIRE_REWARD_REPS_5); logEnergyIncome("⚔️ Sbire", added)
                 sbireRewardMsg = `⚡ ${added} d'énergie ! Tu tiens la distance.`
             } else if (todayWins >= 6) {
                 // Cadeau ULTIME one-time : CT Fouet de Nouilles. Déjà reçue → repli en reps.
                 if (grantCt(SBIRE_REWARD_CT_ID)) {
                     sbireRewardMsg = `🍝 Relique du dieu Spaghetti : la CT Fouet de Nouilles est à toi !`
                 } else {
-                    const added = grantReps(SBIRE_REWARD_CT_FALLBACK_REPS)
+                    const added = grantReps(SBIRE_REWARD_CT_FALLBACK_REPS); logEnergyIncome("⚔️ Sbire", added)
                     sbireRewardMsg = `🍝 Tu as déjà ma relique — alors prends ${added} d'énergie !`
                 }
             }
@@ -846,7 +846,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                         ? `🎁 ${t?.name ?? "Le boss"} te remet ${plural ? "les CT" : "la CT"} « ${names.join(" » et « ")} » ! Cadeau unique — apprends-${plural ? "les" : "la"} à un Daemon compatible.`
                         : `🎁 ${t?.name ?? "Le boss"} te remet une CT cadeau !`
                 } else if (rm?.reward && rm.reward > 0) {
-                    const added = grantReps(rm.reward)
+                    const added = grantReps(rm.reward); logEnergyIncome("⚔️ Combat (revanche)", added)
                     rewardLine = added > 0
                         ? `⚡ +${added} d'énergie pour la revanche !`
                         : `⚡ Revanche gagnée ! (ta jauge d'énergie déborde déjà)`

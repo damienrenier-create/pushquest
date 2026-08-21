@@ -84,6 +84,17 @@ export function firstCatchOf(speciesId: string): { mapId: string; at: string } |
     return dex.firstCatch?.[speciesId] ?? null
 }
 
+export type DexCompareTier = "caught" | "wild" | "known" | "unknown"
+/** COÛT DE BASE (en énergie) pour comparer un Daemon de l'équipe VS une espèce du Pokédex, selon ce que le joueur
+ *  CONNAÎT de cette espèce. Ordre de test OBLIGATOIRE (capturé implique seen/seenAt) : capturé → vu sauvage → connu
+ *  (vu via dresseur/fiche) → inconnu. Le multiplicateur ×1,5/jour est appliqué par playerStore (comparisonConsultPrice). */
+export function daemonCompareTier(speciesId: string): { tier: DexCompareTier; base: number } {
+    if (dex.caught.includes(speciesId)) return { tier: "caught", base: 20 }   // capturé
+    if (seenZonesOf(speciesId).length > 0) return { tier: "wild", base: 50 }   // observé à l'état sauvage
+    if (dex.seen.includes(speciesId)) return { tier: "known", base: 100 }      // connu (dresseur/fiche) mais jamais sauvage
+    return { tier: "unknown", base: 200 }                                       // jamais vu
+}
+
 /** Restauration depuis la sauvegarde (défensif : champs optionnels tolérés absents). */
 export function hydratePokedex(state: PokedexState) {
     dex = {

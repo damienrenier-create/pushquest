@@ -58,6 +58,7 @@ export interface YellowSave {
     sbireDefeatsToday: number
     /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    comparisonConsultsToday?: number
     /** VIEUX SAGE SAIYAN : nb de points Saiyan redistribués AUJOURD'HUI (reset quotidien ; plafond 20/jour). Optionnel (défaut 0). */
     sageSaiyanPointsToday?: number
     /** ANANAS (chercheur de baies) : nb de badges au dernier combat (run 1-3), jour du dernier combat (run 4), pic de niveau (run 4). Optionnels. */
@@ -200,6 +201,9 @@ export interface YellowSave {
     /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
      *  (contrairement au roster) ; union monotone à la fusion des mondes. Défaut []. */
     fusionHistory: { a: string; b: string }[]
+    /** JOURNAL D'ÉNERGIE — les N dernières ENTRÉES d'énergie {ts, source, amount} (diagnostic « d'où vient mon énergie »,
+     *  affiché dans le calepin). Per-monde, borné (slice(-N)), OPTIONNEL/ADDITIF (défaut absent → aucune migration). */
+    energyLog?: { ts: number; source: string; amount: number }[]
     /** RUN 3 — teaser Dieu Spaghetti sur Lavapetit déjà montré (à la rencontre) / Lavapetit déjà capturé ?
      *  Per-monde, one-time (ne re-teaser jamais). Défaut false. */
     run3LavapetitSeen: boolean
@@ -284,6 +288,8 @@ export interface FusionChampionMon {
 // aceTeamSizePeak) pour les saves existantes, en CONSERVANT aceWins. ACE se recalibrera alors sur
 // l'équipe ACTUELLE du joueur (au lieu d'un pic figé trop haut) → enfin battable. Ne peut que l'adoucir.
 export const SAVE_VERSION = 2
+/** Journal d'énergie : nombre max d'entrées conservées (les plus récentes). Borne écriture ET lecture (parse). */
+export const ENERGY_LOG_MAX = 80
 /** Version à partir de laquelle le cliquet ACE est réinitialisé une fois (cf. coerce). */
 const ACE_RATCHET_RESET_VERSION = 2
 
@@ -640,6 +646,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
+        comparisonConsultsToday: typeof o.comparisonConsultsToday === "number" ? Math.max(0, Math.floor(o.comparisonConsultsToday)) : 0,
         sageSaiyanPointsToday: typeof o.sageSaiyanPointsToday === "number" ? Math.max(0, Math.floor(o.sageSaiyanPointsToday)) : 0,
         ananasLastBadgeCount: typeof o.ananasLastBadgeCount === "number" ? Math.max(0, Math.floor(o.ananasLastBadgeCount)) : 0,
         ananasDate: typeof o.ananasDate === "string" ? o.ananasDate : "",
@@ -718,6 +725,12 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         fusionHistory: Array.isArray(o.fusionHistory)
             ? (o.fusionHistory as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(-200) // garde les 200 PLUS RÉCENTES (cohérent avec recordFusionCreated/mergeWorlds)
             : [],
+        // JOURNAL D'ÉNERGIE : optionnel/additif (vieilles saves = absent → undefined). Filtre les entrées cassées,
+        //   tronque la source (anti-bloat) et le montant, garde les ENERGY_LOG_MAX PLUS RÉCENTES. Re-sanitize à CHAQUE
+        //   lecture (client + serveur) → la taille ne peut pas dériver, même si une save injecte un log surdimensionné.
+        energyLog: Array.isArray(o.energyLog)
+            ? (o.energyLog as unknown[]).filter((v): v is { ts: number; source: string; amount: number } => !!v && typeof v === "object" && typeof (v as { ts?: unknown }).ts === "number" && isFinite((v as { ts: number }).ts) && typeof (v as { source?: unknown }).source === "string" && typeof (v as { amount?: unknown }).amount === "number" && isFinite((v as { amount: number }).amount)).map((v) => ({ ts: Math.floor(v.ts), source: String(v.source).slice(0, 24), amount: Math.trunc(v.amount) })).slice(-ENERGY_LOG_MAX)
+            : undefined,
         run3LavapetitSeen: o.run3LavapetitSeen === true,
         run3LavapetitCaught: o.run3LavapetitCaught === true,
         mimimoyReturned: o.mimimoyReturned === true,

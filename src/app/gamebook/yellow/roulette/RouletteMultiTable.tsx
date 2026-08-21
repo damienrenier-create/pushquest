@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, creditReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, creditReps, logEnergyIncome, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -146,7 +146,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         const gain = Math.max(0, pc.net)
         const principal = pc.staked + pc.net - gain // = min(retour, mise)
         if (principal > 0) grantReps(principal)
-        if (gain > 0) creditReps(gain)
+        if (gain > 0) logEnergyIncome("🎰 Roulette", creditReps(gain))
         if (pc.net > 0) addCasinoWon(pc.net) // 🥚 le gain net fait progresser la quête Tonytony (compte tenu par le croupier)
         if (pc.solo && pc.net > 0) decrementRouletteLuck(pc.net) // chance potion (secret) : récup jusqu'au prix payé
         persistYellowSave()
@@ -232,7 +232,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 const gain = Math.max(0, mine.net)
                 const principal = mine.staked + mine.net - gain
                 if (principal > 0) grantReps(principal)
-                if (gain > 0) creditReps(gain)
+                if (gain > 0) logEnergyIncome("🎰 Roulette", creditReps(gain))
                 // CHANCE potion (secret) : si SEUL sur la manche et gain net, on récupère jusqu'au prix payé.
                 if (r.players.length === 1 && mine.net > 0) decrementRouletteLuck(mine.net)
                 persistYellowSave()
@@ -581,10 +581,13 @@ function CoinRain({ count, big }: { count: number; big: boolean }) {
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 9500, background: "rgba(4,8,6,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, fontFamily: "'Courier New', monospace", color: "#eef" },
     box: { position: "relative", width: "min(440px, 98vw)", maxHeight: "96vh", overflowY: "auto", background: "#0c1410", border: "2px solid #1c3a28", borderRadius: 14, padding: 12 },
-    head: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+    // STICKY : l'en-tête (et donc le ✕) reste TOUJOURS visible/cliquable, même quand la grande roue pousse le
+    // contenu et que l'auto-scroll descend vers « Lancer la balle » (sinon le ✕ sortait de la vue → fermeture
+    // impossible, l'overlay n'ayant pas de clic-pour-fermer). Marges négatives + fond opaque = barre pleine largeur.
+    head: { position: "sticky", top: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0c1410", margin: "-12px -12px 8px", padding: "12px 12px 8px", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
     title: { fontSize: 14, fontWeight: 800 },
     beta: { fontSize: 8, background: "#e0c020", color: "#1a1400", borderRadius: 4, padding: "1px 5px", verticalAlign: "middle" },
-    x: { background: "transparent", color: "#9fd", border: "1px solid #2f5a40", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontFamily: "inherit" },
+    x: { background: "#15301f", color: "#9fd", border: "1px solid #2f5a40", borderRadius: 8, width: 34, height: 34, flexShrink: 0, fontSize: 16, fontWeight: 800, lineHeight: 1, cursor: "pointer", fontFamily: "inherit" },
     bar: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, background: "#0e1c14", borderRadius: 8, padding: "7px 10px", marginBottom: 8 },
     reveal: { textAlign: "center", borderRadius: 8, padding: "8px 10px", fontSize: 13, marginBottom: 8 },
     tapis: { display: "flex", gap: 4, marginBottom: 6 },

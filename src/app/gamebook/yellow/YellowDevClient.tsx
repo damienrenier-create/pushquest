@@ -78,7 +78,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons } from "@/lib/gamebook/yellow/store/playerStore"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
@@ -987,8 +987,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         const duel = gifts.filter((g) => g.fromNickname !== "__BDAY36__")
                         const duelTotal = duel.reduce((s, g) => s + (g.energy || 0), 0)
                         const bdayTotal = bday.reduce((s, g) => s + (g.energy || 0), 0)
-                        if (duelTotal > 0) grantReps(duelTotal)                  // cadeaux de duel : plafonnés (normal)
-                        if (bdayTotal > 0) grantBonusEnergyUncapped(bdayTotal)   // anniv : HORS-plafond garanti
+                        if (duelTotal > 0) logEnergyIncome("⚔️ Cadeau de duel", grantReps(duelTotal))   // cadeaux de duel : plafonnés (normal)
+                        if (bdayTotal > 0) grantBonusEnergyUncapped(bdayTotal, "🎂 Anniversaire")        // anniv : HORS-plafond garanti
                         // RATTRAPAGE (Sartay 02/08) : le joueur mirouté touche EN PLUS un bonus d'énergie hors-plafond
                         //   d'autant plus gros qu'il est à la traîne (peu de badges) + une Super Ball par consolation.
                         let duelBalls = 0, duelCatchup = 0
@@ -1037,7 +1037,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         // +1/3 du quota par sacre, MAIS plafonné à 1000 ⚡/sacre : sinon les joueurs au repsCap
                         // gonflé (poker/casino) recevaient des milliers d'énergie d'un seul coup (ex. Mools cap 11550 → 3850).
                         const per = Math.min(1000, Math.floor(getPlayer().repsCap / 3))
-                        const got = grantReps(per * grants)
+                        const got = grantReps(per * grants); logEnergyIncome("🏛️ Sacre (champion)", got)
                         persistYellowSave()
                         const who = [...new Set(champs.filter(Boolean))].join(", ")
                         if (got > 0) setToast(`🏛️ ${who || "Un champion"} a vaincu la Ligue ! +${got} énergie pour toi !`)
@@ -1322,7 +1322,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }).catch(() => {})
             showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp }))
         } else {
-            grantReps(DUEL_LOSS_CONSOLE_REPS)
+            logEnergyIncome("⚔️ Consolation de duel", grantReps(DUEL_LOSS_CONSOLE_REPS))
             persistYellowSave()
             showDialogue("duel_rival", opp.nickname, duelLossLines(opp.nickname))
         }
@@ -2118,7 +2118,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const r = await fetch("/api/gamebook/yellow/genie-offer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ response: choice }) })
             const j = r.ok ? await r.json() : null
             if (j?.ok && choice === "accept" && (j.amount ?? 0) > 0) {
-                grantReps(j.amount); persistYellowSave()
+                logEnergyIncome("🧞 Génie (offre)", grantReps(j.amount)); persistYellowSave()
                 setToast(`🎁 Le génie de ${offer?.sourceNickname ?? "?"} t'offre +${j.amount}⚡ !`)
             } else if (j?.ok && choice === "refuse") {
                 setToast(`Tu as décliné l'offre du génie de ${offer?.sourceNickname ?? "?"}.`)

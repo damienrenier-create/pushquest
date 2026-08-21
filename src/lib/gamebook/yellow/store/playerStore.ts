@@ -25,7 +25,7 @@ import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, run2BlackjackCtPool, MASTER_CT_IDS, type BadgeId } from "../data/cts"
 import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, MEROREM_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_TARGET, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
-import { emptyYellowStats, type YellowStats } from "../storage/save"
+import { emptyYellowStats, ENERGY_LOG_MAX, type YellowStats } from "../storage/save"
 import type { StatKey } from "../battle/types"
 import type { AnanasVariant } from "../data/ananas"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -92,6 +92,8 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    /** Daemomaniaque — comparaisons PAYANTES (équipe vs Pokédex) faites aujourd'hui (reset au tick ; gonfle le prix ×1,5). Optionnel, défaut 0. */
+    comparisonConsultsToday?: number
     /** VIEUX SAGE SAIYAN : points Saiyan redistribués aujourd'hui (reset au tick ; plafond 20/jour). Optionnel (défaut 0). */
     sageSaiyanPointsToday?: number
     /** ANANAS : nb de badges au dernier combat (run 1-3 : dispo si badges.length dépasse) — défaut 0. */
@@ -196,6 +198,8 @@ interface PlayerState {
     /** ATELIER DE FUSION — jusqu'à 6 paires {uid A, uid B} = l'équipe de fusion du joueur (Ligue de Fusion + PvP). */
     fusionRoster: { a: string; b: string }[]
     fusionHistory: { a: string; b: string }[] // JOURNAL permanent des fusions créées (speciesId des 2 parents, a=tête). Fusiodex.
+    /** JOURNAL D'ÉNERGIE — dernières ENTRÉES {ts, source, amount} (diagnostic calepin). Per-monde, borné, optionnel (défaut absent). */
+    energyLog?: { ts: number; source: string; amount: number }[]
     /** RUN 3 — teaser Dieu Spag Lavapetit vu / capturé (one-time, per-monde). Défaut false. */
     run3LavapetitSeen: boolean
     run3LavapetitCaught: boolean
@@ -510,6 +514,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
+        comparisonConsultsToday: p.comparisonConsultsToday ?? st.comparisonConsultsToday ?? 0,
         sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? st.sageSaiyanPointsToday ?? 0,
         ananasLastBadgeCount: p.ananasLastBadgeCount ?? st.ananasLastBadgeCount ?? 0,
         ananasDate: p.ananasDate ?? st.ananasDate ?? "",
@@ -565,6 +570,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         caughtThisRun: p.caughtThisRun ?? st.caughtThisRun ?? [],
         fusionRoster: p.fusionRoster ?? st.fusionRoster ?? [],
         fusionHistory: p.fusionHistory ?? st.fusionHistory ?? [],
+        energyLog: p.energyLog ?? st.energyLog ?? [],
         run3LavapetitSeen: p.run3LavapetitSeen ?? st.run3LavapetitSeen ?? false,
         run3LavapetitCaught: p.run3LavapetitCaught ?? st.run3LavapetitCaught ?? false,
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
@@ -1299,6 +1305,16 @@ export function spendReps(n: number): boolean {
     return true
 }
 
+/** JOURNAL D'ÉNERGIE (calepin) : consigne une ENTRÉE d'énergie {ts, source, amount}, bornée aux ENERGY_LOG_MAX plus
+ *  récentes. IGNORE amount ≤ 0 (les 0 et les dépenses ne sont pas des entrées). Purement diagnostique : ne touche ni
+ *  reps ni cap. Pas d'emit() : le journal n'a pas d'UI en direct (lu à l'ouverture du calepin) et accompagne toujours
+ *  un crédit qui, lui, émet + déclenche l'autosave (l'entrée est donc persistée sans re-render supplémentaire). */
+export function logEnergyIncome(source: string, amount: number): void {
+    const amt = Math.trunc(amount)
+    if (amt <= 0) return
+    st = { ...st, energyLog: [...(st.energyLog ?? []), { ts: Date.now(), source: source.slice(0, 24), amount: amt }].slice(-ENERGY_LOG_MAX) }
+}
+
 /** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté.
  *  RUN 3 (concours) : l'énergie a une SOURCE UNIQUE (500 de départ + paliers d'arène) → tout crédit est BLOQUÉ
  *  sauf `force` (utilisé par startRun3, les paliers d'arène, et le remboursement d'une attaque qui n'est jamais
@@ -1451,6 +1467,7 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
+        comparisonConsultsToday: 0, // nouveau jour → le prix de la comparaison équipe vs Pokédex revient à la base
         sageSaiyanPointsToday: 0, // nouveau jour → le Vieux Sage Saiyan redonne 20 points redistribuables
         // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
         //   pas par un compteur quotidien. Le tick ne remet donc RIEN à zéro ni ne désarme la chasse (choix Sartay 12/08).
@@ -1628,14 +1645,18 @@ export function bankReps(totalToDate: number, throughYesterday: number, today?: 
     if (today && d.tomorrowEnergyMult > 1 && d.tomorrowEnergyDate && today === d.tomorrowEnergyDate) {
         delta = delta * d.tomorrowEnergyMult
     }
+    const beforeBank = st.reps
     st = { ...st, reps: Math.min(st.repsCap, st.reps + delta), repsBankedTotal: Math.max(banked, tot) }
+    logEnergyIncome("🏋️ Sport (tes reps)", st.reps - beforeBank) // JOURNAL : source d'énergie #1
     emit()
 }
 
 /** Cadeau de bienvenue : +100 énergie, UNE seule fois par joueur (à l'arrivée dans le Ch.2). */
 export function claimWelcomeGift() {
     if (st.welcomeGift) return
+    const before = st.reps
     st = { ...st, welcomeGift: true, reps: Math.min(st.repsCap, st.reps + 100) }
+    logEnergyIncome("🎁 Cadeau de bienvenue", st.reps - before)
     emit()
 }
 
@@ -1708,6 +1729,7 @@ export function claimSpagGift() {
     const before = st.reps
     st = { ...st, spagGift: true, reps: Math.min(st.repsCap, st.reps + 150) }
     const gained = st.reps - before
+    logEnergyIncome("🍝 Dieu Spaghetti", gained)
     pendingGiftMessage = gained > 0
         ? `🍝 Le DIEU SPAG te bénit : +${gained} d'énergie offerte ! Régale-toi, mortel.`
         : `🍝 Le DIEU SPAG voulait t'offrir 150 d'énergie… mais ta jauge déborde déjà ! 🤌`
@@ -1728,7 +1750,9 @@ export function consumeGiftMessage(): string | null {
  */
 export function claimPastaGodGift(): boolean {
     if (st.pastaGodGift) return false
+    const before = st.reps
     st = { ...st, pastaGodGift: true, reps: Math.min(st.repsCap, st.reps + 100) }
+    logEnergyIncome("🍝 Dieu des Pâtes", st.reps - before)
     emit()
     return true
 }
@@ -1764,6 +1788,25 @@ export function consultDaemomaniaque(): { ok: boolean; paid: boolean; reason?: "
 /** Consultations restantes GRATUITES aujourd'hui (0-5), pour l'UI. */
 export function freeConsultsLeft(): number {
     return Math.max(0, FREE_CONSULTS_PER_DAY - (st.consultsToday ?? 0))
+}
+
+// ── DAEMOMANIAQUE — COMPARAISON équipe vs Pokédex : coût = base(palier dex) × 1,5^(comparaisons payantes du jour). ──
+export const COMPARISON_GROWTH = 1.5
+/** Prix de la PROCHAINE comparaison payante pour un coût de base donné (palier dex) : base × 1,5^(comparaisons du jour).
+ *  Comparer deux Daemons de SON équipe est gratuit (ne passe jamais par ici). Reset chaque nuit (creditDailyReps). */
+export function comparisonConsultPrice(base: number): number {
+    return Math.round(Math.max(0, Math.floor(base)) * COMPARISON_GROWTH ** (st.comparisonConsultsToday ?? 0))
+}
+/** Combien de comparaisons payantes déjà faites aujourd'hui (pour l'UI : « ×1,5 à chaque fois »). */
+export function comparisonConsultsUsed(): number { return st.comparisonConsultsToday ?? 0 }
+/** Réalise une comparaison PAYANTE : débite `comparisonConsultPrice(base)` puis incrémente le compteur du jour.
+ *  { ok:false, reason:"reps" } si solde insuffisant (rien débité, compteur inchangé). */
+export function payComparison(base: number): { ok: boolean; cost: number; reason?: "reps" } {
+    const cost = comparisonConsultPrice(base)
+    if (cost > 0 && !spendReps(cost)) return { ok: false, cost, reason: "reps" }
+    st = { ...st, comparisonConsultsToday: (st.comparisonConsultsToday ?? 0) + 1 }
+    emit()
+    return { ok: true, cost }
 }
 
 // === RÉPUTATION PvP ===
@@ -2001,11 +2044,12 @@ export function raiseRepsCap(delta: number) {
  * Garantit le don intégral — sans relever le cap, le surplus serait re-plafonné (donc effacé)
  * au prochain bankReps quotidien. Le cap reste relevé (perk durable assumé).
  */
-export function grantBonusEnergyUncapped(n: number) {
+export function grantBonusEnergyUncapped(n: number, source = "✨ Bonus d'énergie") {
     if (runMode() === "run3") return // RUN 3 : aucun cadeau d'énergie hors-plafond (source unique)
     const amt = Math.max(0, Math.floor(n))
     if (amt <= 0) return
     st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }
+    logEnergyIncome(source, amt)
     emit()
 }
 
@@ -2146,6 +2190,7 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
         labDefi: { ...d, casinoSpinIndex: newSpinIndex, casinoWinStreak: newStreak, casinoBankruptUntil: bankruptUntil, casinoTotalWon: newTotalWon, casinoFirstBetDone: true },
     }
     trackBallLockSpend(totalBet) // VŒU DU GÉNIE : mise casino = dépense (hors spendReps)
+    logEnergyIncome("🎰 Casino (gain net)", totalWin - totalBet) // JOURNAL : net positif seulement (≤ 0 ignoré)
     emit()
     return { ok: true, winningCase, totalBet, totalWin, bankrupt, totalWon: newTotalWon, tonytonyReady: newTotalWon >= TONYTONY_TARGET && !d.tonytonyClaimed }
 }
@@ -2172,6 +2217,7 @@ export function settleBlackjack(payout: number, net: number): void {
     if (pay > 0) grantReps(pay)
     const n = Math.floor(net)
     if (n > 0) st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
+    logEnergyIncome("🃏 Blackjack (gain net)", n) // JOURNAL : gain net seulement (perte ≤ 0 ignorée ; le remboursement de mise n'est pas une entrée)
     emit()
 }
 
@@ -2501,8 +2547,10 @@ export function playDailyTicketSpin(betCase: number, today: string): CasinoTicke
     const winningCase = firstBet ? betCase : Math.floor(Math.random() * CASINO_NUM_CASES)
     const won = winningCase === betCase
     const winAmount = won ? betValue * CASINO_WIN_MULT : 0
+    const beforeDaily = st.reps
     const newReps = won ? Math.min(st.repsCap, st.reps + winAmount) : st.reps
     st = { ...st, reps: newReps, labDefi: { ...d, dailyTicketDate: today, casinoFirstBetDone: true } }
+    logEnergyIncome("🎟️ Ticket gratuit", newReps - beforeDaily) // JOURNAL : gain crédité (0 si perdu → ignoré)
     emit()
     return { winningCase, won, winAmount, betValue }
 }
@@ -2522,8 +2570,10 @@ export function playTicketSpin(betCase: number): CasinoTicketResult {
     const winningCase = firstBet ? betCase : Math.floor(Math.random() * CASINO_NUM_CASES)
     const won = winningCase === betCase
     const winAmount = won ? betValue * CASINO_WIN_MULT : 0
+    const beforeTicket = st.reps
     const newReps = won ? Math.min(st.repsCap, st.reps + winAmount) : st.reps
     st = { ...st, reps: newReps, labDefi: { ...d, grantedTickets: d.grantedTickets.slice(1), casinoFirstBetDone: true } }
+    logEnergyIncome("🎟️ Ticket", newReps - beforeTicket) // JOURNAL : gain crédité (0 si perdu → ignoré)
     emit()
     return { winningCase, won, winAmount, betValue }
 }
@@ -2883,26 +2933,20 @@ export function sageSaiyanPointsLeftToday(): number {
 export function sageAvailableToday(): boolean {
     return sageSaiyanPointsLeftToday() > 0
 }
-/** Barème du k-ième point Saiyan déplacé DANS LA JOURNÉE (1-indexé) — TRÈS cher (Sartay) : 5, 10, 15, puis
- *  DOUBLE (30, 60, 120, 240, 480, 960, …) jusqu'au cap journalier → le coût explose = auto-limitation. */
-function sagePointCost(k: number): number {
-    const n = Math.max(1, Math.floor(k))
-    if (n === 1) return 5
-    if (n === 2) return 10
-    return 15 * Math.pow(2, n - 3) // k≥3 : 15, 30, 60, 120, 240, 480, 960, …
-}
-/** Multiplicateur lié à la RÉSERVE d'énergie (repsCap) : ×1 à 5000, +0,1 par tranche de +1000 (×1,1 à 6000…),
- *  −0,1 par tranche de −1000 (×0,9 à 4000…). Borné [0,5 ; 3]. Les gros réservoirs (endgame) paient plus cher. */
-export function sageEnergyMult(reserve: number = st.repsCap): number {
-    return Math.max(0.5, Math.min(3, 1 + (reserve - 5000) / 10000))
-}
-/** Coût en reps pour déplacer `points` points de plus alors qu'on en a déjà bougé `used` aujourd'hui :
- *  Σ du barème SAGE_COST_TABLE sur les points (used+1 … used+points), × le multiplicateur de réserve d'énergie. */
-export function sageRespecCost(points: number, used: number = st.sageSaiyanPointsToday ?? 0): number {
-    const n = Math.max(0, Math.floor(points)), u = Math.max(0, Math.floor(used))
+/** Coût FIXE d'un point Saiyan redistribué. ÉQUITABLE + prévisible : 40 points = 2000 reps pile (plafond 20/jour →
+ *  1000/jour sur 2 jours). Fini l'escalade exponentielle (qui s'envolait) ET le multiplicateur de réserve. */
+export const SAGE_POINT_COST = 50
+function sagePointCost(_k: number): number { return SAGE_POINT_COST }
+/** Multiplicateur de réserve — NEUTRALISÉ (retourne toujours 1). Conservé exporté pour compat ; le coût du Sage
+ *  ne dépend plus de la réserve d'énergie (rendait l'endgame « impayable »). */
+export function sageEnergyMult(_reserve: number = st.repsCap): number { return 1 }
+/** Coût en reps pour déplacer `points` points : FIXE à SAGE_POINT_COST par point (équitable). Indépendant de `used`
+ *  et de la réserve → 40 points coûtent toujours 40 × 50 = 2000 reps. Le plafond quotidien (20/j) limite le rythme. */
+export function sageRespecCost(points: number, _used: number = st.sageSaiyanPointsToday ?? 0): number {
+    const n = Math.max(0, Math.floor(points))
     let base = 0
-    for (let i = 1; i <= n; i++) base += sagePointCost(u + i) // les points u+1 … u+n du jour
-    return Math.round(base * sageEnergyMult())
+    for (let i = 1; i <= n; i++) base += sagePointCost(i)
+    return base
 }
 
 /**

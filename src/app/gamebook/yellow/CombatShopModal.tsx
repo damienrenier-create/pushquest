@@ -8,7 +8,7 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps, recordJcEnergyBuy, getJcEnergyBuysToday, recordGrotteShopBuy } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, logEnergyIncome, grantCt, addItem, addCaught, markCaughtThisRun, spendReps, recordJcEnergyBuy, getJcEnergyBuysToday, recordGrotteShopBuy } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -210,7 +210,7 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={() => setConfirmEnergy(null)} style={cancelBtn}>Annuler</button>
-                            <button disabled={busy} onClick={() => { const e = confirmEnergy; setConfirmEnergy(null); const ep = catPrice(e.price, "energie"); spend(ep, { grant: () => { grantReps(e.amount); recordJcEnergyBuy(); recordGrotteShopBuy("energie") }, toast: `✅ +${e.amount} énergie !${player.run3Used ? " (prix du magasin +10 %)" : ""}` }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Recharger ({catPrice(confirmEnergy.price, "energie")} 💠)</button>
+                            <button disabled={busy} onClick={() => { const e = confirmEnergy; setConfirmEnergy(null); const ep = catPrice(e.price, "energie"); spend(ep, { grant: () => { logEnergyIncome("🪙 Recharge (jetons)", grantReps(e.amount)); recordJcEnergyBuy(); recordGrotteShopBuy("energie") }, toast: `✅ +${e.amount} énergie !${player.run3Used ? " (prix du magasin +10 %)" : ""}` }) }} style={{ ...buyBtn, flex: 1, padding: "8px 0", ...(busy ? buyOff : {}) }}>Recharger ({catPrice(confirmEnergy.price, "energie")} 💠)</button>
                         </div>
                     </div>
                 </div>

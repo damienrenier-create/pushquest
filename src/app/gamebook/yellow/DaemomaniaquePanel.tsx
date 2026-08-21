@@ -17,6 +17,7 @@ import { getSpecies, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/
 import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
 import { ECLAIREUR_PRECISION_MARKER } from "@/lib/gamebook/yellow/data/pnj7"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
+import DaemomaniaqueCompare from "./DaemomaniaqueCompare"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -40,17 +41,19 @@ export default function DaemomaniaquePanel() {
     const [revealed, setRevealed] = useState<Set<string>>(new Set())
     const [err, setErr] = useState<string | null>(null)
     const [selectedRun, setSelectedRun] = useState<number | null>(null) // mode POST : run choisi
+    const [tab, setTab] = useState<"guide" | "compare">("guide")
 
-    useEffect(() => { if (open) { void loadYellowSave(); setSel(null); setSelectedRun(null); setErr(null); setQ("") } }, [open])
+    useEffect(() => { if (open) { void loadYellowSave(); setSel(null); setSelectedRun(null); setErr(null); setQ(""); setTab("guide") } }, [open])
 
     const mode: Mode = aw === "ngplus" ? "run2" : aw === "run3" ? "run3" : player.run3Used ? "post" : "run1"
-    const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "post" ? (selectedRun ?? 1) : 1
+    // POST : la comparaison veut un catalogue même sans run choisi → on prend le run 3 (dex complet) par défaut pour l'onglet Comparer.
+    const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "post" ? (selectedRun ?? (tab === "compare" ? 3 : 1)) : 1
     const hideEndgame = queryRun === 1 && !player.isChampion
     const seenSet = useMemo(() => new Set([...dex.seen, ...dex.caught]), [dex.seen, dex.caught])
     const infoAllowed = (id: string) => mode !== "run2" || seenSet.has(id) || id === "ukognos"
 
     const rows = useMemo(() => {
-        if (!open || (mode === "post" && selectedRun === null)) return [] as SpeciesData[]
+        if (!open || (mode === "post" && selectedRun === null && tab !== "compare")) return [] as SpeciesData[]
         const real = (id: string) => { const sp = getSpecies(id); return sp && sp.dexNo < 500 ? sp : null } // exclut fusions (dexNo ≥ 500) et customs
         const caught = [...dex.caught], seen = [...dex.seen]
         let list: SpeciesData[]
@@ -77,7 +80,7 @@ export default function DaemomaniaquePanel() {
         if (needle) list = list.filter((sp) => sp.name.toLowerCase().includes(needle))
         if (typeFilter) list = list.filter((sp) => sp.types.includes(typeFilter as SpeciesData["types"][number]))
         return list
-    }, [open, mode, selectedRun, queryRun, hideEndgame, q, typeFilter, seenSet, dex.caught, dex.seen, player.isChampion])
+    }, [open, mode, selectedRun, tab, queryRun, hideEndgame, q, typeFilter, seenSet, dex.caught, dex.seen, player.isChampion])
 
     if (!open) return null
 
@@ -109,7 +112,14 @@ export default function DaemomaniaquePanel() {
                     <button style={S.close} onClick={close}>✕</button>
                 </div>
 
-                {mode === "post" && selectedRun === null ? (
+                <div style={S.tabsRow}>
+                    <button style={{ ...S.tabBtn, ...(tab === "guide" ? S.tabBtnOn : {}) }} onClick={() => setTab("guide")}>🗺️ Guide de capture</button>
+                    <button style={{ ...S.tabBtn, ...(tab === "compare" ? S.tabBtnOn : {}) }} onClick={() => setTab("compare")}>⚖️ Comparer</button>
+                </div>
+
+                {tab === "compare" ? (
+                    <DaemomaniaqueCompare rows={rows} tc={tc} />
+                ) : mode === "post" && selectedRun === null ? (
                     // ── Sélecteur de run (post run 3) ──
                     <div style={{ ...S.scroll, textAlign: "center" }}>
                         <div style={{ ...S.line, fontStyle: "italic", marginBottom: 16 }}>« Tu as tout parcouru, voyageur. De quel run veux-tu que je te parle ? »</div>
@@ -176,6 +186,9 @@ const S: Record<string, React.CSSProperties> = {
     title: { fontSize: 17, fontWeight: 900, color: "#ffd76a" },
     sub: { fontSize: 12, color: "#b7a9cf", marginTop: 2 },
     close: { background: "#20293e", border: "1px solid #3a3350", color: "#c3cbdc", width: 34, height: 34, borderRadius: 9, cursor: "pointer", fontSize: 15 },
+    tabsRow: { display: "flex", gap: 6, padding: "10px 16px 0" },
+    tabBtn: { flex: 1, background: "rgba(30,22,48,0.6)", border: "1px solid #4a4468", borderRadius: 9, color: "#c9b8e8", fontSize: 12, fontWeight: 800, padding: "7px 8px", cursor: "pointer" },
+    tabBtnOn: { background: "#e0a020", color: "#161018", borderColor: "#ffd76a" },
     scroll: { overflowY: "auto", padding: "12px 16px 16px" },
     search: { width: "100%", boxSizing: "border-box", background: "rgba(20,16,32,0.8)", border: "1px solid #6a5a8a", borderRadius: 9, color: "#f3ecff", fontSize: 14, padding: "9px 11px", marginBottom: 8 },
     chipsRow: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 },

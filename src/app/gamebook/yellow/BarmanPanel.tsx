@@ -5,7 +5,7 @@
 // Le barman suggère seulement que "payer plus porte chance".
 
 import { useState } from "react"
-import { usePlayer, buyBarmanPotion, barmanPotionBasePrice, casinoTicketCount, redeemCasinoTicket, grantRouletteTicket, spendReps, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, buyBarmanPotion, barmanPotionBasePrice, casinoTicketCount, redeemCasinoTicket, grantRouletteTicket, spendReps, grantReps, logEnergyIncome } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 
 // Valeurs de ticket casino disponibles à la conversion (reps → ticket). Bornées comme les tickets roulette.
@@ -52,7 +52,7 @@ export default function BarmanPanel({ close }: { close: () => void }) {
     const redeem = () => {
         const value = redeemCasinoTicket()
         if (value <= 0) { setMsg("« Tu n'as aucun ticket du casino à me revendre. »"); return }
-        const credited = grantReps(value)
+        const credited = grantReps(value); logEnergyIncome("🎟️ Rachat de ticket", credited)
         persistYellowSave()
         setMsg(credited < value
             ? `« +${credited} ⚡ (plafond atteint, ${value - credited} ⚡ perdus — dépense un peu avant !). »`

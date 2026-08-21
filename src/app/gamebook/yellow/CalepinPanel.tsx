@@ -6,11 +6,18 @@
 import { Fragment, useState } from "react"
 import { TOPICS, topicCat } from "./ParkSignPanel"
 import { getCalepin, setCalepinNote } from "@/lib/gamebook/yellow/store/calepinStore"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 
+// Journal d'énergie : formatage court JJ/MM et HH:MM d'un timestamp.
+const fmtDay = (ts: number) => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}` }
+const fmtTime = (ts: number) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` }
+
 export default function CalepinPanel({ userId, onClose }: { userId: string; onClose: () => void }) {
     const [cal, setCal] = useState(() => getCalepin(userId))
+    const player = usePlayer()                              // pour le JOURNAL D'ÉNERGIE (player.energyLog)
+    const [tab, setTab] = useState<"astuces" | "energie">("astuces")
     const [sort, setSort] = useState<"recu" | "alpha" | "theme">("recu")
     const [open, setOpen] = useState<string | null>(null)   // tip (titre) déplié en détail
     const [draft, setDraft] = useState("")                  // brouillon de note du tip ouvert
@@ -33,7 +40,13 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                     <button onClick={onClose} style={{ background: INK, color: CREAM, border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 800 }}>✕</button>
                 </div>
 
-                {topic ? (
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                    {([["astuces", "📌 Mes astuces"], ["energie", "⚡ Journal d'énergie"]] as const).map(([k, lbl]) => (
+                        <button key={k} onClick={() => { setTab(k); setOpen(null) }} style={{ flex: 1, background: tab === k ? INK : "transparent", color: tab === k ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "6px 8px", cursor: "pointer", fontWeight: 800, fontSize: 11.5 }}>{lbl}</button>
+                    ))}
+                </div>
+
+                {tab === "astuces" && (topic ? (
                     <>
                         <button onClick={() => { saveNote(); setOpen(null) }} style={{ background: "transparent", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 800, fontSize: 11, marginBottom: 10 }}>← Mes astuces</button>
                         <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 8 }}>{topic.t}</div>
@@ -72,8 +85,60 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                             })}
                         </div>
                     </>
-                )}
+                ))}
+
+                {tab === "energie" && <EnergyJournal log={player.energyLog ?? []} />}
             </div>
         </div>
+    )
+}
+
+// JOURNAL D'ÉNERGIE — répond à « d'où vient l'énergie dont je dispose ». Deux volets : (1) une RÉPARTITION par source
+//   (barres, du plus gros au plus petit) = la vue d'ensemble ; (2) le DÉTAIL chronologique récent (le plus récent en
+//   haut). N'affiche QUE les ENTRÉES (crédits) ; les dépenses ne sont pas tracées. Vierge tant qu'aucune entrée.
+function EnergyJournal({ log }: { log: { ts: number; source: string; amount: number }[] }) {
+    if (log.length === 0) {
+        return (
+            <div style={{ textAlign: "center", padding: "26px 14px", fontSize: 13, lineHeight: 1.6, opacity: 0.85 }}>
+                ⚡ Aucune <b>entrée d&apos;énergie</b> enregistrée pour l&apos;instant.<br />
+                Fais du sport, gagne des combats, ouvre des cadeaux… chaque gain d&apos;énergie viendra s&apos;inscrire ici.
+            </div>
+        )
+    }
+    const total = log.reduce((a, e) => a + e.amount, 0)
+    const bySource = new Map<string, number>()
+    for (const e of log) bySource.set(e.source, (bySource.get(e.source) ?? 0) + e.amount)
+    const breakdown = [...bySource.entries()].sort((a, b) => b[1] - a[1])
+    const max = breakdown[0]?.[1] || 1
+    const recent = [...log].reverse() // le plus récent en haut
+    return (
+        <>
+            <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 8 }}>
+                D&apos;où vient ton énergie — <b>{breakdown.length} source{breakdown.length > 1 ? "s" : ""}</b> · total tracé <b>+{total} ⚡</b>
+                <span style={{ opacity: 0.6 }}> (les {log.length} dernières entrées)</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                {breakdown.map(([src, amt]) => (
+                    <div key={src}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 2 }}>
+                            <span>{src}</span><span>+{amt} ⚡ <span style={{ opacity: 0.55, fontWeight: 500 }}>({Math.round((amt / total) * 100)}%)</span></span>
+                        </div>
+                        <div style={{ height: 8, background: "#e7dcbb", borderRadius: 5, overflow: "hidden" }}>
+                            <div style={{ width: `${Math.max(3, (amt / max) * 100)}%`, height: "100%", background: INK, borderRadius: 5 }} />
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.6, marginBottom: 5 }}>Détail récent</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {recent.map((e, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "7px 10px", fontSize: 12.5 }}>
+                        <span style={{ opacity: 0.55, fontSize: 10, fontVariantNumeric: "tabular-nums", flexShrink: 0, minWidth: 66 }}>{fmtDay(e.ts)} · {fmtTime(e.ts)}</span>
+                        <span style={{ flex: 1, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.source}</span>
+                        <span style={{ fontWeight: 800, color: "#2a7a3a", flexShrink: 0 }}>+{e.amount} ⚡</span>
+                    </div>
+                ))}
+            </div>
+        </>
     )
 }
