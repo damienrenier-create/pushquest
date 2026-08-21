@@ -42,7 +42,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "will", name: "WILL", theme: "PSY", icon: "🔮", pairs: [
         // WILL (Xatu/Lippoutou/Flagadoss/Noadkoko + golem psi) → attaquants SPÉCIAUX + 1 mur métal anti-Ténèbres/Spectre.
         { a: "divinpate", b: "aquilord", name: "Divinaquil", moves: ["eveil_divin", "fonce_bec", "souffle_polaire", "lance_flammes"] },   // PSY/VOL ~Xatu
-        { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["vague_mentale", "tempete_verte", "vampigraine", "repos"] },        // PSY/PLANTE ~Noadkoko (mur drain)
+        { a: "karmaki", b: "gloutanoir", name: "Gloutamaki", moves: ["patience", "tempete_verte", "vampigraine", "repos"] },          // PSY/PLANTE ~Noadkoko (mur drain) — Patience (signature karmaki) : rétribution ∝ PV encaissés = son win-con de staller
         { a: "flamaspic", b: "razmaree", name: "Flamarée", moves: ["hydrocanon", "choc_mental", "blizzard", "repos"] },                  // PSY/EAU ~Flagadoss (tank ; ex-Hippomarée, omnhippo libéré pour Hippofer)
         { a: "morrow", b: "divinpate", name: "Morrinpâte", moves: ["coup_d_givre", "eveil_divin", "hypnose", "focalisation"] },          // GLACE/PSY ~Lippoutou (glass-cannon) — coup_d_givre = STAB Glace légal (morrow)
         { a: "omnhippo", b: "colosfer", name: "Hippofer", moves: ["eveil_divin", "onde_cerebrale", "poing_meteore", "repos"] },          // PSY/METAL — mur anti-Ténèbres/Spectre + debuff (onde_cerebrale −Vit/−Préc/−Déf) — REMPLACÉ en Argent/Or (cf. ANTITRIO_ARGENT_OR)

@@ -136,7 +136,7 @@ interface BattleStoreState {
     loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
-    fusionDefeat: { koLog: { victim: string; move: string; by: string }[] } | null // LIGUE DE FUSION — DÉFAITE : générique 5s (récap : quelle attaque a mis chaque fusion K.O.) avant le renvoi à l'Autel (transitoire)
+    fusionDefeat: { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null // LIGUE DE FUSION — DÉFAITE : générique (récap : attaque fatale de chaque fusion + DRESSEUR vainqueur) avant le renvoi à l'Autel (transitoire)
     megamonarxReveal: boolean // 🐉🪨 MÉGAMONARX : signal one-shot « Dracolithe niv100 a transcendé » → cinématique + persist côté client (transitoire)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
@@ -1319,7 +1319,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // GÉNÉRIQUE DE DÉFAITE (Ligue de Fusion) : à la défaite d'une salle, on liste PAR QUELLE ATTAQUE chaque fusion est
     //   tombée (record __lastHitBy posé par le moteur) → overlay 5s thématique avant le renvoi à l'Autel. null sinon.
     const fusionDefeat = (isFusionLeague && b.outcome === "lose")
-        ? { koLog: b.player.team.filter((m) => m.currentHp <= 0).map((m) => {
+        ? { trainerName: getTrainer(storeState.trainer?.trainerId ?? "")?.name ?? "LA LIGUE DE FUSION",
+            koLog: b.player.team.filter((m) => m.currentHp <= 0).map((m) => {
                 const hit = (m as { __lastHitBy?: { move: string; by: string } }).__lastHitBy
                 return { victim: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: hit?.move ?? "—", by: hit?.by ?? "—" }
             }) }
@@ -1932,7 +1933,7 @@ export function clearFusionSacre() {
 }
 
 /** LIGUE DE FUSION — DÉFAITE : récap des attaques fatales (générique 5s), ou null. Cleared après l'overlay → whiteout. */
-export function useFusionDefeat(): { koLog: { victim: string; move: string; by: string }[] } | null {
+export function useFusionDefeat(): { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null {
     return useSyncExternalStore(
         subscribe,
         () => getSnapshot().fusionDefeat,

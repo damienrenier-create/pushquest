@@ -547,6 +547,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (mapPlayer.mapId !== "yellow_combat_tour" && mapPlayer.mapId !== "yellow_combat_usine") return
         fetchFrontierProfile().then(setFrontierProf).catch(() => {})
     }, [mapPlayer.mapId])
+    // À l'ouverture du PALMARÈS : on récupère le profil serveur pour afficher les SYMBOLES DE PRESTIGE possédés
+    //   (🏯 Tour / 🏭 Usine / 🏆 Dôme, achetés à la boutique de jetons). Sans ça, ces objets « prestige » n'ont AUCUNE
+    //   visibilité (ni dans la boutique une fois obtenus, ni ailleurs) → ils deviennent effectifs ici, dans la salle des trophées.
+    useEffect(() => {
+        if (menu !== "palmares") return
+        fetchFrontierProfile().then(setFrontierProf).catch(() => {})
+    }, [menu])
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     const [profileView, setProfileView] = useState(false) // MULTI-PROFILS : overlay « Mes profils » (nouveau profil + bascule)
     const [genesisCraftStep, setGenesisCraftStep] = useState<number | null>(null) // MODE GENÈSE : étape de craft (0..5) ; null = pas en craft
@@ -2419,6 +2426,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>🏆 PALMARÈS</div>
+                            {/* SYMBOLES DE PRESTIGE (boutique de jetons — Zone de Combat) : seuls objets sans effet mécanique,
+                                leur raison d'être est d'être EXHIBÉS. On les affiche ici, dans la salle des trophées. */}
+                            {(frontierProf?.symbols?.length ?? 0) > 0 && (() => {
+                                const PRESTIGE: { id: string; emoji: string; label: string }[] = [
+                                    { id: "sym_tour", emoji: "🏯", label: "Symbole de la Tour" },
+                                    { id: "sym_usine", emoji: "🏭", label: "Symbole de l'Usine" },
+                                    { id: "sym_dome", emoji: "🏆", label: "Symbole du Dôme" },
+                                ]
+                                const owned = PRESTIGE.filter((s) => frontierProf!.symbols.includes(s.id))
+                                return (
+                                    <div title="Symboles de prestige — Boutique de jetons de la Zone de Combat" style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center", margin: "-2px 0 8px", fontSize: 24, lineHeight: 1 }}>
+                                        {owned.map((s) => (
+                                            <span key={s.id} title={s.label} style={{ filter: "drop-shadow(0 0 6px rgba(224,178,61,.55))" }}>{s.emoji}</span>
+                                        ))}
+                                    </div>
+                                )
+                            })()}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "2px 0 6px" }}>
                                 <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{run1Done ? " — RUN 1" : ""}</button>
                                 {hasArenaHof && <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>🏟️ HALL OF FAME (ARÈNES)</button>}
@@ -4947,7 +4971,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 thématique « par quelle attaque chaque fusion est tombée » ; à la fin (onDone → clearFusionDefeat) le
                 whiteout reprend et renvoie à l'Autel. zIndex 9999 (au-dessus de tout). */}
             {fusionDefeat && !battle && (
-                <FusionDefeatOverlay koLog={fusionDefeat.koLog} onDone={clearFusionDefeat} />
+                <FusionDefeatOverlay trainerName={fusionDefeat.trainerName} koLog={fusionDefeat.koLog} onDone={clearFusionDefeat} />
             )}
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en

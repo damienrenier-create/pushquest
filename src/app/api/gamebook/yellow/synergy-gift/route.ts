@@ -14,11 +14,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 
 export const dynamic = "force-dynamic"
-const ENERGY_DOME = 200 // a atteint le Dôme de Fusion
-const ENERGY_OTHER = 50 // le reste de la communauté
+const ENERGY_ALL = 200 // +200 ⚡ pour TOUTE la communauté (découvreur inclus) — la découverte d'un secret profite à tous
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -49,17 +47,13 @@ export async function POST(req: NextRequest) {
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
 
-        // TOUS les joueurs Nexus Jaune (découvreur inclus). On lit leurs `flags` pour le split 200/50 (Dôme atteint ?).
+        // TOUS les joueurs Nexus Jaune (découvreur inclus) reçoivent +200 ⚡ — flat, plus de split Dôme.
         const players = (await prisma.gamebookProgress.findMany({
-            where: { chapterId: YELLOW_CHAPTER_ID }, select: { userId: true, flags: true },
-        })) as { userId: string; flags: unknown }[]
+            where: { chapterId: YELLOW_CHAPTER_ID }, select: { userId: true },
+        })) as { userId: string }[]
         if (players.length > 0) {
             await sg.createMany({
-                data: players.map((p) => {
-                    const dt = (p.flags && typeof p.flags === "object" ? (p.flags as { defeatedTrainers?: unknown }).defeatedTrainers : null)
-                    const reachedDome = Array.isArray(dt) && dt.includes(AUTEL_VISITED_MARKER)
-                    return { toUserId: p.userId, fromUserId: auth.userId, fromNickname: me.nickname, kind: "synergy", speciesId: label, eventKey, energy: reachedDome ? ENERGY_DOME : ENERGY_OTHER }
-                }),
+                data: players.map((p) => ({ toUserId: p.userId, fromUserId: auth.userId, fromNickname: me.nickname, kind: "synergy", speciesId: label, eventKey, energy: ENERGY_ALL })),
             })
         }
         return NextResponse.json({ ok: true, granted: players.length })

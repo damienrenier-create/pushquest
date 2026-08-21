@@ -60,6 +60,9 @@ export default function BattleScreen() {
     const [itemTargetId, setItemTargetId] = useState<string | null>(null) // SOIN/ANTI-STATUT : objet en attente d'une cible (actif OU banc)
     const [lastBallId, setLastBallId] = useState("") // dernière Ball lancée → couleur de l'anim (Fusio-Ball = dorée)
     const [disp, setDisp] = useState<DispHp | null>(null)
+    // STATUT AFFICHÉ par côté, SYNCHRONISÉ sur le playback (comme `disp` pour les PV) → un statut infligé ce tour
+    // n'apparaît qu'au moment où l'event `status` est rejoué (APRÈS l'anim d'attaque), jamais avant. Anti-spoiler.
+    const [dispStatus, setDispStatus] = useState<{ p: string; e: string } | null>(null)
     // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
     // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
     const [dispIdx, setDispIdx] = useState<{ p: number; e: number } | null>(null)
@@ -103,6 +106,7 @@ export default function BattleScreen() {
             const p = battle.player.team[battle.player.activeIndex]
             const e = battle.enemy.team[battle.enemy.activeIndex]
             setDisp({ p: p.currentHp, pMax: maxHpOf(p), e: e.currentHp, eMax: maxHpOf(e) })
+            setDispStatus({ p: p.status, e: e.status })
             setDispIdx({ p: battle.player.activeIndex, e: battle.enemy.activeIndex })
         }
     }, [battle, disp])
@@ -158,6 +162,11 @@ export default function BattleScreen() {
                 if (ev.side === "player") return { ...d, p: m.currentHp, pMax: maxHpOf(m) }
                 return { ...d, e: m.currentHp, eMax: maxHpOf(m) }
             })
+            setDispStatus((d) => (d ? (ev.side === "player" ? { ...d, p: m.status } : { ...d, e: m.status }) : d)) // le Daemon entrant apporte SON statut
+        } else if (ev.kind === "status") {
+            // STATUT infligé (poison/sommeil/brûlure/gel/para) : on l'AFFICHE seulement MAINTENANT — le moteur pousse
+            //   cet event APRÈS l'anim d'attaque, donc le badge n'apparaît jamais avant le coup. Fin du spoiler.
+            setDispStatus((d) => (d ? (ev.side === "player" ? { ...d, p: ev.status } : { ...d, e: ev.status }) : d))
         } else if (ev.kind === "move") {
             // Anim d'attaque (catégorie déduite du moveId) : on LAISSE le temps de la voir
             // avant d'enchaîner sur les dégâts.
@@ -268,6 +277,9 @@ export default function BattleScreen() {
     const pMax = playbackDone ? maxHpOf(player) : (disp?.pMax ?? maxHpOf(player))
     const eHp = playbackDone ? enemy.currentHp : (disp?.e ?? enemy.currentHp)
     const eMax = playbackDone ? maxHpOf(enemy) : (disp?.eMax ?? maxHpOf(enemy))
+    // STATUT affiché : suit le playback (comme les PV) → un statut n'apparaît qu'à son event `status` (après l'attaque).
+    const pStatus = playbackDone ? player.status : (dispStatus?.p ?? player.status)
+    const eStatus = playbackDone ? enemy.status : (dispStatus?.e ?? enemy.status)
 
     // #4 — FENÊTRE D'ENVOI : une fois le playback fini (décision rester/changer), on PRÉVISUALISE
     // le prochain Daemon adverse (sprite + PV pleins + fiche/chips de type) au lieu du K.O. qui
@@ -278,6 +290,7 @@ export default function BattleScreen() {
     const showEIdx = sendOutIdx ?? eIdx
     const showEHp = previewEnemy ? previewEnemy.currentHp : eHp
     const showEMax = previewEnemy ? maxHpOf(previewEnemy) : eMax
+    const showEStatus = previewEnemy ? previewEnemy.status : eStatus
 
     // #7 — APPRENTISSAGE EN COMBAT : à la reprise de la main (menu normal, hors PvP), si l'actif a
     // débloqué une attaque ce tour mais a 4 slots pleins, on propose de l'apprendre MAINTENANT
@@ -460,7 +473,7 @@ export default function BattleScreen() {
                         : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
                     {/* key sur l'uid : au switchIn, la barre se REMONTE nette (pas de flash 0→100%).
                         #4 : pendant la fenêtre d'envoi, on montre le PROCHAIN Daemon (showEnemy). */}
-                    <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} />
+                    <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} status={showEStatus} />
                 </div>
                 <div style={S.enemySpot}>
                     {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
@@ -471,7 +484,7 @@ export default function BattleScreen() {
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} victory={playbackDone && playerWon && battle.pvp} />
                 </div>
                 <div style={S.playerSide}>
-                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
+                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} status={pStatus} />
                     {!battle.isWild && <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />}
                 </div>
                 {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
@@ -653,7 +666,7 @@ const LRN: Record<string, React.CSSProperties> = {
 // Sous-composants
 // ============================================================
 
-function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: number; max: number }) {
+function MonInfo({ mon, self, hp, max, status }: { mon: BattleMon; self?: boolean; hp: number; max: number; status: string }) {
     const pct = Math.max(0, Math.min(100, (hp / max) * 100))
     const col = pct > 50 ? "#48c048" : pct > 20 ? "#f0c040" : "#e04040"
     // #6 — petite LUEUR discrète de la barre d'XP quand CE Daemon passe un niveau (event moins anodin).
@@ -700,7 +713,7 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                     </div>
                 )
             })()}
-            {hp > 0 && mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
+            {hp > 0 && status !== "NONE" && <span style={S.statusTag}>{status}</span>}
         </div>
     )
 }
