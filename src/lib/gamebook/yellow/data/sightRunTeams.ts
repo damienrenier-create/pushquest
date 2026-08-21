@@ -45,14 +45,14 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
             { speciesId: "calderont", level: 50 }, { speciesId: "pyropanthe", level: 50 },
         ],
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team, cf. ci-dessous.)
-        // AQUA ARENA (bateau) — RUN 2 : thème EAU (remix Sartay). Le crew EXHIBE les espèces PÊCHABLES (Braisécaille,
-        //   Osquille, Rô) + strong finals ; le boss final montre GEAUCKÉ, la giga-rare de la canne. ACE = Léviabysse + Chant du Naufrageur.
-        y_aqua_n1: [{ speciesId: "braisecaille", level: 36 }, { speciesId: "osquille", level: 36 }],
-        y_aqua_n2: [{ speciesId: "ro", level: 36 }, { speciesId: "sonarque", level: 36 }, { speciesId: "razmaree", level: 36 }],
-        y_aqua_n3: [{ speciesId: "leviathonn", level: 40 }, { speciesId: "ro", level: 37 }],
-        y_aqua_n4: [{ speciesId: "braisecaille", level: 37 }, { speciesId: "osquille", level: 37 }, { speciesId: "naiadrak", level: 37 }],
-        y_aqua_boss_a: [{ speciesId: "razmaree", level: 38 }, { speciesId: "osquille", level: 38 }, { speciesId: "ro", level: 38 }, { speciesId: "sonarque", level: 39 }, { speciesId: "leviabysse", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
-        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 38 }, { speciesId: "naiadrak", level: 38 }, { speciesId: "osquille", level: 39 }, { speciesId: "geaucke", level: 39 }, { speciesId: "leviathonn", level: 40 }],
+        // AQUA ARENA (bateau) — RUN 2 : thème EAU (remix Sartay). JUSTE MILIEU : ossature de FINALS EAU costauds + UN
+        //   clin d'œil PÊCHABLE par matelot (Osquille/Rô/Braisécaille) ; GEAUCKÉ (giga-rare) = trophée du boss final. ACE = Léviabysse + Chant du Naufrageur.
+        y_aqua_n1: [{ speciesId: "razmaree", level: 36 }, { speciesId: "osquille", level: 36 }],
+        y_aqua_n2: [{ speciesId: "naiadrak", level: 36 }, { speciesId: "sonarque", level: 36 }, { speciesId: "ro", level: 36 }],
+        y_aqua_n3: [{ speciesId: "leviathonn", level: 40 }, { speciesId: "braisecaille", level: 37 }],
+        y_aqua_n4: [{ speciesId: "osquille", level: 37 }, { speciesId: "crapotaure", level: 37 }, { speciesId: "ondaloutre", level: 37 }],
+        y_aqua_boss_a: [{ speciesId: "razmaree", level: 38 }, { speciesId: "naiadrak", level: 38 }, { speciesId: "sonarque", level: 38 }, { speciesId: "mobyd", level: 39 }, { speciesId: "leviabysse", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
+        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 38 }, { speciesId: "crapotaure", level: 38 }, { speciesId: "naiadrak", level: 39 }, { speciesId: "geaucke", level: 39 }, { speciesId: "leviathonn", level: 40 }],
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 2 : stades intermédiaires/finaux Glace.
         y_frere_frisquet: [{ speciesId: "glaceer", level: 46 }, { speciesId: "iorours", level: 47 }],
         y_frere_grelot: [{ speciesId: "glacirex", level: 48 }, { speciesId: "glaceer", level: 49 }],
