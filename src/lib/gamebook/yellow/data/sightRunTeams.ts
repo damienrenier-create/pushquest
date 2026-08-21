@@ -45,23 +45,23 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
             { speciesId: "calderont", level: 50 }, { speciesId: "pyropanthe", level: 50 },
         ],
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team, cf. ci-dessous.)
-        // AQUA ARENA (bateau) — RUN 2 : thème FÉE/INSECTE (métal indispo hors gated). ACE des boss = signature Marée d'Acier.
-        y_aqua_n1: [{ speciesId: "regnantaur", level: 36 }, { speciesId: "wyvortal", level: 36 }],
-        y_aqua_n2: [{ speciesId: "necarabee", level: 36 }, { speciesId: "dracosidhe", level: 36 }, { speciesId: "pterosidhe", level: 36 }],
-        y_aqua_n3: [{ speciesId: "necrolopendre", level: 40 }, { speciesId: "pterosidhe", level: 37 }],
-        y_aqua_n4: [{ speciesId: "regnantaur", level: 37 }, { speciesId: "wyvortal", level: 37 }, { speciesId: "dracosidhe", level: 37 }],
-        y_aqua_boss_a: [{ speciesId: "regnantaur", level: 38 }, { speciesId: "necarabee", level: 38 }, { speciesId: "wyvortal", level: 38 }, { speciesId: "dracosidhe", level: 39 }, { speciesId: "necrolopendre", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
-        y_aqua_boss_b: [{ speciesId: "dracosidhe", level: 38 }, { speciesId: "pterosidhe", level: 38 }, { speciesId: "regnantaur", level: 39 }, { speciesId: "necrolopendre", level: 40 }, { speciesId: "wyvortal", level: 40, moves: ["sig_maree_dacier"], opening: ["sig_maree_dacier"] }],
+        // AQUA ARENA (bateau) — RUN 2 : thème EAU (remix Sartay). ACE des boss = Léviabysse + signature Chant du Naufrageur.
+        y_aqua_n1: [{ speciesId: "razmaree", level: 36 }, { speciesId: "ondaloutre", level: 36 }],
+        y_aqua_n2: [{ speciesId: "naiadrak", level: 36 }, { speciesId: "sonarque", level: 36 }, { speciesId: "mobyd", level: 36 }],
+        y_aqua_n3: [{ speciesId: "leviathonn", level: 40 }, { speciesId: "naiadrak", level: 37 }],
+        y_aqua_n4: [{ speciesId: "crapotaure", level: 37 }, { speciesId: "sonarque", level: 37 }, { speciesId: "ondaloutre", level: 37 }],
+        y_aqua_boss_a: [{ speciesId: "razmaree", level: 38 }, { speciesId: "naiadrak", level: 38 }, { speciesId: "sonarque", level: 38 }, { speciesId: "mobyd", level: 39 }, { speciesId: "leviabysse", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
+        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 38 }, { speciesId: "crapotaure", level: 38 }, { speciesId: "sonarque", level: 39 }, { speciesId: "razmaree", level: 39 }, { speciesId: "leviathonn", level: 40 }],
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 2 : stades intermédiaires/finaux Glace.
         y_frere_frisquet: [{ speciesId: "glaceer", level: 46 }, { speciesId: "iorours", level: 47 }],
         y_frere_grelot: [{ speciesId: "glacirex", level: 48 }, { speciesId: "glaceer", level: 49 }],
         y_frere_glagla: [{ speciesId: "iorours", level: 50 }, { speciesId: "glaceer", level: 50 }],
         y_frere_givre: [{ speciesId: "iorours", level: 51 }, { speciesId: "cryotyran", level: 51 }, { speciesId: "panthegel", level: 52 }],
         y_frere_blizzard: [{ speciesId: "yetiroche", level: 53 }, { speciesId: "auroraur", level: 53 }, { speciesId: "cryotyran", level: 54 }, { speciesId: "orcaline", level: 55 }],
-        // PLAGE (dresseurs à vue) — RUN 2 : stades finaux eau/vol.
-        y_plage_pecheur: [{ speciesId: "razmaree", level: 50 }, { speciesId: "crapotaure", level: 51 }],
-        y_plage_nageuse: [{ speciesId: "naiadrak", level: 50 }, { speciesId: "oragron", level: 51 }, { speciesId: "leviathonn", level: 52 }],
-        y_plage_marin: [{ speciesId: "aquilothan", level: 50 }, { speciesId: "necrocorbe", level: 51 }],
+        // PLAGE (dresseurs à vue) — RUN 2 : thème SPECTRE (remix Sartay ; les spectres ont migré du Manoir vers la crique).
+        y_plage_pecheur: [{ speciesId: "brookhante", level: 50 }, { speciesId: "archibouh", level: 51 }],
+        y_plage_nageuse: [{ speciesId: "chouhante", level: 50 }, { speciesId: "shadow", level: 51 }, { speciesId: "revemante", level: 52 }],
+        y_plage_marin: [{ speciesId: "shadow", level: 50 }, { speciesId: "brookhante", level: 51 }],
     },
     // ── RUN 3 ──
     run3: {

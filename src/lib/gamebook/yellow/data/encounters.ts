@@ -871,22 +871,9 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "phoechaudi", base: VERY_RARE, rare: true },   // Feu/Spectre, pépite (évolue en Phoéchaudiii)
         ],
     },
-    // AQUA ARENA (« LE BATEAU ») run 2 — le pont grouille de faune AQUATIQUE. Devient une zone de rencontres
-    //   EAU : le SOL DU PONT (path) déclenche en NG+ (cf. isWildTile dans gameStore) ; en run 1 le pont reste
-    //   calme (AUCUNE rencontre). Loutrille y retrouve enfin un habitat sauvage. Les lignées évoluent au niveau.
-    yellow_aqua_arena: {
-        rate: 0.12, minLevel: 10,
-        pool: [
-            { speciesId: "gouttiny", base: COMMON },
-            { speciesId: "loutrille", base: COMMON },                   // enfin un habitat sauvage
-            { speciesId: "tetardoc", base: UNCOMMON },
-            { speciesId: "otama", base: UNCOMMON },
-            { speciesId: "belunode", base: RARE },
-            { speciesId: "guizer", base: RARE },
-            { speciesId: "aquapanthe", base: RARE, rare: true },        // finale mono-stade
-            { speciesId: "orcaline", base: VERY_RARE, noEvolve: true, rare: true }, // Glace/Eau, pépite
-        ],
-    },
+    // AQUA ARENA (« LE BATEAU ») : AUCUNE rencontre sauvage (choix Sartay) — le bateau est 100 % DRESSEURS. En run 2,
+    //   ce sont les ÉQUIPES des dresseurs qui passent au thème EAU (cf. SIGHT_RUN_TEAMS dans sightRunTeams.ts) ; le pont
+    //   ne déclenche donc rien (le hook isWildTile a été retiré côté gameStore).
     // MAISON HANTÉE run 2 — LE MANOIR DES TÉNÈBRES. Les spectres ont migré vers la crique (plage) : le manoir
     //   est désormais le repaire des TÉNÈBRES. Règle « PLUS C'EST FORT, PLUS C'EST RARE » : bases communes
     //   (N16-24) → mi-évos peu communes (N30) → finales rares (N44, capture dure) → GÉCKÈBRE giga-rare (N50,

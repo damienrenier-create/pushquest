@@ -1895,8 +1895,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const onWildTile = map.tiles[next.posY]?.[next.posX]
         const isWildTile = onWildTile === "grassTall"
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
-            // « BATEAU » (Aqua Arena) run 2 : le sol du PONT déclenche des rencontres EAU (NGPLUS_ZONES) — run 1 : rien.
-            || (map.id === "yellow_aqua_arena" && onWildTile === "path" && effectiveRunWorld() === "ngplus")
         // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
         if (moved && !!map.darkness && get().torchOn && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
         // 🐈‍⬛ GALIJAH : à chaque pas hors rejeu, on (ré)arme la chasse dès 150 ESPÈCES DIFFÉRENTES au Pokédex — atteintes
