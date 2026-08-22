@@ -38,11 +38,17 @@ import { fishingCommon, fishingRareOfHour, fishingTier, fishingRareLevel, fishin
 import { hydratePlayer, getPlayer, claimFishingRod } from "../store/playerStore"
 
 describe("Pêche — tirage + courbes", () => {
-    it("fishingCommon : braisécaille ou l'espèce EAU du run (50/50), déterministe", () => {
-        expect(fishingCommon("run1", 0)).toBe("braisecaille")
-        expect(fishingCommon("run1", 0.99)).toBe("loutrille")
-        expect(fishingCommon("run2", 0.99)).toBe("tetardoc")
-        expect(fishingCommon("run3", 0.99)).toBe("gouttiny")
+    it("fishingCommon : plan d'eau SANS signature → braisécaille ou l'espèce EAU du run (50/50), déterministe", () => {
+        expect(fishingCommon("", "run1", 0)).toBe("braisecaille")
+        expect(fishingCommon("", "run1", 0.99)).toBe("loutrille")
+        expect(fishingCommon("", "run2", 0.99)).toBe("tetardoc")
+        expect(fishingCommon("", "run3", 0.99)).toBe("gouttiny")
+    })
+    it("fishingCommon : chaque plan d'eau a SA signature (FISHING_BY_MAP), qui remplace le commun run-based", () => {
+        expect(fishingCommon("yellow_route_nord", "run2", 0.5)).toBe("piouflot")
+        expect(fishingCommon("yellow_grotte", "run2", 0.5)).toBe("loutrille")
+        expect(fishingCommon("yellow_grotte_gelee", "run2", 0.5)).toBe("tetardoc")
+        expect(fishingCommon("yellow_cendreville", "run2", 0.5)).toBe("obscurene")
     })
     it("fishingRareOfHour : Osquille de JOUR (8-20h), Rô de NUIT (20-8h)", () => {
         expect(fishingRareOfHour(8)).toBe("osquille")

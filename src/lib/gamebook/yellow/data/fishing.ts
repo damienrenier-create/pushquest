@@ -10,15 +10,24 @@ export const FISHING_ROD_ITEM_ID = "canne_a_peche"
 /** GIGA-RARE pêchable : glass-cannon Roche/Eau. 1 % de touche, et NE REPOP PLUS une fois capturé. Niveau fixe 30. */
 export const GEAUCKE_ID = "geaucke"
 export const GEAUCKE_LEVEL = 30
-/** Communs de pêche PAR RUN (braisécaille + l'espèce EAU du run) — désormais EXCLUSIFS à la pêche (retirés du sauvage). */
+/** Communs de pêche PAR RUN (braisécaille + l'espèce EAU du run) — défaut, pour les plans d'eau sans signature propre. */
 export const FISHING_COMMONS: Record<string, readonly string[]> = {
     run1: ["braisecaille", "loutrille"],
     run2: ["braisecaille", "tetardoc"],
     run3: ["braisecaille", "gouttiny"],
 }
-/** L'espèce commune ferrée pour un run (50/50). `rand`∈[0,1) → déterministe/testable. */
-export function fishingCommon(run: string, rand: number): string {
-    const pool = FISHING_COMMONS[run] ?? FISHING_COMMONS.run1
+/** COMMUN PÊCHÉ PAR PLAN D'EAU (choix Sartay 22/08) : chaque grand plan d'eau a SON espèce signature, qui REMPLACE
+ *  le commun run-based. Les plans d'eau absents d'ici gardent FISHING_COMMONS[run]. (Les tiers rare Osquille/Rô et
+ *  giga Geaucké restent universels.) */
+export const FISHING_BY_MAP: Record<string, readonly string[]> = {
+    yellow_route_nord: ["piouflot"],    // le lac de la Route Nord
+    yellow_grotte: ["loutrille"],       // l'eau de la Grotte
+    yellow_grotte_gelee: ["tetardoc"],  // l'eau de la Grotte Gelée
+    yellow_cendreville: ["obscurene"],  // l'eau de la ville (Obscurène, Eau/Ténèbres, a quitté le manoir)
+}
+/** L'espèce commune ferrée : signature du plan d'eau (FISHING_BY_MAP) sinon le commun run-based. `rand`∈[0,1) → déterministe/testable. */
+export function fishingCommon(mapId: string, run: string, rand: number): string {
+    const pool = FISHING_BY_MAP[mapId] ?? FISHING_COMMONS[run] ?? FISHING_COMMONS.run1
     return pool[Math.min(pool.length - 1, Math.floor(Math.max(0, Math.min(0.999999, rand)) * pool.length))]
 }
 /** Le RARE du moment selon l'HEURE locale : Osquille de JOUR (8h-20h), Rô de NUIT (20h-8h). */

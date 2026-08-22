@@ -763,14 +763,15 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt + Colibraise (Vol/Feu)
             { speciesId: "blaziper", base: UNCOMMON },
             { speciesId: "jerbiwat", base: 5, rare: true, captureMult: 0.5 }, // run 2 : rendu TRÈS rare (~0,75 % : 5/663) + capture ÷2 (trop courant à UNCOMMON — choix Sartay)
-            { speciesId: "bouh", base: UNCOMMON },
             { speciesId: "colibraise", base: UNCOMMON },
             // Rares — le starter Plante (Gouttiny/Glacirex déplacés à la GROTTE GELÉE ; Braisille/Fennaise → CENTRALE FEU)
             { speciesId: "feuillichot", base: RARE, rare: true },
             // Très rare — le bébé-dragon (→ Carlembre → Dracarlin en l'élevant)
             { speciesId: "carlinou", base: VERY_RARE, rare: true },
-            // Giga rare — la pépite dragon + l'ancêtre panthère
-            { speciesId: "draclet", base: GIGA_RARE, rare: true }, { speciesId: "pantheon", base: GIGA_RARE, rare: true },
+            // Giga rare — la pépite dragon
+            { speciesId: "draclet", base: GIGA_RARE, rare: true },
+            // Création rare (~2 %) — choix Sartay 22/08 (remplace Panthéon/Bouh)
+            { speciesId: "goatiny", base: RARE, rare: true },
         ],
     },
     // GROTTE run 2 — Mottoche rétrogradé, la lignée-diamant remonte, Orcaline pépite du lac (gate niveau 35).
@@ -781,10 +782,10 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "cailloutchi", base: COMMON },
             // Peu communs
             { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: 20 }, // limaroche allégé 45→20 (choix Sartay 13/08)
-            { speciesId: "quadroc", base: UNCOMMON },
             { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
-            // Rare — un spectre (Têtardoc/Marmoterre/Loutrille/Orcaline déplacés à la GROTTE GELÉE)
-            { speciesId: "namicha", base: RARE, noEvolve: true },
+            // Ajouts choix Sartay 22/08 (Quadroc + Namicha retirés) : Forgeotin (~10 %) + Batchu (~2 %)
+            { speciesId: "forgeotin", base: 30 },
+            { speciesId: "batchu", base: 6 },
             // Super rare — Mottoche rétrogradé. TOUJOURS stade 1 (noEvolve) ET à un NIVEAU FIXE 5, indépendant
             // du niveau du lead (levelFixed → bypass du scaling) : jamais sa lignée évoluée, jamais scalé haut.
             { speciesId: "mottoche", base: VERY_RARE, noEvolve: true, levelFixed: 5 },
@@ -822,10 +823,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "braisille", base: 27, levelFixed: 15 }, // Braisille (évo 16)
             { speciesId: "braisille", base: 14, levelFixed: 35 }, // → Flamkure (évo 36)
             { speciesId: "braisille", base: 5, levelFixed: 40 },  // → Pyrokoss
-            // ── LE RENARD (lignée Fennaise) ──
-            { speciesId: "fennaise", base: 8, levelFixed: 15 },   // Fennaise (évo 16)
-            { speciesId: "fennaise", base: 4, levelFixed: 35 },   // → Pyrenard (évo 36)
-            { speciesId: "fennaise", base: 2, levelFixed: 40 },   // → Loupyre
+            // (lignée Fennaise RETIRÉE de la Centrale — choix Sartay 22/08)
             // ── LES CENDRES : Pyrozly (mono-stade) ──
             { speciesId: "pyrozly", base: 90, levelRange: [15, 25] },
             // ── 2-STADES RARES (85% base sous l'évo · 15% final au ×1,5) ──
@@ -861,34 +859,29 @@ const NGPLUS_ZONES: Record<string, Zone> = {
         rate: 0.14, minLevel: 8,
         levelDigitFairy: { chance: 0.10, bases: ["rosdrakis", "archeoptix", "toxyrm"] },
         pool: [
-            { speciesId: "brook", base: COMMON },                       // spectre commun
-            { speciesId: "hibouh", base: COMMON },                      // chouette spectre
-            { speciesId: "shady", base: UNCOMMON },
-            { speciesId: "sporbeo", base: UNCOMMON },
+            // Remix Sartay 22/08 : Hibouh + Ombrapanthe retirés ; Namicha + Wistree ajoutés ; Sporbéo devient LE commun.
+            { speciesId: "sporbeo", base: COMMON },
+            { speciesId: "brook", base: UNCOMMON },
+            { speciesId: "namicha", base: UNCOMMON },
+            { speciesId: "wistree", base: UNCOMMON },
             { speciesId: "revemante", base: UNCOMMON },
+            { speciesId: "shady", base: RARE },
+            { speciesId: "phoechaudi", base: RARE, rare: true },        // Feu/Spectre, pépite (évolue en Phoéchaudiii)
             { speciesId: "bouh", base: RARE, rare: true },
-            { speciesId: "ombrapanthe", base: RARE, rare: true },       // panthère spectrale (finale mono-stade) — belle prise
-            { speciesId: "phoechaudi", base: VERY_RARE, rare: true },   // Feu/Spectre, pépite (évolue en Phoéchaudiii)
         ],
     },
     // AQUA ARENA (« LE BATEAU ») : AUCUNE rencontre sauvage (choix Sartay) — le bateau est 100 % DRESSEURS. En run 2,
     //   ce sont les ÉQUIPES des dresseurs qui passent au thème EAU (cf. SIGHT_RUN_TEAMS dans sightRunTeams.ts) ; le pont
     //   ne déclenche donc rien (le hook isWildTile a été retiré côté gameStore).
-    // MAISON HANTÉE run 2 — LE MANOIR DES TÉNÈBRES. Les spectres ont migré vers la crique (plage) : le manoir
-    //   est désormais le repaire des TÉNÈBRES. Règle « PLUS C'EST FORT, PLUS C'EST RARE » : bases communes
-    //   (N16-24) → mi-évos peu communes (N30) → finales rares (N44, capture dure) → GÉCKÈBRE giga-rare (N50,
-    //   capture très dure, Hyper Ball+). ⭐ Obscurène (Eau/Ténèbres) hante la NUIT.
+    // MAISON HANTÉE run 2 — LE MANOIR DES TÉNÈBRES (refonte Sartay 22/08). Manoir plus CALME (5 %/pas) et simplifié :
+    //   Sépulcru omniprésent, Caninombre fréquent mais RÉTIF à la capture (÷5), Joeyrrant en visiteur rare.
+    //   Obscurène a quitté le manoir → désormais PÊCHABLE dans l'eau de Cendreville. Géckèbre + mi-évos/finales retirés.
     yellow_maison_hantee: {
-        rate: 0.12, minLevel: 14, maxLevel: 50,
+        rate: 0.05, minLevel: 14, maxLevel: 50,
         pool: [
-            { speciesId: "caninombre", base: COMMON, noEvolve: true, levelRange: [16, 24] },
-            { speciesId: "sepulcru", base: COMMON, noEvolve: true, levelRange: [16, 24] },
-            { speciesId: "obscurene", base: UNCOMMON, noEvolve: true, levelRange: [18, 26], hourRange: [20, 8] }, // Eau/Ténèbres, la NUIT
-            { speciesId: "lycanfer", base: RARE, noEvolve: true, levelFixed: 30 },   // mi-évo
-            { speciesId: "macabour", base: RARE, noEvolve: true, levelFixed: 30 },   // mi-évo
-            { speciesId: "tenebrir", base: VERY_RARE, noEvolve: true, levelFixed: 44, captureMult: 0.4 }, // finale
-            { speciesId: "condombre", base: VERY_RARE, noEvolve: true, levelFixed: 44, captureMult: 0.4 }, // finale
-            { speciesId: "geckebre", base: GIGA_RARE, noEvolve: true, levelFixed: 50, captureMult: 0.3, captureMinBallBonus: 4 }, // ⭐ ULTRA RARE
+            { speciesId: "sepulcru", base: 60, noEvolve: true, levelRange: [16, 24] },
+            { speciesId: "caninombre", base: 35, noEvolve: true, levelRange: [16, 24], captureMult: 0.2 }, // fréquent MAIS capture TRÈS difficile
+            { speciesId: "joeyrrant", base: 10 },
         ],
     },
 }
