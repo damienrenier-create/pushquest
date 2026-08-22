@@ -37,9 +37,9 @@ export function fishingRareOfHour(hour: number): string {
 }
 
 // ── TIRAGE DU TIER (par prise) ───────────────────────────────────────────────────────────────────────────────
-export const FISHING_NOCATCH = 0.40    // « 60 s pour rien » : le plus souvent, ça ne mord pas
+export const FISHING_NOCATCH = 0.40    // le plus souvent, ça ne mord pas
 export const FISHING_GEAUCKE = 0.01     // Geaucké : giga-rare
-export const FISHING_RARE_BASE = 0.06   // Osquille/Rô : base, ×(1 + dépassement de quota reps)
+export const FISHING_RARE_BASE = 0.12   // Osquille/Rô : base ×(1 + dépassement de quota reps). Relevé 0.06→0.12 (Sartay 22/08 : « un peu trop rares »)
 export type FishTier = "none" | "geaucke" | "rare" | "common"
 /** Tire le TIER d'une prise. `rand`∈[0,1). `repsMult` = 1 + dépassement de quota (1→1.8). `geauckeAvailable` = false
  *  si Geaucké déjà capturé (sa proba retombe sur les communs). Le RARE est TOUJOURS dispo (Osquille jour / Rô nuit). */
@@ -70,15 +70,17 @@ export function fishingLevel(leadLevel: number, rand: number): number {
     return Math.max(5, Math.min(100, Math.floor(leadLevel) - 2 + spread))
 }
 
-/** Durée MAX d'une session (le chrono monte jusqu'ici). Le poisson mord AVANT en général ; l'atteindre = rare. */
-export const FISHING_MAX_WAIT_SEC = 60
+/** Durée MAX d'une session (le chrono monte jusqu'ici). Le poisson mord AVANT en général ; l'atteindre = rare.
+ *  60 → 30 s (Sartay 22/08) : chrono 2× plus court. La cadence de morsure (FISHING_BITE_PER_SEC) est doublée en
+ *  parallèle → tout le timing est compressé ×2, la rareté de « l'attente parfaite » (shiny garanti) reste identique. */
+export const FISHING_MAX_WAIT_SEC = 30
 /** Durée (s) du mini-jeu de FERRAGE (mashing) quand ça mord. */
 export const FISHING_REEL_SEC = 10
 /** FERRAGE : bonus d'IV = +1 par tranche de 10 appuis (ajouté aux IV « prévus », cap 15 côté appelant). 0 appui géré à part. */
 export function fishingReelBonus(taps: number): number { return Math.floor(Math.max(0, taps) / 10) }
 
 /** IV « PRÉVUS » d'une prise : priorité au TEMPS D'ATTENTE (centrés sur biteAt/60, ±2 par stat, bornés 0-15).
- *  Le ferrage au mashing les remonte ensuite. Mutualisé entre le tirage normal et l'onboarding. */
+ *  (centrés sur biteAt/30). Le ferrage au mashing les remonte ensuite. Mutualisé entre tirage normal et onboarding. */
 export function fishingBaseIvs(biteAt: number, rand: () => number): { hp: number; atk: number; def: number; spe: number; spc: number } {
     const center = Math.round(Math.min(1, biteAt / FISHING_MAX_WAIT_SEC) * 15)
     const roll = () => Math.max(0, Math.min(15, center + Math.floor(rand() * 5) - 2))
@@ -86,17 +88,18 @@ export function fishingBaseIvs(biteAt: number, rand: () => number): { hp: number
 }
 
 /** ONBOARDING PÊCHE : les 2 premières parties À VIE sont scriptées (braisécaille garanti) pour donner envie de
- *  pêcher — 1re mord à 8 s, 2e à 21 s, puis le hasard reprend. Compteur via marqueurs (defeatedTrainers, sans champ save). */
+ *  pêcher — 1re mord à 5 s, 2e à 11 s, puis le hasard reprend (échelle 30 s). Compteur via marqueurs (defeatedTrainers). */
 export const FISHING_TUTORIAL: ReadonlyArray<{ biteAt: number; speciesId: string }> = [
-    { biteAt: 8, speciesId: "braisecaille" },
-    { biteAt: 21, speciesId: "braisecaille" },
+    { biteAt: 5, speciesId: "braisecaille" },
+    { biteAt: 11, speciesId: "braisecaille" },
 ]
 export const FISHING_TUTORIAL_MARKER = "fishing_tuto_"
 /** PLANCHER de shiny = taux normal des rencontres sauvages (« comme les pas », cf. encounters.ts). */
 export const FISHING_SHINY_BASE = 1 / 512
-/** Proba de MORSURE par seconde → médiane ~8 s ; atteindre 60 s (shiny garanti) arrive ~0,7 % du temps (RARE). */
-const FISHING_BITE_PER_SEC = 0.08
-/** Raideur de la montée du shiny : reste ≈ plancher longtemps, n'explose vers 100 % que tout près de 60 s. */
+/** Proba de MORSURE par seconde → médiane ~4-5 s ; atteindre 30 s (shiny garanti) arrive ~0,8 % du temps (RARE).
+ *  Doublée 0.08→0.15 avec le passage 60→30 s : morsures 2× plus rapides, « attente parfaite » aussi rare qu'avant. */
+const FISHING_BITE_PER_SEC = 0.15
+/** Raideur de la montée du shiny : reste ≈ plancher longtemps, n'explose vers 100 % que tout près de 30 s. */
 const FISHING_SHINY_STEEP = 4
 
 /** Instant (s) où le poisson MORD, tiré à la volée (loi géométrique → tôt en général, 60 s rarement). `rand`∈[0,1).

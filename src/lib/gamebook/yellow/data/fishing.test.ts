@@ -2,14 +2,14 @@ import { describe, it, expect } from "vitest"
 import { fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL } from "./fishing"
 
 describe("pêche — onboarding & IV de base", () => {
-    it("2 pêches scriptées : braisécaille à 8 s puis 21 s", () => {
-        expect(FISHING_TUTORIAL.map((t) => t.biteAt)).toEqual([8, 21])
+    it("2 pêches scriptées : braisécaille à 5 s puis 11 s", () => {
+        expect(FISHING_TUTORIAL.map((t) => t.biteAt)).toEqual([5, 11])
         for (const t of FISHING_TUTORIAL) expect(t.speciesId).toBe("braisecaille")
     })
     it("fishingBaseIvs borné 0-15, plus haut pour une longue attente", () => {
         const rnd = () => 0.5
-        const low = fishingBaseIvs(6, rnd) // attente courte → IV bas
-        const high = fishingBaseIvs(60, rnd) // attente longue → IV haut
+        const low = fishingBaseIvs(3, rnd) // attente courte → IV bas
+        const high = fishingBaseIvs(30, rnd) // attente longue (max) → IV haut
         for (const v of Object.values(low)) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(15) }
         for (const v of Object.values(high)) { expect(v).toBeLessThanOrEqual(15) }
         expect(high.hp).toBeGreaterThan(low.hp)
@@ -60,10 +60,10 @@ describe("Pêche — tirage + courbes", () => {
         expect(fishingTier(0.1, 1, true)).toBe("none")            // < 0.40
         expect(fishingTier(0.405, 1, true)).toBe("geaucke")       // [0.40, 0.41)
         expect(fishingTier(0.405, 1, false)).toBe("rare")         // Geaucké capturé → sa proba retombe sur le rare
-        expect(fishingTier(0.44, 1, true)).toBe("rare")           // fenêtre rare 6 % à reps=1
+        expect(fishingTier(0.44, 1, true)).toBe("rare")           // fenêtre rare 12 % à reps=1 → [0.41, 0.53)
         expect(fishingTier(0.9, 1, true)).toBe("common")
-        expect(fishingTier(0.50, 1, true)).toBe("common")         // hors fenêtre rare à reps=1
-        expect(fishingTier(0.50, 1.8, true)).toBe("rare")         // reps ×1.8 élargit la fenêtre (10.8 %)
+        expect(fishingTier(0.60, 1, true)).toBe("common")         // hors fenêtre rare à reps=1 (> 0.53)
+        expect(fishingTier(0.60, 1.8, true)).toBe("rare")         // reps ×1.8 élargit la fenêtre (21.6 %, capée 0.30)
     })
     it("fishingRareLevel : 50 % bande de badges / 50 % moyenne d'équipe, borné", () => {
         expect(fishingRareLevel(1, 50, 0.9, 0)).toBe(5)     // bande badge 1 = [5,15], bandRand=0
@@ -76,20 +76,20 @@ describe("Pêche — tirage + courbes", () => {
         expect(fishingLevel(3, 0)).toBe(5)        // plancher
         expect(fishingLevel(100, 0.99)).toBe(100) // plafond
     })
-    it("rollBiteTime : borné [2,60], tôt en général, 60 s seulement au bout du rand (rare)", () => {
+    it("rollBiteTime : borné [2,30], tôt en général, 30 s seulement au bout du rand (rare)", () => {
         expect(rollBiteTime(0)).toBe(2)                       // plancher
-        expect(rollBiteTime(0.999999)).toBe(FISHING_MAX_WAIT_SEC) // ne dépasse jamais 60
+        expect(rollBiteTime(0.999999)).toBe(FISHING_MAX_WAIT_SEC) // ne dépasse jamais le max (30)
         const med = rollBiteTime(0.5)
         expect(med).toBeGreaterThanOrEqual(2)
-        expect(med).toBeLessThanOrEqual(15)                   // médiane basse (~9 s) → 60 s rare
+        expect(med).toBeLessThanOrEqual(15)                   // médiane basse (~4-5 s) → atteindre 30 s rare
         expect(rollBiteTime(0.3)).toBe(rollBiteTime(0.3))     // déterministe
     })
-    it("fishingShinyChance : PLANCHER = taux normal à t=0, GARANTI à 60 s, croissante", () => {
+    it("fishingShinyChance : PLANCHER = taux normal à t=0, GARANTI à 30 s (max), croissante", () => {
         expect(fishingShinyChance(0)).toBeCloseTo(FISHING_SHINY_BASE, 6) // plancher = ~1/512 (comme les pas)
-        expect(fishingShinyChance(60)).toBeCloseTo(1, 6)                 // parfait garanti à 60 s
+        expect(fishingShinyChance(30)).toBeCloseTo(1, 6)                 // parfait garanti à 30 s (l'attente max)
         expect(fishingShinyChance(10)).toBeLessThan(0.05)               // reste bas la plupart du temps
-        expect(fishingShinyChance(45)).toBeGreaterThan(fishingShinyChance(30)) // strictement croissante
-        expect(fishingShinyChance(30)).toBeGreaterThan(fishingShinyChance(10))
+        expect(fishingShinyChance(28)).toBeGreaterThan(fishingShinyChance(20)) // strictement croissante
+        expect(fishingShinyChance(20)).toBeGreaterThan(fishingShinyChance(10))
     })
 })
 
