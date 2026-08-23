@@ -34,6 +34,7 @@ import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies, registerCustomSpecies } from "../data/species"
 import { funFactFor } from "../data/collectionneurFunFacts" // L'ARCHIVISTE : réservoir de fun facts (dits à SA défaite)
+import { leagueFusionIdForParents } from "../data/leagueFusionDex" // FUSIODEX : fusions de Ligue rencontrées
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
@@ -88,6 +89,10 @@ function syncPokedex(b: BattleState) {
     const caught = b.outcome === "caught"
     // SURPRISE : Gékroc / Goshendofy restent MASQUÉS du Pokédex (même pas « vu ») tant que NON capturés.
     if (caught || !getSpecies(sp)?.hiddenUntilCaught) { markSeen(sp); markSeenThisRun(sp) } // Pokédex GLOBAL + LIGNE du dex de L'Archiviste (per-run)
+    // FUSION DE LIGUE rencontrée (bronze/argent/or, boss inclus) : son id de combat est ÉPHÉMÈRE → on inscrit sa
+    //   FICHE STABLE (mappée depuis ses 2 parents) au Pokédex global → le FUSIODEX l'affiche. Non capturable.
+    const spData = getSpecies(sp)
+    if (spData?.fusionParents) { const lid = leagueFusionIdForParents(spData.fusionParents[0], spData.fusionParents[1]); if (lid) markSeen(lid) }
     // LOCALISATION « premium » : on n'enregistre la ZONE que pour une vraie rencontre SAUVAGE (pas un combat de dresseur)
     //   → la fiche montre « où j'ai croisé cette créature », jamais un indice de chasse (réservé au Daemomaniaque).
     if (b.isWild && !getSpecies(sp)?.hiddenUntilCaught) { const mid = getCurrentMapId(); if (mid) recordSeenZone(sp, mid) }

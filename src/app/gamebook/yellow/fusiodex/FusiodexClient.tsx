@@ -234,7 +234,7 @@ export default function FusiodexClient() {
                         {official.map((f) => {
                             const ring = f.seen && f.types[0] ? typeColor(f.types[0]) : "#4a3a6a"
                             return (
-                                <div key={f.id} style={{ ...S.card, borderLeftColor: ring, opacity: f.seen ? 1 : 0.62 }}>
+                                <div key={f.id} onClick={() => f.seen && setFiche(f.id)} title={f.seen ? "Voir la fiche complète (stats + attaques)" : undefined} style={{ ...S.card, borderLeftColor: ring, opacity: f.seen ? 1 : 0.62, cursor: f.seen ? "pointer" : "default" }}>
                                     <div style={S.no}>N°{String(f.dexNo).padStart(3, "0")}</div>
                                     {f.seen
                                         ? <FusionSprite src={f.sprite} ring={ring} />
@@ -247,7 +247,7 @@ export default function FusiodexClient() {
                                         {f.seen && f.description && <div style={S.desc}>« {f.description} »</div>}
                                         {/* À LA CAPTURE : révèle la lignée d'évolution (jusqu'au 1er stade non atteint, en ???). */}
                                         {dex.caught.includes(f.id) && <FusionChain rootId={f.id} caught={dex.caught} />}
-                                        {!f.seen && <div style={S.descMuted}>Croise-la dans la Grotte du Nexus pour révéler son identité.</div>}
+                                        {!f.seen && <div style={S.descMuted}>Croise-la en jeu (Grotte du Nexus ou Ligue de Fusion) pour révéler son identité.</div>}
                                     </div>
                                     <div style={S.tag}>{dex.caught.includes(f.id) ? "✓" : f.seen ? "👁" : "🔒"}</div>
                                 </div>

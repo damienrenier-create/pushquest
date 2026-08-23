@@ -286,6 +286,20 @@ export function allFusionLeaguePairs(): FusionPairDef[] {
     return FUSION_LEAGUE.flatMap((t) => t.pairs)
 }
 
+/** TOUTES les fusions AFFRONTABLES en Ligue (Conseil bronze + remplacements Argent/Or + boss Dieu Spaghetti +
+ *  boss ultra), dédupliquées par NOM (les noms sont uniques par design). Sert à bâtir leurs fiches de FUSIODEX. */
+export function allEncounterableFusionDefs(): FusionPairDef[] {
+    const all: FusionPairDef[] = [
+        ...FUSION_LEAGUE.flatMap((t) => t.pairs),
+        ...Object.values(ANTITRIO_ARGENT_OR).flatMap((ovs) => ovs.map((o) => o.with)),
+        ...FUSION_BOSS_PAIRS,
+        ...FUSION_BOSS_ULTRA,
+    ]
+    const byName = new Map<string, FusionPairDef>()
+    for (const p of all) if (!byName.has(p.name)) byName.set(p.name, p)
+    return [...byName.values()]
+}
+
 /** Fusions ENNEMIES sans PNG statique (boss ULTRA Argent/Or + murs anti-trio Argent/Or) → à GÉNÉRER (Gemini) à
  *  l'entrée de Ligue pour ne laisser AUCUN trou (elles s'affichaient en placeholder composite faute de sprite dédié).
  *  Toutes les AUTRES fusions ennemies (Conseil bronze, KAREN, LANCE, boss bronze) ont déjà leur sprite dans public/

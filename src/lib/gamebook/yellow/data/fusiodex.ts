@@ -11,6 +11,7 @@
 
 import type { PokeType, SpeciesData } from "../battle/types"
 import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
+import { leagueFusionSpecies } from "./leagueFusionDex"
 import { FUSION_RULES } from "./fusionLore"
 import { computeFusion, type FusionParent, type FusionStats } from "./fusionSpecies"
 import { getSpecies } from "./species"
@@ -92,7 +93,7 @@ export function fusionRootSpeciesIds(): Set<string> {
  *  — l'UI masque tout (nom/sprite/type) des entrées non vues (anti-spoiler). Les stades évolués sont exclus d'ici. */
 export function officialFusions(seenIds: string[]): OfficialFusionEntry[] {
     const roots = fusionRootSpeciesIds()
-    return FUSION_BASE_SPECIES.filter((s) => roots.has(s.id)).map((s) => ({
+    const grotte = FUSION_BASE_SPECIES.filter((s) => roots.has(s.id)).map((s) => ({
         id: s.id,
         name: s.name,
         types: s.types,
@@ -101,13 +102,22 @@ export function officialFusions(seenIds: string[]): OfficialFusionEntry[] {
         description: s.description,
         seen: seenIds.includes(s.id),
     }))
+    // FUSIONS DE LA LIGUE (non capturables) : aperçues à la RENCONTRE en Ligue de Fusion (bronze/argent/or). Même
+    //   présentation (masquées tant que non vues). dexNo 550+ → listées après les fusions capturables de la Grotte.
+    const ligue = leagueFusionSpecies().map((s) => ({
+        id: s.id, name: s.name, types: s.types, dexNo: s.dexNo, sprite: s.sprite, description: s.description, seen: seenIds.includes(s.id),
+    }))
+    return [...grotte, ...ligue]
 }
 
-/** Nombre de fusions RACINES aperçues / total (badge de progression du Fusiodex). */
+/** Nombre de fusions (Grotte racines + Ligue) aperçues / total (badge de progression du Fusiodex). */
 export function officialFusionProgress(seenIds: string[]): { seen: number; total: number } {
     const roots = fusionRootSpeciesIds()
     const rootList = FUSION_BASE_SPECIES.filter((s) => roots.has(s.id))
-    return { seen: rootList.filter((s) => seenIds.includes(s.id)).length, total: rootList.length }
+    const ligue = leagueFusionSpecies()
+    const total = rootList.length + ligue.length
+    const seen = rootList.filter((s) => seenIds.includes(s.id)).length + ligue.filter((s) => seenIds.includes(s.id)).length
+    return { seen, total }
 }
 
 /** Un maillon de lignée : l'espèce + le libellé de la MÉTHODE menant au stade SUIVANT (undefined = stade final). */
