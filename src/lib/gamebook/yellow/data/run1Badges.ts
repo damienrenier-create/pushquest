@@ -32,7 +32,8 @@ export const TIER_EMOJI: Record<BadgeTier, string> = { bronze: "🥉", silver: "
  *  (DEX_ULTRA_SECRET : MégamonarX/Galijah, obtention hors-normes) en sont EXCLUS — ils restent dans le Pokédex
  *  (cartes « ??? » capturables) mais ne bloquent pas la complétion. Calculé une fois. */
 const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_ULTRA_SECRET.has(id))
-export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 143 (dont Osquille + Rô, pêchables)
+export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 141 (dont Osquille + Rô, pêchables). Exclut Sylvebarbe(133) &
+// Géckèbre(180) désormais postLeague (endgame post-Ligue / Zone de Combat), comme leurs cousins Gavillus/Goatiny/B2F.
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
 // Lignée Gékroc — les 5 Geckos élémentaires (miroir de GECKO_IDS dans fusionSpecies.ts). Inliné en littéral pour
 // garder ce module PUR (pas d'import de données lourdes). Collectionner les 5 = un vrai haut fait de complétion.

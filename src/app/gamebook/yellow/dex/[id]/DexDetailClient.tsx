@@ -6,12 +6,12 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES, isDexHidden, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
-import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
@@ -67,43 +67,41 @@ export default function DexDetailClient({ id }: { id: string }) {
     const router = useRouter()
     const dex = usePokedex()
     const player = usePlayer()
-    const aw = useActiveWorld() // hook (avant tout early-return) ; le dex est tiéré par run
-    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
-    useEffect(() => { void loadYellowSave() }, []) // hydrate le Pokédex (accès direct par URL) ; défaut = masqué
+    useEffect(() => { void loadYellowSave() }, []) // hydrate la save (accès direct par URL) ; défaut = verrouillé
     const sp = SPECIES[id]
     if (!sp) return null
-    // VERROU : une espèce runTwoOnly non capturée, OU une création post-Ligue tant qu'on n'est pas Champion,
-    // reste MASQUÉE même par accès URL direct (/dex/merorem, /dex/mouflorage) → pas de spoiler de son
-    // existence/stats/learnset avant de l'avoir débloquée.
-    // Verrous alignés sur isDexHidden : post-run 3 (run3Used) débloque TOUT ; « vu » débloque le run-3 (némésis
-    // affronté). Sinon on ne se révèle qu'en capturant / dans le bon run (pas de spoiler par accès URL direct).
-    const runThreeLocked = sp.runThreeOnly && !isRun3 && !player.run3Used && !dex.caught.includes(id) && !dex.seen.includes(id)
-    const runTwoLocked = sp.runTwoOnly && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
-    const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
-    // LÉGENDAIRE ULTRA-SECRET (MégamonarX/Galijah) : fiche SCELLÉE tant que non CAPTURÉ — même par accès URL direct,
-    // même post-run 3 (secret préservé en fin de jeu). Seule la capture réelle la révèle.
+    // VERROU — modèle « L'Archiviste » : la FICHE n'est consultable que si le Daemon a été VU ce run (seenThisRun,
+    //   la LIGNE existe) ET que la fiche a été DÉBLOQUÉE en battant L'Archiviste (fichesUnlockedThisRun). Accès URL
+    //   direct à un Daemon jamais vu / pas encore débloqué → écran scellé (aucun spoiler stats/learnset/fun fact).
+    const notSeen = !player.seenThisRun.includes(id)
+    const ficheLocked = !player.fichesUnlockedThisRun.includes(id)
+    // LÉGENDAIRE ULTRA-SECRET (MégamonarX/Galijah) : fiche SCELLÉE (silhouette) tant que non CAPTURÉ — même une fois vue.
     const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !dex.caught.includes(id)
-    if (runThreeLocked || runTwoLocked || postLeagueLocked || ultraSecretLocked) {
-        // Ultra-secret : on montre l'OMBRE NOIRE (silhouette) + un indice à paliers (MégamonarX) ou le décompte (Galijah).
+    if (ultraSecretLocked || notSeen || ficheLocked) {
         const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
         const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
         const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
         const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(dex.caught.length) : null
+        // Vu-mais-verrouillé : on montre le SPRITE (déjà croisé) ; jamais-vu / ultra-secret : silhouette noire / ❓.
+        const showSprite = ficheLocked && !notSeen && !ultraSecretLocked
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>
                         {ultraSecretLocked
                             ? <img src={sp.sprite} alt="?" style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated", filter: "brightness(0)" }} />
-                            : "❓"}
+                            : showSprite
+                                ? <img src={sp.sprite} alt={sp.name} style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated" }} />
+                                : "❓"}
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>N°{String(sp.dexNo).padStart(3, "0")}</div>
-                    <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
+                    <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>{showSprite ? "🔒 FICHE VERROUILLÉE" : "DAEMON INCONNU"}</div>
                     {gRem !== null && <div style={{ ...galijahCounterStyle(gRem), marginBottom: 8 }}>{gRem}</div>}
                     <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 320, marginLeft: "auto", marginRight: "auto" }}>
                         {ultraSecretLocked
                             ? (mHint ?? (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien."))
-                            : postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
+                            : showSprite ? "Tu as croisé ce Daemon, mais sa fiche reste scellée. Bats L'ARCHIVISTE (Ville Jaune) pour débloquer toutes tes fiches vues !"
+                                : "Cette entrée reste scellée… tu la débloqueras en rencontrant ce Daemon."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
                 </div>
@@ -146,6 +144,9 @@ export default function DexDetailClient({ id }: { id: string }) {
                         </div>
                     ) : <p style={S.desc}>{sp.description}</p>
                 })()}
+
+                {/* FUN FACT — anecdote de L'Archiviste (le Collectionneur), s'il en a fiché une pour cette espèce. */}
+                {sp.funFact && <div style={S.funFact}>💡 <b>Le savais-tu&nbsp;?</b> {sp.funFact}</div>}
 
                 {/* LOCALISATION — historique du JOUEUR uniquement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
                 {(() => {
@@ -227,9 +228,9 @@ export default function DexDetailClient({ id }: { id: string }) {
                         <div style={S.panelTitle}>ÉVOLUTION</div>
                         <div style={S.evoRow}>
                             {chain.map((stage, i) => {
-                                // Un stade VOISIN encore scellé (runTwoOnly/postLeague non débloqué) reste « ??? » :
+                                // Un stade VOISIN dont la fiche n'est pas encore débloquée (L'Archiviste) reste « ??? » :
                                 // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
-                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen)
+                                const sealed = !player.fichesUnlockedThisRun.includes(stage.id)
                                 return (
                                     <div key={stage.id} style={S.evoItem}>
                                         {i > 0 && (
@@ -304,6 +305,7 @@ const S: Record<string, React.CSSProperties> = {
     chipRow: { display: "flex", gap: 6, flexWrap: "wrap" },
     role: { fontSize: 10, opacity: 0.65, marginTop: 6, fontStyle: "italic" },
     desc: { fontSize: 12, lineHeight: 1.5, opacity: 0.85, marginBottom: 14, background: "#262626", border: "1px solid #000", borderRadius: 8, padding: "10px 12px" },
+    funFact: { fontSize: 12, lineHeight: 1.5, marginBottom: 14, background: "#2a2618", border: "1px solid #6b5a1e", borderRadius: 8, padding: "10px 12px", color: "#f0e2a8" },
 
     metaRow: { display: "flex", gap: 8, marginBottom: 14 },
     metaCell: { flex: 1, background: "#262626", border: "1px solid #000", borderRadius: 8, padding: "8px 6px", display: "flex", flexDirection: "column", gap: 3, alignItems: "center" },

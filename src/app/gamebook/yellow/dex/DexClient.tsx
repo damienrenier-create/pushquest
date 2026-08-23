@@ -1,14 +1,15 @@
 "use client"
 
-// Nexus Jaune Éclair — Dex de référence (liste). Affiche TOUTES les espèces
-// (non gated), avec recherche + filtre par type. Clic → fiche détaillée.
-// Style natif GBC (cohérent avec /pokedex).
+// Nexus Jaune Éclair — DEX de L'ARCHIVISTE (Collectionneur). Offert à sa 1re défaite (bouton menu gated).
+//   Au départ VIDE (seule la table des types) ; une LIGNE apparaît à chaque Daemon RENCONTRÉ ce run (seenThisRun,
+//   scoping strict par run → un joueur run 1 ne voit QUE des lignes run 1). La FICHE liée reste VERROUILLÉE 🔒
+//   tant qu'on n'a pas (re)battu L'Archiviste (fichesUnlockedThisRun). Style natif GBC (cohérent avec /pokedex).
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
@@ -33,21 +34,24 @@ export default function DexClient() {
     const player = usePlayer()
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
-    // Hydrate la save (idempotent) : sinon le Pokédex en mémoire est vide → les run-2 restent masqués (défaut sûr).
+    // Hydrate la save (idempotent) : sinon seenThisRun en mémoire est vide → dex apparaît vide au refresh direct.
     useEffect(() => { void loadYellowSave() }, [])
 
-    // Base VISIBLE : cache les run-2 (hors run 2) et les créations post-Ligue (hors Champion) non révélées.
-    // En run 2, toute la roster étendue (créations canonisées + exclusifs run 2) est révélée.
-    const aw = useActiveWorld() // hook réactif : re-render au changement de monde
-    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
-    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen), [dex.caught, dex.seen, player.isChampion, isRun2, isRun3, player.run3Used])
+    // LIGNES = espèces VUES ce run (seenThisRun) → scoping strict par run, natif (plus de tiérage run3Used/cumulatif).
+    const seen = useMemo<SpeciesData[]>(
+        () => player.seenThisRun.map((id) => getSpecies(id)).filter((s): s is SpeciesData => !!s),
+        [player.seenThisRun],
+    )
+    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun])
+    const lockedCount = useMemo(() => seen.reduce((n, sp) => n + (unlocked.has(sp.id) ? 0 : 1), 0), [seen, unlocked])
+
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
-        return visible
+        return seen
             .filter((sp) => {
                 const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
-                // ANTI-LEAK : un ultra-secret non capturé n'apparaît JAMAIS via un filtre de type (sinon on déduit son
-                // type), et n'est trouvable en recherche que par son NUMÉRO (jamais par son nom).
+                // ANTI-LEAK : un ultra-secret non capturé n'apparaît JAMAIS via un filtre de type, et n'est trouvable
+                // en recherche que par son NUMÉRO (jamais par son nom).
                 if (typeFilter && (secret || !sp.types.includes(typeFilter))) return false
                 if (q) {
                     if (secret) { if (!String(sp.dexNo).includes(q)) return false }
@@ -56,7 +60,7 @@ export default function DexClient() {
                 return true
             })
             .sort((a, b) => a.dexNo - b.dexNo)
-    }, [query, typeFilter, visible, dex.caught])
+    }, [query, typeFilter, seen, dex.caught])
 
     return (
         <div style={S.root}>
@@ -66,7 +70,7 @@ export default function DexClient() {
                     <button onClick={() => router.push("/gamebook/yellow/dex/types")} style={S.chartBtn}>📊 Table des types</button>
                 </div>
                 <h1 style={S.title}>📖 DEX NEXUS</h1>
-                <div style={S.sub}>{entries.length} / {visible.length} espèces</div>
+                <div style={S.sub}>{entries.length} / {seen.length} espèces vues{lockedCount > 0 ? ` · 🔒 ${lockedCount} fiche(s) verrouillée(s)` : ""}</div>
 
                 <input
                     value={query}
@@ -95,11 +99,15 @@ export default function DexClient() {
                     // ULTRA-SECRET non capturé : tout masqué (ombre, nom/types « ??? », BST « 5XX »). Galijah : décompte énigmatique.
                     const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
                     const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
+                    // FICHE verrouillée : la LIGNE apparaît (on a vu le Daemon) mais le détail est bloqué tant que L'Archiviste
+                    //   n'a pas été (re)battu. On garde le clic → la page détail affiche l'écran « fiche verrouillée ».
+                    const locked = !unlocked.has(sp.id)
                     return (
                         <button
                             key={sp.id}
                             onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)}
-                            style={S.card}
+                            style={{ ...S.card, ...(locked && !secret ? S.cardLocked : {}) }}
+                            title={locked ? "Fiche verrouillée — bats L'Archiviste pour l'ouvrir" : sp.name}
                         >
                             <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                             <DexIcon sp={sp} secret={secret} />
@@ -112,12 +120,15 @@ export default function DexClient() {
                             <div style={S.bst}>
                                 {galijahRem !== null
                                     ? <div style={galijahCounterStyle(galijahRem)}>{galijahRem}</div>
-                                    : <><div style={S.bstNum}>{secret ? maskedBst(baseStatTotal(sp.baseStats)) : baseStatTotal(sp.baseStats)}</div><div style={S.bstLbl}>BST</div></>}
+                                    : locked && !secret
+                                        ? <div style={S.lock}>🔒</div>
+                                        : <><div style={S.bstNum}>{secret ? maskedBst(baseStatTotal(sp.baseStats)) : baseStatTotal(sp.baseStats)}</div><div style={S.bstLbl}>BST</div></>}
                             </div>
                         </button>
                     )
                 })}
-                {entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
+                {seen.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre des Daemons pour les répertorier, puis bats L'Archiviste pour ouvrir leurs fiches !</div>}
+                {seen.length > 0 && entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
             </div>
         </div>
     )
@@ -137,6 +148,7 @@ const S: Record<string, React.CSSProperties> = {
     filterChipOn: {},
     list: { maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 },
     card: { display: "flex", alignItems: "center", gap: 12, background: "#f8f8e8", color: "#1c1408", border: "2px solid #000", borderRadius: 8, padding: "8px 12px", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "'Courier New', monospace" },
+    cardLocked: { opacity: 0.62, borderColor: "#7a7a7a", background: "#e6e4d6" },
     no: { fontSize: 10, fontWeight: 700, opacity: 0.6, width: 38 },
     icon: { width: 44, height: 44, borderRadius: "50%", background: "#fff", border: "2px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, flexShrink: 0 },
     body: { flex: 1, minWidth: 0 },
@@ -146,5 +158,6 @@ const S: Record<string, React.CSSProperties> = {
     bst: { textAlign: "center", flexShrink: 0 },
     bstNum: { fontSize: 15, fontWeight: 900 },
     bstLbl: { fontSize: 8, opacity: 0.6, fontWeight: 700 },
-    empty: { textAlign: "center", opacity: 0.6, fontSize: 12, padding: 24 },
+    lock: { fontSize: 18 },
+    empty: { textAlign: "center", opacity: 0.6, fontSize: 12, padding: 24, lineHeight: 1.5 },
 }

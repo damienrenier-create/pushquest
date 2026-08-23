@@ -103,6 +103,9 @@ export interface YellowSave {
     /** BAIES (post-Ligue) : le SECRET des baies est-il révélé ? (Druide en run 2, ou assistant du Prof. CHEN)
      *  → active la récolte sur les arbres de Route Nord & Ville Jaune. Par monde (défaut false). */
     berrySecretKnown: boolean
+    /** L'ARCHIVISTE (Collectionneur du dex) : le dex-catalogue a-t-il été OFFERT (1re victoire) ? GLOBAL/monotone
+     *  (survit aux runs, comme berrySecretKnown) → gate le bouton DEX du menu. Défaut false. */
+    collectionneurDexGiven: boolean
     /** BAIES : jour (YYYY-MM-DD) du suivi de récolte courant. Change de jour → les arbres se réinitialisent. */
     berryHarvestDay: string
     /** BAIES : arbres déjà cueillis CE jour (clés "mapId:x:y") → anti-refarm au refresh. Vidé au jour suivant. */
@@ -195,6 +198,12 @@ export interface YellowSave {
     /** POKÉDEX — espèces capturées PENDANT le run EN COURS (overlay PER-MONDE par-dessus le Pokédex GLOBAL
      *  cumulatif) → distingue « capturé ce run » de « capturé un run précédent ». Défaut []. */
     caughtThisRun: string[]
+    /** L'ARCHIVISTE — LIGNES du dex : espèces VUES pendant le run EN COURS (overlay PER-MONDE) → un joueur run 1
+     *  ne voit QUE des lignes run 1 (scoping strict par run natif). Seedé à la migration depuis seen∪owned. Défaut []. */
+    seenThisRun: string[]
+    /** L'ARCHIVISTE — FICHES débloquées CE run (overlay PER-MONDE) : une victoire ajoute toutes les lignes vues.
+     *  NON seedé (les anciens joueurs doivent battre L'Archiviste pour rouvrir leurs fiches). Défaut []. */
+    fichesUnlockedThisRun: string[]
     /** ATELIER DE FUSION (salle de l'Autel) — jusqu'à 6 paires {uid parent A, uid parent B} = l'équipe de fusion
      *  du joueur (réutilisée pour la Ligue de Fusion + le futur PvP « dépôt »). Per-monde (uids du monde courant). Défaut []. */
     fusionRoster: { a: string; b: string }[]
@@ -294,7 +303,7 @@ export const ENERGY_LOG_MAX = 80
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -672,6 +681,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         leagueSixShiny: o.leagueSixShiny === true,
         mirrorWinHigherLevel: o.mirrorWinHigherLevel === true,
         berrySecretKnown: o.berrySecretKnown === true,
+        collectionneurDexGiven: o.collectionneurDexGiven === true,
         berryHarvestDay: typeof o.berryHarvestDay === "string" ? o.berryHarvestDay : "",
         berryHarvestPicked: strArr(o.berryHarvestPicked),
         sylvebarbeAwake: o.sylvebarbeAwake === true,
@@ -719,6 +729,8 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             ? Object.fromEntries(Object.entries(o.run3EnergyByArena as Record<string, unknown>).filter(([, v]) => typeof v === "number" && isFinite(v)).map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]).slice(0, 32))
             : {},
         caughtThisRun: Array.isArray(o.caughtThisRun) ? (o.caughtThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 300) : [],
+        seenThisRun: Array.isArray(o.seenThisRun) ? (o.seenThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 400) : [],
+        fichesUnlockedThisRun: Array.isArray(o.fichesUnlockedThisRun) ? (o.fichesUnlockedThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 400) : [],
         fusionRoster: Array.isArray(o.fusionRoster)
             ? (o.fusionRoster as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(0, 6)
             : [],

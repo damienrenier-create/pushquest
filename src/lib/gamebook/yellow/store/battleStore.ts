@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, setCollectionneurDexGiven, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -86,7 +86,7 @@ function syncPokedex(b: BattleState) {
     if (!sp) return
     const caught = b.outcome === "caught"
     // SURPRISE : Gékroc / Goshendofy restent MASQUÉS du Pokédex (même pas « vu ») tant que NON capturés.
-    if (caught || !getSpecies(sp)?.hiddenUntilCaught) markSeen(sp)
+    if (caught || !getSpecies(sp)?.hiddenUntilCaught) { markSeen(sp); markSeenThisRun(sp) } // Pokédex GLOBAL + LIGNE du dex de L'Archiviste (per-run)
     // LOCALISATION « premium » : on n'enregistre la ZONE que pour une vraie rencontre SAUVAGE (pas un combat de dresseur)
     //   → la fiche montre « où j'ai croisé cette créature », jamais un indice de chasse (réservé au Daemomaniaque).
     if (b.isWild && !getSpecies(sp)?.hiddenUntilCaught) { const mid = getCurrentMapId(); if (mid) recordSeenZone(sp, mid) }
@@ -732,6 +732,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // CT du sbire possédée AVANT ce combat ? (le ticket sbire ne tombe qu'APRÈS l'avoir décrochée).
     const hadSbireCt = getPlayer().ownedCts.includes(SBIRE_REWARD_CT_ID)
     if (b.outcome === "win" && storeState.trainer) {
+        // L'ARCHIVISTE (Collectionneur du dex) : 1re victoire ⇒ OFFRE le dex-catalogue (bouton menu) ; CHAQUE victoire
+        //   ⇒ débloque EN BLOC les fiches de toutes les lignes actuellement vues. Ré-affrontable (aucun autre effet).
+        if (storeState.trainer.trainerId?.startsWith("collectionneur:")) {
+            setCollectionneurDexGiven()
+            unlockFichesFromSeen()
+        }
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
             // ACE : sa défaite ratchete son niveau (+2 sur ta MOYENNE d'équipe) + mémorise le contre.
             const aceTeam = getPlayer().team

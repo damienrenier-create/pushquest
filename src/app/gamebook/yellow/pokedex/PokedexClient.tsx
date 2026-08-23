@@ -163,7 +163,9 @@ export default function PokedexClient() {
     const player = usePlayer()
     const aw = useActiveWorld() // hook réactif : re-render au changement de monde
     const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
-    const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, player.run3Used)
+    // SCOPING STRICT PAR RUN (refonte Collectionneur) : le catalogue n'est « tout révélé » que PENDANT le run 3
+    //   (isRun3), plus via le flag PERMANENT run3Used → un vétéran retombé en run 1 ne voit plus tous les run 2/3.
+    const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, isRun3)
     // 🐉🪨 MÉGAMONARX : indice à 2 paliers — atteint le Dôme (AUTEL_VISITED) → rumeur vague ; a GAGNÉ la Ligue de Fusion → indice « une fusion peut évoluer ».
     const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
     const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
@@ -173,7 +175,7 @@ export default function PokedexClient() {
     useEffect(() => { void loadYellowSave() }, [])
     // Les run-2 restent INVISIBLES hors run 2 ; les créations post-Ligue INVISIBLES hors Champion — sauf en
     // run 2 où toute la roster étendue est révélée (le joueur est un ex-champion). Sinon pas même une case « ??? ».
-    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen).sort((a, b) => a.dexNo - b.dexNo)
+    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
         <div style={S.root}>
@@ -199,10 +201,11 @@ export default function PokedexClient() {
                 {entries.map((sp) => {
                     const multiRun = player.ngplusUsed || player.run3Used
                     const caught = dex.caught.includes(sp.id)
-                    // POST-RUN 3 (run3Used) : catalogue 100% RÉVÉLÉ — même les surprises hiddenUntilCaught
+                    // EN RUN 3 (isRun3) : catalogue 100% RÉVÉLÉ — même les surprises hiddenUntilCaught
                     // (Gékroc/Goshendofy…) montrent leur identité. EXCEPTION : les légendaires ULTRA-SECRETS
-                    // (MégamonarX/Galijah) restent « ??? » (silhouette noire) tant que non CAPTURÉS, même post-run 3.
-                    const seen = caught || dex.seen.includes(sp.id) || (player.run3Used && !DEX_ULTRA_SECRET.has(sp.id))
+                    // (MégamonarX/Galijah) restent « ??? » (silhouette noire) tant que non CAPTURÉS. Hors run 3, on ne
+                    // révèle que ce qui a été VU/CAPTURÉ (scoping strict — plus de révélation permanente via run3Used).
+                    const seen = caught || dex.seen.includes(sp.id) || (isRun3 && !DEX_ULTRA_SECRET.has(sp.id))
                     const caughtNow = multiRun && caught && (player.caughtThisRun ?? []).includes(sp.id)
                     // Indice d'un ultra-secret non révélé : Galijah = décompte énigmatique ; MégamonarX = rumeur (2 paliers).
                     let secretHint: ReactNode = "Inconnu"

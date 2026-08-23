@@ -15,9 +15,9 @@ describe("Badges run 1 — socle", () => {
         expect([TIER_POINTS.bronze, TIER_POINTS.silver, TIER_POINTS.gold, TIER_POINTS.diamond, TIER_POINTS.legend]).toEqual([5, 15, 30, 75, 150])
     })
 
-    it("Pokédex run 1 = 143 espèces (badge dex_run1) — inclut Osquille + Rô, pêchables en run 1", () => {
-        expect(RUN1_DEX_TOTAL).toBe(143)
-        expect(BADGES.find((b) => b.id === "dex_run1")!.label).toContain("143")
+    it("Pokédex run 1 = 141 espèces (badge dex_run1) — inclut Osquille + Rô pêchables ; exclut Sylvebarbe/Géckèbre (postLeague)", () => {
+        expect(RUN1_DEX_TOTAL).toBe(141)
+        expect(BADGES.find((b) => b.id === "dex_run1")!.label).toContain("141")
     })
 
     it("save vierge : 0 point, aucun badge gagné", () => {
