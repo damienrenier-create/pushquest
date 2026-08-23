@@ -146,8 +146,9 @@ export default function DexDetailClient({ id }: { id: string }) {
                     ) : <p style={S.desc}>{sp.description}</p>
                 })()}
 
-                {/* FUN FACT — anecdote de L'Archiviste (le Collectionneur), s'il en a fiché une pour cette espèce. */}
-                {(funFactFor(sp.id) ?? sp.funFact) && <div style={S.funFact}>💡 <b>Le savais-tu&nbsp;?</b> {funFactFor(sp.id) ?? sp.funFact}</div>}
+                {/* FUN FACT — anecdote de L'Archiviste (le Collectionneur), s'il en a fiché une pour cette espèce.
+                    Le texte s'auto-cadre (« Savais-tu que… », « Il paraît que… ») → on n'ajoute pas de préfixe figé. */}
+                {(funFactFor(sp.id) ?? sp.funFact) && <div style={S.funFact}>💡 <b>L'Archiviste&nbsp;:</b> {funFactFor(sp.id) ?? sp.funFact}</div>}
 
                 {/* LOCALISATION — historique du JOUEUR uniquement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
                 {(() => {

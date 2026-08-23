@@ -4,250 +4,250 @@
 //   Repli : si une espèce n'a pas d'entrée ici, archivisteFunFact génère une phrase générique.
 
 export const FUN_FACTS: Record<string, string> = {
-    "feuillichot": "Ce petit pousse-lapin verdit à vue d'œil quand son dresseur transpire, si bien qu'on mesure l'effort d'une séance à la nuance de son duvet.", // N°001
-    "broutame": "Ce faon nommé Broubouc broute littéralement la lumière de l'aube, et ses bois bourgeonnent d'un cran chaque matin où le soleil se lève clair.", // N°002
-    "sylvapuce": "Ce cerf-forêt centenaire porte tant de vie que là où il s'assoupit une nuit, les collectionneurs reviennent trouver une clairière en fleurs.", // N°003
-    "gouttiny": "Simple goutte espiègle, ce Gouttiny rebondit sur tout ce qu'il croise et met une joie farceuse à éclabousser quiconque se penche sur lui.", // N°004
-    "ondulo": "Cet amphibien crée ses propres vagues pour les surfer, esquivant les coups avec la nonchalance élégante d'un rider qui n'a jamais quitté l'eau.", // N°005
-    "razmaree": "Gardien des marées, Razmarée fait reculer la mer de plusieurs mètres d'une seule inspiration, ce que les vieux pêcheurs prennent pour un présage.", // N°006
-    "braisille": "Ce renardeau de braise crépite d'impatience et, chose triste pour un collectionneur négligent, ses flammes s'éteignent si on l'oublie trop longtemps.", // N°007
-    "flamkure": "Jeune fauve de flammes, Flamkure voit sa fourrure rougir et brûler plus fort à mesure qu'il s'échauffe, comme un athlète qui monte en régime.", // N°008
-    "pyrokoss": "Ce lion de lave laisse une empreinte de magma à chaque foulée, et l'on retrace parfois son passage à des kilomètres grâce aux traces figées.", // N°009
-    "plumiot": "Cet oisillon tout ébouriffé tombe bien plus qu'il ne vole, mais son courage vaut pour deux et il se relève toujours d'un battement d'ailes têtu.", // N°010
-    "faukon": "Vif comme l'éclair, ce faucon fond sur sa proie en piqué si rapide que l'œil ne voit qu'un trait, et les traqueurs jurent l'entendre siffler.", // N°011
-    "aquilothan": "Empereur des cieux, Aquilothan déploie une envergure telle que son ombre glisse au sol comme celle d'un nuage, semant l'effroi chez les petits Daemons.", // N°012
-    "cailloutchi": "Ce chevreau de pierre aux grands yeux ronds encaisse les coups sans broncher, quitte à mettre un temps fou avant de daigner riposter.", // N°013
-    "roctaur": "Bélier de roche, Roctaur charge tête baissée en faisant trembler le sol, et les villages de montagne confondent parfois son galop avec un séisme.", // N°014
-    "rochison": "Ce bison de roche reste si immobile qu'on l'a longtemps rangé parmi les menhirs, jusqu'au jour où un menhir a chargé un promeneur imprudent.", // N°015
-    "couperin": "Ce renard méditatif garde toujours les poings bandés et s'entraîne sur le premier obstacle venu, du tronc d'arbre au rocher qui dépasse.", // N°016
-    "frappard": "Combattant d'une discipline de fer, Frappard enchaîne ses séries de coups avec la régularité d'un athlète qui ne raterait jamais un entraînement.", // N°017
-    "maitrezenc": "Sensei au calme olympien, Maîtrezenc peut fendre un bloc de pierre d'un seul crochet, mais préfère mille fois enseigner la patience à ses cadets.", // N°018
-    "electroatiss": "Petit coati farceur au bandeau de bandit, Électroatiss laisse sa queue crépiter d'étincelles et adore électriser les poignées de porte.", // N°019
-    "couranti": "Ce maraudeur électrique s'enveloppe d'une cape conductrice qui capte l'orage, si bien qu'on le repère de très loin les soirs de tempête.", // N°020
-    "zappeureal": "Souverain de la foudre, Zappeuréal porte une couronne d'arcs électriques permanente, et sa seule présence fait grésiller l'air tout autour de lui.", // N°021
-    "auroruff": "Adorable chiot des neiges, Auroruff mâchouille un os de givre qu'il ne lâche jamais, aussi fidèle à son dresseur qu'il est douillettement frileux.", // N°022
-    "glaceer": "Élégant lévrier de gel, Glaceer trace une fine traînée de givre à chaque foulée, dessinant sur la neige des arabesques que les traqueurs adorent suivre.", // N°023
-    "auroraur": "Majestueux molosse polaire, Auroraur arbore une cape ondoyante d'aurore boréale qui, dit-on, ne brille jamais deux nuits de la même couleur.", // N°024
-    "ruffiant": "Fourmi-soldat des plus dégourdies, Ruffiant garde ses mandibules toujours prêtes et ne recule devant aucun intrus, fût-il dix fois plus grand qu'elle.", // N°025
-    "formiguer": "Fourmi-guerrière à la carapace chitineuse renforcée, Formiguer encaisse les assauts en première ligne pour protéger les ouvrières de sa colonie.", // N°026
-    "regnantaur": "J'ai vu cette reine-fourmi couronnée régenter mille ouvrières sans un bruit : tout l'ordre de la colonie transite par son seul esprit.", // N°027
-    "lavapetit": "Ce petit caillou reste tiède au creux de la main, car il couve en son centre une braise discrète : la pièce préférée des collectionneurs frileux.", // N°028
-    "fissuralave": "Chaque craquelure de ce golem laisse perler la lave ; je le manipule avec des gants épais, ses fissures brûlantes marquant le cuir en un clin d'œil.", // N°029
-    "magmator": "Titan dont le cœur de magma ne s'est jamais refroidi depuis sa formation ; on dit qu'un seul de ses pas scelle une empreinte de roche fondue.", // N°030
-    "nouillon": "Ce petit tas de nouilles vivantes dresse ses yeux au bout de fines tentacules pour scruter les alentours : l'un des plus attendrissants spécimens de mon dex.", // N°031
-    "vermisaint": "Cet enchevêtrement de pâtes baigne dans une aura mystique si dense que je garde toujours une distance respectueuse en l'observant méditer.", // N°032
-    "divinpate": "Divinité-spaghetti ailée et couronnée, elle bénit ses fidèles d'un simple contact de sa nouille sacrée ; posséder son effigie relève du miracle.", // N°033
-    "piouflot": "Ce poussin duveteux patauge bien plus qu'il ne vole et trempe ses plumes à la moindre flaque : le plus maladroit petit trésor de ma volière aquatique.", // N°034
-    "herondee": "Ce héron gracile ruisselle en permanence d'eau de pluie, comme s'il portait l'averse avec lui ; le voir en vol, c'est admirer danser une fontaine ailée.", // N°035
-    "oragron": "Les ailes de ce héron sont des nuages d'orage vivants, zébrés d'éclairs qui grondent quand il fond du ciel ; je ne l'approche jamais sans paratonnerre.", // N°036
-    "broussours": "Cet ourson a la fourrure si emmêlée de lierre qu'il se fond dans les fourrés ; il faut l'œil aiguisé d'un collectionneur pour le débusquer dans les broussailles.", // N°037
-    "sylvours": "Cet ours dressé porte une vraie armure de feuilles qu'il renouvelle à chaque saison ; les anciennes, une fois tombées, font des marque-pages très prisés.", // N°038
-    "druidours": "Ce colosse druidique abrite un cœur de sève luminescent qui éclaire les sous-bois la nuit ; les anciens jurent qu'il veille sur les forêts endormies.", // N°039
-    "pampousse": "Ce chaton-pousse ne tient jamais en place et bondit de branche en branche ; on le repère aux petites feuilles qu'il sème dans son sillage joueur.", // N°040
-    "feliane": "Ce félin sylvestre à la crinière de feuilles file si vite entre les troncs qu'on croit d'abord à une rafale de vent : un vrai régal pour l'œil averti.", // N°041
-    "cerfeuillu": "Ce félin-cerf majestueux se pare de fruits mûrs et de fleurs qui repoussent au fil des saisons ; croiser un Silviliane fleuri est un privilège rare.", // N°042
-    "loutrille": "Cette petite loutre espiègle ne tient pas en place une seconde et transforme chaque flaque en toboggan : le farceur adoré de tout mon vivier.", // N°043
-    "ondaloutre": "Cette loutre élégante chevauche ses propres vagues avec l'aisance d'une surfeuse née ; je pourrais l'admirer glisser des heures durant sur l'onde.", // N°044
-    "naiadrak": "Ce dragon d'eau couronné de corail veille sur les courants marins ; les pêcheurs jurent que ses passages ramènent les bancs de poissons égarés.", // N°045
-    "fennaise": "Ce renardeau de feu aux immenses oreilles capte le moindre crépitement de flamme ; farceur invétéré, il adore surprendre les collectionneurs distraits.", // N°046
-    "pyrenard": "La queue de ce renard de braise laisse dans la nuit une traînée d'étincelles qu'on suit comme une comète ; un spectacle que je ne me lasse pas de guetter.", // N°047
-    "loupyre": "Ce loup de flammes porte une crinière incandescente qui rougeoie plus fort quand la meute chasse ; sa seule présence réchauffe une clairière entière.", // N°048
-    "forgeotin": "Ce jeune orang-outan trimballe déjà partout son petit marteau et cogne tout ce qui résonne : apprenti forgeron, il apprend le métier en faisant du bruit.", // N°049
-    "marteloutan": "Ceint de son tablier de cuir, ce singe forgeron abat des coups si secs qu'il sert lui-même d'enclume ; ses pièces martelées valent de l'or chez les experts.", // N°050
-    "enclumind": "Sous son armure runique, ce maître-forgeron plie l'acier autant que l'esprit de ses rivaux ; on murmure que son marteau grave des pensées dans le métal.", // N°051
-    "trolystrik": "Ce petit troll-lutin nerveux ne cesse de gigoter, et sa crête grésille d'électricité au moindre agacement : le farceur le plus survolté de ma ménagerie.", // N°052
-    "brutetrik": "Ce troll bagarreur frotte ses poings avant l'assaut jusqu'à en tirer des arcs bleutés ; les dresseurs prudents gardent leurs bottes de caoutchouc à portée.", // N°053
-    "hebulmin": "Sa crinière hérissée d'éclairs signale ce colosse à des lieues ; un seul de ses coups, dit-on, fait vibrer les gradins de l'arène tout entière.", // N°054
-    "draclet": "Ce dragonnet blanc tout guilleret bat des ailes bien trop petites pour voler, alors il dévale les cimes en sautillant, pépiant de joie.", // N°055
-    "wyverion": "Cette wyverne fonce en piqué depuis les nuages, ses ailes coriaces sifflant comme des lames ; nul rongeur des cimes ne lui échappe deux fois.", // N°056
-    "draconarque": "Immense dragon blanc des sommets, son ombre à elle seule plonge une vallée entière dans la pénombre ; les bergers y lisent un présage d'orage.", // N°057
-    "cornaissant": "À peine sorti de l'œuf, ce corbillat fourrage déjà dans les fioles des apothicaires, fasciné par tout flacon qui brille ou qui bouillonne.", // N°058
-    "corvenin": "Ce corbeau alchimiste ne se sépare jamais de sa fiole de venin, qu'il serre dans ses serres et dose goutte à goutte sur ses proies étourdies.", // N°059
-    "necrocorbe": "Drapé d'ossements cliquetants, ce corbeau-chamane psalmodie des incantations si corrosives qu'on les dit capables de ronger l'âme autant que la chair.", // N°060
-    "sporbeo": "Ce petit champignon toujours souriant balance une flammèche bleutée qui ne brûle pas mais éclaire, dit-on, le chemin des esprits égarés.", // N°061
-    "lampignon": "Cet esprit-champignon ailé promène sa lanterne d'âmes dans les sous-bois nocturnes ; suivre sa lueur mène rarement là où l'on croyait aller.", // N°062
-    "mycedruide": "Sage-champignon millénaire, il couronne son chef d'un mycélium luminescent et relie, dit la légende, toute la forêt par un même fil souterrain.", // N°063
-    "tamanpousse": "Ce bébé tamanoir feuillu plonge son museau dans les fourmilières non pour les fourmis mais pour leur sève sucrée, qu'il aspire d'une longue langue.", // N°064
-    "fourmilierre": "Tout paré de lianes vivaces, ce tamanoir déploie une langue collante qui happe les nuisibles du potager ; les maraîchers l'adorent en secret.", // N°065
-    "gloutanoir": "Ce tamanoir-titan à crinière de fougères vide lentement ses proies de leur vigueur, puis somnole des jours entiers pour digérer son festin vert.", // N°066
-    "pantheon": "Ce panthéreau au pelage d'encre absorbe l'énergie de son environnement comme une éponge ; deux spécimens élevés ailleurs ne se ressemblent jamais.", // N°067
-    "florapanthe": "Cette panthère sylvestre file entre les troncs en s'agrippant de lianes vives, bondissant d'arbre en arbre comme le lierre grimpe vers la lumière.", // N°068
-    "panthegel": "Son pelage cristallin tinte à chaque foulée et son souffle givre l'air ; les traqueurs suivent la buée gelée qu'elle laisse flotter derrière elle.", // N°069
-    "pyropanthe": "Couronnée de flammes, cette panthère de braise court si vite qu'elle devance son propre feu, laissant dans son sillage une pluie d'étincelles.", // N°070
-    "ombrapanthe": "Cette panthère des ténèbres se fond dans la moindre flaque d'ombre et surgit avant qu'on l'aperçoive ; on la sent bien plus qu'on ne la voit.", // N°071
-    "aquapanthe": "Panthère des torrents, sa crinière ruisselle sans cesse d'une eau vive et fraîche ; elle remonte les cascades d'un bond, à contre-courant.", // N°072
-    "voltapanthe": "Véritable éclair sur pattes, cette panthère de foudre est la plus rapide de son antre ; on n'en perçoit qu'un grésillement et une traînée fugace.", // N°073
-    "rembodo": "Ce dodo fossilisé aux grandes pattes détale à une vitesse folle, vestige d'un âge oublié qui semble courir à rebours des aiguilles du temps.", // N°074
-    "retroraptor": "Ce rapace fossile arbore un incongru bec de dodo sur un corps de raptor ; les paléo-collectionneurs se disputent ses moindres plumes pétrifiées.", // N°075
-    "chronorex": "Le plus ancien des fossiles connus : un T-Rex titanesque coiffé d'un bec de dodo, dont la mâchoire broie la pierre comme d'autres croquent une noix.", // N°076
-    "mottoche": "Cette humble boule de terre roule si mollement qu'on la prend pour un caillou ; les vieux dresseurs murmurent pourtant de ne jamais la sous-estimer.", // N°077
-    "dumotte": "Deux mottes de terre soudées bout à bout qui roulent de conserve ; les enfants du village aiment les faire dévaler les collines juste après la pluie.", // N°078
-    "quadroc": "Quadroc n'est qu'une amitié de quatre galets roulant ensemble : sépare-les et ils reviennent toujours se recoller flanc contre flanc.", // N°079
-    "octoroc": "Huit cailloux soudés forment Octoroc, et les collectionneurs jurent que son grondement sourd est celui de pierres qui se serrent les coudes.", // N°080
-    "hexaroc": "Avec ses seize galets quasi indestructibles, Hexaroc sert de borne aux bergers de montagne, qui le confondent parfois avec un vieux muret.", // N°081
-    "diamantine": "Diamantine aligne trente-deux cristaux d'un bleu si pur qu'on la piste au clair de lune, quand ses facettes renvoient les étoiles une à une.", // N°082
-    "amadiam": "Amas de soixante-quatre diamants, Amadiam crisse en avançant, et les prospecteurs suivent ce chant de cristaux entrechoqués jusque dans les mines.", // N°083
-    "golemini": "Compact golem taillé dans ses soixante-quatre diamants, Golémini se love en boule pour dormir et passe alors pour un vulgaire gros galet scintillant.", // N°084
-    "megalithe": "Titan de diamant réputé infranchissable, Mégalithe dort debout comme un menhir, et bien des voyageurs ont pique-niqué contre lui sans le réveiller.", // N°085
-    "limaroche": "Limaroche rampe si lentement qu'on la croit inerte, mais ses antennes minérales captent les pensées des passants bien avant qu'ils ne la voient.", // N°086
-    "escaroche": "Escargyle porte une coquille de pierre où il se mure au moindre orage, imperturbable, laissant la grêle rebondir sur son toit minéral.", // N°087
-    "torturoche": "Tortue ancestrale à carapace de roche, Tortoracle passe pour un oracle des cavernes : on vient murmurer ses questions contre son antique dôme.", // N°088
-    "marmoterre": "Marmoterre creuse ses terriers à même la pierre des cimes gelées, et son sifflement d'alerte résonne d'un versant à l'autre comme un carillon.", // N°089
-    "iorours": "Fière et indomptable, Iorours cuirasse sa fourrure polaire de plaques de roc et de glace, et nul chasseur n'ose croiser son regard deux fois.", // N°090
-    "yetiroche": "Yéti légendaire des plus hauts sommets, Yétiroche frappe du poing autant qu'il souffle le givre, et ses empreintes nourrissent mille rumeurs.", // N°091
-    "tetardoc": "Minuscule têtard coiffé d'une carapace de galet, Têtardoc s'entraîne déjà à cracher ses billes d'eau pile sur la feuille qu'il a choisie.", // N°092
-    "grenarc": "Grenarc bande un arc de pierre né de ses propres membres et décoche ses traits avec une adresse dont s'enorgueillissent les archers de la mare.", // N°093
-    "crapotaure": "Crapaud colossal armé d'un arc démesuré, Crapôtaure loge ses flèches de roche en pleine cible et reste, dit-on, le plus véloce de tous les Roche.", // N°094
-    "revemante": "Mante religieuse revenante, Revemante surgit du néant sans un bruit, et l'on dit que la croiser en rêve annonce une bien longue insomnie.", // N°095
-    "necarabee": "Nécarabée arbore une carapace translucide où flottent des lueurs pâles, et les entomologistes du crépuscule s'arrachent ses mues fantomatiques.", // N°096
-    "necrolopendre": "Scolopendre spectrale aux anneaux sans fin, Nécrolopendre file, insaisissable, mais un seul coup au but suffit à briser son long corps de brume.", // N°097
-    "colibraise": "Colibraise bat des ailes si vite qu'elles s'embrasent, et son vol immobile devant une fleur laisse dans l'air une fine traînée d'étincelles.", // N°098
-    "arardent": "Ara au plumage incandescent, Arardent lance des cris qui font crépiter l'air chaud, et les orpailleurs y devinent l'approche des zones volcaniques.", // N°099
-    "toucanyon": "Toucanyon niche au bord des cratères et se sert de son énorme bec rougeoyant comme d'une buse, crachant ses flammes sur des proies lointaines.", // N°100
-    "blaziper": "Blaziper n'est qu'un serpenteau aux écailles à peine tièdes, mais son regard ardent suffit déjà à figer sur place le plus vif des rongeurs.", // N°101
-    "flamaspic": "Quand Flamaspic se concentre, ses anneaux incandescents se mettent à fumer, et les guérisseurs récoltent cette fumée parfumée pour leurs onguents.", // N°102
-    "vipember": "Vipère-braise que l'on dit millénaire, Vipember plie la volonté d'autrui par la seule chaleur de son esprit, et couve les cendres comme un trésor.", // N°103
-    "braisecaille": "Sous sa carapace, Braisécaille cache une mare intérieure où couvent des braises, si bien qu'elle fume doucement chaque fois qu'elle plonge.", // N°104
-    "calderont": "sa carapace abrite un volcan de poche où la lave côtoie une mare secrète, et le moindre choc le fait cracher un long panache de vapeur brûlante.", // N°105
-    "brasicow": "ce petit veau râblé rumine sans cesse des braises de charbon ardent, et fonce tête baissée dès qu'on ose s'approcher de son pré fumant.", // N°106
-    "tauricendre": "ses cornes en fusion rougeoient dans la nuit, et sa charge titanesque fait littéralement trembler le sol sous les sabots des imprudents.", // N°107
-    "pyrozly": "ce grizzly au pelage éternellement fumant choisit d'hiberner tout au fond des cratères encore tièdes, roulé en boule sur la cendre chaude.", // N°108
-    "belunode": "ce bébé béluga est constellé de petits nodes électriques qui se mettent à crépiter joyeusement dès qu'on ose le caresser sous le menton.", // N°109
-    "sonarque": "il émet dans les abysses des clics de sonar électrifiés dont la décharge étourdit les proies bien avant qu'elles ne l'aperçoivent.", // N°110
-    "leviathonn": "ce colosse tapi au fond des fosses lâche des décharges si puissantes que l'océan tout entier en tremble sur des kilomètres à la ronde.", // N°111
-    "jerbiwat": "cette minuscule gerbille électrostatique met un temps fou à mûrir, mais patience: elle cache un canon psychique redoutable une fois adulte.", // N°112
-    "namicha": "ce chaton tissé d'ombre et de statique se faufile entre deux éclairs, si furtif qu'on ne devine sa présence qu'au léger crépitement de l'air.", // N°113
-    "namizeus": "félin spectral et foudroyant, il jaillit des ténèbres pour frapper sa cible bien avant que le grondement du tonnerre n'atteigne les oreilles.", // N°114
-    "boltah": "ce guépardeau aux pattes déjà crépitantes court, dit-on, plus vite que sa propre ombre, qui peine à suivre ses foulées enflammées.", // N°115
-    "heatah": "lancé à pleine course, il abandonne derrière lui une longue traînée de braises et d'étincelles qui trace sa route dans la poussière.", // N°116
-    "thundah": "réputé le Daemon le plus rapide de tout le Nexus, ce n'est qu'un pur éclair de feu galopant sur quatre pattes, presque invisible à l'œil nu.", // N°117
-    "bouh": "ce petit spectre boudeur se barricade au creux des ombres et se révèle, à qui le sous-estime, bien plus coriace qu'il n'en a l'air.", // N°118
-    "bouhbou": "ce spectre grognon a troqué la bouderie contre les poings: il cogne, encaisse, puis surgit devant l'adversaire d'un coup furtif inattendu.", // N°119
-    "brook": "gardien squelettique des vieilles tombes, il encaisse les assauts en silence tout en affaiblissant sournoisement quiconque s'approche trop.", // N°120
-    "brookhante": "véritable colosse d'outre-tombe, sa carcasse encaisse l'inencaissable et draine la vie de ses assaillants pour tenir debout des siècles durant.", // N°121
-    "hibouh": "hibou spectral aux grands yeux luminescents, il hulule longuement dans le noir avant de fondre sans le moindre bruit sur une proie tétanisée.", // N°122
-    "chouhante": "son regard perçant sonde les esprits: perché entre deux mondes, il est devenu aussi psychique qu'il est spectral, énigme des collectionneurs.", // N°123
-    "archibouh": "grand-duc surgi d'outre-tombe, son cri psychique foudroie l'esprit de sa proie avant même que l'ombre glacée n'achève tranquillement le travail.", // N°124
-    "goshendofy": "ce dragon primordial sommeille, parfaitement camouflé, dans l'herbe la plus humble et la plus basse, là où nul chasseur ne songe à le chercher.", // N°125
-    "gekroc": "golem-taupe fossile serti d'une pierre d'évolution crépitante, il creuse des tunnels fulgurants et s'adapte, dit-on, à absolument toutes les situations.", // N°126
-    "carlinou": "ce bébé carlin-dragon ronfle paisiblement des petites volutes de fumée, tandis qu'une flammèche espiègle couve déjà au tout bout de sa queue.", // N°127
-    "carlembre": "joufflu mais étonnamment vif, ses petites ailes le portent déjà dans les airs et la flamme au bout de sa queue ne s'éteint désormais plus jamais.", // N°128
-    "dracarlin": "carlin-dragon altier au regard d'acier, il fond du ciel en piqué embrasé et frappe sa cible avant même qu'elle ait eu le temps de cligner des yeux.", // N°129
-    "glacirex": "jeune tyrannosaure des banquises, sa gueule givrante referme une morsure bien plus glaçante et vigoureuse qu'on ne l'imaginerait d'un tel gabarit.", // N°130
-    "cryotyran": "Perché sur les banquises, le Cryotyran hérisse des cristaux nés de son propre souffle ; son rugissement gèle l'air et fait trembler la roche alentour.", // N°131
-    "orcaline": "Cette maligne orque polaire glisse sous la banquise puis jaillit d'un souffle glacé : on jure qu'elle traque exprès les dragons pour les figer.", // N°132
-    "sylvebarbe": "Arbre-titan millénaire à l'écorce de pierre, le Sylvebarbe passe pour un rocher jusqu'à ce que ses racines fendent le sol sous vos pas.", // N°133
-    "tonytony": "Ce Daemon-œuf au cœur démesuré préfère bercer et soigner que frapper ; il encaisse les pires sortilèges mais tremble au moindre horion bien placé.", // N°134
-    "gekraise": "Ce golem fossile ressemble à s'y méprendre à Gékroc, mais sa pierre couve un cœur de magma : ses galeries brûlantes fument des jours durant.", // N°135
-    "ukognos": "Lutin-démon nimbé de flammes violettes, l'Ukognos n'est qu'un écho féerique et maudit ; il ne paraît qu'à ceux assez fous pour recommencer l'aventure.", // N°136
-    "merorem": "L'hydre-fléau qu'est le Merorem ne soigne jamais : chaque étreinte de ses tentacules suintantes inocule une plaie neuve dont il se repaît.", // N°137
-    "morrow": "Venue d'un monde inconnu au sourire troublant, la Morrow endort d'un baiser givré avant de foudroyer ; on l'échange, dit-on, jamais on ne la capture.", // N°138
-    "gavillus": "Ce jeune crocodile au regard déjà trop malin porte des plaques de pierre sur le dos et de minuscules moignons aux épaules, promesse d'ailes à venir.", // N°139
-    "crocodaillus": "Mi-crocodile mi-caméléon, le Crocodaillus louche déjà de chaque œil tandis que des ailes à demi formées percent sa carapace de pierre.", // N°140
-    "alirocaillus": "Caméléon de pierre aux larges ailes, l'Alirocaillus fond du ciel avant qu'on l'ait vu bouger ; sa ruse, murmure-t-on, n'a pas d'égale.", // N°141
-    "goatiny": "Chevreau des hautes cimes, le Goatiny grésille de statique au moindre orage et ses cornes naissantes crépitent comme deux étincelles impatientes.", // N°142
-    "mouflorage": "Froid et calculateur, le mouflon d'orage aux cornes-bobines paralyse sa proie et lui dérobe sa vitesse avant de la foudroyer, ancré au roc.", // N°143
-    "magnetor": "La roche du Magnetor a mué en un alliage que rien ne perce ; ce colosse de métal en fusion avance comme une forteresse, lent mais inarrêtable.", // N°144
-    "elefer": "Lourdaud et placide, l'Éléfer est un éléphanteau à la peau de fer qui encaisse coups et bourrasques sans même daigner ouvrir un œil.", // N°145
-    "barrisfer": "L'éléphant cuirassé qu'est le Barrisfer pousse un barrissement qui résonne comme un gong de guerre ; ses flancs d'acier ignorent la brèche.", // N°146
-    "colosfer": "Mammouth-forteresse taillé dans le métal massif, le Colosfer ne se laisse ni percer ni déplacer : autant vouloir pousser une montagne du doigt.", // N°147
-    "cornaive": "Naïve mais déjà scintillante, cette pouliche-licorne sent sa corne crépiter d'une magie lunaire qu'elle maîtrise à peine, trésor pour l'œil averti.", // N°148
-    "astracorne": "Licorne à la crinière d'étoiles, l'Astracorne galope sur les rayons de lune eux-mêmes et ne laisse derrière elle qu'une traînée d'argent.", // N°149
-    "lunarque": "Souveraine lunaire au port altier, la Lunarque abat d'un simple coup de corne un cataclysme d'argent ; peu de dex peuvent abriter pareille lumière.", // N°150
-    "coccipoing": "Ne vous fiez pas à sa taille : cette coccinelle aux gantelets rouges est une teigne qui cogne vite et fort, prête à défier bien plus gros qu'elle.", // N°151
-    "coccombat": "Le Coccombat a largué ses élytres pour gagner en vitesse ; guerrière déchaînée, elle enchaîne les frappes éclair plus vite que l'œil ne suit.", // N°152
-    "coccimperatrice": "Souveraine des pois rouges et maîtresse à mains nues, la Coccimpératrice brise les gardes d'une frappe foudroyante, avec un panache royal.", // N°153
-    "aquilord": "Seigneur souverain des tempêtes, l'Aquilord fend les nuages d'un cri ; à ses ailes obéissent la glace mordante comme les flammes rugissantes.", // N°154
-    "mimimoy": "Créature falote au regard perpétuellement inquiet, le Mimimoy paraît insignifiant ; mais parvenir à en dénicher un fait tout le prix du collectionneur.", // N°155
-    "gekosmic": "Sosie fossile de Gékroc, le Gékosmic laisse courir des éclairs psychiques sur sa carapace de roche et sa queue cristallisée irradie l'esprit pur.", // N°156
-    "hypnoppo": "sous ses paupières lourdes, cet hippo somnolent hypnotise ses proies d'un simple clignement, sans jamais avoir à les toucher — tout se joue dans son regard.", // N°157
-    "teleppo": "son troisième œil ne cesse de clignoter tandis qu'il se dématérialise pour resurgir à l'autre bout du réacteur en un seul souffle, télépathe et insaisissable.", // N°158
-    "omnhippo": "ce colosse aux yeux multiples perçoit chaque pensée du réacteur et riposte avant même que l'adversaire ait choisi d'attaquer — un mastodonte que rien n'étonne.", // N°159
-    "karmaki": "ce moine-plante médite en lotus perpétuel, une liane-fleur enroulée sous lui ; il annule les excès d'autrui et rend, dit-on, exactement le karma qu'on lui inflige.", // N°160
-    "otama": "ce petit têtard tout rond au sourire benêt se coiffe d'un origami plié avec soin ; frêle, on murmure pourtant qu'il couve un futur guerrier des eaux.", // N°161
-    "gamaruto": "grenouille-ninja au regard perçant, elle façonne un jutsu d'eau au creux de la main et harcèle l'adversaire en esquivant chaque coup avec une ruse déconcertante.", // N°162
-    "uzumaro": "crapaud-sage massif aux bras croisés et marqués de motifs de guerre, il encaisse derrière une garde de fer avant de balayer poings et raz-de-marée confondus.", // N°163
-    "wistree": "esprit sylvestre couronné de fleurs et de baies, il flotte en silence puis siphonne sournoisement la puissance de quiconque ose se renforcer devant lui.", // N°164
-    "guizer": "ne te fie pas à sa bouille : ce petit béluga blanc d'apparence adorable est en réalité colérique et rancunier, gardant en mémoire la moindre offense.", // N°165
-    "dalugazer": "ce béluga blanc a grandi sans rien perdre de son tempérament : toujours aussi kawaï en surface, toujours aussi rancunier dès qu'on croise sa route glacée.", // N°166
-    "mobyd": "orque albinos ailée inspirée du légendaire Moby Dick, elle dégage une aura oppressante et mythique — et son cœur reste, dit-on, aussi rancunier qu'au premier jour.", // N°167
-    "shady": "petit félin spectral translucide, il porte une flammèche fantomatique au bout de la queue et file déjà comme une ombre — une création signée du dresseur Franss.", // N°168
-    "shade": "félin-fantôme à l'âge ingrat, plus grand et bien plus vif : ses griffes phosphorescentes crépitent d'une énergie spectrale à chaque bond dans la pénombre.", // N°169
-    "shadow": "grand félin-fantôme élancé et nimbé d'ombre, ce prédateur frappe à la vitesse de l'éclair puis s'évanouit avant même qu'on ait aperçu sa silhouette.", // N°170
-    "caninombre": "louveteau au pelage si sombre qu'il semble avaler la lumière, il se tapit dans les recoins obscurs et ne frappe que par surprise — forgé par ACE pour traquer une ombre.", // N°171
-    "lycanfer": "dressé sur ses pattes arrière, crocs allongés, ce lycanthrope exhale une aura rougeoyante : des flammes froides remontées tout droit des abysses les plus noirs.", // N°172
-    "tenebrir": "loup démoniaque colossal, cornu et zébré de lave, dont le seul hurlement suffit, dit la légende, à éteindre toute lumière alentour et à glacer le sang des braves.", // N°173
-    "sepulcru": "petit urubu déplumé au duvet gris-cendre et à la tête chauve, il fixe le monde de deux yeux violets trop grands pour son crâne et traîne déjà une volute d'ombre.", // N°174
-    "macabour": "vautour d'envergure au plumage d'encre, il arbore un premier fragment d'os blanchi sur le poitrail et plane bas, patient : la mort qui prend tout son temps.", // N°175
-    "condombre": "condor colossal d'obsidienne dont le visage disparaît derrière un masque de crânes soudés — les trophées de ses proies — d'où percent deux braises pourpres.", // N°176
-    "bidouzen": "bipède mauve-gris à mi-chemin du chaton et du moine kung-fu, ses moustaches frémissent d'une énergie psychique encore naissante — une malicieuse création d'Embi.", // N°177
-    "medisciple": "le disciple s'est musclé : ce chat-moine tient une posture de combat parfaite, l'aura psychique désormais éveillée autour de ses poings à force de méditation.", // N°178
-    "karatame": "chat stylé et musclé en pleine lévitation, ce maître du kung-fu psychique frappe l'esprit autant que le corps — l'aboutissement d'une création signée Embi.", // N°179
-    "geckebre": "golem fossile dont la pierre a viré à l'obsidienne : un cœur d'ombre bat sous sa carapace impénétrable, et rien, absolument rien, ne semble pouvoir l'ébranler.", // N°180
-    "geaucke": "golem fossile dont la pierre s'est muée en geyser : des jets d'eau propulsent sa carcasse rocheuse à une vitesse stupéfiante, quitte à encaisser fort mal les coups.", // N°181
-    "batchu": "minuscule chauve-souris aux ailes crépitantes de statique, frêle et nerveuse, elle file en zigzag et te harcèle de décharges bien avant que tu l'aies repérée.", // N°182
-    "supabatchu": "Sa silhouette supersonique déchire l'air en gerbes d'étincelles, et on ne la voit jamais frapper : seul reste le grésillement qu'elle laisse derrière elle.", // N°183
-    "phoechaudi": "Ce poussin de phénix mauve n'est encore qu'une braise enveloppée d'un linceul spectral, mais son air condescendant trahit déjà une âme de flamme lugubre.", // N°184
-    "phoechaudii": "Toujours drapé de flammes fantômes, ce phénix mauve toise le monde de haut : sa suffisance grandit à mesure que son feu spectral prend de l'ampleur.", // N°185
-    "phoechaudiii": "Phénix d'un noir mauve auréolé de flammes fantomatiques, il incarne le deuil fait oiseau : là où il se pose, l'air se refroidit et les ombres s'inclinent.", // N°186
-    "obscurene": "Tapie dans l'eau noire des grands fonds, cette murène ne trahit sa présence que par l'éclat luisant d'un œil froid, patient, terriblement implacable.", // N°187
-    "abyssombre": "Murène des abysses au corps d'encre, elle rôde là où la lumière renonce, attendant sans hâte que sa proie s'égare dans le noir pour l'engloutir.", // N°188
-    "leviabysse": "Léviathan des abysses dit né pour traquer un phénix maudit, on murmure qu'il noie les flammes elles-mêmes et engloutit les âmes au fond des ténèbres liquides.", // N°189
-    "crocavern": "Ce crocodile des sables sommeille dans les bancs de terre depuis des âges oubliés ; lent mais inexorable, il happe ses proies sous le sol pour s'en repaître.", // N°190
-    "rosdrakis": "Petit dragon rose lové sur lui-même, ses écailles féeriques scintillent d'un vieux songe : on dit qu'il dort depuis des ères en attendant son heure.", // N°191
-    "dracosidhe": "Ce dragon-fée des premiers âges déploie une crête magenta et des ailes de flammes féeriques dont l'éclat, dit-on, fend le ciel comme aux origines du monde.", // N°192
-    "archeoptix": "Oiseau-dinosaure aux plumes bleues et aux griffes rouges, échappé de l'aube du monde, il file par des couloirs de vent que nul autre ne connaît plus.", // N°193
-    "pterosidhe": "Seigneur des cieux anciens, son envergure voile le soleil et son vol reste si silencieux que la proie ne perçoit jamais l'ombre fondant sur elle.", // N°194
-    "fulguror": "Dinosaure jaune parcouru d'arcs électriques, il foudroie tout ce qui bouge ; mais son corps fossile est si cassant qu'il doit vaincre au premier éclair.", // N°195
-    "rocosaure": "Titan cuirassé d'écailles millénaires et hérissé de pointes, il se tient immuable comme une montagne, encaisse tout et rend chaque coup en véritable séisme.", // N°196
-    "givroptere": "Ptérosaure spectral aux ailes de givre, blanc comme un blizzard sans fin, il n'excelle en rien mais survit à tout : dernier témoin des âges gelés.", // N°197
-    "toxyrm": "Petit saurien trapu à la tête mauve et au ventre crème, boudeur mais déjà venimeux, il s'obstine et tient bon là où de plus grands abandonnent.", // N°198
-    "wyvortal": "Wyverne mauve et corail aux ailes membraneuses, elle exhale des vapeurs féeriques empoisonnées et, patiente autant qu'increvable, use l'adversaire goutte à goutte.", // N°199
-    "joeyrrant": "Larve-crevette d'un noir d'encre et privée d'yeux, elle s'agrippe à sa mère de toutes ses forces, timide et rancunière, refusant de lâcher la vie.", // N°200
-    "wallabisan": "Ce petit wallaby noir a déjà un bras réduit à l'os, arrêté à mi-chemin de la mort ; timide et rancunier, il sursaute au moindre bruit puis vous en veut.", // N°201
-    "kangoudead": "Kangourou mort-vivant au pelage noir, privé de mâchoire inférieure et le flanc droit à nu jusqu'à l'os, il traîne sa rancune glacée sans un cri.", // N°202
-    "megamonarx": "Colosse de pierre vivante hérissé de cristaux, né de la fusion portée à son absolu, chacun de ses pas fait trembler le Nexus ; on le dit tout simplement immortel.", // N°203
-    "galijah": "Créature paisible et joueuse tenue pour une légende, elle porte en elle l'empreinte de tous les Daemons et imite chaque technique, hormis les ténèbres qu'elle fuit.", // N°204
-    "osquille": "Squille bariolée aux poings soniques : son coup fait imploser une bulle de cavitation qui claque comme la foudre, ravageuse mais fragile comme du verre.", // N°205
-    "ro": "Raie sombre enfouie dans le sable des fonds à la nuit tombée, elle endort, empoisonne et enlise ses proies avant même qu'elles devinent d'où vient l'attaque.", // N°206
-    "mottelave": "Mottelave scelle la pierre têtue de Mottoche à la braise de Lavapetit, si bien que sa carapace fissurée sue une lave brûlante à chaque pas.", // N°500
-    "nouiflot": "Nouiflot mêle le ruban de pâte de Nouillon à l'âme d'oisillon de Piouflot, ondulant sur l'eau au gré d'un calme presque hypnotique.", // N°501
-    "sporemante": "Sporémante greffe le voile fantomatique de Revemante au chapeau de Sporbéo, dispersant des spores empoisonnées qui plongent les proies en songes toxiques.", // N°502
-    "ruffardoc": "Ruffardoc coule le têtard chitineux de Têtardoc dans la carapace insectoïde de Ruffiant, incrustée d'éclats de roche qui n'entament pas sa vivacité.", // N°503
-    "dractriss": "Dractriss soude le sang draconique de Draclet aux décharges d'Électroatiss, ses ailerons crépitant d'arcs électriques avant même qu'on l'aperçoive.", // N°504
-    "voltaile": "Voltaile unit la chauve-souris électrique Batchu au dragonnet volant Draclet, un éclair ailé qui zèbre le premier étage de la Grotte du Nexus.", // N°510
-    "abyssvolt": "Abyssvolt entrelace le serpent abyssal d'Obscurène à l'énergie d'Électroatiss, un long ruban des profondeurs grésillant d'électricité statique.", // N°511
-    "oniridrak": "Oniridrak fond la transe d'Hypnoppo dans l'écaille de Draclet, un dragon onirique dont le souffle glisse dans les rêves pour y endormir ses proies.", // N°512
-    "necrospore": "Nécrospore fond l'ombre d'un molosse spectral dans un champignon vénéneux : ce SPECTRE/POISON exhale des spores nécrosantes nées de deux natures morbides.", // N°514
-    "ombrepsy": "Ombrepsy tisse une silhouette d'ombre furtive autour d'un ruban de pâte vivante, et de ce mariage NORMAL/PSY naissent des pouvoirs psychiques troubles.", // N°515
-    "rocaptere": "Rocaptère soude les ailes d'un reptile rocheux au cœur d'une braise de lave : ce ptérosaure ROCHE/VOL fend le ciel, carapace fumante et magmatique.", // N°516
-    "givrasol": "Givrasol unit la force tellurique d'une bête de sol au souffle d'un geyser de glace : ce béhémoth SOL/GLACE, né de deux créations, piétine le givre.", // N°517
-    "fissuraillus": "Fissuraillus épaissit l'alliage de roche et d'aile de sa lignée : ses membranes se déploient et la lave affleure, incandescente, au creux de ses fissures.", // N°518
-    "magmaillus": "Magmaillus porte à son sommet l'hybride de roche et de vol : dragon volcanique majestueux, sa carcasse minérale irradie de lave à chaque battement d'ailes.", // N°519
-    "scorieve": "Scoriève couve encore la fusion de roche et de lave de la lignée Mottelave : sa carapace ROCHE/FEU se hérisse de scories brûlantes et fissurées.", // N°520
-    "basaltor": "Basaltor durcit l'héritage de roche et de feu de Mottelave en un rempart de basalte : ce colosse ROCHE/FEU oppose sa muraille refroidie à toute charge.", // N°521
-    "siderobloc": "Sidérobloc voit la lave refroidie de son ascendance roche-et-feu se muer en fer : ce colosse ROCHE/MÉTAL cliquette d'un alliage minéral aimanté et massif.", // N°522
-    "sideralithe": "Sidéralithe couronne la lignée née de la pierre et de la lave : titan ultime ROCHE/MÉTAL, sa carcasse magnétisée d'acier et de roc défie le temps.", // N°523
-    "nouibrume": "Nouïbrume affine le mariage de la nouille vivante et de l'esprit d'oisillon : ce ruban EAU/PSY dérive dans une brume mentale, serein et insaisissable.", // N°524
-    "oniromouille": "Oniromouille pousse à l'extrême l'alliance de la pâte aquatique et de l'âme onirique : ce EAU/PSY frêle tisse des songes liquides au mental déroutant.", // N°525
-    "spectrelame": "Spectrelame marie la faux d'une mante fantôme aux spores vénéneuses d'un champignon : ses lames spectrales exhalent un poison qui glace le sang.", // N°526
-    "necromante": "Nécromante, sorcier-mante des songes, mêle la nécromancie spectrale à la sève empoisonnée du champignon dont il tire ses funestes sortilèges.", // N°527
-    "carapoing": "Carapoing serre dans ses poings de roche l'agilité d'un insecte et la cuirasse minérale d'un têtard : un cogneur né de deux mondes soudés.", // N°528
-    "roctobrute": "Roctobrute écrase tout sous sa carapace d'insecte incrustée de roc : le têtard cuirassé et le brigand des nuées ne font plus qu'un colosse.", // N°529
-    "voltriss": "Voltriss fait crépiter les écailles du dragonnet au rythme des décharges de son parent électrique : chaque battement d'aile claque comme la foudre.", // N°530
-    "draconvolt": "Draconvolt, dragon de foudre pure, canalise le sang draconique et l'énergie électrique de ses aïeux en un orage qui gronde sous ses écailles.", // N°531
-    "eolectre": "Éolectre plane sur des ailes de chauve-souris chargées d'orage, mariant l'électricité de la bestiole nocturne au vol vif du dragonnet.", // N°532
-    "stratevolt": "Stratévolt fend la stratosphère comme un éclair : la chauve-souris foudroyante et le dragonnet ailé se sont fondus en un seul météore électrique.", // N°533
-    "abyssonde": "Abyssonde ondule dans les eaux noires en diffusant l'électricité statique du serpent des abysses : chacune de ses ondes pique autant qu'elle mouille.", // N°534
-    "marefoudre": "Maréfoudre soulève des marées électrifiées : le calme abyssal du serpent d'eau et la fureur des décharges s'unissent en une lame de fond grondante.", // N°535
-    "oniragon": "Oniragon tisse des songes hypnotiques hérités de l'hippo dormeur tout en déployant les griffes du dragonnet : ses rêves peuvent vous engloutir.", // N°536
-    "songedrak": "Songedrak, dragon des songes, endort d'un regard psychique et veille sur les rêveurs : l'hypnose de l'hippo et la force draconique n'en font qu'un.", // N°537
-    "sporcrypte": "Sporcrypte hante les cryptes en répandant les spores nécrosantes du champignon, guidé par l'âme d'un chien d'ombre qui flaire les vivants.", // N°538
-    "miasmort": "Miasmort exhale un miasme mortel où se mêlent le souffle spectral du chien des ombres et le venin fongique : rien ne survit à son passage brumeux.", // N°539
-    "ombrelin": "Ombrelin se faufile telle une ombre élastique, alliant la nature insaisissable du farceur au flux psychique trouble de la nouille onduleuse.", // N°540
-    "psychombre": "Psychombre frappe depuis l'ombre en un éclair mental : l'insaisissable farceur et l'esprit-nouille se sont noués en un prédateur psychique fulgurant.", // N°541
-    "givrebre": "Givrèbre parcourt la toundra en soulevant terre et gel : la stabilité tellurique de la chèvre s'y noue au froid mordant du geyser glacé.", // N°542
-    "cryolithe": "Cryolithe se dresse tel un menhir de glace éternelle : le socle terreux de la chèvre et le gel du geyser se sont pétrifiés en un rempart immuable.", // N°543
+    "feuillichot": "Chez les Feuillichot, plus le dresseur sue à l'entraînement, plus leur pelage vire au vert bouteille : un vrai thermomètre à chlorophylle.", // N°001
+    "broutame": "Il paraît qu'un Broubouc récolte plus de rosée sur ses bois au lever du jour qu'un pré entier, et refuse de brouter passé midi par pur snobisme.", // N°002
+    "sylvapuce": "Cerfeuillu détient le record de siestes fleuries : partout où ce cerf centenaire pose ses bois pour un somme, une clairière éclôt sans prévenir.", // N°003
+    "gouttiny": "Méfie-toi : un Gouttiny adore rebondir pile au-dessus de ta nuque pour t'offrir la seule éclaboussure que personne ne réclame jamais.", // N°004
+    "ondulo": "Un vieux dresseur jure qu'un Ondulo peut surfer sur une vague qu'il a lui-même créée, la relançant à l'infini plutôt que d'admettre qu'il est tombé.", // N°005
+    "razmaree": "Les naturalistes ont calculé qu'une seule inspiration de Razmarée fait reculer la mer de trois barques et d'un pêcheur médusé.", // N°006
+    "braisille": "Personne ne sait pourquoi un Braisille refuse de dormir seul, sauf lui : négligé une nuit, ce renardeau boude et laisse sa braise virer au tiède.", // N°007
+    "flamkure": "Flamkure serait le seul Daemon à s'enflammer davantage à l'échauffement qu'au combat : ce fauve prend son jogging matinal beaucoup trop au sérieux.", // N°008
+    "pyrokoss": "Chez les Pyrokoss, chaque pas imprime une empreinte de magma : on cartographie leurs promenades des mois plus tard, aux pâquerettes carbonisées.", // N°009
+    "plumiot": "Il paraît qu'un Plumiot compte plus d'atterrissages ratés que de plumes, mais qu'il redécolle chaque fois avec un courage bien trop grand pour sa taille.", // N°010
+    "faukon": "Faukon détient le record du piqué le plus vaniteux : ce faucon vise sa proie, freine à la dernière seconde et vérifie d'abord si on l'a bien regardé.", // N°011
+    "aquilothan": "Un vieux dresseur jure qu'un Aquilothan déploie une ombre si vaste que les villageois rentrent leur linge, persuadés qu'un orage arrive.", // N°012
+    "cailloutchi": "Personne ne sait pourquoi un Cailloutchi refuse de bouger avant midi, sauf les géologues : ce chevreau de pierre confond obstination et sieste minérale.", // N°013
+    "roctaur": "Les naturalistes ont calculé qu'une charge de Roctaur fait tinter la vaisselle à deux villages de là, ce que ce bélier rocheux prend pour un compliment.", // N°014
+    "rochison": "Rochison serait le seul Daemon à figurer sur d'anciennes cartes comme point de repère : on l'y avait dessiné en menhir, avant qu'il ne décide de s'en aller.", // N°015
+    "couperin": "Méfie-toi : un Couperin adore transformer le moindre poteau ou passant immobile en partenaire d'entraînement, ses poings bandés ignorant le repos.", // N°016
+    "frappard": "Il paraît qu'un Frappard enchaîne plus de répétitions avant le petit-déjeuner que la plupart des dresseurs en un mois, et compte tout haut pour être sûr.", // N°017
+    "maitrezenc": "Un vieux dresseur jure qu'un Maîtrezenc peut fendre un rocher d'un seul crochet, puis s'excuser platement auprès du rocher pour l'avoir dérangé.", // N°018
+    "electroatiss": "Chez les Électroatiss, le bandeau n'est pas un déguisement de farceur : à force de frotter sa queue crépitante, ce coati électrise tout ce qu'il frôle.", // N°019
+    "couranti": "Couranti détient le record du vol de goûter le plus électrisant : ce maraudeur drape sa cape conductrice sur sa proie avant qu'elle ait le temps de crier aïe.", // N°020
+    "zappeureal": "Personne ne sait pourquoi Zappeuréal refuse d'entrer sous un toit, sauf les paratonnerres : ce souverain de la foudre tient à ce que sa couronne d'arcs reste visible.", // N°021
+    "auroruff": "Les naturalistes ont calculé qu'un Auroruff passe plus de temps à réchauffer son propre os givré qu'à le ronger, ce chiot des neiges étant paradoxalement frileux.", // N°022
+    "glaceer": "Glaceer serait le seul Daemon à signer ses courses : ce lévrier de gel laisse une traînée si nette qu'on suit sa foulée comme un pointillé argenté.", // N°023
+    "auroraur": "Un vieux dresseur jure qu'un Auroraur déclenche une aurore boréale rien qu'en s'ébrouant, ce molosse polaire trouvant que le ciel manquait de panache.", // N°024
+    "ruffiant": "Méfie-toi : un Ruffiant adore réorganiser ton pique-nique en file indienne, cette fourmi-soldat jugeant tes miettes bien trop mal rangées à son goût.", // N°025
+    "formiguer": "Il paraît qu'un Formiguer porte sur son dos plus que son poids en brindilles, uniquement pour épater les ouvrières et frimer avec sa carapace renforcée.", // N°026
+    "regnantaur": "Chez les Regnantaur, on raconte que la reine gouverne mille ouvrières par télépathie, mais oublie chaque matin où elle a posé sa couronne.", // N°027
+    "lavapetit": "Les naturalistes ont mesuré qu'un Lavapetit reste tiède pile ce qu'il faut pour réchauffer un thé, mais jamais assez pour le faire bouillir.", // N°028
+    "fissuralave": "Un vieux dresseur jure qu'un Fissuralave laisse dans son sillage des empreintes de lave qui servent, une fois refroidies, de dalles de jardin.", // N°029
+    "magmator": "Magmator détient le record de la sieste la plus brûlante : son cœur de magma ne s'éteint jamais, même quand tout le reste ronfle.", // N°030
+    "nouillon": "Il paraît qu'un Nouillon possède plus d'yeux au bout de ses tentacules que d'idées claires, ce qui explique ses trajectoires en tire-bouchon.", // N°031
+    "vermisaint": "Personne ne sait pourquoi un Vermisaint refuse qu'on le démêle, sauf les moines qui y voient un nœud sacré à ne surtout pas dénouer.", // N°032
+    "divinpate": "Chez les Divinpâte, on bénit les fidèles d'un léger coup de nouille sur le front, geste qu'on dit porteur de chance et de sauce tomate.", // N°033
+    "piouflot": "Méfie-toi : un Piouflot adore imiter le grand vol plané des aînés, avant de s'écraser dans la première flaque venue en éclaboussant tout le monde.", // N°034
+    "herondee": "Hérondée serait le seul Daemon à sécher plus lentement qu'il ne se mouille, si bien qu'un héron parfaitement sec passe pour une légende vivante.", // N°035
+    "oragron": "Les naturalistes ont noté qu'un Oragron déclenche un mini-orage rien qu'en s'ébrouant, au grand désespoir des pique-niques de la région.", // N°036
+    "broussours": "Un Broussours passe ses journées à confondre lutte et câlin, si bien que ses adversaires ne savent jamais s'ils ont perdu le combat ou gagné un ami.", // N°037
+    "sylvours": "Chez les Sylvours, l'armure de feuilles se renouvelle à l'automne : un guerrier qui perd sa cuirasse attend patiemment le printemps suivant pour se rhabiller.", // N°038
+    "druidours": "Druidours détient le record de la révérence la plus lente : saluer un ancien de la forêt lui prend, dit-on, une saison entière, sève comprise.", // N°039
+    "pampousse": "Un vieux dresseur jure qu'un Pampousse peut s'endormir au sommet d'une branche et se réveiller trois arbres plus loin sans jamais toucher le sol.", // N°040
+    "feliane": "Les naturalistes ont calculé qu'une Féliane lancée à pleine vitesse laisse un sillage de feuilles qui met dix bonnes minutes à retomber.", // N°041
+    "cerfeuillu": "Il paraît qu'un Silviliane porte plus de fruits sur ses bois qu'un verger entier, et que les oiseaux s'y installent comme dans un arbre officiel.", // N°042
+    "loutrille": "Personne ne sait pourquoi un Loutrille refuse de rester immobile plus de trois secondes, sauf quand il fait mine de dormir pour mieux piquer ton goûter.", // N°043
+    "ondaloutre": "Ondaloutre détient le record de la plus longue glissade sur vague personnelle, un exploit qu'elle refait fièrement dès qu'un public la regarde.", // N°044
+    "naiadrak": "Chez les Naïadrak, la couronne de corail pousse d'un rameau par courant maîtrisé, si bien qu'un vieux gardien porte une véritable forêt sur la tête.", // N°045
+    "fennaise": "Méfie-toi : un Fennaise adore tendre ses grandes oreilles aux ragots du campement, puis répandre la nouvelle avant même que tu aies fini ta phrase.", // N°046
+    "pyrenard": "Les naturalistes ont calculé qu'un Pyrenard sème assez d'étincelles pour rallumer un feu de camp éteint, mais jamais assez pour retrouver son propre chemin.", // N°047
+    "loupyre": "Loupyre serait le seul Daemon à hurler à la lune en projetant une gerbe d'étincelles, spectacle qui lui vaut le surnom de comète des nuits froides.", // N°048
+    "forgeotin": "Chez les Forgeotin, chaque petit reçoit un marteau avant même de savoir marcher, et tape sur tout ce qui traîne en croyant déjà forger des chefs-d'œuvre.", // N°049
+    "marteloutan": "Il paraît qu'un Marteloutan use plus de tabliers de cuir que de marteaux, tant il met d'ardeur à cogner tout ce qui ressemble de près à une enclume.", // N°050
+    "enclumind": "Un vieux dresseur jure qu'un Enclumind redresse une pensée tordue d'un coup de marteau, ce qui explique qu'on le consulte avant les grandes décisions.", // N°051
+    "trolystrik": "Trolystrik détient le record des cheveux dressés d'un coup : sa crête grésille tant qu'il sert volontiers de briquet ambulant à toute la bande.", // N°052
+    "brutetrik": "Un vieux dresseur jure qu'un Brutetrik recharge sa lampe torche d'un seul coup de poing crépitant, puis la fait fondre neuf fois sur dix.", // N°053
+    "hebulmin": "Hébulmin détient le record du plus long silence après une gifle : la crinière grésille, l'arène tremble, et personne n'ose applaudir.", // N°054
+    "draclet": "Chez les Draclet, on a remarqué qu'ils s'essoufflent à battre des ailes pour décoller de trois centimètres, puis boudent tout l'après-midi.", // N°055
+    "wyverion": "Il paraît qu'un Wyverion accumule plus de piqués ratés dans les buissons que de proies attrapées, mais jure que c'était « pour l'entraînement ».", // N°056
+    "draconarque": "Les naturalistes ont calculé qu'à midi l'ombre d'un Draconarque plonge une vallée entière dans la nuit ; les fermiers en profitent pour une sieste.", // N°057
+    "cornaissant": "Méfie-toi : un Cornaissant à peine éclos goûtera toute potion laissée sans surveillance, et recrachera dignement celles qui ne pétillent pas.", // N°058
+    "corvenin": "Personne ne sait pourquoi un Corvenin refuse de voler sans sa petite fiole de venin sous l'aile, sauf peut-être par pure coquetterie d'alchimiste.", // N°059
+    "necrocorbe": "Nécrocorbe serait le seul Daemon à réciter ses incantations à l'envers quand il boude, ce qui, dit-on, ravive les âmes au lieu de les ronger.", // N°060
+    "sporbeo": "Chez les Sporbéo, garder le sourire est une religion : flammèche spectrale éteinte, un simple éternuement de spores suffit à la rallumer.", // N°061
+    "lampignon": "Il paraît qu'un Lampignon range les âmes égarées dans sa lanterne comme d'autres collectionnent les lucioles, et les libère quand il s'ennuie la nuit.", // N°062
+    "mycedruide": "Les naturalistes ont calculé qu'un Mycédruide médite si longtemps que le mycélium de sa couronne relie, dit-on, une forêt entière en un seul réseau.", // N°063
+    "tamanpousse": "Méfie-toi : un Tamanpousse plante sa langue-liane dans la première fourmilière venue et en sirote la sève des heures, oreilles frétillantes de plaisir.", // N°064
+    "fourmilierre": "Fourmilierre détient le record de la langue la plus longue du sous-bois : d'un claquement, elle happe un nuisible à trois mètres sans bouger de l'ombre.", // N°065
+    "gloutanoir": "On raconte qu'un Gloutanoir rassasié laisse ses proies non pas blessées, mais simplement trop fatiguées pour lui en vouloir, avachies sous sa crinière.", // N°066
+    "pantheon": "Personne ne sait de quelle humeur se réveillera un Panthéon : selon l'énergie frôlée la veille, son pelage tire vers le givre, la braise ou l'orage.", // N°067
+    "florapanthe": "Chez les Florapanthe, on a remarqué qu'elles s'élancent de liane en liane sans jamais toucher terre, et tiennent le fait de marcher pour une vulgarité.", // N°068
+    "panthegel": "Il paraît qu'un Panthégel éternue de vrais flocons et refuse de dormir ailleurs que sur un carreau gelé, qu'il polit d'abord d'un souffle glacial.", // N°069
+    "pyropanthe": "Les naturalistes ont calculé qu'un Pyropanthe au galop distance sa propre flamme, si bien qu'on le surprend parfois à courir après sa couronne éteinte.", // N°070
+    "ombrapanthe": "Ombrapanthe serait le seul Daemon capable de se tapir dans sa propre ombre, ce qui explique qu'on ne l'ait jamais pris en photo de face.", // N°071
+    "aquapanthe": "Un vieux dresseur jure qu'un Aquapanthe endormi bruisse comme un ruisseau, et que sa crinière ruisselante ne s'assèche pas même en plein désert.", // N°072
+    "voltapanthe": "On dit qu'un Voltapanthe change de pièce plus vite que sa moustache ne finit de grésiller ; les autres panthères ont renoncé depuis à la course.", // N°073
+    "rembodo": "Chez les Rembodo, courir plus vite qu'on ne réfléchit est un art : ce dodo fonce droit dans les murs qu'il avait pourtant contournés la veille.", // N°074
+    "retroraptor": "Méfie-toi : un Rétroraptor picore ta montre pour « gagner du temps », persuadé qu'avec son bec de dodo il fera reculer les aiguilles du cadran.", // N°075
+    "chronorex": "Chronorex détient le record du plus vieux fossile jamais réveillé, et reste vexé qu'un T-Rex de sa carrure ait hérité d'un ridicule petit bec de dodo.", // N°076
+    "mottoche": "Personne ne sait pourquoi un Mottoche refuse obstinément de rouler en descente, sauf peut-être qu'une motte de terre a, elle aussi, sa fierté.", // N°077
+    "dumotte": "Il paraît qu'un Dumotte passe ses journées à se chamailler avec lui-même, ses deux mottes soudées n'étant jamais d'accord sur la direction à prendre.", // N°078
+    "quadroc": "Il paraît qu'un Quadroc a plus d'angles morts que de côtés : ses quatre cailloux se chamaillent pour savoir lequel touchera le sol en premier.", // N°079
+    "octoroc": "Chez les Octoroc, on raconte que huit cailloux valent mieux que quatre : le neuvième, jaloux, roule toujours à part en boudant.", // N°080
+    "hexaroc": "Hexaroc détient le record du plus grand nombre de cailloux capables de tenir un conciliabule sans qu'aucun des seize ne se fende jamais.", // N°081
+    "diamantine": "Les naturalistes ont calculé qu'un Diamantine renvoie exactement trente-deux reflets bleutés, un par cristal, de quoi éblouir un dresseur distrait.", // N°082
+    "amadiam": "Personne ne sait pourquoi un Amadiam refuse de compter ses propres diamants, sauf les joailliers, qui préfèrent ne jamais recompter les soixante-quatre.", // N°083
+    "golemini": "Un vieux dresseur jure qu'un Golémini, taillé dans soixante-quatre diamants, marche en cliquetant comme un lustre pris de panique.", // N°084
+    "megalithe": "Méfie-toi : un Mégalithe adore poser pour l'éternité, et les grimpeurs qui l'ont pris pour une falaise attendent encore qu'il daigne bouger.", // N°085
+    "limaroche": "Il paraît qu'une Limaroche met plus de temps à traverser une flaque qu'à lire dans vos pensées : ses antennes télépathes n'attendent pas ses pieds.", // N°086
+    "escaroche": "Chez les Escargyle, la moindre bousculade se règle par un long silence de pierre : leur coquille est si imperturbable qu'ils y méditent parfois une saison entière.", // N°087
+    "torturoche": "Tortoracle serait le seul Daemon à prédire l'avenir depuis sa carapace de roche, mais son oracle arrive toujours avec une lenteur de tortue millénaire.", // N°088
+    "marmoterre": "Un vieux dresseur jure qu'une Marmoterre creuse la pierre gelée si vite qu'elle réveille l'hiver avant que l'automne ait fini de tomber.", // N°089
+    "iorours": "Méfie-toi : une Iorours porte sa cuirasse de glace et de roc avec tant de fierté qu'elle refuse de saluer quiconque n'a pas gravi un sommet.", // N°090
+    "yetiroche": "Il paraît qu'un Yétiroche laisse plus d'empreintes que de témoins : entre son poing de roc et son souffle glacé, personne ne reste debout pour raconter.", // N°091
+    "tetardoc": "Chez les Têtardoc, on apprend à viser avant même de savoir nager : la petite carapace de galet fait un abri commode entre deux tirs d'essai.", // N°092
+    "grenarc": "Un vieux dresseur jure qu'un Grenarc décoche ses flèches de pierre les yeux fermés, et que son arc coasse un petit « touché » à chaque mouche embrochée.", // N°093
+    "crapotaure": "Crapôtaure détient le record de flèches de roche tirées avant qu'un autre Roche ait seulement décidé de bouger : le plus vif de sa famille, et le plus fanfaron.", // N°094
+    "revemante": "Personne ne sait pourquoi une Revemante refuse d'apparaître de face, sauf ceux qui l'ont vue surgir du néant : ils ne s'en souviennent plus.", // N°095
+    "necarabee": "Les naturalistes ont calculé qu'à travers la carapace translucide d'un Nécarabée on peut lire l'heure de sa dernière hantise, mais jamais celle de la prochaine.", // N°096
+    "necrolopendre": "Méfie-toi : un Nécrolopendre adore frôler ta nuque dans le noir ; long, insaisissable, il file sans un bruit — mais un coup bien placé le brise net.", // N°097
+    "colibraise": "Chez les Colibraise, battre des ailes plus vite que l'œil ne suit finit toujours en petites étincelles : ils sont les seuls oiseaux à s'éclairer eux-mêmes en volant.", // N°098
+    "arardent": "Un vieux dresseur jure qu'un Arardent au plumage incandescent fait crépiter l'air d'un seul cri, et que sa cage réchauffe la maison mieux qu'un poêle.", // N°099
+    "toucanyon": "Il paraît qu'un Toucanyon a plus de flammes au bout du bec que de plumes sur le dos : ce toucan-volcan grille ses cibles avant même de les survoler.", // N°100
+    "blaziper": "Blaziper serait le seul serpenteau à endormir une proie d'un simple regard tiède, quitte à somnoler juste après, hypnotisé par sa propre chaleur.", // N°101
+    "flamaspic": "Chez les Flamaspic, on mesure la concentration à la fumée : plus les anneaux incandescents fument, plus l'aspic est sur le point de trouver une idée brûlante.", // N°102
+    "vipember": "Un vieux dresseur jure qu'une Vipember millénaire n'a jamais mordu personne : son esprit brûlant plie déjà les volontés bien avant que ses crocs n'y songent.", // N°103
+    "braisecaille": "Personne ne sait comment une Braisécaille garde des braises au sec sous la mare cachée dans sa carapace, sauf peut-être la tortue, qui n'en dit jamais rien.", // N°104
+    "calderont": "Les naturalistes ont calculé qu'un Caldéront met trois siècles à refroidir sa carapace-volcan : officiellement la tortue la moins pressée du Nexus.", // N°105
+    "brasicow": "Chez les Brasicow, on a remarqué que ruminer du charbon ardent donne un lait crémeux et légèrement fumé, très prisé des dresseurs gourmands.", // N°106
+    "tauricendre": "Tauricendre détient le record de la plus longue trace de brûlé laissée par une charge : on jure que le sillon fume encore trois jours plus tard.", // N°107
+    "pyrozly": "Personne ne sait pourquoi Pyrozly refuse d'hiberner ailleurs que dans un cratère tiède, sauf qu'un grizzly au pelage fumant déteste avoir froid aux pattes.", // N°108
+    "belunode": "Méfie-toi : un Bélunode adore qu'on le caresse, mais chaque câlin le fait crépiter, si bien qu'on le chouchoute désormais avec des gants isolants.", // N°109
+    "sonarque": "Un vieux dresseur jure qu'un Sonarque peut retrouver une pièce tombée au fond des abysses rien qu'en l'appelant par son cliquetis électrique.", // N°110
+    "leviathonn": "Il paraît qu'un Léviathonn a plus de kilomètres de courant dans une seule décharge que la plupart des fleuves n'en ont de cours entier.", // N°111
+    "jerbiwat": "Jerbiwat serait le seul Daemon à faire crépiter sa roue au point d'éclairer tout son terrier lorsqu'il court après ses propres pensées.", // N°112
+    "namicha": "Caresser un Namicha revient à toucher à la fois une ombre et une pile : on ressort avec les doigts glacés ET les cheveux dressés sur la tête.", // N°113
+    "namizeus": "Personne ne sait comment Namizeus arrive avant son propre coup de tonnerre, sauf que ce félin spectral trouve terriblement grossier d'attendre son signal.", // N°114
+    "boltah": "Les naturalistes ont calculé qu'un Boltah dépasse sa propre ombre de deux bonnes foulées, ce qui explique pourquoi il a toujours l'air de courir seul.", // N°115
+    "heatah": "Méfie-toi : un Heatah adore piquer un sprint dans les herbes sèches, laissant une traînée de braises que les pompiers du Nexus connaissent trop bien.", // N°116
+    "thundah": "Thundah détient le record de vitesse du Nexus : on raconte qu'il franchit la ligne d'arrivée avant même d'avoir décidé de participer à la course.", // N°117
+    "bouh": "Chez les Bouh, on a remarqué qu'un petit spectre boudeur encaisse bien mieux les coups que les remarques sur son air perpétuellement renfrogné.", // N°118
+    "bouhbou": "Un vieux dresseur jure qu'un Bouhbou range ses poings dans l'ombre et les ressort exactement là où on ne les attend pas, boudeur mais redoutable.", // N°119
+    "brook": "Brook serait le seul Daemon à monter la garde d'une tombe pendant des siècles sans jamais réclamer ni relève, ni prime, ni même une pause déjeuner.", // N°120
+    "brookhante": "Les naturalistes ont calculé qu'il faudrait empiler dix enclumes sur un Brookhanté avant qu'il ne daigne enfin reculer d'un timide demi-pas.", // N°121
+    "hibouh": "Personne ne sait pourquoi Hibouh hulule toujours trois fois avant de fondre sur sa proie, sauf que ce petit spectre trouve l'effet dramatique très réussi.", // N°122
+    "chouhante": "Il paraît qu'un Chouhanté lit vos pensées d'un œil et scrute l'au-delà de l'autre, ce qui rend toute partie de cache-cache perdue d'avance.", // N°123
+    "archibouh": "Méfie-toi : un Archibouh commence par te foudroyer l'esprit d'un hululement, si bien que tu ne vois même pas venir l'ombre qui achève le travail.", // N°124
+    "goshendofy": "Goshendofy détient le record du légendaire le mieux planqué : un dragon primordial qui dort dans l'herbe la plus banale, là où nul n'ose regarder.", // N°125
+    "gekroc": "Un vieux dresseur jure qu'un Gékroc apprend n'importe quelle technique en une nuit, puis creuse un tunnel fulgurant rien que pour aller frimer ailleurs.", // N°126
+    "carlinou": "Chez les Carlinou, on a remarqué que leurs ronflements dessinent de petites volutes de fumée en forme de cœur, au grand désespoir des voisins.", // N°127
+    "carlembre": "Il paraît qu'un Carlembre a plus de joues que d'envergure, et pourtant ses petites ailes tiennent bon, sa queue de feu refusant désormais de s'éteindre.", // N°128
+    "dracarlin": "Dracarlin serait le seul carlin à toiser les nuages de haut avant de fondre en piqué embrasé, plus vite qu'un simple battement de cils.", // N°129
+    "glacirex": "Les naturalistes ont calculé qu'une morsure de Glacirex givre son casse-croûte à l'instant même, ce qui lui vaut le surnom de petit roi du surgelé.", // N°130
+    "cryotyran": "Chez les Cryotyran, éternuer est fort mal vu : un seul reniflement de ce tyran des banquises transforme la mare du voisinage en patinoire pour la saison.", // N°131
+    "orcaline": "Il paraît qu'une Orcaline a figé plus de dragons d'un seul souffle glacé qu'elle n'a jamais avalé de poissons, un régime qu'aucun naturaliste ne s'explique.", // N°132
+    "sylvebarbe": "Sylvebarbe serait le seul Daemon à mettre trois automnes pour se retourner, si bien que les oiseaux le prennent pour une colline et y bâtissent des villages.", // N°133
+    "tonytony": "Un vieux dresseur jure qu'un Tonytony a bercé toute une infirmerie d'un seul fredon, avant de s'évanouir parce qu'un papillon avait effleuré sa coquille.", // N°134
+    "gekraise": "Les naturalistes ont calculé qu'un Gékraise apprend une technique plus vite qu'il ne refroidit, c'est-à-dire jamais, vu le magma qui lui tient lieu de cœur.", // N°135
+    "ukognos": "Personne ne sait pourquoi Ukognos n'apparaît qu'à ceux qui refont tout depuis le début, sauf peut-être lui, qui ricane en flammes violettes sans rien expliquer.", // N°136
+    "merorem": "Méfie-toi : un Merorem adore serrer la main, et chacune de ses étreintes suintantes t'offre gracieusement une maladie que tu n'avais jamais réclamée.", // N°137
+    "morrow": "Morrow détient le record du baiser le plus frais : d'un effleurement givré elle endort sa proie, puis nie farouchement avoir jamais quitté son monde.", // N°138
+    "gavillus": "Chez les Gavillus, le nourrisson résout l'énigme du dîner avant les adultes, ce qui explique pourquoi ses parents rangent désormais les biscuits tout en haut.", // N°139
+    "crocodaillus": "Il paraît qu'un Crocodaillus peut lire deux livres à la fois, un œil par page, puis se disputer tout seul sur la meilleure des deux fins.", // N°140
+    "alirocaillus": "Un vieux dresseur jure qu'un Alirocaillus lui a chipé son chapeau en plein vol, l'a repeint façon rocher, puis le lui a rendu contre un pourboire.", // N°141
+    "goatiny": "Méfie-toi : un Goatiny adore se frotter aux inconnus, et sa laine grésillante de statique transforme le moindre câlin en petite décharge surprise.", // N°142
+    "mouflorage": "Mouflorage serait le seul Daemon à prendre rendez-vous avec sa proie : il la paralyse poliment, consulte ses cornes-bobines, puis la foudroie à l'heure dite.", // N°143
+    "magnetor": "Les naturalistes ont calculé qu'un Magnetor met neuf hivers à tiédir, si bien que les villageois l'invitent chaque décembre à faire office de radiateur.", // N°144
+    "elefer": "Chez les Éléfer, la sieste est un sport de haut niveau : ce lourdaud de fer s'endort si profondément qu'on l'a déjà confondu avec une enclume oubliée.", // N°145
+    "barrisfer": "Il paraît qu'un Barrisfer a annulé un concert d'un seul barrissement, le public ayant pris son cri de gong pour l'annonce d'un entracte prolongé.", // N°146
+    "colosfer": "Colosfer détient le record du déménagement le plus lent : refusant qu'on le pousse, ce mammouth de métal a mis un an à changer de pièce, par pur principe.", // N°147
+    "cornaive": "Un vieux dresseur jure qu'une Cornaïve a voulu décrocher la lune avec sa corne, l'a manquée trois fois, puis a boudé en illuminant tout le pré de dépit.", // N°148
+    "astracorne": "Personne ne sait comment Astracorne galope sur les rayons de lune sans glisser, sauf les nuits sans étoiles, où on l'entend pester tout bas dans le noir.", // N°149
+    "lunarque": "Les naturalistes ont calculé qu'un coup de corne de Lunarque éclaire une nuit entière, ce qui fait d'elle l'unique souveraine à facturer le clair de lune.", // N°150
+    "coccipoing": "Méfie-toi : une Coccipoing adore provoquer trois fois sa taille, et ses petits gantelets rouges cognent avant même que l'adversaire ait fini de sourire.", // N°151
+    "coccombat": "Chez les Coccombat, on largue ses élytres comme d'autres jettent leur manteau, persuadées que rien ne doit ralentir une bonne raclée bien menée.", // N°152
+    "coccimperatrice": "Il paraît qu'une Coccimpératrice compte ses pois rouges comme des victoires, et qu'aucune garde n'a jamais tenu le temps qu'elle finisse de compter.", // N°153
+    "aquilord": "Aquilord détient le record du bulletin météo le plus capricieux : d'un battement d'ailes il livre grêle puis canicule, au gré du seigneur des cieux.", // N°154
+    "mimimoy": "Mimimoy serait le seul Daemon dont la grande prouesse est de rester introuvable, si banal que les collectionneurs se ruinent juste pour prouver qu'il existe.", // N°155
+    "gekosmic": "Un vieux dresseur jure qu'un Gékosmic a deviné sa question avant qu'il n'ouvre la bouche, puis a répondu d'un éclair psychique jailli de sa carapace de roche.", // N°156
+    "hypnoppo": "Chez les Hypnoppo, on a remarqué que bâiller à table est un signe de respect : ça signifie qu'on aime assez son voisin pour l'endormir avant lui.", // N°157
+    "teleppo": "Un Téléppo peut arriver en retard à un rendez-vous tout en étant déjà reparti : son troisième œil, lui, vit trois secondes dans le futur.", // N°158
+    "omnhippo": "Un vieux dresseur jure qu'un Omnhippo a esquivé une gifle qu'il n'avait pas même décidé de donner : tous ses yeux l'avaient vue venir avant lui.", // N°159
+    "karmaki": "Les naturalistes ont calculé qu'un Karmaki rend très exactement ce qu'il reçoit : lui marcher sur une liane revient à se marcher soi-même sur le pied.", // N°160
+    "otama": "Personne ne sait pourquoi Otama refuse d'ôter son origami, même pour dormir, sauf lui, qui se prend déjà pour un grand guerrier plié en quatre.", // N°161
+    "gamaruto": "Méfie-toi : un Gamaruto adore te tendre la patte façon poignée de main, juste pour te noyer d'un jutsu d'eau au moment où tu la serres.", // N°162
+    "uzumaro": "Uzumaro détient le record du combat gagné sans un geste : bras croisés, il a laissé l'orage et l'adversaire s'épuiser avant de lever le petit doigt.", // N°163
+    "wistree": "Wistree serait le seul Daemon à t'applaudir poliment quand tu te renforces devant lui, juste avant de t'aspirer toute ta belle énergie neuve.", // N°164
+    "guizer": "Ne te fie pas à sa bouille de peluche : Guizer tient une liste noire de tous ceux qui ont osé lui pincer la joue, et n'oublie jamais un nom.", // N°165
+    "dalugazer": "Il paraît qu'un Dalugazer garde plus de rancunes en réserve que de glaçons dans sa banquise, et compte bien les régler toutes, une par une.", // N°166
+    "mobyd": "Les marins racontent qu'apercevoir un Moby D porte malheur, surtout au marin : l'orque blanche ailée n'a jamais pardonné qu'on écrive des romans sur elle.", // N°167
+    "shady": "Chez les Shady, on a remarqué que renverser un vase puis filer à travers le mur est le passe-temps préféré : c'est toujours le chat d'à côté qu'on accuse.", // N°168
+    "shade": "Un Shade aiguise ses griffes phosphorescentes contre le mur à trois heures du matin, non par cruauté, mais purement pour l'ambiance lumineuse.", // N°169
+    "shadow": "Shadow détient le record de la disparition la plus vexante : il a déjà croqué un goûter et filé avant même que l'ombre du dresseur ait touché le sol.", // N°170
+    "caninombre": "Les naturalistes ont calculé qu'un Caninombre absorbe tant de lumière qu'on en a déjà égaré un dans une pièce pourtant parfaitement éclairée.", // N°171
+    "lycanfer": "Un vieux dresseur jure qu'un Lycanfer crache des flammes si froides qu'elles gèlent au lieu de brûler, et qu'il s'en sert surtout pour rafraîchir sa gamelle.", // N°172
+    "tenebrir": "Ténèbrir serait le seul Daemon dont le hurlement éteint tous les lampadaires du quartier, ce qui lui vaut une facture d'électricité étonnamment basse.", // N°173
+    "sepulcru": "Avec sa tête chauve bien trop grande pour ses deux yeux violets, Sépulcru passe ses journées à répéter son regard menaçant dans les flaques, sans grand succès.", // N°174
+    "macabour": "Méfie-toi : un Macabour adore planer très bas et très lentement au-dessus de toi, histoire de te rappeler qu'il a tout son temps, et toi beaucoup moins.", // N°175
+    "condombre": "Condombre détient le record du masque le plus glaçant : une mosaïque de crânes soudés qu'il astique chaque matin comme d'autres cirent leurs chaussures.", // N°176
+    "bidouzen": "Chez les Bidouzen, on a remarqué que les moustaches frémissent juste avant chaque bêtise : c'est leur seul détecteur de mauvaise idée, et il sonne sans arrêt.", // N°177
+    "medisciple": "Personne ne sait pourquoi Medisciple médite toujours les poings serrés, sauf son maître, qui sait qu'un chat bien discipliné reste un chat prêt à griffer.", // N°178
+    "karatame": "Karatame lévite en permanence, non par flemme de marcher, mais parce qu'un vrai maître du kung-fu psychique juge que le sol, franchement, c'est pour les amateurs.", // N°179
+    "geckebre": "Géckèbre serait le seul Daemon qu'on ait confondu avec un rocher si longtemps qu'une mousse a eu le temps d'y pousser avant qu'il ne daigne enfin bouger.", // N°180
+    "geaucke": "Il paraît qu'un Geaucké gaspille plus d'eau à foncer qu'une cascade entière, ce qui explique pourquoi il freine toujours contre un mur trop tard.", // N°181
+    "batchu": "Méfie-toi : un Batchu adore te tourner autour en zigzag crépitant, et tu ne repères la petite chauve-souris qu'à l'instant où elle t'a déjà chatouillé.", // N°182
+    "supabatchu": "Les naturalistes ont calculé qu'un Supabatchu bat des ailes si vite qu'il grille trois moustiques par éclair — et s'excuse rarement pour le bruit.", // N°183
+    "phoechaudi": "Chez les Phoéchaudi, le premier cri n'est pas un pépiement mais un soupir condescendant : ce poussin de phénix mauve trouve déjà les flammes des autres trop tièdes.", // N°184
+    "phoechaudii": "Il paraît qu'un Phoéchaudii passe plus de temps à lisser ses plumes mauves fantômes qu'à voler, persuadé qu'un phénix se doit d'être impeccable même en hantant.", // N°185
+    "phoechaudiii": "Un vieux dresseur jure qu'un Phoéchaudiii ne renaît de ses cendres que lorsque personne ne regarde, jugeant le spectacle indigne d'un public aussi banal.", // N°186
+    "obscurene": "Personne ne sait pourquoi l'Obscurène refuse de nager en eau claire, sauf peut-être qu'un œil aussi luisant préfère rester la seule lumière des abysses.", // N°187
+    "abyssombre": "Méfie-toi : un Abyssombre adore imiter le rocher noir pendant des heures, immobile et patient, juste pour le plaisir de voir une proie changer d'avis trop tard.", // N°188
+    "leviabysse": "Léviabysse détient le record de la plus longue apnée du Nexus : il resterait tapi dans le noir des siècles entiers rien que pour éteindre une seule flamme oubliée.", // N°189
+    "crocavern": "Crocavern serait le seul Daemon à confondre volontairement sieste et embuscade : enfoui dans le sable, il engloutit ce qui passe sans jamais vraiment se réveiller.", // N°190
+    "rosdrakis": "Chez les Rosdrakis, on a remarqué que ce dragonnet rose dort si profondément qu'il ronfle en écailles féeriques, rêvant du colosse qu'il jure devenir un jour.", // N°191
+    "dracosidhe": "Déployer ses ailes de flammes féeriques prend à Dracosidhe une seconde à peine ; ranger correctement sa crête magenta, en revanche, lui prend toute la matinée.", // N°192
+    "archeoptix": "Un vieux dresseur jure qu'un Archéoptix, curieux jusqu'au bout des griffes rouges, apprend un chemin de vent inédit chaque fois qu'il se perd — c'est-à-dire souvent.", // N°193
+    "pterosidhe": "Ptérosidhe détient le record du plané le plus silencieux : sa proie n'apprend qu'elle est chassée qu'au moment où l'ombre de ses ailes féeriques lui tombe dessus.", // N°194
+    "fulguror": "Méfie-toi : un Fulguror adore frapper en premier, non par stratégie mais parce que son corps fossile risque de se fissurer s'il attend son tour trop poliment.", // N°195
+    "rocosaure": "Il paraît qu'un Rocosaure bouge moins en une année qu'une montagne en un siècle : on en aurait pris trois pour des collines avant qu'ils ne ripostent en séisme.", // N°196
+    "givroptere": "Chez les Givroptère, on répète qu'il vaut mieux être bon partout que génial nulle part : ce ptérosaure de givre a traversé tous les âges gelés rien qu'en restant polyvalent.", // N°197
+    "toxyrm": "Toxyrm serait le seul Daemon à bouder son adversaire plutôt qu'à l'attaquer, comptant sur ses glandes déjà venimeuses pour rendre chaque câlin franchement regrettable.", // N°198
+    "wyvortal": "Les naturalistes ont calculé qu'un Wyvortal gagne la plupart de ses duels sans lever une aile : il lui suffit d'empoisonner l'air et d'attendre, increvable et serein.", // N°199
+    "joeyrrant": "Sans yeux mais rancunier jusqu'à la moelle, Joeyrrant s'accroche à sa mère pour ne rien lâcher de la vie — et surtout pour n'oublier aucun affront.", // N°200
+    "wallabisan": "Personne ne sait pourquoi Wallabisan garde son bras d'os toujours du même côté, sauf qu'un demi-mort-vivant aussi timide n'ose sans doute pas demander de retouches.", // N°201
+    "kangoudead": "Il paraît qu'un Kangoudead range encore un petit dans sa poche fantôme, alors qu'il n'a même plus de mâchoire pour lui raconter la moindre histoire au coucher.", // N°202
+    "megamonarx": "MégamonarX détient le record du pas le plus lourd du Nexus : la légende dit qu'un seul de ses déplacements a redessiné trois vallées et fâché tous les géologues.", // N°203
+    "galijah": "Un vieux dresseur jure qu'un Galijah copie n'importe quelle technique après l'avoir vue une fois — sauf les ténèbres, qu'il fuit en gloussant comme un enfant taquin.", // N°204
+    "osquille": "Méfie-toi : un Osquille adore saluer d'un coup de poing sonique qui implose l'eau en coup de tonnerre — spectacle magnifique, jusqu'à ce que tu réalises que c'était pour toi.", // N°205
+    "ro": "Chez les Rô, on a remarqué que rien ne bouge à leur approche nocturne : la proie s'endort, s'empoisonne et s'enlise dans le sable avant d'avoir compris qu'il faisait nuit.", // N°206
+    "mottelave": "Les naturalistes ont calculé qu'un Mottelave met neuf siècles à refroidir : mi-caillou mi-braise, c'est le pire partenaire de câlin jamais recensé.", // N°500
+    "nouiflot": "Il paraît qu'un Nouiflot a plus de pensées philosophiques que de calories, ce ruban de pâte flottant sur l'eau sous la garde d'un oisillon rêveur.", // N°501
+    "sporemante": "Chez les Sporémante, on a remarqué qu'ils infusent leurs cauchemars tel un thé : un coup de chapeau-champignon, une bouffée de spores, et bonne nuit spectrale.", // N°502
+    "ruffardoc": "Ruffardoc détient le record du sprint en armure : ce têtard bardé d'éclats de roche court plus vite qu'un galet ricoché, sans jamais perdre une écaille.", // N°503
+    "dractriss": "Un vieux dresseur jure qu'un Dractriss a grillé son réveil avant que l'alarme sonne : ce dragonnet aux ailerons crépitants frappe toujours une seconde trop tôt.", // N°504
+    "voltaile": "Méfie-toi : un Voltaile adore recharger ses ailes sur les lignes à haute tension, car ce croisé de chauve-souris et de dragonnet prend la foudre pour un hamac.", // N°510
+    "abyssvolt": "Personne ne sait pourquoi Abyssvolt refuse de nager en surface, sauf qu'un serpent des abysses gorgé d'électricité préfère garder ses courts-circuits au frais.", // N°511
+    "oniridrak": "Oniridrak serait le seul Daemon à bâiller pour attaquer : ce dragon des songes endort ses proies d'un souffle et les pourchasse jusque dans leurs rêves.", // N°512
+    "necrospore": "Les naturalistes ont calculé qu'un Nécrospore relâche par éternuement de quoi champignonner tout un cimetière, aboiements d'outre-tombe compris.", // N°514
+    "ombrepsy": "Il paraît qu'un Ombrepsy compte plus de nœuds dans son ombre de pâte molle que de pensées claires dans sa tête embrumée de psychisme.", // N°515
+    "rocaptere": "Un vieux dresseur jure qu'un Rocaptère peut planer trois jours d'affilée sans battre de l'aile, réchauffé par la lave qui suinte de sa carcasse rocheuse.", // N°516
+    "givrasol": "Givrasol détient le record du rot le plus froid jamais mesuré : un geyser de givre capable de figer la terre labourée par ses propres sabots.", // N°517
+    "fissuraillus": "Chez les Fissuraillus, on a remarqué que chaque battement d'ailes membraneuses ravive la lave endormie dans leurs fissures, façon soufflet de forge ailé.", // N°518
+    "magmaillus": "Personne ne sait pourquoi Magmaillus refuse de se poser près de l'eau, sauf les volcanologues : ce dragon de roche en fusion tient trop à ses ailes rougeoyantes.", // N°519
+    "scorieve": "Méfie-toi : un Scoriève adore se rouler dans les braises pour durcir sa carapace de scorie, quitte à transformer ton feu de camp en bloc de roche fumante.", // N°520
+    "basaltor": "Basaltor serait le seul Daemon à se fissurer en colonnes de basalte encore tièdes lorsqu'il boude, se reformant en mur plus têtu dès qu'on ose le contrarier.", // N°521
+    "siderobloc": "Il paraît qu'un Sidérobloc contient plus de fer dans sa carcasse que d'idées dans son crâne de roche, sa lave d'antan ayant durci en un blindage grinçant.", // N°522
+    "sideralithe": "Les naturalistes ont calculé qu'un Sidéralithe affole les boussoles à cent pas, son titan de fer et de roche déviant même les étoiles filantes égarées.", // N°523
+    "nouibrume": "Chez les Nouïbrume, on raconte que chaque ruban de pâte flotte dans sa propre brume mentale, si bien qu'un oisillon perdu s'y assoupit avant d'y comprendre goutte.", // N°524
+    "oniromouille": "Un vieux dresseur jure qu'un Oniromouille file plus vite que le songe qu'il t'expédie, filant sur l'eau pour éclabousser tes rêves avant que tu te saches trempé.", // N°525
+    "spectrelame": "Chez les Spectrelame, on jure que leurs lames spectrales taillent les cauchemars en rondelles avant d'y saupoudrer une pincée de spores empoisonnées.", // N°526
+    "necromante": "Il paraît qu'un Nécromante récolte plus d'âmes égarées que de vraies proies, et pourtant ses spores et ses cauchemars moisissent gaiement côte à côte.", // N°527
+    "carapoing": "Carapoing serait le seul Daemon à cogner d'un poing minéral tout en grommelant des injures d'insecte : sa cuirasse de têtard n'a rien perdu de son sale caractère.", // N°528
+    "roctobrute": "Un vieux dresseur jure qu'un Roctobrute peut aplatir un rocher d'un uppercut de têtard bodybuildé, sans jamais fêler sa carapace d'insecte cuirassé.", // N°529
+    "voltriss": "Les naturalistes ont calculé qu'un Voltriss crépite à chaque battement d'ailerons, comme si un dragonnet avait avalé un orage entier par pure gourmandise.", // N°530
+    "draconvolt": "Draconvolt détient le record de la charge la plus rapide jamais mesurée : un éclair à écailles qui frappe bien avant que son rugissement de dragon ne t'atteigne.", // N°531
+    "eolectre": "Personne ne sait pourquoi Éolectre refuse de se poser par temps calme, sauf les vieux marins : sans vent ni orage, ce croisement de chauve-souris et de dragonnet s'ennuie ferme.", // N°532
+    "stratevolt": "Méfie-toi : un Stratévolt adore piquer depuis les nuages pour te roussir les cheveux d'une décharge, puis remonter en ricanant vers la stratosphère.", // N°533
+    "abyssonde": "Chez les Abyssonde, on raconte que ce serpent des grands fonds a gobé tant d'anguilles électriques qu'il éclaire désormais les abysses comme une enseigne de bar.", // N°534
+    "marefoudre": "Il paraît qu'un Maréfoudre encaisse plus de vagues et de courts-circuits qu'un phare en pleine tempête, sans jamais éteindre l'étincelle qui grésille sous ses écailles.", // N°535
+    "oniragon": "Oniragon serait le seul Daemon à endormir sa proie d'un regard hypnotique puis à la border d'un souffle draconique, histoire de faire les choses proprement.", // N°536
+    "songedrak": "Un vieux dresseur jure qu'un Songedrak peut absorber tes rêves toute une nuit sans broncher, ce dragon placide encaissant les cauchemars comme un oreiller à écailles.", // N°537
+    "sporcrypte": "Les naturalistes ont calculé qu'un Sporcrypte sème assez de spores nécrosantes derrière lui pour changer une crypte entière en champ de champignons hantés.", // N°538
+    "miasmort": "Miasmort détient le record du miasme le plus expéditif : ce spectre-champignon crache un nuage mortel puis s'évapore, fragile comme un vieux chapeau de bolet.", // N°539
+    "ombrelin": "Personne ne sait pourquoi Ombrelin refuse de tenir en place, sauf les cuisiniers : cette ombre en forme de nouille glisse partout et lit tes pensées entre deux plis.", // N°540
+    "psychombre": "Méfie-toi : un Psychombre adore filer dans ton dos telle une ombre élastique, puis te souffler une pensée gênante à l'oreille juste avant de frapper.", // N°541
+    "givrebre": "Chez les Givrèbre, on a remarqué que cette chèvre de pierre gelée broute le givre du sol et rumine des glaçons, semant des empreintes cristallines derrière elle.", // N°542
+    "cryolithe": "Il paraît qu'un Cryolithe a plus de patience qu'un glacier : ce béhémoth de roche et de glace met une saison à se retourner, mais rien ne fissure sa carapace polaire.", // N°543
 }
 
 /** Anecdote d'une espèce (si fichée par L'Archiviste). */

@@ -101,7 +101,7 @@ export function archivisteFunFact(speciesId: string, hour: number): string {
     const sp = getSpecies(speciesId)
     const name = sp?.name ?? speciesId
     const fact = funFactFor(speciesId) ?? sp?.funFact
-    if (fact) return `💡 Le savais-tu ? ${fact}`
+    if (fact) return `💡 ${fact}` // les facts s'auto-cadrent (« Savais-tu que… », « Il paraît que… ») → pas de préfixe figé
     const moment = SLOT_LABEL[archivisteSlot(hour)]
     return `💡 ${name}… une pièce que j'observe volontiers en ${moment}. Un spécimen que tout collectionneur rêve de ficher !`
 }
