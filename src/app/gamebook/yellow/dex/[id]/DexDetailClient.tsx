@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
@@ -68,7 +68,7 @@ export default function DexDetailClient({ id }: { id: string }) {
     const dex = usePokedex()
     const player = usePlayer()
     useEffect(() => { void loadYellowSave() }, []) // hydrate la save (accès direct par URL) ; défaut = verrouillé
-    const sp = getSpecies(id) // getSpecies (pas SPECIES[]) → résout AUSSI les fusions (CUSTOM_SPECIES) pour leurs fiches
+    const sp = SPECIES[id] // dex de référence = Pokédex de BASE uniquement (les fusions/customs sont dans le FUSIODEX)
     if (!sp) return null
     // VERROU — modèle « L'Archiviste » : la FICHE n'est consultable que si le Daemon a été VU ce run (seenThisRun,
     //   la LIGNE existe) ET que la fiche a été DÉBLOQUÉE en battant L'Archiviste (fichesUnlockedThisRun). Accès URL

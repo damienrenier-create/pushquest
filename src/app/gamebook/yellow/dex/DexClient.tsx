@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -38,8 +38,10 @@ export default function DexClient() {
     useEffect(() => { void loadYellowSave() }, [])
 
     // LIGNES = espèces VUES ce run (seenThisRun) → scoping strict par run, natif (plus de tiérage run3Used/cumulatif).
+    //   On mappe via SPECIES (Pokédex de BASE) et NON getSpecies : les fusions (→ FUSIODEX) et les Daemons CUSTOM des
+    //   joueurs (dexNo hashé 900-9899) ne sont PAS dans SPECIES → naturellement exclus du dex de référence.
     const seen = useMemo<SpeciesData[]>(
-        () => player.seenThisRun.map((id) => getSpecies(id)).filter((s): s is SpeciesData => !!s),
+        () => player.seenThisRun.map((id) => SPECIES[id]).filter((s): s is SpeciesData => !!s),
         [player.seenThisRun],
     )
     const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun])
