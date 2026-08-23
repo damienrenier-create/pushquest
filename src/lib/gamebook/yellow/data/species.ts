@@ -2115,7 +2115,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 80, moveId: "ultralaser" },
             { level: 90, moveId: "lance_soleil" }, // LA plus forte attaque Plante (120, en 2 temps)
         ],
-        catchRate: 25, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", exclusive: true, role: "Sol/Plante — colosse-sylve (mur anti-Eau/Élec)",
+        catchRate: 25, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", exclusive: true, postLeague: true, role: "Sol/Plante — colosse-sylve (mur anti-Eau/Élec)",
         description: "Arbre-titan millénaire à l'écorce de roche. Immensément lent mais quasi inamovible : ses racines fendent le sol et ses ramures balaient l'ennemi.",
         sprite: "/yellow/sprites/dex/sylvebarbe.png",
     },
@@ -2344,7 +2344,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 80, moveId: "devoreur_ombres" },  // gros STAB TÉNÈBRES (siphon)
             { level: 88, moveId: "frappe_atlas" },     // capstone SOL : dégâts = NIVEAU (ignore son atk faible → parfait pour le mur)
         ],
-        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true, postLeague: true,
         role: "Gek de la Grotte — SOL/TÉNÈBRES, mur immuable, apprend TOUTES les CT",
         description: "Golem fossile jumeau de Gékroc, mais sa pierre a viré à l'obsidienne : un cœur d'ombre bat sous sa carapace impénétrable. Rien ne semble pouvoir l'ébranler.",
         sprite: "/yellow/sprites/dex/geckebre.png",
