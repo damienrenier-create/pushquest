@@ -52,7 +52,7 @@ const box: React.CSSProperties = {
     boxShadow: "0 0 36px rgba(0,0,0,0.5)",
 }
 const head: React.CSSProperties = { fontSize: 20, fontWeight: 800, letterSpacing: 0.5, marginBottom: 4 }
-const sub: React.CSSProperties = { fontSize: 12, opacity: 0.85, marginBottom: 12 }
+const sub: React.CSSProperties = { fontSize: 12, opacity: 0.85, marginBottom: 12, whiteSpace: "pre-line", lineHeight: 1.45 }
 const row: React.CSSProperties = { display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }
 const card: React.CSSProperties = { width: 62, background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "6px 2px" }
 const img: React.CSSProperties = { width: 46, height: 46, objectFit: "contain", imageRendering: "pixelated" }

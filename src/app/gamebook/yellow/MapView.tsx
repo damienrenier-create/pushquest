@@ -1134,7 +1134,9 @@ function hashHue(s: string): number {
 // EX-SKINS HARDCODÉS RETIRÉS : task1/franss/embi rendent désormais le sprite de base (Red) jusqu'à ce qu'ils
 //   s'achètent un skin chez la Fashion Victim. Leur ancien skin est versé au POOL (EX_PLAYER_SKINS) et reproposé
 //   en 2e place à leur 1re visite. Vide pour l'instant (plus aucun skin hardcodé).
-const PLAYER_GEN3_SPRITE: Record<string, string> = {}
+const PLAYER_GEN3_SPRITE: Record<string, string> = {
+    "l'archiviste": "/yellow/sprites/archiviste_gen3.png", // L'ARCHIVISTE (Collectionneur du dex) — sheet Gen3 19×4, clé = pseudo lowercased
+}
 
 function RemotePlayerSprite({
     rp,

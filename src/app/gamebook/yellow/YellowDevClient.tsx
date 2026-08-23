@@ -151,6 +151,8 @@ import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
+import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
+import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, buildArchivisteTeam, archivisteGreeting, archivisteFunFact } from "@/lib/gamebook/yellow/data/collectionneurNpc"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
@@ -458,6 +460,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
     const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
     const [ghostFight, setGhostFight] = useState<{ ghost: Run2Ghost; enemy: MonInstance[] } | null>(null)
+    // L'ARCHIVISTE (Collectionneur du dex) — erre sur la Ville Jaune, ré-affrontable (pas de filtre defeatedTrainers).
+    const archivistes = useArchiviste(mapPlayer.mapId)
+    const [archivisteFight, setArchivisteFight] = useState<{ npc: ArchivisteNpc; enemy: MonInstance[]; blurb: string } | null>(null)
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
     const [confirmStartReplay, setConfirmStartReplay] = useState<"run2" | "run3" | null>(null) // « rejouer un run » : confirmation avant de lancer
@@ -467,6 +472,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
         if (isFishing) return // PÊCHE en cours : on ignore les clics d'adversaire (sinon la session resterait bloquée en combat).
+        // L'ARCHIVISTE (Collectionneur du dex) — équipe tirée au hasard parmi les Daemons DÉJÀ VUS, niveau centré sur
+        //   la moyenne du joueur (moyenne d'équipe == moyenne joueur), Daemons NATURE, IA « hof ». Ré-affrontable.
+        if (uid === ARCHIVISTE_ID) {
+            const npc = archivistes.find((a) => a.userId === ARCHIVISTE_ID)
+            if (!npc) return
+            const team = getPlayer().team
+            if (!team.some((m) => m.currentHp > 0)) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Ton équipe est K.O. ! Soigne-toi avant de me montrer ta collection."]); return }
+            const mean = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
+            const seed = Math.floor(Math.random() * 1e9) >>> 0
+            const enemy = buildArchivisteTeam(getPokedex().seen, mean, seed, team.length)
+            if (enemy.length === 0) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Tu n'as encore croisé aucun Daemon digne d'être fiché ! Reviens quand tu en auras rencontré quelques-uns."]); return }
+            const now = new Date()
+            const funMon = team[Math.floor(Math.random() * team.length)]
+            const blurb = archivisteGreeting(now.getDay(), now.getHours()) + "\n\n" + archivisteFunFact(funMon.speciesId, now.getHours())
+            setArchivisteFight({ npc, enemy, blurb })
+            return
+        }
         // PNJ-JOUEUR RUN 2 (Grotte 1F) : combat vs l'équipe run-2 GELÉE d'un autre joueur (traité AVANT le check arène).
         const ghost = run2Ghosts.find((g) => g.userId === uid)
         if (ghost) {
@@ -1164,7 +1186,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // seulement → A ratait souvent les reflets qui errent ; le tactile, lui, ignorait la distance).
                     const cheb = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
                     // Reflets d'arène OU PNJ-joueurs run 2 (Grotte 1F) : A près (≤1 case) → défie le plus proche (comme le clic/tap).
-                    const opp = [...arenaOpponents, ...visibleGhosts].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0]
+                    const opp = [...arenaOpponents, ...visibleGhosts, ...archivistes].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0]
                     if (opp) handleArenaClick(opp.userId) // même gate/lancement que le clic (dont la limite run 3 : 1 match miroir/jour)
                     else if (tryCasinoObjectA()) { /* table roulette / croupier (casino) */ }
                     else casinoAFallback()
@@ -2276,7 +2298,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // ARÈNE JOUEUR / PNJ-joueur run 2 : A près d'un REFLET (≤1 case, diagonales incl.) → le défie, comme le
                     //   clic/tap ET le clavier (le bouton A tactile l'ignorait → il fallait CLIQUER le reflet). Bug corrigé.
                     const chebR = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
-                    const oppR = [...arenaOpponents, ...visibleGhosts].filter((o) => chebR(o) <= 1).sort((a, b) => chebR(a) - chebR(b))[0]
+                    const oppR = [...arenaOpponents, ...visibleGhosts, ...archivistes].filter((o) => chebR(o) <= 1).sort((a, b) => chebR(a) - chebR(b))[0]
                     if (oppR) { handleArenaClick(oppR.userId); return }
                     pressA()
                 }}
@@ -2293,7 +2315,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <BattleScreen />
                     </BattleBoundary>
                 ) : (
-                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts]} onArenaClick={handleArenaClick} myAvatar={player.chosenAvatar} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts, ...archivistes]} onArenaClick={handleArenaClick} myAvatar={player.chosenAvatar} />
                 )}
             </GameBoyShell>
 
@@ -4825,6 +4847,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         setGhostFight(null)
                     }}
                     onCancel={() => setGhostFight(null)}
+                />
+            )}
+
+            {archivisteFight && !battle && (
+                <ArenaChallengeModal
+                    title={`🔍 ${ARCHIVISTE_NAME}`}
+                    subtitle={archivisteFight.blurb + "\n\n— En garde ! Montre-moi ce que vaut ta collection."}
+                    accent="#3fb6a8"
+                    enemyTeam={archivisteFight.enemy}
+                    onFight={() => {
+                        // Équipe déjà tirée au hasard (lead = draw[0]) → pas de randomizeLead. Daemons NATURE, IA « hof ».
+                        startTrainerBattle(getPlayer().team, archivisteFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: ARCHIVISTE_TRAINER_ID, reward: 0, aiLevel: "hof" })
+                        setArchivisteFight(null)
+                    }}
+                    onCancel={() => setArchivisteFight(null)}
                 />
             )}
 

@@ -163,6 +163,9 @@ export interface SpeciesData {
     growthRate?: "medium_fast" | "fast" | "slow" | "medium_slow"
     /** Rôle de game-design (lisibilité éditoriale, non utilisé par le moteur). */
     role?: string
+    /** ANECDOTE de fiche (dex de L'Archiviste) : « le savais-tu ? » débité par le Collectionneur à la rencontre.
+     *  Purement éditorial (non lu par le moteur). Défaut absent → repli générique. */
+    funFact?: string
     /** TALENT SECRET d'une lignée CUSTOM (créateur de Daemon) : clé de talent lue par le moteur (talentEffects).
      *  Undefined pour toute espèce standard → aucun effet (le combat existant est strictement inchangé). */
     secretTalent?: string
