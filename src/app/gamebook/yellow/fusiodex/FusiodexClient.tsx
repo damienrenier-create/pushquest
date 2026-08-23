@@ -139,7 +139,9 @@ export default function FusiodexClient() {
     const ownedFusions = useMemo(() => {
         const box = [...player.team, ...player.pc]
         const seen = new Map<string, ReturnType<typeof getSpecies>>()
-        for (const m of box) { const sp = getSpecies(m.speciesId); if (sp && sp.dexNo >= 500 && !seen.has(sp.id)) seen.set(sp.id, sp) }
+        // Fusions = dexNo 500-899 (base Grotte 500-543 + Ligue 550+). Les Daemons CUSTOM des joueurs (dexNo hashé
+        //   900-9899) ne sont PAS des fusions → exclus de « Tes fusionnés ».
+        for (const m of box) { const sp = getSpecies(m.speciesId); if (sp && sp.dexNo >= 500 && sp.dexNo < 900 && !seen.has(sp.id)) seen.set(sp.id, sp) }
         return [...seen.values()].filter((sp): sp is NonNullable<typeof sp> => !!sp).sort((a, b) => a.dexNo - b.dexNo)
     }, [player.team, player.pc])
     const [fiche, setFiche] = useState<string | null>(null) // fiche d'espèce-fusion possédée (plein écran)
