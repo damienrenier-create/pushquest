@@ -6,7 +6,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { funFactFor } from "@/lib/gamebook/yellow/data/collectionneurFunFacts"
 import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
@@ -68,7 +69,7 @@ export default function DexDetailClient({ id }: { id: string }) {
     const dex = usePokedex()
     const player = usePlayer()
     useEffect(() => { void loadYellowSave() }, []) // hydrate la save (accès direct par URL) ; défaut = verrouillé
-    const sp = SPECIES[id]
+    const sp = getSpecies(id) // getSpecies (pas SPECIES[]) → résout AUSSI les fusions (CUSTOM_SPECIES) pour leurs fiches
     if (!sp) return null
     // VERROU — modèle « L'Archiviste » : la FICHE n'est consultable que si le Daemon a été VU ce run (seenThisRun,
     //   la LIGNE existe) ET que la fiche a été DÉBLOQUÉE en battant L'Archiviste (fichesUnlockedThisRun). Accès URL
@@ -146,7 +147,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                 })()}
 
                 {/* FUN FACT — anecdote de L'Archiviste (le Collectionneur), s'il en a fiché une pour cette espèce. */}
-                {sp.funFact && <div style={S.funFact}>💡 <b>Le savais-tu&nbsp;?</b> {sp.funFact}</div>}
+                {(funFactFor(sp.id) ?? sp.funFact) && <div style={S.funFact}>💡 <b>Le savais-tu&nbsp;?</b> {funFactFor(sp.id) ?? sp.funFact}</div>}
 
                 {/* LOCALISATION — historique du JOUEUR uniquement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
                 {(() => {

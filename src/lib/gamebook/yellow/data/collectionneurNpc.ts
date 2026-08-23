@@ -11,6 +11,7 @@
 import type { MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies, DEX_ULTRA_SECRET } from "./species"
+import { funFactFor } from "./collectionneurFunFacts"
 import { Rng } from "../battle/rng"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 
@@ -99,7 +100,8 @@ export function archivisteGreeting(day: number, hour: number): string {
 export function archivisteFunFact(speciesId: string, hour: number): string {
     const sp = getSpecies(speciesId)
     const name = sp?.name ?? speciesId
-    if (sp?.funFact) return `💡 Le savais-tu ? ${sp.funFact}`
+    const fact = funFactFor(speciesId) ?? sp?.funFact
+    if (fact) return `💡 Le savais-tu ? ${fact}`
     const moment = SLOT_LABEL[archivisteSlot(hour)]
     return `💡 ${name}… une pièce que j'observe volontiers en ${moment}. Un spécimen que tout collectionneur rêve de ficher !`
 }
