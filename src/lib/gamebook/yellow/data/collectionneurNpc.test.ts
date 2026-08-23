@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS } from "./collectionneurNpc"
+import { baseSpeciesOf } from "./ace"
 
 const POOL = ["feuillichot", "broutame", "piouflot", "tetardoc", "draclet", "cailloutchi", "sporbeo", "namicha"]
 
@@ -28,9 +29,20 @@ describe("archivisteGreeting — matrice jour × heure", () => {
 })
 
 describe("buildArchivisteTeam — équipe du Collectionneur", () => {
-    it("ne tire QUE parmi les espèces vues (pool)", () => {
+    it("ne tire QUE parmi les LIGNÉES vues (pool) — évolué au stade du niveau", () => {
         const team = buildArchivisteTeam(POOL, 30, 12345, 6)
-        for (const m of team) expect(POOL).toContain(m.speciesId)
+        // Les Daemons sont évolués au stade naturel du niveau (« même stade que le joueur ») → on vérifie que leur
+        //   BASE de lignée fait bien partie du pool des espèces vues.
+        for (const m of team) expect(POOL).toContain(baseSpeciesOf(m.speciesId))
+    })
+
+    it("évolue au STADE du niveau (même stade que le joueur)", () => {
+        // À bas niveau, une lignée reste au stade de base ; à haut niveau, elle est évoluée.
+        const low = buildArchivisteTeam(["piouflot"], 3, 1, 1)[0]
+        const high = buildArchivisteTeam(["piouflot"], 60, 1, 1)[0]
+        expect(baseSpeciesOf(low.speciesId)).toBe("piouflot")
+        expect(baseSpeciesOf(high.speciesId)).toBe("piouflot")
+        expect(high.speciesId).not.toBe(low.speciesId) // évolué à niveau élevé
     })
 
     it("taille = min(count, pool, 6)", () => {

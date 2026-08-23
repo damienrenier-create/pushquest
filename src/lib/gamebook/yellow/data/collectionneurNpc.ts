@@ -12,6 +12,7 @@ import type { MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies, DEX_ULTRA_SECRET } from "./species"
 import { funFactFor } from "./collectionneurFunFacts"
+import { baseSpeciesOf, speciesAtLevel } from "./ace"
 import { Rng } from "../battle/rng"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 
@@ -34,6 +35,15 @@ export function archivisteSlot(hour: number): 0 | 1 | 2 | 3 {
 }
 
 const SLOT_LABEL = ["matin", "journée", "soirée", "nuit"] as const
+
+/** PREMIÈRE RENCONTRE — il se présente, REMET le dex (consultable de suite) et explique la règle : lignes à la
+ *  rencontre, fiches complètes seulement après l'avoir battu. Affiché une fois (pose collectionneurDexGiven). */
+export const ARCHIVISTE_INTRO_LINES: string[] = [
+    "Ah, un œil de collectionneur, ça se reconnaît ! Enchanté : je suis L'Archiviste, gardien du grand catalogue des Daemons.",
+    "Tiens, ce DEX est à toi — dès maintenant. Consulte-le quand tu veux : chaque Daemon que tu croises y inscrira sa ligne, et je le tiens à jour.",
+    "Mais la FICHE COMPLÈTE d'un Daemon observé, je ne la révèle qu'à qui me bat en duel. Mets-moi au tapis et j'actualise tout ce que tu as vu !",
+    "Reviens me défier quand tu te sens prêt… avec une équipe digne d'un vrai collectionneur.",
+]
 
 /** DIALOGUES DE PASSIONNÉ — matrice [jour 0-6 (0=dimanche, getDay())][tranche 0-3]. Un ton différent chaque jour
  *  et chaque moment. La ligne de FUN FACT (sur un Daemon de l'équipe joueur) est ajoutée séparément par le launcher. */
@@ -125,5 +135,11 @@ export function buildArchivisteTeam(pool: readonly string[], playerMean: number,
     // Correction à somme nulle → la moyenne d'équipe retombe EXACTEMENT sur playerMean.
     let residual = offs.reduce((a, b) => a + b, 0)
     for (let i = 0; residual !== 0; i = (i + 1) % offs.length) { const step = residual > 0 ? -1 : 1; offs[i] += step; residual += step }
-    return draw.map((id, i) => createMonInstance(id, Math.max(1, Math.min(100, playerMean + offs[i])), { owned: false }))
+    return draw.map((id, i) => {
+        const level = Math.max(1, Math.min(100, playerMean + offs[i]))
+        // MÊME STADE que le joueur : on évolue l'espèce tirée au stade NATUREL pour ce niveau (comme les équipes de
+        //   dresseurs), pour ne jamais aligner un stade de base sous-évolué face à des finales.
+        const staged = speciesAtLevel(baseSpeciesOf(id), level)
+        return createMonInstance(staged, level, { owned: false })
+    })
 }

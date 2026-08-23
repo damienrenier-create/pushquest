@@ -80,7 +80,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven } from "@/lib/gamebook/yellow/store/playerStore"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -152,7 +152,7 @@ import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/type
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
 import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
-import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, buildArchivisteTeam, archivisteGreeting, archivisteFunFact } from "@/lib/gamebook/yellow/data/collectionneurNpc"
+import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, buildArchivisteTeam, archivisteGreeting } from "@/lib/gamebook/yellow/data/collectionneurNpc"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
@@ -477,6 +477,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (uid === ARCHIVISTE_ID) {
             const npc = archivistes.find((a) => a.userId === ARCHIVISTE_ID)
             if (!npc) return
+            // 1re RENCONTRE : il se présente + REMET le dex (consultable de suite). Pas de combat cette fois — il faudra
+            //   revenir le défier pour débloquer les fiches complètes. Le fun fact, lui, arrive à SA DÉFAITE.
+            if (!getPlayer().collectionneurDexGiven) {
+                setCollectionneurDexGiven(); persistYellowSave()
+                showDialogue("archiviste", ARCHIVISTE_NAME, ARCHIVISTE_INTRO_LINES)
+                return
+            }
             const team = getPlayer().team
             if (!team.some((m) => m.currentHp > 0)) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Ton équipe est K.O. ! Soigne-toi avant de me montrer ta collection."]); return }
             const mean = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
@@ -484,8 +491,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const enemy = buildArchivisteTeam(getPokedex().seen, mean, seed, team.length)
             if (enemy.length === 0) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Tu n'as encore croisé aucun Daemon digne d'être fiché ! Reviens quand tu en auras rencontré quelques-uns."]); return }
             const now = new Date()
-            const funMon = team[Math.floor(Math.random() * team.length)]
-            const blurb = archivisteGreeting(now.getDay(), now.getHours()) + "\n\n" + archivisteFunFact(funMon.speciesId, now.getHours())
+            const blurb = archivisteGreeting(now.getDay(), now.getHours()) // dialogue passionné jour×heure (le fun fact est pour la défaite)
             setArchivisteFight({ npc, enemy, blurb })
             return
         }

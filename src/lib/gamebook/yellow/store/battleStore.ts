@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, setCollectionneurDexGiven, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -33,6 +33,7 @@ import { bossEnemyKey, leagueEnemyKey } from "../data/run3Score"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies, registerCustomSpecies } from "../data/species"
+import { funFactFor } from "../data/collectionneurFunFacts" // L'ARCHIVISTE : réservoir de fun facts (dits à SA défaite)
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
@@ -732,11 +733,25 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // CT du sbire possédée AVANT ce combat ? (le ticket sbire ne tombe qu'APRÈS l'avoir décrochée).
     const hadSbireCt = getPlayer().ownedCts.includes(SBIRE_REWARD_CT_ID)
     if (b.outcome === "win" && storeState.trainer) {
-        // L'ARCHIVISTE (Collectionneur du dex) : 1re victoire ⇒ OFFRE le dex-catalogue (bouton menu) ; CHAQUE victoire
-        //   ⇒ débloque EN BLOC les fiches de toutes les lignes actuellement vues. Ré-affrontable (aucun autre effet).
+        // L'ARCHIVISTE (Collectionneur du dex) — le dex est déjà OFFERT à la 1re rencontre ; ici, à SA DÉFAITE, il
+        //   débloque EN BLOC les fiches complètes des Daemons observés + DIT un fun fact sur un Daemon de TON équipe
+        //   qui l'a affronté (via rematchReward → dialogue post-combat). Ré-affrontable.
         if (storeState.trainer.trainerId?.startsWith("collectionneur:")) {
-            setCollectionneurDexGiven()
             unlockFichesFromSeen()
+            const myTeam = getPlayer().team
+            const withFact = myTeam.filter((m) => funFactFor(m.speciesId))
+            const pool = withFact.length ? withFact : myTeam
+            const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null
+            const lines = [
+                "Splendide duel ! Ton équipe a le souffle des grandes collections.",
+                "J'actualise ton dex : les fiches complètes des Daemons que tu as observés sont désormais consultables.",
+            ]
+            if (pick) {
+                const nm = pick.nickname || getSpecies(pick.speciesId)?.name || pick.speciesId
+                const fact = funFactFor(pick.speciesId)
+                lines.push(fact ? `Et un présent d'expert, sur ton ${nm} : ${fact}` : `Et prends soin de ton ${nm} — une bien belle pièce de collection !`)
+            }
+            rematchReward = { npcId: "archiviste", npcName: "L'Archiviste", lines }
         }
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
             // ACE : sa défaite ratchete son niveau (+2 sur ta MOYENNE d'équipe) + mémorise le contre.

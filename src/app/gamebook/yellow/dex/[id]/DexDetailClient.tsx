@@ -7,7 +7,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
-import { funFactFor } from "@/lib/gamebook/yellow/data/collectionneurFunFacts"
 import { usePokedex, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib/gamebook/yellow/data/dexMensurations"
@@ -146,9 +145,6 @@ export default function DexDetailClient({ id }: { id: string }) {
                     ) : <p style={S.desc}>{sp.description}</p>
                 })()}
 
-                {/* FUN FACT — anecdote de L'Archiviste (le Collectionneur), s'il en a fiché une pour cette espèce.
-                    Le texte s'auto-cadre (« Savais-tu que… », « Il paraît que… ») → on n'ajoute pas de préfixe figé. */}
-                {(funFactFor(sp.id) ?? sp.funFact) && <div style={S.funFact}>💡 <b>L'Archiviste&nbsp;:</b> {funFactFor(sp.id) ?? sp.funFact}</div>}
 
                 {/* LOCALISATION — historique du JOUEUR uniquement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
                 {(() => {
@@ -307,7 +303,6 @@ const S: Record<string, React.CSSProperties> = {
     chipRow: { display: "flex", gap: 6, flexWrap: "wrap" },
     role: { fontSize: 10, opacity: 0.65, marginTop: 6, fontStyle: "italic" },
     desc: { fontSize: 12, lineHeight: 1.5, opacity: 0.85, marginBottom: 14, background: "#262626", border: "1px solid #000", borderRadius: 8, padding: "10px 12px" },
-    funFact: { fontSize: 12, lineHeight: 1.5, marginBottom: 14, background: "#2a2618", border: "1px solid #6b5a1e", borderRadius: 8, padding: "10px 12px", color: "#f0e2a8" },
 
     metaRow: { display: "flex", gap: 8, marginBottom: 14 },
     metaCell: { flex: 1, background: "#262626", border: "1px solid #000", borderRadius: 8, padding: "8px 6px", display: "flex", flexDirection: "column", gap: 3, alignItems: "center" },
