@@ -58,6 +58,8 @@ export interface YellowSave {
     sbireDefeatsToday: number
     /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    /** L'ARCHIVISTE — nb de matchs disputés AUJOURD'HUI (gagné ou perdu ; max 3, reset quotidien). Escalade la team. */
+    archivisteMatchesToday?: number
     comparisonConsultsToday?: number
     /** VIEUX SAGE SAIYAN : nb de points Saiyan redistribués AUJOURD'HUI (reset quotidien ; plafond 20/jour). Optionnel (défaut 0). */
     sageSaiyanPointsToday?: number
@@ -655,6 +657,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
+        archivisteMatchesToday: typeof o.archivisteMatchesToday === "number" ? Math.max(0, Math.floor(o.archivisteMatchesToday)) : 0,
         comparisonConsultsToday: typeof o.comparisonConsultsToday === "number" ? Math.max(0, Math.floor(o.comparisonConsultsToday)) : 0,
         sageSaiyanPointsToday: typeof o.sageSaiyanPointsToday === "number" ? Math.max(0, Math.floor(o.sageSaiyanPointsToday)) : 0,
         ananasLastBadgeCount: typeof o.ananasLastBadgeCount === "number" ? Math.max(0, Math.floor(o.ananasLastBadgeCount)) : 0,

@@ -80,7 +80,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch } from "@/lib/gamebook/yellow/store/playerStore"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -152,7 +152,7 @@ import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/type
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
 import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
-import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, buildArchivisteTeam, archivisteGreeting } from "@/lib/gamebook/yellow/data/collectionneurNpc"
+import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, ARCHIVISTE_DAILY_LIMIT_LINES, ARCHIVISTE_MAX_MATCHES_PER_DAY, archivisteEscalation, buildArchivisteTeam, archivisteGreeting } from "@/lib/gamebook/yellow/data/collectionneurNpc"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
@@ -484,11 +484,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 showDialogue("archiviste", ARCHIVISTE_NAME, ARCHIVISTE_INTRO_LINES)
                 return
             }
+            // MAX 3 matchs/jour (gagnés OU perdus) → au-delà, il s'incline et propose de revenir demain.
+            const played = archivisteMatchesToday()
+            if (played >= ARCHIVISTE_MAX_MATCHES_PER_DAY) { showDialogue("archiviste", ARCHIVISTE_NAME, ARCHIVISTE_DAILY_LIMIT_LINES); return }
             const team = getPlayer().team
             if (!team.some((m) => m.currentHp > 0)) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Ton équipe est K.O. ! Soigne-toi avant de me montrer ta collection."]); return }
             const mean = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
             const seed = Math.floor(Math.random() * 1e9) >>> 0
-            const enemy = buildArchivisteTeam(getPokedex().seen, mean, seed, team.length)
+            // ESCALADE du jour : match 1 = base, match 2 = +3 niv/50 Saiyan, match 3 = +6 niv/95 Saiyan.
+            const { levelBonus, saiyanPoints } = archivisteEscalation(played)
+            const enemy = buildArchivisteTeam(getPokedex().seen, mean, seed, team.length, levelBonus, saiyanPoints)
             if (enemy.length === 0) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Tu n'as encore croisé aucun Daemon digne d'être fiché ! Reviens quand tu en auras rencontré quelques-uns."]); return }
             const now = new Date()
             const blurb = archivisteGreeting(now.getDay(), now.getHours()) // dialogue passionné jour×heure (le fun fact est pour la défaite)
@@ -4867,7 +4872,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     accent="#3fb6a8"
                     enemyTeam={archivisteFight.enemy}
                     onFight={() => {
-                        // Équipe déjà tirée au hasard (lead = draw[0]) → pas de randomizeLead. Daemons NATURE, IA « hof ».
+                        // On CONSOMME le match du jour ICI (vrai lancement) → scouter puis Annuler ne compte pas. Max 3/jour.
+                        recordArchivisteMatch(); persistYellowSave()
+                        // Équipe déjà tirée au hasard (lead = draw[0]) → pas de randomizeLead. IA « hof ».
                         startTrainerBattle(getPlayer().team, archivisteFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: ARCHIVISTE_TRAINER_ID, reward: 0, aiLevel: "hof" })
                         setArchivisteFight(null)
                     }}

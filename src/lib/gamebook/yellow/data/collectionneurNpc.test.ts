@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS } from "./collectionneurNpc"
+import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation } from "./collectionneurNpc"
 import { baseSpeciesOf } from "./ace"
 
 const POOL = ["feuillichot", "broutame", "piouflot", "tetardoc", "draclet", "cailloutchi", "sporbeo", "namicha"]
@@ -85,5 +85,34 @@ describe("buildArchivisteTeam — équipe du Collectionneur", () => {
     it("exclut les légendaires ultra-secrets (megamonarx/galijah) même s'ils sont vus", () => {
         const team = buildArchivisteTeam([...POOL, "megamonarx", "galijah"], 30, 9, 8)
         expect(team.some((m) => m.speciesId === "megamonarx" || m.speciesId === "galijah")).toBe(false)
+    })
+
+    it("ne combat JAMAIS avec un fusionné (dexNo >= 500 exclu du pool)", () => {
+        // mottelave = fusion capturable Grotte (dexNo 500) : même vue, elle ne doit jamais rejoindre son équipe.
+        const team = buildArchivisteTeam([...POOL, "mottelave", "nouiflot"], 30, 3, 8)
+        for (const m of team) expect(baseSpeciesOf(m.speciesId)).not.toBe("mottelave")
+        expect(team.some((m) => m.speciesId === "mottelave" || m.speciesId === "nouiflot")).toBe(false)
+    })
+
+    it("ESCALADE : +niveaux + points Saiyan aux matchs répétés", () => {
+        const base = buildArchivisteTeam(POOL, 40, 1, 6, 0, 0)
+        const m2 = buildArchivisteTeam(POOL, 40, 1, 6, 3, 50)   // 2e match
+        const m3 = buildArchivisteTeam(POOL, 40, 1, 6, 6, 95)   // 3e match
+        // niveaux : moyenne décalée de +levelBonus
+        expect(base.reduce((s, m) => s + m.level, 0) / base.length).toBe(40)
+        expect(m2.reduce((s, m) => s + m.level, 0) / m2.length).toBe(43)
+        expect(m3.reduce((s, m) => s + m.level, 0) / m3.length).toBe(46)
+        // points Saiyan (allocated) : absents au 1er match, présents ensuite
+        expect(base.every((m) => m.allocated === undefined)).toBe(true)
+        expect(m2.every((m) => m.allocated && Object.values(m.allocated).reduce((a, b) => a + (b ?? 0), 0) === 50)).toBe(true)
+        expect(m3.every((m) => m.allocated && Object.values(m.allocated).reduce((a, b) => a + (b ?? 0), 0) === 95)).toBe(true)
+    })
+})
+
+describe("archivisteEscalation — paliers du jour", () => {
+    it("match 1 = base, 2 = +3/50, 3 = +6/95", () => {
+        expect(archivisteEscalation(0)).toEqual({ levelBonus: 0, saiyanPoints: 0 })
+        expect(archivisteEscalation(1)).toEqual({ levelBonus: 3, saiyanPoints: 50 })
+        expect(archivisteEscalation(2)).toEqual({ levelBonus: 6, saiyanPoints: 95 })
     })
 })

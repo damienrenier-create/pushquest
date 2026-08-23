@@ -26,6 +26,23 @@ export const ARCHIVISTE_TRAINER_ID = "collectionneur:nexus"
 /** Il erre sur la Ville Jaune. */
 export const ARCHIVISTE_MAP = YELLOW_ENTRANCE_MAP_ID
 
+/** Max de matchs par jour (gagnés OU perdus) ; après quoi il s'incline et propose de revenir demain. */
+export const ARCHIVISTE_MAX_MATCHES_PER_DAY = 3
+
+/** ESCALADE selon le nb de matchs DÉJÀ disputés aujourd'hui (0 = 1er match) :
+ *  match 1 = base (nature) · match 2 = +3 niv/Daemon + 50 pts Saiyan · match 3 = +6 niv/Daemon + 95 pts Saiyan. */
+export function archivisteEscalation(matchesToday: number): { levelBonus: number; saiyanPoints: number } {
+    if (matchesToday <= 0) return { levelBonus: 0, saiyanPoints: 0 }
+    if (matchesToday === 1) return { levelBonus: 3, saiyanPoints: 50 }
+    return { levelBonus: 6, saiyanPoints: 95 }
+}
+
+/** Réplique quand la limite quotidienne est atteinte. */
+export const ARCHIVISTE_DAILY_LIMIT_LINES: string[] = [
+    "Ho là ! Trois duels dans la journée, tu m'as épuisé mon carnet de notes…",
+    "Je m'incline, dresseur — reviens demain, j'aurai de nouvelles fiches à jour pour toi !",
+]
+
 /** Tranche horaire (heure locale 0-23) : 0=matin (6-10), 1=journée (10-17), 2=soirée (17-21), 3=nuit (21-6). */
 export function archivisteSlot(hour: number): 0 | 1 | 2 | 3 {
     if (hour >= 6 && hour < 10) return 0
@@ -122,24 +139,28 @@ const ARCHIVISTE_TEAM_EXCLUDE: ReadonlySet<string> = DEX_ULTRA_SECRET
 /** Équipe de L'Archiviste : `count` Daemons tirés au hasard parmi `pool` (= dex.seen), niveaux = `playerMean` +
  *  offsets à SOMME NULLE (±5) → moyenne d'équipe == playerMean (exact avant clamp [1,100]). Daemons NATURE :
  *  on ne passe QUE { owned:false } → zéro EV, zéro point Saiyan, pas de shiny (cf. fullStats). Déterministe/seed. */
-export function buildArchivisteTeam(pool: readonly string[], playerMean: number, seed: number, count: number): MonInstance[] {
+export function buildArchivisteTeam(pool: readonly string[], playerMean: number, seed: number, count: number, levelBonus = 0, saiyanPoints = 0): MonInstance[] {
     const rng = new Rng(seed >>> 0)
-    // Seules les espèces instanciables (createMonInstance throw sinon) et non ultra-secrètes.
-    const bag = pool.filter((id) => getSpecies(id) != null && !ARCHIVISTE_TEAM_EXCLUDE.has(id))
+    // Espèces de BASE vues uniquement : instanciables, hors ultra-secrets, et JAMAIS de fusion (dexNo 500+ = fusions
+    //   permanentes ; dexNo -1 = fusion éphémère). → L'Archiviste ne combat jamais avec un fusionné.
+    const bag = pool.filter((id) => { const sp = getSpecies(id); return !!sp && sp.dexNo >= 1 && sp.dexNo < 500 && !ARCHIVISTE_TEAM_EXCLUDE.has(id) })
     const n = Math.max(1, Math.min(6, count))
     const draw: string[] = []
     while (draw.length < n && bag.length) draw.push(bag.splice(rng.int(0, bag.length - 1), 1)[0])
     if (draw.length === 0) return []
     const SPREAD = 5
     const offs = draw.map(() => rng.int(-SPREAD, SPREAD))
-    // Correction à somme nulle → la moyenne d'équipe retombe EXACTEMENT sur playerMean.
+    // Correction à somme nulle → la moyenne d'équipe retombe EXACTEMENT sur playerMean (+ levelBonus d'escalade).
     let residual = offs.reduce((a, b) => a + b, 0)
     for (let i = 0; residual !== 0; i = (i + 1) % offs.length) { const step = residual > 0 ? -1 : 1; offs[i] += step; residual += step }
+    // ESCALADE (matchs répétés du jour) : +levelBonus niveaux/Daemon + saiyanPoints répartis également sur les 5 stats.
+    const per = saiyanPoints > 0 ? Math.floor(saiyanPoints / 5) : 0
+    const allocated = per > 0 ? { hp: per, atk: per, def: per, spe: per, spc: per } : undefined
     return draw.map((id, i) => {
-        const level = Math.max(1, Math.min(100, playerMean + offs[i]))
+        const level = Math.max(1, Math.min(100, playerMean + offs[i] + levelBonus))
         // MÊME STADE que le joueur : on évolue l'espèce tirée au stade NATUREL pour ce niveau (comme les équipes de
         //   dresseurs), pour ne jamais aligner un stade de base sous-évolué face à des finales.
         const staged = speciesAtLevel(baseSpeciesOf(id), level)
-        return createMonInstance(staged, level, { owned: false })
+        return createMonInstance(staged, level, allocated ? { owned: false, allocated } : { owned: false })
     })
 }

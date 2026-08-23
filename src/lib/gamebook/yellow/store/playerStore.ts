@@ -92,6 +92,8 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
+    /** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (max 3, reset quotidien) → escalade la difficulté. */
+    archivisteMatchesToday?: number
     /** Daemomaniaque — comparaisons PAYANTES (équipe vs Pokédex) faites aujourd'hui (reset au tick ; gonfle le prix ×1,5). Optionnel, défaut 0. */
     comparisonConsultsToday?: number
     /** VIEUX SAGE SAIYAN : points Saiyan redistribués aujourd'hui (reset au tick ; plafond 20/jour). Optionnel (défaut 0). */
@@ -520,6 +522,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
+        archivisteMatchesToday: p.archivisteMatchesToday ?? st.archivisteMatchesToday ?? 0,
         comparisonConsultsToday: p.comparisonConsultsToday ?? st.comparisonConsultsToday ?? 0,
         sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? st.sageSaiyanPointsToday ?? 0,
         ananasLastBadgeCount: p.ananasLastBadgeCount ?? st.ananasLastBadgeCount ?? 0,
@@ -736,6 +739,14 @@ export function setCollectionneurDexGiven() {
     emit()
 }
 export function isCollectionneurDexGiven(): boolean { return st.collectionneurDexGiven }
+
+/** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (0-3). Sert à l'escalade (niveau + points Saiyan) et au cap 3/jour. */
+export function archivisteMatchesToday(): number { return st.archivisteMatchesToday ?? 0 }
+/** L'ARCHIVISTE — enregistre un match disputé (gagné OU perdu). Reset au tick quotidien (creditDailyReps). */
+export function recordArchivisteMatch() {
+    st = { ...st, archivisteMatchesToday: (st.archivisteMatchesToday ?? 0) + 1 }
+    emit()
+}
 
 /** ATELIER DE FUSION — remplace le roster de fusion (jusqu'à 6 paires {uid A, uid B}). Ne touche PAS aux Daemons
  *  eux-mêmes (juste des références). Persisté. */
@@ -1515,6 +1526,7 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
+        archivisteMatchesToday: 0, // nouveau jour → L'Archiviste ré-affrontable (3 matchs, escalade remise à zéro)
         comparisonConsultsToday: 0, // nouveau jour → le prix de la comparaison équipe vs Pokédex revient à la base
         sageSaiyanPointsToday: 0, // nouveau jour → le Vieux Sage Saiyan redonne 20 points redistribuables
         // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
