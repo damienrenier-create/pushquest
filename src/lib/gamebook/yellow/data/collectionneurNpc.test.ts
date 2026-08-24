@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation } from "./collectionneurNpc"
+import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation, archivisteDefeatLines, ARCHIVISTE_INTRO_LINES } from "./collectionneurNpc"
 import { baseSpeciesOf } from "./ace"
 
 const POOL = ["feuillichot", "broutame", "piouflot", "tetardoc", "draclet", "cailloutchi", "sporbeo", "namicha"]
@@ -106,6 +106,29 @@ describe("buildArchivisteTeam — équipe du Collectionneur", () => {
         expect(base.every((m) => m.allocated === undefined)).toBe(true)
         expect(m2.every((m) => m.allocated && Object.values(m.allocated).reduce((a, b) => a + (b ?? 0), 0) === 50)).toBe(true)
         expect(m3.every((m) => m.allocated && Object.values(m.allocated).reduce((a, b) => a + (b ?? 0), 0) === 95)).toBe(true)
+    })
+})
+
+describe("dialogues Archiviste — intro + défaite", () => {
+    it("intro : plusieurs lignes non vides (dex offert + fiches à la victoire)", () => {
+        expect(ARCHIVISTE_INTRO_LINES.length).toBeGreaterThanOrEqual(3)
+        expect(ARCHIVISTE_INTRO_LINES.every((l) => l.length > 0)).toBe(true)
+        expect(ARCHIVISTE_INTRO_LINES.join(" ")).toMatch(/DEX/i)
+    })
+
+    it("défaite : félicitations + dex mis à jour + fun fact + revanche (matchs restants)", () => {
+        const l = archivisteDefeatLines("Toto", "il ne dort que la tête en bas", 1)
+        expect(l.length).toBe(4)
+        expect(l.join(" ")).toMatch(/dex/i)                        // dex mis à jour
+        expect(l[2]).toContain("Toto")                             // fun fact sur le Daemon du joueur
+        expect(l[2]).toContain("il ne dort que la tête en bas")
+        expect(l[3]).toMatch(/reste 2 duels/i)                     // revanche : 2 restants après le 1er match
+    })
+
+    it("défaite : sans fun fact fiché → repli, et 3e match = « reviens demain »", () => {
+        const l = archivisteDefeatLines("Toto", null, 3)
+        expect(l[2]).toContain("Toto")
+        expect(l[3]).toMatch(/demain/i)                            // plus de duel aujourd'hui
     })
 })
 

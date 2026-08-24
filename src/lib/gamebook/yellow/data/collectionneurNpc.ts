@@ -56,11 +56,28 @@ const SLOT_LABEL = ["matin", "journée", "soirée", "nuit"] as const
 /** PREMIÈRE RENCONTRE — il se présente, REMET le dex (consultable de suite) et explique la règle : lignes à la
  *  rencontre, fiches complètes seulement après l'avoir battu. Affiché une fois (pose collectionneurDexGiven). */
 export const ARCHIVISTE_INTRO_LINES: string[] = [
-    "Ah, un œil de collectionneur, ça se reconnaît ! Enchanté : je suis L'Archiviste, gardien du grand catalogue des Daemons.",
-    "Tiens, ce DEX est à toi — dès maintenant. Consulte-le quand tu veux : chaque Daemon que tu croises y inscrira sa ligne, et je le tiens à jour.",
-    "Mais la FICHE COMPLÈTE d'un Daemon observé, je ne la révèle qu'à qui me bat en duel. Mets-moi au tapis et j'actualise tout ce que tu as vu !",
-    "Reviens me défier quand tu te sens prêt… avec une équipe digne d'un vrai collectionneur.",
+    "HALTE-LÀ ! Ne bouge plus… non, pas toi — c'est le Daemon derrière toi qui bave sur mon carnet ! Enchanté : je suis L'ARCHIVISTE, catalogueur compulsif de Daemons.",
+    "Trente ans que je noircis ce DEX. TRENTE ! Tiens, il est à toi — oui, TOI. Chaque bestiole que tu croises y inscrira sa ligne, et moi je tiens tout à jour, jour et nuit (surtout la nuit, je dors très mal).",
+    "MAIS — car il y a un mais — la FICHE COMPLÈTE (poids, humeur, petits secrets honteux), je ne la lâche qu'à qui me colle une bonne raclée. Question de principe ! Bats-moi et j'ouvre grand les archives.",
+    "Alors, tu me défies ? Ou tu comptes fixer ma loupe toute la journée ? Reviens quand ton équipe aura fière allure, jeune prodige.",
 ]
+
+/** DIALOGUE DE DÉFAITE (dit quand le joueur BAT L'Archiviste) : félicitations + dex mis à jour + FUN FACT sur un
+ *  Daemon de l'équipe joueur + proposition de REVANCHE selon les matchs restants du jour (escalade annoncée). */
+export function archivisteDefeatLines(monName: string, fact: string | null, matchesPlayedToday: number): string[] {
+    const remaining = Math.max(0, ARCHIVISTE_MAX_MATCHES_PER_DAY - matchesPlayedToday)
+    const lines = [
+        "AH ! Battu ! Magnifiquement, honteusement battu ! Ça ne m'était plus arrivé depuis… euh… bref, bravo !",
+        "Marché conclu, je m'incline : j'ouvre les archives ! Toutes les fiches des Daemons que tu as croisés sont désormais COMPLÈTES dans ton dex — poids, secrets, tout le tralala.",
+        fact
+            ? `Et cadeau du perdant, un petit fait sur ton ${monName} : ${fact}`
+            : `Et prends bien soin de ton ${monName}, c'est une pièce de collection, ça !`,
+    ]
+    lines.push(remaining >= 1
+        ? `Il te reste ${remaining} duel${remaining > 1 ? "s" : ""} aujourd'hui — et je te préviens : à chaque manche je corse l'affaire (plus de niveaux, plus de points Saiyan) ! On remet ça quand tu veux, fripon.`
+        : "C'était notre troisième manche du jour, tu m'as lessivé ! Laisse-moi ramasser mes fiches… et reviens demain, j'aurai de quoi t'occuper.")
+    return lines
+}
 
 /** DIALOGUES DE PASSIONNÉ — matrice [jour 0-6 (0=dimanche, getDay())][tranche 0-3]. Un ton différent chaque jour
  *  et chaque moment. La ligne de FUN FACT (sur un Daemon de l'équipe joueur) est ajoutée séparément par le launcher. */
