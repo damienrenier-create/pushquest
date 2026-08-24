@@ -226,6 +226,43 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "panthers_all", label: "Réunir les 6 Panthères élémentaires", tier: "diamond", secret: true, cat: "collection", earned: (i) => PANTHEON_EVOS.every((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
 ]
 
+// ════════════════ RÉCOMPENSES EN REPS (⚡) — créditées UNE FOIS à l'obtention, distribuées en DRIP (1000⚡/jour) ════════════════
+// Barème choisi par Sartay. SEULS les hauts faits PRÉ-Sylvebarbe rapportent (l'endgame — fusion/dôme/Sylvebarbe/
+//   légendaires ultimes — vaut 0). Les 6 clés hors-BADGES (fashion/sage/… + berry_found:<id>) sont gérées à part.
+export const BADGE_REPS: Record<string, number> = {
+    // ① Progression
+    first_catch: 50, evolve: 100, beat_trainer: 50, full_team: 100, beat_arena: 250, all_arenas: 250, champion: 250,
+    // ② Collection
+    types3: 100, types10: 300, dex10: 50, dex50: 500, dex100: 1000, dex_run1: 1000,
+    // ③ Social
+    trade_pnj: 250, trade_player: 250, beat_mirror: 250, beat_mirror_higher: 250, pvp_win: 250,
+    // ④ Spéciales & secrets
+    pantheon: 250, pantheon_evo: 250, gekroc: 250, manoir_surprise: 250, orcaline: 250, masterball: 250, tonytony: 250,
+    sbire: 100, ace1: 100, ace7: 100, lab_defi: 100, level100: 1000, bet_win: 100, casino_win: 100, goshendofy: 1000,
+    // ⑤ Shiny
+    shiny1: 1000, shiny6: 1000, shiny_trade: 1000, league_6shiny: 3000,
+    // ⑦ Exploration
+    grotte_nexus: 100, nexus_guardian: 250, nexus_deep: 600, ice_cave: 600, beach: 250, aqua_arena: 600,
+    // ⑨ Side-quests
+    berries: 250, poker: 100, held_item: 250, gift_ct: 250,
+    // ⑩ Lignées
+    geckos_all: 500, panthers_all: 500,
+    // ── 6 NOUVEAUX (détection Phase 2 : marqueurs dédiés / collectionneurDexGiven / berry_found:<id>) ──
+    fashion_outfit: 100, archiviste_dexupdate: 100, sage_saiyan: 100, daemon_uses_berry: 100, blackjack_win: 100,
+    // berry_found:<id> = 50 (phoenix 100) → géré dynamiquement (cf. BERRY_FOUND_REPS).
+}
+
+/** Reps du plafond quotidien de distribution (drip) des récompenses de hauts faits. */
+export const BADGE_REPS_DAILY_CAP = 1000
+
+/** Ids des hauts faits ACTUELLEMENT gagnés qui rapportent des reps (⊂ BADGE_REPS). Sert au drip. */
+export function earnedRepsBadgeIds(i: BadgeInput): string[] {
+    return BADGES.filter((b) => BADGE_REPS[b.id] != null && b.earned(i)).map((b) => b.id)
+}
+
+/** Libellés des trophées (id → label), pour l'annonce du Dieu Spaghetti lors du drip de reps. */
+export const BADGE_LABELS: Record<string, string> = Object.fromEntries(BADGES.map((b) => [b.id, b.label]))
+
 export interface BadgeState { id: string; tier: BadgeTier; points: number; earned: boolean; revealed: boolean }
 export interface BadgeResult { badges: BadgeState[]; totalPoints: number; earnedCount: number }
 

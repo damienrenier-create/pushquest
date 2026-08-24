@@ -13,6 +13,7 @@ import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { leagueFusionSpecies } from "../data/leagueFusionDex"
+import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
@@ -95,6 +96,10 @@ interface PlayerState {
     consultsToday?: number
     /** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (max 3, reset quotidien) → escalade la difficulté. */
     archivisteMatchesToday?: number
+    /** HAUTS FAITS — ids de trophées dont les reps sont déjà crédités (une fois). GLOBAL (union tous mondes). */
+    badgeRepsClaimed?: string[]
+    /** HAUTS FAITS — reps déjà distribués aujourd'hui par le drip (plafond quotidien, reset au tick). */
+    badgeRepsToday?: number
     /** Daemomaniaque — comparaisons PAYANTES (équipe vs Pokédex) faites aujourd'hui (reset au tick ; gonfle le prix ×1,5). Optionnel, défaut 0. */
     comparisonConsultsToday?: number
     /** VIEUX SAGE SAIYAN : points Saiyan redistribués aujourd'hui (reset au tick ; plafond 20/jour). Optionnel (défaut 0). */
@@ -525,6 +530,8 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
         archivisteMatchesToday: p.archivisteMatchesToday ?? st.archivisteMatchesToday ?? 0,
+        badgeRepsClaimed: p.badgeRepsClaimed ?? st.badgeRepsClaimed ?? [],
+        badgeRepsToday: p.badgeRepsToday ?? st.badgeRepsToday ?? 0,
         comparisonConsultsToday: p.comparisonConsultsToday ?? st.comparisonConsultsToday ?? 0,
         sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? st.sageSaiyanPointsToday ?? 0,
         ananasLastBadgeCount: p.ananasLastBadgeCount ?? st.ananasLastBadgeCount ?? 0,
@@ -747,6 +754,44 @@ export function archivisteMatchesToday(): number { return st.archivisteMatchesTo
 /** L'ARCHIVISTE — enregistre un match disputé (gagné OU perdu). Reset au tick quotidien (creditDailyReps). */
 export function recordArchivisteMatch() {
     st = { ...st, archivisteMatchesToday: (st.archivisteMatchesToday ?? 0) + 1 }
+    emit()
+}
+
+/** HAUTS FAITS — DRIP des récompenses en reps. Parmi `earnedIds` (+ paires `id:reps` custom via `extra`), crédite
+ *  les trophées gagnés NON encore payés, dans la limite du plafond quotidien (BADGE_REPS_DAILY_CAP), en marquant
+ *  chacun « payé » (jamais deux fois). Crédite EN BLOC (creditReps, sans troncature) + journal ⚡. Renvoie la liste
+ *  {id, reps} effectivement payée CE tour → le client affiche l'intervention du Dieu Spaghetti (un message/trophée).
+ *  `extra` : récompenses hors-BADGE_REPS (ex. berry_found:<id> → 50/100). Rien en run 3 (source d'énergie unique). */
+export function dripBadgeReps(earnedIds: readonly string[], extra: Record<string, number> = {}): { id: string; reps: number }[] {
+    if (runMode() === "run3") return []
+    const repsOf = (id: string): number => extra[id] ?? BADGE_REPS[id] ?? 0
+    const claimed = new Set(st.badgeRepsClaimed ?? [])
+    const pending = earnedIds.filter((id) => !claimed.has(id) && repsOf(id) > 0)
+    if (!pending.length) return []
+    let budget = BADGE_REPS_DAILY_CAP - (st.badgeRepsToday ?? 0)
+    if (budget <= 0) return []
+    const granted: { id: string; reps: number }[] = []
+    for (const id of pending) {
+        if (budget <= 0) break // plafond du jour atteint → le reste attend demain (drip)
+        const reps = repsOf(id)
+        granted.push({ id, reps })
+        claimed.add(id)
+        budget -= reps // le dernier trophée peut faire dépasser 1000 (on ne fractionne jamais un trophée)
+    }
+    const total = granted.reduce((s, g) => s + g.reps, 0)
+    st = { ...st, badgeRepsClaimed: [...claimed], badgeRepsToday: (st.badgeRepsToday ?? 0) + total }
+    emit()
+    creditReps(total) // crédite intégralement (relève le cap au minimum si besoin, jamais tronqué)
+    logEnergyIncome("🏆 Haut fait", total)
+    return granted
+}
+/** HAUTS FAITS — un trophée est-il déjà payé (reps crédités) ? */
+export function isBadgeRepsClaimed(id: string): boolean { return (st.badgeRepsClaimed ?? []).includes(id) }
+/** HAUTS FAITS — fusionne des ids « payés » dans le set GLOBAL (union tous mondes, au chargement). */
+export function setBadgeRepsClaimed(ids: readonly string[]) {
+    const merged = [...new Set([...(st.badgeRepsClaimed ?? []), ...ids])]
+    if (merged.length === (st.badgeRepsClaimed ?? []).length) return
+    st = { ...st, badgeRepsClaimed: merged }
     emit()
 }
 
@@ -1529,6 +1574,7 @@ export function creditDailyReps(today: string) {
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
         archivisteMatchesToday: 0, // nouveau jour → L'Archiviste ré-affrontable (3 matchs, escalade remise à zéro)
+        badgeRepsToday: 0, // nouveau jour → le drip des reps de hauts faits redistribue jusqu'à 1000⚡
         comparisonConsultsToday: 0, // nouveau jour → le prix de la comparaison équipe vs Pokédex revient à la base
         sageSaiyanPointsToday: 0, // nouveau jour → le Vieux Sage Saiyan redonne 20 points redistribuables
         // GALIJAH : plus rien à faire ici — la chasse est pilotée par le nb d'ESPÈCES du Pokédex (GLOBAL, cumulatif),
