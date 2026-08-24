@@ -56,6 +56,9 @@ export default function FashionPicker() {
     const offer = useMemo(() => (storeOffer.length >= FASHION_DAILY_COUNT ? storeOffer : personalFashionOffer(randomFashionSeed(), getCurrentNickname())), [storeOffer])
     const filter = filterOf(h, s, b)
     const previewBase = curBase ?? offer[0]
+    // CHOIX OBLIGATOIRE tant qu'on n'a pas de tenue — MAIS jamais de piège : si le joueur ne peut pas s'offrir la
+    //   tenue la moins chère (ex. après un reset qui l'a mis à sec), on le laisse repartir (il reviendra).
+    const canLeave = !!curBase || player.reps < FASHION_PRICES[0]
 
     // ACHAT en 2 temps : clic sur une tenue → CONFIRMATION (aperçu + prix) → seulement alors on dépense les reps.
     const [pendingBuy, setPendingBuy] = useState<{ base: string; price: number } | null>(null)
@@ -71,8 +74,10 @@ export default function FashionPicker() {
     const doReset = () => { const r = resetAvatar(); if (!r.ok) setMsg(r.reason ?? "Impossible.") }
     const rollTint = () => { const t = rollAvatarTint(Math.random); setH(t.h); setS(t.s); setB(t.b) }
 
+    // CHOIX OBLIGATOIRE : tant qu'aucune tenue n'est adoptée (et qu'il peut s'en payer une), on ne peut PAS fermer la
+    //   boutique (ni par le fond, ni par un bouton) → le joueur ne repart jamais avec un skin par défaut non choisi.
     return (
-        <div onClick={close} style={overlay}>
+        <div onClick={canLeave ? close : undefined} style={overlay}>
             <div onClick={(e) => e.stopPropagation()} style={box}>
                 <div style={header}><span>👗 FASHION VICTIM</span><span style={{ fontSize: 12, fontWeight: 700, color: "#a05" }}>⚡ {player.reps}</span></div>
                 <div style={{ padding: 12, overflowY: "auto" }}>
@@ -134,7 +139,9 @@ export default function FashionPicker() {
 
                     <button onClick={doReset} style={resetBtn}>↩︎ Revenir au look par défaut ({revertCost} reps)</button>
                 </div>
-                <button onClick={close} style={closeBtn}>FERMER</button>
+                {canLeave
+                    ? <button onClick={close} style={closeBtn}>FERMER</button>
+                    : <div style={mustPickHint}>👗 Choisis d'abord une tenue pour continuer !</div>}
                 {/* CONFIRMATION D'ACHAT : aperçu + prix avant de dépenser les reps. */}
                 {pendingBuy && (
                     <div onClick={() => setPendingBuy(null)} style={confirmOverlay}>
@@ -166,5 +173,6 @@ const linkBtn: React.CSSProperties = { width: "100%", padding: "7px 0", backgrou
 const errStyle: React.CSSProperties = { fontSize: 11.5, color: "#8a1c1c", background: "#f6d9d9", border: "1px solid #d88", borderRadius: 8, padding: "6px 9px", marginBottom: 8, fontWeight: 700 }
 const resetBtn: React.CSSProperties = { marginTop: 12, width: "100%", padding: "7px 0", background: "transparent", color: "#a05", border: `1px solid ${DARK}`, borderRadius: 8, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }
 const closeBtn: React.CSSProperties = { margin: 10, marginTop: 0, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }
+const mustPickHint: React.CSSProperties = { margin: 10, marginTop: 0, padding: "8px 0", background: "#fff0f6", color: "#a05", border: `1px dashed ${ACCENT}`, borderRadius: 8, fontWeight: 800, fontSize: 12, textAlign: "center" }
 const confirmOverlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, zIndex: 5, padding: 16 }
 const confirmBox: React.CSSProperties = { background: CREAM, border: `3px solid ${ACCENT}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, maxWidth: 260, boxShadow: "0 8px 28px rgba(0,0,0,0.55)" }

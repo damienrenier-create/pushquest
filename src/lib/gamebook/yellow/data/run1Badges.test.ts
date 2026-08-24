@@ -127,6 +127,23 @@ describe("Badges run 1 — socle", () => {
         expect(state(r, "nexus_deep").earned).toBe(false)    // B2F non atteint
     })
 
+    it("beat_trainer — les MARQUEURS d'événement ne comptent PAS comme des dresseurs battus (bug perdre-vs-ACE)", () => {
+        // Compte neuf qui a juste croisé/parlé à l'ACE + déclenché des marqueurs (intro synergie, achat tenue…) mais
+        //   n'a battu AUCUN vrai dresseur → beat_trainer ne doit PAS être gagné.
+        const markersOnly = badgeInputFromSave({
+            defeatedTrainers: ["y_ace_pass_1", "synergy_intro_seen", "ach_fashion", "autel_visited", "collectionneurDexGiven"],
+        } as unknown as Parameters<typeof badgeInputFromSave>[0])
+        expect(markersOnly.trainersBeaten).toBe(0)
+        expect(state(evaluateBadges(markersOnly), "beat_trainer").earned).toBe(false)
+
+        // Dès qu'un VRAI dresseur est présent (registre TRAINERS ou frère Glaçon), beat_trainer est gagné.
+        const realTrainer = badgeInputFromSave({
+            defeatedTrainers: ["ach_fashion", "y_frere_frisquet"],
+        } as unknown as Parameters<typeof badgeInputFromSave>[0])
+        expect(realTrainer.trainersBeaten).toBe(1)
+        expect(state(evaluateBadges(realTrainer), "beat_trainer").earned).toBe(true)
+    })
+
     it("Fusion run 1 — 1re fusion + Ligue via fusionHistory & marqueurs fusleague_*", () => {
         const save = {
             fusionHistory: [{ a: "nouillon", b: "gouttiny" }],

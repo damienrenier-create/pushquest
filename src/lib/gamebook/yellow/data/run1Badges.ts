@@ -15,6 +15,7 @@
 
 import { getSpecies, visibleDexSpecies, SPECIES, DEX_ULTRA_SECRET } from "./species"
 import { FUSION_BASE_IDS } from "./fusionBaseSpecies"
+import { getTrainer } from "./trainers"
 import type { YellowSave } from "../storage/save"
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
@@ -119,6 +120,13 @@ const mk = (i: BadgeInput) => i.markers ?? []
 const hasMk = (i: BadgeInput, id: string) => mk(i).includes(id)
 const hasAllMk = (i: BadgeInput, ids: readonly string[]) => ids.every((id) => mk(i).includes(id))
 const hasAnyMk = (i: BadgeInput, ids: readonly string[]) => ids.some((id) => mk(i).includes(id))
+
+// « Battre un dresseur » ne doit compter QUE de VRAIS dresseurs. save.defeatedTrainers est SURCHARGÉ de marqueurs
+//   d'événements (ach_fashion, *_MARKER, intro synergie, ACE_PASS, collectionneurDexGiven…) qui ne sont PAS des
+//   combats → sans ce filtre, n'importe quel nouveau compte « bat un dresseur » à tort (bug perdre-contre-l'ACE).
+//   On ne garde que les ids du registre TRAINERS + les dresseurs définis hors-registre (frères Glaçon / plage / aqua).
+const OTHER_REAL_TRAINERS: ReadonlySet<string> = new Set<string>([...FRERES_GLACON, ...PLAGE_TRAINERS, ...AQUA_MOBS, ...AQUA_BOSSES])
+const isRealTrainerId = (id: string) => getTrainer(id) != null || OTHER_REAL_TRAINERS.has(id)
 
 export interface BadgeDef {
     id: string
@@ -310,7 +318,7 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         teamSize: (s.team ?? []).length,
         arenaBadges: (s.badges ?? []).length,
         isChampion: s.isChampion === true,
-        trainersBeaten: (s.defeatedTrainers ?? []).length,
+        trainersBeaten: (s.defeatedTrainers ?? []).filter(isRealTrainerId).length, // VRAIS dresseurs uniquement (pas les marqueurs d'événement)
         mirrorWins: s.stats?.duelWinsTotal ?? 0,
         playerTrades: s.stats?.playerTrades ?? 0, // ÉCHANGE joueur↔joueur (Casino) → haut-fait trade_player (forward-only)
         pvpWins: s.pvpStats?.wins ?? 0,

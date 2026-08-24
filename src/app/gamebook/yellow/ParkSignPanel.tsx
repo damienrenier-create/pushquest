@@ -7,7 +7,9 @@
 import { useEffect, type ReactNode } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { recordCalepinTip } from "@/lib/gamebook/yellow/store/calepinStore"
-import { getCurrentPlayerId } from "@/lib/gamebook/yellow/store/playerStore"
+import { getCurrentPlayerId, getActiveWorld, getReplayRun, getGameMode, modeFillAmount } from "@/lib/gamebook/yellow/store/playerStore"
+import { POKE_TYPES, type PokeType } from "@/lib/gamebook/yellow/battle/types"
+import { typeMultiplier } from "@/lib/gamebook/yellow/battle/typeChart"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 
@@ -30,7 +32,7 @@ function CapturePage() {
     ]
     return (
         <>
-            <P>D'abord <b>affaiblis</b> : à PV pleins, <b>40% max</b> (impossible de capturer sans toucher). Sous <b>1/3 de vie</b>, le <b>100%</b> devient possible.</P>
+            <P>D'abord <b>affaiblis</b> : à PV pleins, <b>40% max</b> (le 100% est impossible tant qu'il est en pleine forme). Sous <b>1/3 de vie</b>, le <b>100%</b> devient possible. Chaque ball ratée <b>facilite</b> le lancer suivant.</P>
             <P>Chaque ball est taillée pour les <b>communs</b> jusqu'à un niveau (à 1/3 de vie) :</P>
             <table style={tbl}>
                 <thead><tr><th style={th}>Ball</th><th style={th}>Communs jusqu'au…</th></tr></thead>
@@ -42,40 +44,92 @@ function CapturePage() {
     )
 }
 
+// Libellé FR + emoji de chaque type (source d'affichage unique du panneau).
+const TYPE_FR: Record<PokeType, string> = {
+    NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace",
+    COMBAT: "Combat", POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte",
+    ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Acier", TENEBRES: "Ténèbres",
+}
+const TYPE_EMOJI: Record<PokeType, string> = {
+    NORMAL: "⚪", FEU: "🔥", EAU: "💧", PLANTE: "🌿", ELEC: "⚡", GLACE: "❄️",
+    COMBAT: "🥊", POISON: "☠️", SOL: "🌍", VOL: "🦅", PSY: "🔮", INSECTE: "🐛",
+    ROCHE: "🪨", SPECTRE: "👻", DRAGON: "🐉", FEE: "🧚", METAL: "⚙️", TENEBRES: "🌑",
+}
+
+/** Numéro du run EN COURS (monde actif). Sert à ne montrer QUE les types réellement présents. */
+function currentRunNo(): 1 | 2 | 3 {
+    const w = getActiveWorld()
+    if (w === "run3") return 3
+    if (w === "ngplus") return 2
+    if (w === "replay") { const r = getReplayRun(); return r === "run3" ? 3 : r === "run2" ? 2 : 1 }
+    return 1
+}
+/** Types RÉELLEMENT présents selon le run : la FÉE arrive au run 2 (Ukognos), l'ACIER et les TÉNÈBRES au run 3.
+ *  → en run 1 la table n'affiche JAMAIS Fée / Acier / Ténèbres (ils y sont absents). Data-driven (aucune valeur en dur). */
+function availableTypes(): PokeType[] {
+    const run = currentRunNo()
+    return POKE_TYPES.filter((t) => (t === "FEE" ? run >= 2 : (t === "METAL" || t === "TENEBRES") ? run >= 3 : true))
+}
+
 function TypesPage() {
-    const matchups: [string, string][] = [
-        ["💧 Eau", "Feu · Sol · Roche"],
-        ["🔥 Feu", "Plante · Glace · Insecte · Acier"],
-        ["🌿 Plante", "Eau · Sol · Roche"],
-        ["⚡ Élec", "Eau · Vol"],
-        ["🪨 Roche", "Feu · Vol · Insecte · Glace"],
-        ["🌍 Sol", "Feu · Élec · Roche · Poison · Acier"],
-        ["🥊 Combat", "Normal · Roche · Glace · Acier"],
-        ["🦅 Vol", "Plante · Combat · Insecte"],
-        ["🔮 Psy", "Combat · Poison"],
-        ["❄️ Glace", "Plante · Sol · Vol · Dragon"],
-    ]
+    const types = availableTypes()
+    // « Qui bat qui » CALCULÉ depuis la vraie table du moteur (typeMultiplier === 2), bornée aux types du run courant.
+    const rows = types
+        .map((atk) => ({ atk, targets: types.filter((d) => typeMultiplier(atk, d) === 2) }))
+        .filter((r) => r.targets.length > 0)
     return (
         <>
             <P>Frappe avec un type <b>super efficace</b> (×2) pour doubler tes dégâts. Qui bat qui :</P>
             <table style={tbl}>
                 <thead><tr><th style={th}>Type</th><th style={{ ...th, textAlign: "left" }}>super efficace contre</th></tr></thead>
-                <tbody>{matchups.map(([a, b], i) => <tr key={i}><td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a}</td><td style={{ ...td, textAlign: "left" }}>{b}</td></tr>)}</tbody>
+                <tbody>{rows.map(({ atk, targets }) => (
+                    <tr key={atk}>
+                        <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{TYPE_EMOJI[atk]} {TYPE_FR[atk]}</td>
+                        <td style={{ ...td, textAlign: "left" }}>{targets.map((t) => TYPE_FR[t]).join(" · ")}</td>
+                    </tr>
+                ))}</tbody>
             </table>
             <P>Un type <b>×2</b> superposé (ex. cible Roche/Sol) = <b>×4</b> ! Garde une équipe variée.</P>
         </>
     )
 }
 
-export const TOPICS: { t: string; body: ReactNode }[] = [
-    { t: "🎯 Capturer un Daemon", body: <CapturePage /> },
-    {
-        t: "⚡ Reps → Énergie", body: <>
+// L'ÉNERGIE dépend du RUN et du MODE : run 3 = don fixe + recharges d'arène (les vraies reps ne créditent PAS,
+//   elles servent les points Saiyan) ; easy/debutant = réserve à remplissages découplée des reps ; run 1/2 normal
+//   & fun = les vraies reps DEVIENNENT l'énergie. On affiche donc la bonne explication selon le contexte réel.
+function EnergyPage() {
+    const run = currentRunNo()
+    const mode = getGameMode()
+    if (run >= 3) {
+        return (
+            <>
+                <P>En <b>concours (run 3)</b>, tes pompes ne rechargent <b>pas</b> ton énergie : tu démarres avec <b>500⚡</b> et chaque <b>arène vaincue</b> te recharge (jusqu'à 1000).</P>
+                <P>Ici, tes vraies répétitions servent tes <b>points Saiyan</b> (entraînement) — pas tes munitions.</P>
+                <P>Chaque attaque coûte de l'énergie ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
+            </>
+        )
+    }
+    if (mode === "easy" || mode === "debutant") {
+        return (
+            <>
+                <P>Ton énergie est une <b>réserve</b> (pas tes vraies reps) : <b>{modeFillAmount()}⚡</b> au départ, <b>rechargée</b> automatiquement quand tu tombes à sec — tant qu'il te reste des recharges.</P>
+                <P>Chaque attaque coûte de l'énergie ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
+            </>
+        )
+    }
+    return (
+        <>
+            {mode === "fun" && <P>🎉 <b>Démarrage offert</b> : 1000⚡ + 10 Nexus-Ball. Ensuite, tes reps rechargent ton énergie comme d'habitude.</P>}
             <P>Tes <b>vraies répétitions PushQuest</b> deviennent ton <b>énergie</b> de combat.</P>
             <P>Chaque attaque coûte des reps (selon sa puissance) : pas de sport, pas de munitions. Une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             <P>Toutes les reps faites aujourd'hui sont <b>jouables immédiatement</b> — même celles des jours non joués s'accumulent.</P>
-        </>,
-    },
+        </>
+    )
+}
+
+export const TOPICS: { t: string; body: ReactNode }[] = [
+    { t: "🎯 Capturer un Daemon", body: <CapturePage /> },
+    { t: "⚡ Reps → Énergie", body: <EnergyPage /> },
     {
         t: "🏆 Le quota du jour", body: <>
             <P>Atteins ton <b>quota quotidien</b> et la nature te récompense en combat sauvage :</P>
@@ -86,8 +140,8 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     { t: "⚔️ Table des types", body: <TypesPage /> },
     {
         t: "📊 Niveau de l'équipe", body: <>
-            <P>Le <b>niveau de ton équipe</b> influence les Daemons sauvages que tu croises.</P>
-            <P>Plus tu montes en puissance, plus les herbes recèlent d'adversaires coriaces : entraîne-toi régulièrement pour suivre le rythme.</P>
+            <P>Avant le badge <b>Roche</b>, les Daemons sauvages se calent sur ton Daemon de <b>tête</b> (le 1er de l'équipe) ; ensuite, sur la <b>moyenne</b> de ton équipe.</P>
+            <P>Chaque <b>badge d'arène</b> relève le <b>plafond</b> de niveau des sauvages : <b>12 → 17 → 30 → 45 → 60</b>. Tes tout premiers combats sont volontairement plus doux.</P>
         </>,
     },
     {
@@ -100,7 +154,7 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
         t: "☠️ Les attaques de statut", body: <>
             <P>Certaines attaques infligent un <b>statut</b> : brûlure, poison, paralysie, sommeil, gel, confusion.</P>
             <P><b>Exemple :</b> <i>Flammèche</i> (Feu) brûle 10% du temps — <b>Braisille</b> l'apprend au <b>niveau 6</b>, <b>Fennaise</b> au <b>niveau 7</b>.</P>
-            <P>Poison &amp; brûlure rongent l'ennemi chaque tour ; paralysie/sommeil/gel l'empêchent d'agir. De quoi gagner sans prendre un coup.</P>
+            <P>Poison &amp; brûlure rongent l'ennemi chaque tour ; <b>sommeil</b> et <b>gel</b> l'empêchent vraiment d'agir, la <b>paralysie</b> le ralentit et le fait parfois rater son tour. De quoi gagner sans (trop) prendre de coups.</P>
         </>,
     },
     {

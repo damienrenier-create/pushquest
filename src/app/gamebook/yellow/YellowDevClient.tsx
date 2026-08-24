@@ -78,7 +78,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -103,7 +103,7 @@ import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER, historyFusions, fusionPairError, NON_FUSABLE_IDS } from "@/lib/gamebook/yellow/data/fusiodex"
 import { EPILOGUE_INTRO_LINES, fusionEpilogueQuests } from "@/lib/gamebook/yellow/data/fusionEpilogue"
 import { shopPrice, BOURSE_INTRO_LINES, BOURSE_SHOP_LINES, BOURSE_INTRO_MARKER, BOURSE_SHOP_MARKER } from "@/lib/gamebook/yellow/data/shopPricing"
-import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
@@ -989,6 +989,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",
                         ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${rewardLabel(g.id)} » !`),
+                        "« Retrouve TOUS tes trophées dans le menu (Pause) → 🏆 PALMARÈS → 🎖️ TROPHÉES & HAUTS FAITS. »",
                     ])
                     persistYellowSave()
                 }
@@ -1963,6 +1964,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // on marque l'intro vue et on persiste.
     const onIntroComplete = (starterId: string) => {
         setTeam([createMonInstance(starterId, 5, { owned: true })])
+        markCaught(starterId); markCaughtThisRun(starterId) // le starter entre au Pokédex (global + « vu/capturé ce run »)
         addItem("poke_ball", 5)
         // Pas d'argent offert : le portefeuille = reps de la veille (crédité au chargement).
         markIntroSeen()

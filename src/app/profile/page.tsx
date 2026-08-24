@@ -21,6 +21,7 @@ export default function ProfilePage() {
     const [medDates, setMedDates] = useState({ start: "", end: "", note: "" })
     const [records, setRecords] = useState({ pushups: 0, pullups: 0, squats: 0 })
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
+    const [funBlocked, setFunBlocked] = useState<boolean | null>(null) // null = vérif en cours ; true = compte "fun" (pas de profil)
 
     useEffect(() => {
         if (session === null) {
@@ -30,6 +31,16 @@ export default function ProfilePage() {
             fetchProfileData()
         }
     }, [session, router])
+
+    // Comptes "fun" (lien nexus-fun-2026) : PAS de page profil — ni cash, ni lien d'invitation de base. On renvoie au Nexus.
+    useEffect(() => {
+        let cancelled = false
+        fetch("/api/user/me")
+            .then((r) => r.json())
+            .then((d) => { if (cancelled) return; if (d?.gameMode === "fun") { setFunBlocked(true); router.replace("/gamebook/yellow") } else setFunBlocked(false) })
+            .catch(() => { if (!cancelled) setFunBlocked(false) })
+        return () => { cancelled = true }
+    }, [router])
 
     const fetchProfileData = async () => {
         try {
@@ -142,7 +153,8 @@ export default function ProfilePage() {
         }
     }
 
-    if (!session) {
+    // Attend la session ET la vérif du mode : un compte "fun" ne doit JAMAIS voir le profil (redirigé au Nexus).
+    if (!session || funBlocked !== false) {
         return (
             <div className="flex justify-center items-center min-h-screen">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

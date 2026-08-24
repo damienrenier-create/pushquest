@@ -190,9 +190,10 @@ export function activeNpcs() {
             dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
         }]
     }
-    // FASHION VICTIM — à VILLE JAUNE, visible par TOUS. Spot tiré au hasard parmi TOUTES les cases WALKABLE de la ville
+    // FASHION VICTIM — à VILLE JAUNE, visible SEULEMENT à partir du 1er badge d'arène (elle n'existe pas avant : un tout
+    //   nouveau compte ne doit pas la croiser). Spot tiré au hasard parmi TOUTES les cases WALKABLE de la ville
     //   (flood-fill, comme le Sage) → elle bouge vraiment d'une visite à l'autre (fini les 2 spots fixes). Look re-tiré aussi.
-    {
+    if (getPlayerSave().badges.length >= 1) {
         const fashionSpots = villeJauneSageSpots()
         if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * fashionSpots.length)
         if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
@@ -2378,8 +2379,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ sageOpen: true })
             return
         }
-        // FASHION VICTIM : entrer FORCE la 1re tenue du jour (50 reps) tant qu'on n'a pas de skin → applique + gag/canne
-        //   au 1er achat du run. Déjà un skin → boutique normale. Pas assez de reps → elle refuse (message).
+        // FASHION VICTIM : ouvre TOUJOURS la boutique → le joueur CHOISIT et CONFIRME sa tenue lui-même (plus jamais
+        //   d'auto-achat d'une tenue aléatoire non choisie). Tant qu'il n'a pas de skin, le picker l'oblige à choisir
+        //   (pas de bouton FERMER, cf. FashionPicker). Le gag + la canne se déclenchent au 1er achat CONFIRMÉ.
+        //   Déjà un skin → re-shopping normal. Pas de skin + pas assez de reps → elle refuse (message).
         if (npc.id.startsWith(FASHION_VICTIM_NPC_ID)) {
             // DÉFLAG (ex : Mools) : à la 1re interaction FV, on RÉINITIALISE son skin → il refait l'onboarding comme au 1er jour.
             if (FV_RESET_NICKS.has(getCurrentNickname().trim().toLowerCase()) && !isTrainerDefeated(FV_RESET_MARKER)) {
@@ -2391,13 +2394,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // ≥1 tenue de surfeur GARANTIE dès 145 espèces, TANT QUE le joueur n'en porte pas déjà une (« jusqu'à l'achat »).
             const offer = personalFashionOffer(randomFashionSeed(), getCurrentNickname(), { includeSurf: getPokedex().caught.length >= SURF_OUTFIT_DEX_HINT && !isSurfOutfit(getPlayerSave().chosenAvatar) })
             const cur = getPlayerSave().chosenAvatar
-            if (cur) { set({ fashionOpen: true, fashionOffer: offer }); return } // a déjà un skin → boutique
-            if (getPlayerSave().reps < FASHION_PRICES[0]) {
+            // Pas encore de skin + pas assez de reps → refus (le picker exigerait un achat impayable).
+            if (!cur && getPlayerSave().reps < FASHION_PRICES[0]) {
                 set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]} reps et je m'occupe de ton cas. »`] } })
                 return
             }
-            const r = get().buyFashionOutfit(offer[0], FASHION_PRICES[0]) // pose la 1re tenue + gag/canne (1re fois du run)
-            if (r.ok && get().dialogue == null) set({ fashionOpen: true, fashionOffer: offer }) // pas de gag (canne déjà là) → ouvre la boutique
+            // Boutique ouverte : le joueur choisit + confirme (pas d'auto-achat). Sans skin, le picker impose le choix.
+            set({ fashionOpen: true, fashionOffer: offer })
             return
         }
         // L'ARTISANE (Grotte 1F) : ouvre le panneau de forge d'objet signature.
