@@ -80,4 +80,33 @@ describe("PARRAINAGE — modes de jeu (énergie)", () => {
         ensureModeStartGrant()
         expect(getPlayer().reps).toBe(0)      // aucun remplissage hors monde live
     })
+
+    it("fun : setGameMode accepte 'fun'", () => {
+        setGameMode("fun"); expect(getGameMode()).toBe("fun")
+    })
+
+    it("fun : don de départ = 1000⚡ + 10 Nexus-Ball, une seule fois", () => {
+        setGameMode("fun")
+        ensureModeStartGrant()
+        expect(getPlayer().reps).toBe(1000)               // 1000⚡ au départ
+        expect(getPlayer().repsCap).toBeGreaterThanOrEqual(1000)
+        expect(getPlayer().items?.poke_ball).toBe(10)     // 10 Nexus-Ball
+        ensureModeStartGrant()                             // idempotent
+        expect(getPlayer().reps).toBe(1000)
+        expect(getPlayer().items?.poke_ball).toBe(10)     // pas 20
+    })
+
+    it("fun : bankReps RECRÉDITE les vrais reps (comme normal), après le don de départ", () => {
+        setGameMode("fun")
+        bankReps(500, 0, "2026-07-17")
+        expect(getPlayer().reps).toBe(500)                 // les reps encodés comptent
+    })
+
+    it("fun : don de départ SEULEMENT en live", () => {
+        setActiveWorld("run3")
+        setGameMode("fun")
+        ensureModeStartGrant()
+        expect(getPlayer().reps).toBe(0)                   // rien hors monde live
+        expect(getPlayer().items?.poke_ball ?? 0).toBe(0)
+    })
 })

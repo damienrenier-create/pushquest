@@ -13,6 +13,11 @@ export async function POST(req: Request) {
         // Compte INVITÉ/AMI : créé via le lien /register?invite=<code>. Joue au
         // Chapitre 2 mais reste hors-concours (cf. isGuest). Code partagé par Sartay.
         const GUEST_INVITE_CODE = process.env.GUEST_INVITE_CODE || "nexus-ami-2026"
+        // Lien "AMIS SIMPLIFIÉ" : /register?invite=nexus-fun-2026. Compte invité en mode "fun" FORCÉ
+        //   (1000⚡ + 10 Nexus-Ball au départ, reps encodés simplement) → interface muscu allégée. Sert à
+        //   amener des potes sans la barrière muscu. N'affecte PAS le lien invité classique ci-dessus.
+        const FUN_INVITE_CODE = process.env.FUN_INVITE_CODE || "nexus-fun-2026"
+        const isFunInvite = typeof invite === "string" && invite === FUN_INVITE_CODE
 
         // PARRAINAGE : /register?parrain=<pseudo> → le pseudo identifie le PARRAIN. Le filleul est un compte invité.
         let sponsorId: string | null = null
@@ -20,10 +25,13 @@ export async function POST(req: Request) {
             const sponsor = await prisma.user.findFirst({ where: { nickname: { equals: parrain.trim(), mode: "insensitive" } }, select: { id: true } })
             sponsorId = sponsor?.id ?? null
         }
-        const isGuest = (typeof invite === "string" && invite === GUEST_INVITE_CODE) || sponsorId !== null
+        const isGuest = (typeof invite === "string" && invite === GUEST_INVITE_CODE) || isFunInvite || sponsorId !== null
 
-        // MODE de jeu Nexus (choisi à l'inscription) : "normal" (reps) / "easy" (2×3000) / "debutant" (6×1000).
-        const gameMode = typeof mode === "string" && ["normal", "easy", "debutant"].includes(mode) ? mode : "normal"
+        // MODE de jeu Nexus. Lien "fun" → "fun" FORCÉ (on ignore le sélecteur). Sinon, mode choisi à
+        //   l'inscription : "normal" (reps) / "easy" (2×3000) / "debutant" (6×1000).
+        const gameMode = isFunInvite
+            ? "fun"
+            : (typeof mode === "string" && ["normal", "easy", "debutant"].includes(mode) ? mode : "normal")
 
         if (!email || !code || !nickname) {
             return NextResponse.json(
