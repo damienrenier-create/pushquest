@@ -40,6 +40,15 @@ describe("dripBadgeReps — récompenses de hauts faits (une fois, drip 1000/jou
         expect(g).toEqual([])
     })
 
+    it("6 nouveaux : reps via BADGE_REPS + berry_found via `extra` (phoenix 100 / autre 50)", () => {
+        const g1 = dripBadgeReps(["fashion_outfit", "sage_saiyan"]) // 100 + 100 (BADGE_REPS)
+        expect(g1).toEqual([{ id: "fashion_outfit", reps: 100 }, { id: "sage_saiyan", reps: 100 }])
+        const g2 = dripBadgeReps(["berry_found:baie_pure", "berry_found:baie_phenix"], { "berry_found:baie_pure": 50, "berry_found:baie_phenix": 100 })
+        expect(g2).toEqual([{ id: "berry_found:baie_pure", reps: 50 }, { id: "berry_found:baie_phenix", reps: 100 }])
+        expect(isBadgeRepsClaimed("berry_found:baie_phenix")).toBe(true) // payé une fois
+        expect(dripBadgeReps(["berry_found:baie_phenix"], { "berry_found:baie_phenix": 100 })).toEqual([]) // pas deux fois
+    })
+
     it("barème conforme (échantillon)", () => {
         expect(BADGE_REPS.champion).toBe(250)
         expect(BADGE_REPS.league_6shiny).toBe(3000)

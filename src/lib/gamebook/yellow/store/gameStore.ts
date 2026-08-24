@@ -1353,6 +1353,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (!isValidAvatar(base)) return { ok: false, reason: "Tenue inconnue." }
         if (priceReps > 0 && !spendReps(priceReps)) return { ok: false, reason: "Pas assez de reps." }
         setChosenAvatar(avatarSheet(base)) // adopte la BASE propre (teinte neutre) — la teinte se règle ensuite, gratis
+        markTrainerDefeated("ach_fashion") // HAUT FAIT : 1er achat de tenue chez la Fashion Victim
         // GAG 1×/run : au 1er achat, séquence non-skippable + canne ; c'est ELLE qui se relooke (le picker se ferme).
         const got = claimFishingRod()
         persistYellowSave()
@@ -2373,6 +2374,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
         if (npc.id === "y_sage_saiyan") {
+            markTrainerDefeated("ach_sage"); persistYellowSave() // HAUT FAIT : parler au Vieux Sage Saiyan (1re fois)
             set({ sageOpen: true })
             return
         }

@@ -616,6 +616,20 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // NG+ : chaque combat (sauvages inclus) consomme la fenêtre d'abandon (≤ NGPLUS_ABANDON_LIMIT). No-op hors NG+.
     if (getActiveWorld() === "ngplus") incNgplusBattles()
 
+    // HAUT FAIT « un Daemon utilise une baie » : une baie tenue est CONSOMMÉE en combat → le moteur vide heldItem du
+    //   BattleMon (copie), l'équipe RÉELLE garde le sien. On compare : baie réelle présente + copie vidée = consommée.
+    //   Hors PvP (aucun objet tenu). L'épreuve de fusion utilise des mons éphémères (uids absents de l'équipe) → no-op.
+    if (!b.pvp && b.player?.team?.length) {
+        const berrySet = BERRY_IDS as readonly string[]
+        const realByUid = new Map(getPlayer().team.map((m) => [m.uid, m]))
+        const usedBerry = b.player.team.some((bm) => {
+            const real = realByUid.get(bm.uid)
+            if (!real) return false
+            return (!!real.heldItem && berrySet.includes(real.heldItem) && !bm.heldItem) || (!!real.heldItem2 && berrySet.includes(real.heldItem2) && !bm.heldItem2)
+        })
+        if (usedBerry) markTrainerDefeated("ach_berry_used")
+    }
+
     // ÉPREUVE DE FUSION (bac à sable) : ne compte PAS dans les stats/score (sinon les victoires gonfleraient le
     //   win-ratio run 2), ne soigne pas la vraie équipe, ne téléporte pas (cf. plus bas). N'inclut PAS l'Usine
     //   (frontier:FACTORY garde son comportement historique).

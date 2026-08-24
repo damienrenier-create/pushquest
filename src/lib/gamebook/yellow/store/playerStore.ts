@@ -877,11 +877,13 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
     const key = `${mapId}:${x}:${y}`
     const picked = st.berryHarvestDay === day ? st.berryHarvestPicked : [] // nouveau jour → repart à zéro
     if (picked.includes(key)) return false
+    const berryMk = `ach_berry:${berryId}` // HAUT FAIT : 1re récolte de CE type de baie (idempotent → 1 fois par baie)
     st = {
         ...st,
         berryHarvestDay: day,
         berryHarvestPicked: [...picked, key],
         items: { ...st.items, [berryId]: (st.items[berryId] ?? 0) + 1 },
+        defeatedTrainers: st.defeatedTrainers.includes(berryMk) ? st.defeatedTrainers : [...st.defeatedTrainers, berryMk],
     }
     emit()
     return true
@@ -2324,7 +2326,10 @@ export function settleBlackjack(payout: number, net: number): void {
     const pay = Math.max(0, Math.floor(payout))
     if (pay > 0) grantReps(pay)
     const n = Math.floor(net)
-    if (n > 0) st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
+    if (n > 0) {
+        st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
+        if (!st.defeatedTrainers.includes("ach_blackjack")) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, "ach_blackjack"] } // HAUT FAIT : 1re victoire blackjack
+    }
     logEnergyIncome("🃏 Blackjack (gain net)", n) // JOURNAL : gain net seulement (perte ≤ 0 ignorée ; le remboursement de mise n'est pas une entrée)
     emit()
 }

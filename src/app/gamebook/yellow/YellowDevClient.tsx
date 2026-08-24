@@ -81,7 +81,7 @@ import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
-import { earnedRepsBadgeIds, badgeInputFromSave, BADGE_LABELS } from "@/lib/gamebook/yellow/data/run1Badges"
+import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -969,11 +969,26 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // HAUTS FAITS — DRIP à la CONNEXION : on paie les reps des trophées gagnés-non-encore-payés, jusqu'à 1000⚡/jour
             //   (le reste attend la prochaine connexion). Chaque trophée payé = une ligne annoncée par le Dieu Spaghetti.
             if (!cancelled) {
-                const granted = dripBadgeReps(earnedRepsBadgeIds(badgeInputFromSave({ ...getPlayer(), pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0])))
+                const p = getPlayer()
+                // 6 récompenses HORS-BADGES détectées via marqueurs / flags (+ 1 clé par baie récoltée).
+                const extraIds: string[] = []
+                const extraReps: Record<string, number> = {}
+                if (p.defeatedTrainers.includes("ach_fashion")) extraIds.push("fashion_outfit")
+                if (p.collectionneurDexGiven) extraIds.push("archiviste_dexupdate")
+                if (p.defeatedTrainers.includes("ach_sage")) extraIds.push("sage_saiyan")
+                if (p.defeatedTrainers.includes("ach_berry_used")) extraIds.push("daemon_uses_berry")
+                if (p.defeatedTrainers.includes("ach_blackjack")) extraIds.push("blackjack_win")
+                for (const m of p.defeatedTrainers) if (m.startsWith("ach_berry:")) {
+                    const berryId = m.slice("ach_berry:".length)
+                    const rid = `berry_found:${berryId}`
+                    extraIds.push(rid); extraReps[rid] = berryId === "baie_phenix" ? 100 : 50 // Phénix = 100, autres = 50
+                }
+                const earned = earnedRepsBadgeIds(badgeInputFromSave({ ...p, pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0]))
+                const granted = dripBadgeReps([...earned, ...extraIds], extraReps)
                 if (granted.length) {
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",
-                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${BADGE_LABELS[g.id] ?? g.id} » !`),
+                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${rewardLabel(g.id)} » !`),
                     ])
                     persistYellowSave()
                 }

@@ -263,6 +263,19 @@ export function earnedRepsBadgeIds(i: BadgeInput): string[] {
 /** Libellés des trophées (id → label), pour l'annonce du Dieu Spaghetti lors du drip de reps. */
 export const BADGE_LABELS: Record<string, string> = Object.fromEntries(BADGES.map((b) => [b.id, b.label]))
 
+/** Libellés des 6 récompenses HORS-BADGES (clés custom du drip) + repli baie. */
+export const EXTRA_REWARD_LABELS: Record<string, string> = {
+    fashion_outfit: "Nouvelle tenue (Fashion Victim)",
+    archiviste_dexupdate: "Dex mis à jour (L'Archiviste)",
+    sage_saiyan: "Rencontrer le Vieux Sage Saiyan",
+    daemon_uses_berry: "Un Daemon utilise une baie",
+    blackjack_win: "Gagner au blackjack",
+}
+/** Libellé d'affichage d'une récompense (trophée OU clé custom), pour le Dieu Spaghetti. */
+export function rewardLabel(id: string): string {
+    return BADGE_LABELS[id] ?? EXTRA_REWARD_LABELS[id] ?? (id.startsWith("berry_found:") ? "Baie inédite découverte" : id)
+}
+
 export interface BadgeState { id: string; tier: BadgeTier; points: number; earned: boolean; revealed: boolean }
 export interface BadgeResult { badges: BadgeState[]; totalPoints: number; earnedCount: number }
 
