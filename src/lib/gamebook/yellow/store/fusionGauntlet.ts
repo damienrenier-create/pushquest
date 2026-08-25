@@ -52,7 +52,7 @@ export function gauntletHasAlive(): boolean { return !!team && team.some((f) => 
 
 /** Usure sérialisable d'UNE fusion du gauntlet. Clé = paire de parents (a,b = uids des Daemons parents, STABLES au
  *  reload car sauvegardés) → permet de ré-appliquer PV/statut/PP après reconstruction (les uids de fusion, eux, changent). */
-export interface GauntletCarryMon { a: string; b: string; hp: number; status: string; statusCounter: number; pp: Record<string, number>; moves: string[] }
+export interface GauntletCarryMon { a: string; b: string; hp: number; status: string; statusCounter: number; pp: Record<string, number>; moves: string[]; heldItem?: string | null; heldItem2?: string | null }
 /** Sérialise l'usure de l'équipe-gauntlet courante (pour persistance → REPRISE au reload). null = pas de gauntlet.
  *  `moves` = ordre COURANT des attaques (le joueur peut le réordonner) → restauré tel quel au reload. */
 export function serializeGauntletCarry(): GauntletCarryMon[] | null {
@@ -66,6 +66,10 @@ export function serializeGauntletCarry(): GauntletCarryMon[] | null {
             statusCounter: f.instance.statusCounter ?? 0,
             pp: Object.fromEntries(f.instance.moves.map((m) => [m.moveId, m.pp])),
             moves: f.instance.moves.map((m) => m.moveId),
+            // OBJET TENU (baie consommée incluse) : `?? null` car JSON.stringify DROPPE les undefined → au reload une
+            //   baie consommée (undefined) se distingue d'un ancien carry (clé absente) : null = « vidé », absent = « ne pas toucher ».
+            heldItem: f.instance.heldItem ?? null,
+            heldItem2: f.instance.heldItem2 ?? null,
         }
     })
 }
@@ -110,5 +114,11 @@ export function writeBackGauntlet(finalTeam: ReadonlyArray<BattleMon>): void {
             const b = bm.moves.find((x) => x.moveId === mv.moveId)
             if (b) mv.pp = b.pp
         }
+        // OBJET TENU CONSOMMÉ : une baie (phénix/pinch/pure/herbe blanche) vide bm.heldItem sur la COPIE de combat au
+        //   déclenchement. On reporte l'état RÉEL sur l'instance du gauntlet → une baie consommée en salle N reste
+        //   consommée en salle N+1 (fini la Baie Phénix qui réanime en boucle dans la Ligue). Les objets PASSIFS
+        //   (restes, boost de type, signatures) ne se vident jamais → recopie = no-op (comportement inchangé).
+        f.instance.heldItem = bm.heldItem
+        f.instance.heldItem2 = bm.heldItem2
     }
 }

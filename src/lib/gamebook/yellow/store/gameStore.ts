@@ -329,6 +329,11 @@ export function restoreFusionGauntletFromCarry(): boolean {
             const order = new Map(w.moves.map((id, idx) => [id, idx]))
             f.instance.moves = [...f.instance.moves].sort((x, y) => (order.get(x.moveId) ?? 99) - (order.get(y.moveId) ?? 99))
         }
+        // OBJET TENU : buildFusion vient de RÉ-hériter l'objet PLEIN des parents ; le carry fait autorité (état réel
+        //   post-combat) → une baie phénix consommée avant le refresh ne « repousse » pas. `!== undefined` = clé présente
+        //   dans le carry (null = vidé/consommé → undefined) ; absente = ancien carry → on garde la valeur ré-héritée.
+        if (w.heldItem !== undefined) f.instance.heldItem = w.heldItem ?? undefined
+        if (w.heldItem2 !== undefined) f.instance.heldItem2 = w.heldItem2 ?? undefined
     }
     if (!rebuilt.some((f) => f.instance.currentHp > 0)) { rebuilt.forEach((f) => disposeFusion(f.speciesId)); return false } // tous K.O. → fail-safe
     setGauntletTeam(rebuilt)
