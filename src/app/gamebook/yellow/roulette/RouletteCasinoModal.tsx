@@ -16,8 +16,8 @@ export default function RouletteCasinoModal({ onClose }: { onClose: () => void }
     const [caisse, setCaisse] = useState(0)
 
     const loadEnergy = (amount: number) => {
-        // VŒU DU GÉNIE (cap casino) : le chargement de la caisse est plafonné à 10/charge + 200/jour (le compteur ne
-        //   fait que monter → borne l'exposition totale même avec cashout/rechargement).
+        // VŒU DU GÉNIE (cap casino, ASSOUPLI) : le chargement de la caisse est plafonné à 250/charge + 250/jour (le
+        //   compteur ne fait que monter → borne l'exposition totale même avec cashout/rechargement).
         let amt = Math.min(amount, player.reps)
         if (isCasinoRestricted()) amt = Math.min(amt, CASINO_VOW_MAX_BET, casinoRemainingToday())
         if (amt <= 0) return

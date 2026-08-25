@@ -1270,21 +1270,20 @@ export function trackBallLockSpend(n: number) {
     if (st.ballLockRemaining > 0 && n > 0) st = { ...st, ballLockRemaining: Math.max(0, st.ballLockRemaining - Math.floor(n)) }
 }
 
-// ════════════ VŒU DU GÉNIE — CAP CASINO (10 ⚡/mise + 200 ⚡/jour) ════════════
+// ════════════ VŒU DU GÉNIE — CAP CASINO (mise ≤ 250 ⚡ + 250 ⚡/jour) ════════════
 // Actif si le marqueur `casino_restricted` est posé (effet génie « casino_cap »). `casinoSpentToday` se reset
 // chaque jour (creditDailyReps). Enforcement CLIENT (le casino jaune est client-authoritative) : chaque jeu vérifie
 // casinoBetAllowed(mise) avant de miser, et recordCasinoSpend(mise) une fois la mise engagée.
 export const CASINO_RESTRICTED_MARKER = "casino_restricted"
-export const CASINO_VOW_MAX_BET = 10
-export const CASINO_VOW_MAX_PER_DAY = 200 // (héritage) ancien plafond flat — remplacé par le cap PROGRESSIF ci-dessous
-// CAP PROGRESSIF (Sartay) : le plafond QUOTIDIEN du casino restreint démarre à 50 ⚡, monte de +10/jour, plafonné à
-//   1000 ⚡/jour → la « bride » du vœu se desserre peu à peu (Jacanon regagne sa liberté). Cf. casinoDailyCap().
-export const CASINO_CAP_START = 50
-export const CASINO_CAP_STEP = 10
-export const CASINO_CAP_MAX = 1000
-/** Plafond de mise QUOTIDIEN d'un joueur restreint aujourd'hui (progressif). Infini si non restreint. */
+// MALÉDICTION ASSOUPLIE (Sartay, 25/08/2026) : le « banni du casino » (ex-vœu de Jacanon) peut désormais miser
+//   jusqu'à 250 ⚡/JOUR — mise unique ≤ 250, total quotidien ≤ 250 (reset via creditDailyReps). Remplace l'ancien
+//   régime dur (10/mise + plafond progressif 50→1000) par un plafond FLAT, INDÉPENDANT de l'historique de la save
+//   → Jacanon retrouve ses 250/jour immédiatement, quel que soit son ancien casinoCapToday (champ conservé mais inutilisé).
+export const CASINO_DAILY_CAP = 250
+export const CASINO_VOW_MAX_BET = 250
+/** Plafond de mise QUOTIDIEN d'un joueur restreint (flat 250 ⚡/jour). Infini si non restreint. */
 export function casinoDailyCap(): number {
-    return isCasinoRestricted() ? Math.min(CASINO_CAP_MAX, st.casinoCapToday ?? CASINO_CAP_START) : Infinity
+    return isCasinoRestricted() ? CASINO_DAILY_CAP : Infinity
 }
 // VŒU « ABONDANCE MAUDITE » (Jacanon) : marqueur d'activité (defeatedTrainers) + durée 1 semaine + plafond de
 //   Daemons rendus désobéissants à la fin. Le compteur d'objets gratuits pris = le nb de Daemons touchés (max 7).
@@ -1299,7 +1298,7 @@ export function casinoBetAllowed(bet: number): { ok: boolean; reason?: string } 
     const b = Math.max(0, Math.floor(bet))
     if (b > CASINO_VOW_MAX_BET) return { ok: false, reason: `Vœu du génie : ta mise est plafonnée à ${CASINO_VOW_MAX_BET} ⚡.` }
     const cap = casinoDailyCap()
-    if (st.casinoSpentToday + b > cap) return { ok: false, reason: `Vœu du génie : plafond de ${cap} ⚡/jour au casino atteint (il monte de +${CASINO_CAP_STEP}/jour). Reviens demain.` }
+    if (st.casinoSpentToday + b > cap) return { ok: false, reason: `Vœu du génie : plafond de ${cap} ⚡/jour au casino atteint. Reviens demain.` }
     return { ok: true }
 }
 /** Reste misable au casino aujourd'hui (pour borner les curseurs de mise). Infini si non restreint. */
@@ -1343,7 +1342,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         }; return true // rencontre imposée
         case "nemesis_challenge": if (!st.defeatedTrainers.includes(NEMESIS_ARMED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, NEMESIS_ARMED_MARKER] }; return true // arme le défi némésis (PNJ apparaît)
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
-        case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER], casinoCapToday: CASINO_CAP_START }; return true // cap casino 10/mise + plafond QUOTIDIEN progressif (50 → +10/jour → 1000), enforcé par les jeux
+        case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         default: return false                                                                              // type non géré → non appliqué
     }
@@ -1586,9 +1585,7 @@ export function creditDailyReps(today: string) {
         pastaBoughtToday: 0,
         potionBuysToday: 0, // BOURSE : l'inflation perso des soins se recharge chaque jour
         jcEnergyBuysToday: 0, // BOURSE : l'inflation « recharge JC » se recharge chaque jour
-        casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : la mise dépensée du jour repart à zéro
-        // CAP CASINO PROGRESSIF : le plafond QUOTIDIEN d'un joueur restreint MONTE de +10/jour (plafonné à 1000) → la bride se desserre.
-        casinoCapToday: isCasinoRestricted() ? Math.min(CASINO_CAP_MAX, (st.casinoCapToday ?? CASINO_CAP_START) + CASINO_CAP_STEP) : st.casinoCapToday,
+        casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : la mise dépensée du jour repart à zéro (plafond FLAT 250/jour désormais)
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
