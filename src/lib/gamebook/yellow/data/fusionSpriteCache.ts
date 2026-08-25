@@ -8,8 +8,10 @@
 
 export type FusionSpriteStatus = "PENDING" | "READY" | "FAILED"
 
-/** Nb MAX d'appels API facturés pour une paire avant abandon définitif (FAILED). Borne le coût par paire. */
-export const MAX_ATTEMPTS = 2
+/** Nb MAX d'appels API facturés pour une paire avant abandon définitif (FAILED). Borne le coût par paire.
+ *  Relevé 2→3 (Sartay, 25/08/2026) : une paire tombée en FAILED (ex. « Myce… ») retente une fois de plus au
+ *  prochain chargement au lieu d'être bloquée en placeholder à vie. */
+export const MAX_ATTEMPTS = 3
 
 /** Clé de cache canonique : les 2 speciesId TRIÉS → A+B et B+A donnent la MÊME clé (donc le même sprite). */
 export function fusionPairKey(aId: string, bId: string): string {

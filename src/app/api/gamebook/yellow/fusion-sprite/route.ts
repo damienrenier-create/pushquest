@@ -22,8 +22,10 @@ import { specialFusionForIds } from "@/lib/gamebook/yellow/data/fusionSpecies"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60 // la génération image peut prendre quelques secondes
 
-const TOTAL_CAP = Number(process.env.FUSION_GEN_TOTAL_CAP ?? 500)
-const DAILY_CAP = Number(process.env.FUSION_GEN_DAILY_CAP ?? 50)
+// Plafonds RELEVÉS (Sartay, 25/08/2026) : 500→1500 total, 50→120/jour — trop de fusions novel tombaient en placeholder
+//   une fois le budget atteint. Toujours surchargeable par env. ⚠️ penser à relever aussi le budget Google Cloud (coût réel).
+const TOTAL_CAP = Number(process.env.FUSION_GEN_TOTAL_CAP ?? 1500)
+const DAILY_CAP = Number(process.env.FUSION_GEN_DAILY_CAP ?? 120)
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)

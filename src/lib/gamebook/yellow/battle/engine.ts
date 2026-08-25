@@ -345,7 +345,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     // ARTISANE — activation par-tour des objets signature (avant l'ordre : la Vitesse boostée peut le changer).
     rollSignatures(state, rng)
     // Les switchs passent AVANT les attaques.
-    const order = orderActions(state, playerResolved, enemyAction, rng)
+    const order = orderActions(state, playerResolved, enemyAction, rng, events)
 
     let playerActed = false
     for (const act of order) {
@@ -439,7 +439,7 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
     })
     // ARTISANE — activation par-tour des objets signature (identique au solo, RNG seedé → checksum PvP préservé).
     rollSignatures(state, rng)
-    const order = orderActions(state, toResolved("player", actionA), toResolved("enemy", actionB), rng)
+    const order = orderActions(state, toResolved("player", actionA), toResolved("enemy", actionB), rng, events)
     for (const act of order) {
         if (state.phase === "ended") break
         const cur = active(state[act.side])
@@ -493,6 +493,7 @@ function orderActions(
     p: ResolvedAction,
     e: ResolvedAction,
     rng: Rng,
+    events: BattleEvent[],
 ): ResolvedAction[] {
     const pp = actionPriority(state, p)
     const ep = actionPriority(state, e)
@@ -502,7 +503,13 @@ function orderActions(
     const eqc = (heldEffect(active(state.enemy))?.quickClawPct ?? 0) + (talentEffect(active(state.enemy))?.quickClawPct ?? 0)
     const pProc = pqc > 0 && rng.chance(pqc)
     const eProc = eqc > 0 && rng.chance(eqc)
-    if (pProc !== eProc) return pProc ? [p, e] : [e, p]
+    if (pProc !== eProc) {
+        // On SIGNALE le proc (le joueur doit comprendre pourquoi l'ordre change) — objet Vive Griffe vs talent Main leste.
+        const winnerMon = pProc ? active(state.player) : active(state.enemy)
+        const byItem = ((pProc ? heldEffect(active(state.player)) : heldEffect(active(state.enemy)))?.quickClawPct ?? 0) > 0
+        events.push({ kind: "message", text: `${displayName(winnerMon)} ${byItem ? "dégaine sa Vive Griffe" : "file grâce à Main leste"} et frappe en premier !` })
+        return pProc ? [p, e] : [e, p]
+    }
     const ps = effectiveSpeed(active(state.player))
     const es = effectiveSpeed(active(state.enemy))
     if (ps !== es) return ps > es ? [p, e] : [e, p]
@@ -868,6 +875,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     const drainFrac = atkHeld?.drainDealtFrac ?? talentEffect(attacker)?.drainDealtFrac
     if (drainFrac && dealt > 0 && attacker.currentHp > 0) {
         applyHeal(state, side, Math.max(1, Math.floor(dealt / drainFrac)), events)
+        events.push({ kind: "message", text: atkHeld?.drainDealtFrac ? `${displayName(attacker)} draine des PV grâce à ${atkHeld.name} !` : `${displayName(attacker)} draine des PV à l'ennemi !` })
     }
     // Roche Royale (objet) + talent Regard perçant : % d'apeurer la cible (flinch), atténué par le talent Corps sain.
     const flinchPct = ((atkHeld?.flinchPct ?? 0) + (talentEffect(attacker)?.flinchOut ?? 0)) * (talentEffect(defender)?.flinchResistMult ?? 1)
@@ -960,7 +968,7 @@ function tryInflictStatus(state: BattleState, targetSide: SideId, status: Exclud
         mon.status = "NONE"; mon.statusCounter = 0
         mon.heldItem = undefined
         events.push({ kind: "status", side: targetSide, status: "NONE" }) // baie neutralise le statut à peine infligé : le badge repart aussitôt
-        events.push({ kind: "message", text: `${displayName(mon)} : la ${cure.name} neutralise le statut !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${cure.name} : statut neutralisé !` })
     }
 }
 
@@ -1126,10 +1134,10 @@ function triggerPinchBerry(state: BattleState, side: SideId, events: BattleEvent
     mon.heldItem = undefined // consommée au déclenchement
     if (trig.kind === "heal") {
         applyHeal(state, side, Math.max(1, Math.floor(max * trig.frac)), events)
-        events.push({ kind: "message", text: `${displayName(mon)} : la ${it.name} restaure ses PV !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${it.name} et restaure ses PV !` })
     } else {
         mon.stages[trig.stat] = clampStage(mon.stages[trig.stat] + 1)
-        events.push({ kind: "message", text: `${displayName(mon)} : la ${it.name} le galvanise !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${it.name} : ça le galvanise !` })
     }
 }
 
@@ -1204,7 +1212,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
                 ;(mon as any).__phoenixUsed = true
                 mon.heldItem = undefined
                 events.push({ kind: "hp", side, hp: 1, max: maxHpOf(mon) })
-                events.push({ kind: "message", text: `${displayName(mon)} : la ${rev.name} le maintient à 1 PV !` })
+                events.push({ kind: "message", text: `🔥 ${displayName(mon)} a mangé sa ${rev.name} et refuse de tomber (survit à 1 PV) !` })
                 continue
             }
             ;(mon as any).__fainted = true

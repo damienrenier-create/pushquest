@@ -291,8 +291,10 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
         if (iToxic >= 0 && !foeTypes.includes("POISON") && !foeTypes.includes("METAL")) return iToxic
         if (iSleep >= 0 && foeFresh) return iSleep
     }
-    // 5) VAMPIGRAINE (drain passif) si pas déjà posée et cible non-Plante.
-    if (iSeed >= 0 && !foe.volatiles?.SEEDED && !foeTypes.includes("PLANTE")) return iSeed
+    // 5) VAMPIGRAINE (drain passif) — EN OUVERTURE seulement : pas déjà posée, cible non-Plante, ET on ÉVITE de semer à
+    //    bas PV quand on porte une win-con « bas PV » (Patience) : à bas PV, Patience frappe fort (étape 9) → il serait
+    //    absurde de poser une graine plutôt que de lâcher Patience (bug Glouta-maki : Vampigraine à quelques PV).
+    if (iSeed >= 0 && !foe.volatiles?.SEEDED && !foeTypes.includes("PLANTE") && !(hasLowHpNuke && frac < 0.5)) return iSeed
     // 6) NEUTRALISER un physique : débuff (Voile) puis +DÉF.
     if (iDebuff >= 0 && foePhys && foeFresh) return iDebuff
     if (iDef >= 0 && foePhys && (self.stages?.def ?? 0) < 2) return iDef

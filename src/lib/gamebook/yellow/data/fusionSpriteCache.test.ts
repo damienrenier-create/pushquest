@@ -19,7 +19,8 @@ describe("fusionSpriteCache — logique pure", () => {
     it("nextStatusAfterAttempt : succès→READY ; échec→PENDING puis FAILED au bout de MAX", () => {
         expect(nextStatusAfterAttempt(0, true)).toEqual({ status: "READY", attempts: 1 })
         expect(nextStatusAfterAttempt(0, false)).toEqual({ status: "PENDING", attempts: 1 })
-        expect(nextStatusAfterAttempt(1, false)).toEqual({ status: "FAILED", attempts: 2 }) // 2e échec = abandon définitif
+        expect(nextStatusAfterAttempt(MAX_ATTEMPTS - 2, false)).toEqual({ status: "PENDING", attempts: MAX_ATTEMPTS - 1 }) // encore un essai possible
+        expect(nextStatusAfterAttempt(MAX_ATTEMPTS - 1, false)).toEqual({ status: "FAILED", attempts: MAX_ATTEMPTS }) // dernier échec = abandon définitif
     })
 
     it("withinTotalBudget : borne le coût total à vie", () => {

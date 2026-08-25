@@ -47,6 +47,20 @@ describe("Pilote d'archétype — setup / usure / win-con", () => {
         expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))).toEqual({ kind: "move", moveIndex: 0 }) // Patience, PAS Repos
     })
 
+    it("Glouta-maki (kit complet) : Vampigraine en OUVERTURE quand il est en forme (PV hauts, foe frais)", () => {
+        const self = mon("karmaki", 80, ["patience", "tempete_verte", "vampigraine", "repos"]) // PV pleins
+        const foe = mon(SPEC, 80, ["charge"]); foe.currentHp = 9999
+        expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))).toEqual({ kind: "move", moveIndex: 2 }) // Vampigraine posée en ouverture
+    })
+
+    it("Glouta-maki à BAS PV : ne pose PLUS Vampigraine → lâche Patience (bug run argent : graine à quelques PV)", () => {
+        const self = mon("karmaki", 80, ["patience", "tempete_verte", "vampigraine", "repos"]); self.currentHp = 30 // frac < 0.5
+        // Foe COMBAT (Forgeotin) : Patience (PSY) le frappe ×2 → à bas PV (~150 de base ×2) elle domine Tempête Verte.
+        const foe = mon("forgeotin", 80, ["charge"]); foe.currentHp = 9999 // non-SEEDED
+        const act = chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))
+        expect(act).toEqual({ kind: "move", moveIndex: 0 }) // Patience, surtout PAS Vampigraine (index 2)
+    })
+
     it("un mur au kit banal (aucune mécanique spéciale) retombe sur l'IA générique", () => {
         // Sylvebarbe est whitelisté, mais avec 2 attaques pures → chooseArchetypeMove renvoie null → IA générique
         //   choisit tout de même un coup (jamais de crash, jamais de switch).
