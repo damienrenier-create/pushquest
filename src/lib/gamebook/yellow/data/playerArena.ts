@@ -33,6 +33,7 @@ export interface RegistryPlayer {
     userId: string
     nickname: string
     isGuest?: boolean
+    gameMode?: string // "fun" = compte du lien nexus-fun-2026 → scoping des reflets entre comptes fun (route nord)
     team: RegistryMon[]
     customDaemons?: StoredCustomDaemon[] // specs des Daemons CUSTOM du joueur → à enregistrer pour résoudre son reflet
     badges?: string[]
@@ -64,6 +65,12 @@ export function hasAllBadges(badges: readonly string[]): boolean {
     return ALL_BADGES.every((b) => badges.includes(b))
 }
 
+/** Route Nord : arène de reflets RÉSERVÉE aux comptes « fun » (lien nexus-fun-2026), dès le run 1, dans les
+ *  HAUTES HERBES. Gating par gameMode (pas par badge) → décidé dans usePlayerArena (arenaActive renvoie false ici). */
+export const ROUTE_NORD_MAP_ID = "yellow_route_nord"
+/** Nombre de cases-candidates (hautes herbes) où faire pop les reflets fun de la Route Nord (>= 10, cf. demande). */
+export const ROUTE_NORD_SPOT_COUNT = 12
+
 /** Mode d'arène joueur selon la map. */
 export type ArenaMode = "hub" | "mirror"
 export const ARENA_MAPS: Record<string, ArenaMode> = {
@@ -73,10 +80,12 @@ export const ARENA_MAPS: Record<string, ArenaMode> = {
     // ARÈNE EAU : une fois ONDINE vaincue, les reflets INVERSÉS (équipe = faiblesses de type,
     // pseudo à l'envers) y popent — défi miroir de fin de zone.
     yellow_arena_eau: "mirror",
+    // ROUTE NORD : reflets EXACTS entre comptes fun (activation gérée par gameMode dans le hook, pas par arenaActive).
+    [ROUTE_NORD_MAP_ID]: "hub",
 }
 /** Maps où les adversaires POPENT sur des cases ALÉATOIRES (re-tirées à chaque entrée) — façon
  *  rencontres, pour se mesurer aux autres au plus tôt. Les arènes fixes utilisent ARENA_POSITIONS. */
-export const ROAMING_ARENA_MAPS: ReadonlySet<string> = new Set([YELLOW_ENTRANCE_MAP_ID])
+export const ROAMING_ARENA_MAPS: ReadonlySet<string> = new Set([YELLOW_ENTRANCE_MAP_ID, ROUTE_NORD_MAP_ID])
 /** Cases LIBRES (walkable, hors gym) où planter les adversaires sur les arènes à placement FIXE. */
 export const ARENA_POSITIONS: Record<string, [number, number][]> = {
     yellow_arena_eau: [[2, 8], [2, 12], [13, 8], [13, 12], [3, 10], [12, 10]],
@@ -89,28 +98,66 @@ export const ARENA_POSITIONS: Record<string, [number, number][]> = {
  */
 export function arenaActive(mapId: string, badges: readonly string[]): boolean {
     if (!ARENA_MAPS[mapId]) return false
+    // ROUTE NORD : activation par gameMode "fun" (décidée dans usePlayerArena), PAS par badge → false ici pour
+    //   que les comptes NON-fun n'y voient jamais de reflet (leur Route Nord reste inchangée).
+    if (mapId === ROUTE_NORD_MAP_ID) return false
     if (mapId === YELLOW_ENTRANCE_MAP_ID) return badges.length >= 1
     if (mapId === "yellow_arena_eau") return badges.includes("eau")
     return hasAllBadges(badges)
 }
 
+// Cases JOIGNABLES par map (mémorisé, déterministe). Le plus grand composant connexe des cases praticables, en
+//   EXCLUANT les emprises de bâtiment (couche `buildings`, hors porte — exactement comme le mouvement réel). Sans ça,
+//   roamingSpots pouvait poser un reflet sur une case « grass » SOUS un bâtiment ou dans une poche isolée : le joueur
+//   ne pouvait jamais s'en approcher → bouton A (distance ≤ 1) SANS effet (bug reflets « incombattables au A »).
+const _reachableCache: Record<string, [number, number][]> = {}
+function reachableCells(mapId: string): [number, number][] {
+    if (_reachableCache[mapId]) return _reachableCache[mapId]
+    const m = YELLOW_MAPS[mapId]
+    if (!m) return []
+    const inBuildingWall = (x: number, y: number) => (m.buildings ?? []).some((b) => {
+        if (!(x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return false
+        const dw = b.doorW ?? 1
+        return !(x >= b.x + b.doorX && x < b.x + b.doorX + dw && y === b.y + b.doorY) // dans le bâtiment mais pas sur la porte
+    })
+    const walkable = (x: number, y: number) =>
+        x >= 0 && y >= 0 && x < m.width && y < m.height && !!m.tiles[y]?.[x] && !isBlockingTile(m.tiles[y][x]) && !inBuildingWall(x, y)
+    const seen = new Set<string>()
+    let best: [number, number][] = []
+    for (let y0 = 0; y0 < m.height; y0++) {
+        for (let x0 = 0; x0 < m.width; x0++) {
+            if (seen.has(`${x0},${y0}`) || !walkable(x0, y0)) continue
+            const comp: [number, number][] = []
+            const stack: [number, number][] = [[x0, y0]]
+            while (stack.length) {
+                const [x, y] = stack.pop()!
+                const k = `${x},${y}`
+                if (seen.has(k)) continue
+                seen.add(k)
+                if (!walkable(x, y)) continue
+                comp.push([x, y])
+                stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
+            }
+            if (comp.length > best.length) best = comp
+        }
+    }
+    _reachableCache[mapId] = best
+    return best
+}
+
 /**
- * Cases « libres » d'une map (sol praticable, hors murs/arbres/barrières et hors warps) où faire
- * pop des adversaires-IA, mélangées et tronquées à `count`. `rand` = source d'aléa (Math.random
- * côté UI). Déterministe pour un `rand` donné → testable.
+ * Cases « libres » d'une map où faire pop des adversaires-IA : JOIGNABLES (cf. reachableCells — hors murs de
+ * bâtiment et hors poches isolées, donc toujours atteignables au bouton A), hors warps, éventuellement restreintes
+ * à un TYPE de sol (`tileType`, ex. "grassTall" = hautes herbes), mélangées et tronquées à `count`. `rand` = source
+ * d'aléa (Math.random côté UI). Déterministe pour un `rand` donné → testable.
  */
-export function roamingSpots(mapId: string, count: number, rand: () => number): [number, number][] {
+export function roamingSpots(mapId: string, count: number, rand: () => number, tileType?: string): [number, number][] {
     const m = YELLOW_MAPS[mapId]
     if (!m) return []
     const exits = new Set((m.exits ?? []).map((e) => `${e.x},${e.y}`))
-    const spots: [number, number][] = []
-    for (let y = 0; y < m.height; y++) {
-        for (let x = 0; x < m.width; x++) {
-            const t = m.tiles[y]?.[x]
-            if (t && !isBlockingTile(t) && !exits.has(`${x},${y}`)) spots.push([x, y])
-        }
-    }
-    // Fisher-Yates → placement « hasardeux ».
+    const spots = reachableCells(mapId).filter(([x, y]) =>
+        !exits.has(`${x},${y}`) && (!tileType || m.tiles[y]?.[x] === tileType))
+    // Fisher-Yates → placement « hasardeux » (copie issue de filter → ne mute pas le cache).
     for (let i = spots.length - 1; i > 0; i--) {
         const j = Math.floor(rand() * (i + 1))
         const tmp = spots[i]; spots[i] = spots[j]; spots[j] = tmp

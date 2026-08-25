@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
     teamMaxLevel, rankClosest, buildHubTeam, bestCounterType, strongestSpeciesOfType,
     mirrorName, buildMirrorTeam, pickMirrorCounter, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
-    ROAMING_ARENA_MAPS, roamingSpots, arenaActive, type RegistryPlayer,
+    ROAMING_ARENA_MAPS, roamingSpots, arenaActive, ROUTE_NORD_MAP_ID, ROUTE_NORD_SPOT_COUNT, type RegistryPlayer,
 } from "./playerArena"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -81,6 +81,36 @@ describe("Arène joueurs — déblocage & placement", () => {
             expect(x >= 0 && x < m.width && y >= 0 && y < m.height, `${x},${y} hors bornes`).toBe(true)
             expect(isBlockingTile(m.tiles[y][x]), `${x},${y} bloquante`).toBe(false)
         }
+    })
+
+    it("roamingSpots : JAMAIS sur une emprise de bâtiment (bug reflet incombattable au bouton A)", () => {
+        let s = 7
+        const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
+        const spots = roamingSpots(YELLOW_ENTRANCE_MAP_ID, 50, rand)
+        const m = YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+        const inBuildingWall = (x: number, y: number) => (m.buildings ?? []).some((b) => {
+            if (!(x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return false
+            const dw = b.doorW ?? 1
+            return !(x >= b.x + b.doorX && x < b.x + b.doorX + dw && y === b.y + b.doorY)
+        })
+        expect((m.buildings ?? []).length).toBeGreaterThan(0) // sanity : Ville Jaune a bien des bâtiments
+        for (const [x, y] of spots) expect(inBuildingWall(x, y), `${x},${y} tombe sur un bâtiment`).toBe(false)
+    })
+
+    it("ROUTE NORD (fun) : arène hub roaming, activée par gameMode (arenaActive=false, pas de badge)", () => {
+        expect(ARENA_MAPS[ROUTE_NORD_MAP_ID]).toBe("hub")
+        expect(ROAMING_ARENA_MAPS.has(ROUTE_NORD_MAP_ID)).toBe(true)
+        // Gaté par gameMode "fun" (décidé dans le hook) → arenaActive renvoie false même avec tous les badges.
+        expect(arenaActive(ROUTE_NORD_MAP_ID, ["plante", "roche", "eau", "feu", "elec"])).toBe(false)
+    })
+
+    it("roamingSpots(route nord, grassTall) : >= 10 cases, toutes en HAUTES HERBES", () => {
+        let s = 3
+        const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
+        const spots = roamingSpots(ROUTE_NORD_MAP_ID, ROUTE_NORD_SPOT_COUNT, rand, "grassTall")
+        expect(spots.length).toBeGreaterThanOrEqual(10)
+        const m = YELLOW_MAPS[ROUTE_NORD_MAP_ID]
+        for (const [x, y] of spots) expect(m.tiles[y][x]).toBe("grassTall")
     })
 })
 

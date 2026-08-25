@@ -33,10 +33,10 @@ export async function GET() {
 
     const rows = await (prisma as any).gamebookProgress.findMany({
         where: { chapterId: YELLOW_CHAPTER_ID },
-        select: { userId: true, flags: true, user: { select: { nickname: true, isGuest: true } } },
+        select: { userId: true, flags: true, user: { select: { nickname: true, isGuest: true, gameMode: true } } },
     })
 
-    const players = (rows as { userId: string; flags: unknown; user: { nickname: string | null; isGuest: boolean } | null }[])
+    const players = (rows as { userId: string; flags: unknown; user: { nickname: string | null; isGuest: boolean; gameMode: string | null } | null }[])
         .map((r) => {
             const s = parseSave(r.flags)
             // ÉQUIPE COURANTE (pas le run-1 gelé) : le top-level est le monde LIVE ; l'équipe active d'un joueur en
@@ -48,6 +48,7 @@ export async function GET() {
                 userId: r.userId,
                 nickname: r.user?.nickname ?? "?",
                 isGuest: r.user?.isGuest === true,
+                gameMode: r.user?.gameMode ?? "normal", // "fun" = lien nexus-fun-2026 → scoping des reflets fun (route nord)
                 // MIROIR à PLEINE PUISSANCE : on expose la VRAIE force du joueur (EV entraînés, points Saiyan `allocated`,
                 //   IV, moveset/CT réels, objets tenus) — pas seulement espèce+niveau — pour que son reflet IA soit au
                 //   niveau du joueur (et active ses pilotes d'archétype via les moves équipés). Lecture seule, contexte fermé.

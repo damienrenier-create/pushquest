@@ -456,7 +456,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const player = usePlayer()
     // ARÈNES JOUEURS (hub Eau / miroir Élec) — adversaires IA, débloqués quand on a TOUS les badges.
     const myArenaLevel = player.team.reduce((m, x) => Math.max(m, x.level), 0)
-    const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel)
+    const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel, gameMode)
     const [arenaFight, setArenaFight] = useState<{ opp: ArenaOpponent; mode: ArenaMode; enemy: MonInstance[] } | null>(null)
     const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
     const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
