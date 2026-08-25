@@ -39,6 +39,46 @@ export function arenaRevancheIntro(trainerName: string, isBoss: boolean): string
 }
 
 // ── Équipes run 2 par trainerId (leaders + gardes des 5 arènes) ──
+// RUN 2 (NG+) — RE-SKIN des dresseurs d'arène : nom + planche Gen 3 (760×160) + position ALTERNATIVE (x,y) appliqués
+//   par activeNpcs/arenaInfo quand activeWorld === "ngplus". Les équipes restent NGPLUS_ARENA_TEAMS ci-dessous.
+//   x,y = repositionnement quand la carte NG+ change de grille (ex. arène 2 adopte la config de l'arène 1) ; absent = position du run 1.
+//   • Arène 1 (yellow_arena) = thème VOL « Sanctuaire des Vents » — même grille qu'au run 1 → pas de repositionnement.
+//   • Arène 2 (yellow_arena_roche) = thème PSY « Nef Psychique » — grille RE-CONFIGURÉE comme l'arène 1 (cf. NGPLUS_ARENA_MAPS)
+//     → PNJ repositionnés sur la disposition de l'arène 1 (gardes en haut, boss au trône central).
+export const NGPLUS_ARENA_NPCS: Record<string, { name: string; gen3: string; x?: number; y?: number }> = {
+    // Arène 1 — VOL
+    y_arena_g1: { name: "GARDE BRISE", gen3: "/yellow/sprites/npc_vol_g1_gen3.png" },
+    y_arena_g2: { name: "GARDE NUÉE", gen3: "/yellow/sprites/npc_vol_g2_gen3.png" },
+    y_arena_g3: { name: "GARDE RAFALE", gen3: "/yellow/sprites/npc_vol_g3_gen3.png" },
+    y_arena_g4: { name: "GARDE BOURRASQUE", gen3: "/yellow/sprites/npc_vol_g4_gen3.png" },
+    y_arena_druide: { name: "ZÉPHYRA", gen3: "/yellow/sprites/npc_vol_boss_gen3.png" },
+    // Arène 2 — PSY (grille = config arène 1 → repositionnement sur les emplacements du Bosquet/Vol)
+    y_rocharena_g1: { name: "GARDE ONDE", gen3: "/yellow/sprites/npc_psy_g1_gen3.png", x: 2, y: 1 },
+    y_rocharena_g2: { name: "GARDE MIRAGE", gen3: "/yellow/sprites/npc_psy_g2_gen3.png", x: 3, y: 1 },
+    y_rocharena_g3: { name: "GARDE PRISME", gen3: "/yellow/sprites/npc_psy_g3_gen3.png", x: 11, y: 1 },
+    y_rocharena_g4: { name: "GARDE AURA", gen3: "/yellow/sprites/npc_psy_g4_gen3.png", x: 12, y: 1 },
+    y_rocharena_boss: { name: "CÉRÉBRA", gen3: "/yellow/sprites/npc_psy_boss_gen3.png", x: 7, y: 1 },
+    // Arène 3 — ÉQUILIBRÉE « Temple de l'Harmonie » (grille = config arène 1 → repositionnement)
+    y_feuarena_g1: { name: "GARDE ÉQUINOXE", gen3: "/yellow/sprites/npc_equi_g1_gen3.png", x: 2, y: 1 },
+    y_feuarena_g2: { name: "GARDE MOSAÏQUE", gen3: "/yellow/sprites/npc_equi_g2_gen3.png", x: 3, y: 1 },
+    y_feuarena_g3: { name: "GARDE NUANCE", gen3: "/yellow/sprites/npc_equi_g3_gen3.png", x: 11, y: 1 },
+    y_feuarena_g4: { name: "GARDE ALLIAGE", gen3: "/yellow/sprites/npc_equi_g4_gen3.png", x: 12, y: 1 },
+    y_feuarena_boss: { name: "HARMONIA", gen3: "/yellow/sprites/npc_equi_boss_gen3.png", x: 7, y: 1 },
+    // Arène 4 — INSECTE « La Grande Ruche » (grille = config arène 1 → repositionnement)
+    y_elecarena_g1: { name: "GARDE DARD", gen3: "/yellow/sprites/npc_insecte_g1_gen3.png", x: 2, y: 1 },
+    y_elecarena_g2: { name: "GARDE CHITINE", gen3: "/yellow/sprites/npc_insecte_g2_gen3.png", x: 3, y: 1 },
+    y_elecarena_g3: { name: "GARDE ESSAIM", gen3: "/yellow/sprites/npc_insecte_g3_gen3.png", x: 11, y: 1 },
+    y_elecarena_g4: { name: "GARDE ANTENNE", gen3: "/yellow/sprites/npc_insecte_g4_gen3.png", x: 12, y: 1 },
+    y_elecarena_boss: { name: "REGINA", gen3: "/yellow/sprites/npc_insecte_boss_gen3.png", x: 7, y: 1 },
+    // Arène 5 — « Salle des Colosses » (finals inédits) : noms tirés du Daemon signature de chaque dresseur.
+    //   Remous [pyrokoss/cerfeuillu/torturoche/tonytony] · Écume [diamantine] · Abysse [loupyre] · Ressac/boss [amadiam AS].
+    y_eauarena_g1: { name: "GARDE TITAN", gen3: "/yellow/sprites/npc_finals_g1_gen3.png", x: 2, y: 1 },
+    y_eauarena_g2: { name: "GARDE DIAMANT", gen3: "/yellow/sprites/npc_finals_g2_gen3.png", x: 3, y: 1 },
+    y_eauarena_g3: { name: "GARDE CROC", gen3: "/yellow/sprites/npc_finals_g3_gen3.png", x: 11, y: 1 },
+    y_eauarena_g4: { name: "GARDE GEMME", gen3: "/yellow/sprites/npc_finals_g4_gen3.png", x: 12, y: 1 },
+    y_eauarena_boss: { name: "AMADIA", gen3: "/yellow/sprites/npc_finals_boss_gen3.png", x: 7, y: 1 },
+}
+
 export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     // ===== ARÈNE PLANTE → VOL (Druide Sylvain) =====
     y_arena_g1: [{ speciesId: "plumiot", level: 7 }, { speciesId: "piouflot", level: 9 }],
@@ -74,9 +114,9 @@ export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
         { speciesId: "faukon", level: 24 },
         { speciesId: "marteloutan", level: 24 },
         { speciesId: "chouhante", level: 29 },
-        { speciesId: "namizeus", level: 30 },
-        { speciesId: "flamkure", level: 31 },
-        { speciesId: "frappard", level: 32, moves: ["danse_fauve", "belier", "poing_karate", "double_pied"], opening: ["danse_fauve"] }, // AS
+        { speciesId: "namizeus", level: 30, moves: ["danse_fauve", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["danse_fauve"] }, // ouvre Danse du Fauve
+        { speciesId: "flamkure", level: 31, moves: ["danse_fauve", "lance_flammes", "flammeche", "charge"], opening: ["danse_fauve"] }, // ouvre Danse du Fauve
+        { speciesId: "frappard", level: 32, moves: ["danse_fauve", "belier", "poing_karate", "double_pied"], opening: ["danse_fauve"] }, // AS — ouvre Danse du Fauve
     ],
 
     // ===== ARÈNE ÉLEC → BESTIOLES & SPECTRES (Volta) =====

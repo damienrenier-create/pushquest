@@ -1006,7 +1006,7 @@ function NpcSprite({
     screenPos,
     overrideSprite,
 }: {
-    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string } }
+    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string }; gen3?: { url: string; col?: number; row?: number } }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     overrideSprite?: { url: string; frames: number; h?: number }
 }) {
@@ -1029,8 +1029,9 @@ function NpcSprite({
             </div>
         )
     }
-    // Planche Gen 3 (cellule idle) — prime sur NPC_SPRITES, sauf override explicite.
-    const gen3 = NPC_GEN3_IDLE[npc.id]
+    // Planche Gen 3 (cellule idle) — prime sur NPC_SPRITES, sauf override explicite. npc.gen3 (re-skin run 2) prime
+    //   sur le registre NPC_GEN3_IDLE (par id) → une arène NG+ peut re-sprite ses dresseurs sans toucher au run 1.
+    const gen3 = npc.gen3 ?? NPC_GEN3_IDLE[npc.id]
     if (gen3 && !overrideSprite) {
         return (
             <div

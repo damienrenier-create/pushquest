@@ -35,6 +35,9 @@ export interface NpcDefinition {
     // 15×10 unifiée, dresseurs repositionnés). Résolue par le store (activeNpcs) ; ignorée hors run 3. Défaut = initialX/Y.
     run3X?: number
     run3Y?: number
+    // RUN 2 (Nexus Jaune) : sprite Gen 3 (planche 760×160) posé dynamiquement par activeNpcs pour les arènes NG+
+    //   re-skinnées (ex. arène VOL). Prime sur NPC_GEN3_IDLE/NPC_SPRITES dans MapView. Ignoré hors run 2.
+    gen3?: { url: string; col?: number; row?: number }
     // Pour les wanderers : rayon de patrouille autour de la position initiale
     wanderRadius?: number
     // Dialogues

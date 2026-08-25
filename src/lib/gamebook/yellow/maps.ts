@@ -1982,3 +1982,53 @@ export const RUN3_ARENA_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 960, backgroundImageHeight: 640, backgroundImageTileSize: 64,
     },
 }
+
+// RUN 2 (NG+) — arènes re-skinnées : MÊME grille/dimensions/positions que le run 1 (donc mêmes cases marchables,
+//   PNJ, entrée, sortie), SEUL le fond change. Appliqué par resolveActiveMap quand activeWorld === "ngplus".
+//   Les gardes/boss sont rendus en sprites Gen 3 par activeNpcs (cf. NGPLUS_ARENA_NPCS) par-dessus ce fond.
+export const NGPLUS_ARENA_MAPS: Record<string, YellowMapData> = {
+    // Arène 1 (Bosquet Sacré) → arène VOL « Sanctuaire des Vents » (aire céleste, plumes, nuages). Image 2528×1686
+    //   (ratio 3:2 = 15×10) → posée en 15×10 (width/tileSize = 15, height/tileSize = 10) → remplit la grille sans distorsion.
+    yellow_arena: {
+        ...YELLOW_MAPS.yellow_arena,
+        name: "SANCTUAIRE DES VENTS",
+        backgroundImage: "/yellow/sprites/arena_vol_r2.jpg",
+        backgroundImageWidth: 1500, backgroundImageHeight: 1000, backgroundImageTileSize: 100,
+    },
+    // Arène 2 (Caverne Minière) → arène PSY « Nef Psychique ». Le sprite reprend la CONFIG de l'arène 1 (vol) → on
+    //   RE-CONFIGURE la grille (buildArenaPlante 15×10) ET les cases ; les PNJ sont repositionnés via NGPLUS_ARENA_NPCS.
+    yellow_arena_roche: {
+        ...YELLOW_MAPS.yellow_arena_roche,
+        name: "NEF PSYCHIQUE",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_psy_r2.jpg",
+        backgroundImageWidth: 1500, backgroundImageHeight: 1000, backgroundImageTileSize: 100,
+    },
+    // Arène 3 (La Caldeira, 16×16) → arène ÉQUILIBRÉE « Temple de l'Harmonie ». Même config que les arènes 1/2 :
+    //   grille RE-CONFIGURÉE en 15×10 (buildArenaPlante) + PNJ repositionnés (cf. NGPLUS_ARENA_NPCS).
+    yellow_arena_feu: {
+        ...YELLOW_MAPS.yellow_arena_feu,
+        name: "TEMPLE DE L'HARMONIE",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_equi_r2.jpg",
+        backgroundImageWidth: 1500, backgroundImageHeight: 1000, backgroundImageTileSize: 100,
+    },
+    // Arène 4 (Tour Hertz) → arène INSECTE « La Grande Ruche ». Même config que 1/2/3 (grille 15×10 + repositionnement).
+    yellow_arena_elec: {
+        ...YELLOW_MAPS.yellow_arena_elec,
+        name: "LA GRANDE RUCHE",
+        tiles: buildArenaPlante(), width: 15, height: 10, exits: RUN3_ARENA_EXIT,
+        backgroundImage: "/yellow/sprites/arena_insecte_r2.jpg",
+        backgroundImageWidth: 1500, backgroundImageHeight: 1000, backgroundImageTileSize: 100,
+    },
+    // Arène 5 (Sanctuaire des Marées, 16×16) → « Salle des Colosses » (finals inédits). Même config que 1-4 (15×10) ;
+    //   MAIS elle est à Cendreville → sortie (7,9) vers yellow_cendreville (10,10), PAS Ville Jaune.
+    yellow_arena_eau: {
+        ...YELLOW_MAPS.yellow_arena_eau,
+        name: "SALLE DES COLOSSES",
+        tiles: buildArenaPlante(), width: 15, height: 10,
+        exits: [{ x: 7, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 10 }],
+        backgroundImage: "/yellow/sprites/arena_finals_r2.jpg",
+        backgroundImageWidth: 1500, backgroundImageHeight: 1000, backgroundImageTileSize: 100,
+    },
+}

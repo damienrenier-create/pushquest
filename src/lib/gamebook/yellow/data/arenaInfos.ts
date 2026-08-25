@@ -5,7 +5,7 @@
 // (où les équipes sont re-typées via NGPLUS_ARENA_TEAMS). Aucune donnée en dur à maintenir.
 
 import { trainersOnMap, type TrainerMonSpec } from "./trainers"
-import { NGPLUS_ARENA_TEAMS } from "./ngplusArenas"
+import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS } from "./ngplusArenas"
 import { RUN3_ARENAS } from "./run3Arenas"
 import { RUN3_BOSS_TEAMS, run3ArenaBossTeam } from "./run3Bosses"
 import { getSpecies } from "./species"
@@ -65,7 +65,9 @@ export function arenaInfo(badge: BadgeId, isRun2 = false): ArenaInfo | null {
 
     return {
         badge,
-        bossName: boss.name,
+        // RUN 2 : le boss est re-skinné (nom NG+) → le panneau affiche le nom du run 2 (l'équipe montrée est déjà celle
+        //   du run 2 via teamFor(boss, isRun2) → panneau cohérent avec les Daemons réellement affrontés).
+        bossName: (isRun2 && NGPLUS_ARENA_NPCS[boss.id]?.name) || boss.name,
         bossTitle: boss.title,
         themeTypes,
         levelMin: allLevels.length ? Math.min(...allLevels) : 0,

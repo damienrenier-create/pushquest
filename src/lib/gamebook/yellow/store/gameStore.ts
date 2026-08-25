@@ -14,7 +14,7 @@ import { tryMove } from "../engine/movement"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS, RUN3_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
+import { YELLOW_MAPS, RUN3_ARENA_MAPS, NGPLUS_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
 import { currentGymBadge } from "../data/arenaInfos"
 import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
@@ -41,7 +41,7 @@ import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt, buildForc
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
-import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
@@ -78,6 +78,8 @@ import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, H
 // pour couvrir aussi le reload direct dans l'arène.
 function resolveActiveMap(mapId: string): YellowMapData | undefined {
     if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[mapId]) return RUN3_ARENA_MAPS[mapId]
+    // RUN 2 : arènes re-skinnées (même grille, fond différent) → arène 1 devient l'arène VOL. Hors run 2 : ignoré.
+    if (effectiveRunWorld() === "ngplus" && NGPLUS_ARENA_MAPS[mapId]) return NGPLUS_ARENA_MAPS[mapId]
     // LIGUE DE FUSION — salle du Dieu Spaghetti en BRONZE (le boss EST la fin) : fond SANS PORTE (cul-de-sac).
     //   Argent/or gardent le fond AVEC porte (→ salle ultime, gated). Résolu à chaque pose de carte.
     if (mapId === "yellow_fusion_miroir" && activeFusionTier((m) => isTrainerDefeated(m)) === "bronze") return FUSION_MIROIR_BRONZE
@@ -104,6 +106,14 @@ export function activeNpcs() {
         list = list.map((n) => (n.run3X != null
             ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
             : n))
+    }
+    // RUN 2 — RE-SKIN des dresseurs d'arène (ex. arène VOL) : nouveau NOM + planche Gen 3 (rendue par MapView via
+    //   npc.gen3, qui prime sur NPC_SPRITES). Positions inchangées. Hors run 2 : liste intacte.
+    if (effectiveRunWorld() === "ngplus") {
+        list = list.map((n) => {
+            const o = NGPLUS_ARENA_NPCS[n.id]
+            return o ? { ...n, name: o.name, gen3: { url: o.gen3 }, initialX: o.x ?? n.initialX, initialY: o.y ?? n.initialY } : n
+        })
     }
     // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE UNIQUEMENT, on AJOUTE le MAÎTRE
     // DES CAPACITÉS (PNJ dédié en (9,3), regarde le nord). L'assistant reste en place (invisible/décor) des deux côtés.
@@ -1778,6 +1788,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 //   — feu 8,14, eau 7,14 depuis Cendreville — sortiraient de la grille 15×10 unifiée).
                 if (targetMapId === "yellow_arena_feu") { spawnX = 8; spawnY = 14 }
                 if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[targetMapId]) { spawnX = 7; spawnY = 8 }
+                // RUN 2 : les arènes re-skinnées passées en 15×10 (feu → équilibre, eau → finals) ont la MÊME entrée
+                //   générique (7,8) → sinon les spawns de base (feu 8,14 ; eau 7,14 depuis Cendreville) sortiraient de la grille.
+                if (effectiveRunWorld() === "ngplus" && NGPLUS_ARENA_MAPS[targetMapId]) { spawnX = 7; spawnY = 8 }
                 const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
                 // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
                 // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.
