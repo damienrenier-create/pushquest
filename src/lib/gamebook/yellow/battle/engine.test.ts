@@ -503,6 +503,30 @@ describe("objets de combat (X / anti-statut)", () => {
     })
 })
 
+describe("Baie Phénix — réanimation APRÈS le KO", () => {
+    it("le Daemon réanimé revient PROPRE : statut, boosts de stats et volatiles effacés par le KO", () => {
+        const s0 = createBattle(
+            [createMonInstance("rochison", 50, { moveIds: ["danse_fauve", "eboulis", "belier", "seisme"] })],
+            [createMonInstance("plumiot", 2)],
+            { isWild: true, seed: 1 })
+        const p = s0.player.team[s0.player.activeIndex]
+        p.heldItem = "baie_phenix"
+        p.currentHp = 1          // au bord du KO
+        p.status = "POISON"      // le tick de poison en fin de tour va le mettre K.O. (déterministe)
+        p.statusCounter = 1
+        p.stages.atk = 2         // boosts présents avant la chute
+        p.stages.def = -1
+        const s1 = resolveTurn(s0, { kind: "move", moveIndex: 0 }) // danse_fauve (non offensif → l'ennemi survit, combat continue)
+        const g = s1.player.team[s1.player.activeIndex]
+        expect(g.currentHp).toBeGreaterThanOrEqual(1) // réanimé (pas K.O.)
+        expect(g.status).toBe("NONE")                 // statut effacé par le KO (plus de poison qui re-tue)
+        expect(g.statusCounter).toBe(0)
+        expect(g.stages.atk).toBe(0)                  // boosts remis à neutre
+        expect(g.stages.def).toBe(0)
+        expect(g.heldItem).toBeUndefined()            // baie consommée
+    })
+})
+
 describe("capture ratée — séquence d'échec théâtral (miss + punchline)", () => {
     it("un lancer raté joue l'anim 'miss' + une punchline, PAS l'anim de réussite", () => {
         // Sauvage coriace (haut niveau, PV pleins, Ball de base) → capture quasi impossible.

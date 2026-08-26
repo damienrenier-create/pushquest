@@ -1211,7 +1211,14 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
                 mon.currentHp = 1
                 ;(mon as any).__phoenixUsed = true
                 mon.heldItem = undefined
+                // Le KO efface TOUT avant que la baie n'agisse (elle réanime APRÈS la chute) : le Daemon revient PROPRE
+                //   — plus de statut (sommeil/toxik/brûlure…), boosts de stats remis à neutre, volatiles (confusion…) vidés.
+                const hadStatus = mon.status !== "NONE"
+                mon.status = "NONE"; mon.statusCounter = 0
+                mon.stages = neutralStages()
+                mon.volatiles = {}
                 events.push({ kind: "hp", side, hp: 1, max: maxHpOf(mon) })
+                if (hadStatus) events.push({ kind: "status", side, status: "NONE" }) // retire le badge de statut à l'écran
                 events.push({ kind: "message", text: `🔥 ${displayName(mon)} a mangé sa ${rev.name} et refuse de tomber (survit à 1 PV) !` })
                 continue
             }
