@@ -1982,6 +1982,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         catch { setToast("Starter introuvable — run 3 impossible."); return }
         const ok = await startRun3(starter)
         if (!ok) { setToast("Run 3 réservé au Champion du run 2."); return }
+        markCaught(starterId); markCaughtThisRun(starterId) // le starter run 3 entre au Pokédex (comme le run 1) — sinon sa base disparaît dès qu'il évolue
         setRun3StarterChoice(false)
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le run 3 démarre au tout début

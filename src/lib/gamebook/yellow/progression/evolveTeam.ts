@@ -12,6 +12,9 @@ import { getSpecies } from "../data/species"
 /** Une évolution effectuée sur un membre d'équipe + de quoi la défaire (annulation B). */
 export interface TeamEvolution extends EvolutionResult {
     uid: string
+    /** Toutes les formes TRAVERSÉES (base incluse → forme finale) pour cette évolution. Permet de marquer TOUTE la
+     *  chaîne au Pokédex, y compris un stade intermédiaire franchi dans le même combat (ex. 1→2→3 d'un coup). */
+    chainIds: string[]
     /** État AVANT l'évolution (pour restaurer si le joueur annule). */
     beforeSpeciesId: string
     beforeMoves: { moveId: string; pp: number; ppMax: number }[]
@@ -35,9 +38,10 @@ export function evolveTeam(team: MonInstance[]): TeamEvolution[] {
         let evolved = false
         let target = levelEvolutionTarget(mon)
         const learnedMoveIds: string[] = [], pendingMoveIds: string[] = [] // cumulés sur toute la chaîne d'évolution
+        const chainIds: string[] = [beforeSpeciesId] // base + chaque forme franchie (pour marquer TOUTE la chaîne au dex)
         while (target && guard < 5) {
             const r = applyEvolution(mon, target)
-            if (r) { evolved = true; learnedMoveIds.push(...(r.learnedMoveIds ?? [])); pendingMoveIds.push(...(r.pendingMoveIds ?? [])) }
+            if (r) { evolved = true; learnedMoveIds.push(...(r.learnedMoveIds ?? [])); pendingMoveIds.push(...(r.pendingMoveIds ?? [])); chainIds.push(mon.speciesId) }
             target = levelEvolutionTarget(mon)
             guard++
         }
@@ -50,6 +54,7 @@ export function evolveTeam(team: MonInstance[]): TeamEvolution[] {
                 toName: getSpecies(mon.speciesId)?.name ?? mon.speciesId,
                 learnedMoveIds,
                 pendingMoveIds,
+                chainIds,
                 beforeSpeciesId,
                 beforeMoves,
                 beforePendingMoves,

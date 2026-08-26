@@ -1337,7 +1337,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const team = getPlayer().team
     const evos = isFactory ? [] : evolveTeam(team)
     if (evos.length > 0) {
-        for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) } // la nouvelle forme entre au Pokédex
+        for (const e of evos) for (const id of e.chainIds) { markCaught(id); markCaughtThisRun(id) } // TOUTE la chaîne (base incluse) entre au Pokédex — un starter/don évolué n'oublie plus sa base
         setTeam([...team])
     }
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
@@ -1733,7 +1733,7 @@ function finishPvpBattle(b: BattleState) {
         const team = getPlayer().team
         evos = evolveTeam(team)
         if (evos.length > 0) {
-            for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) }
+            for (const e of evos) for (const id of e.chainIds) { markCaught(id); markCaughtThisRun(id) } // toute la chaîne (base incluse) au Pokédex
             setTeam([...team])
         }
     }

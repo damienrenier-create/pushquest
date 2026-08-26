@@ -86,6 +86,14 @@ export function applyServerSave(save: YellowSave): void {
             .map((m) => getSpecies(m.speciesId)?.id)
             .filter((id): id is string => !!id && !!SPECIES[id]),
     )]
+    // STARTERS ÉVOLUÉS (rétroactif) : un starter run 2/run 3 est un Daemon DONNÉ jamais capturé ; une fois évolué,
+    //   sa BASE n'est plus « possédée » (ownedCanon ne voit que la forme évoluée) → elle manquait au dex (ex. elefer
+    //   starter run 3 devenu barrisfer : elefer absent). On ré-injecte les bases starter MÉMORISÉES (précis, jamais
+    //   du wild évolué → pas de faux positif). Additif + rétroactif → répare les saves existantes.
+    const starterBases = pdxWorlds
+        .flatMap((w) => [w.run3StarterBase, w.ngplusStarterBase])
+        .map((id) => (id ? getSpecies(id)?.id : undefined))
+        .filter((id): id is string => !!id && !!SPECIES[id])
     // LOCALISATION « premium » (additif) : UNION des zones croisées + 1re capture LA PLUS ANCIENNE, sur tous les mondes.
     const mergedSeenAt: Record<string, string[]> = {}
     for (const w of pdxWorlds) {
@@ -110,8 +118,8 @@ export function applyServerSave(save: YellowSave): void {
     // RÉTRO-REMPLISSAGE (saves d'avant la feature) : dérive la 1re capture depuis les Daemons POSSÉDÉS (capturedMapId/at).
     for (const w of pdxWorlds) for (const m of [...(w.team ?? []), ...(w.pc ?? [])]) considerFirst(getSpecies(m.speciesId)?.id, m.capturedMapId, m.capturedAt)
     hydratePokedex({
-        seen: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []), ...ownedCanon])],
-        caught: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []), ...ownedCanon])],
+        seen: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []), ...ownedCanon, ...starterBases])],
+        caught: [...new Set([...pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []), ...ownedCanon, ...starterBases])],
         seenAt: mergedSeenAt,
         firstCatch: mergedFirstCatch,
     })
