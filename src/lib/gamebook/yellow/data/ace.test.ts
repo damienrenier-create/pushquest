@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, baseSpeciesOf, ACE_PANTHERS, ACE_PANTHERS_EVOLVED, ACE_BOX } from "./ace"
+import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, levelEvosRemaining, baseSpeciesOf, ACE_PANTHERS, ACE_PANTHERS_EVOLVED, ACE_BOX } from "./ace"
 import { getSpecies } from "./species"
 
 describe("ACE — scaling + équipe + contre adaptatif", () => {
@@ -25,6 +25,13 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(speciesAtLevel("nouillon", 16)).toBe("vermisaint")
         expect(speciesAtLevel("nouillon", 34)).toBe("divinpate")
         expect(speciesAtLevel("braisille", 36)).toBe("pyrokoss")
+    })
+
+    it("levelEvosRemaining : évolutions LEVEL restantes → borne de spawn (100 − n) pour les noEvolve", () => {
+        expect(levelEvosRemaining("nouillon")).toBe(2)    // 3 stades → base ≤98
+        expect(levelEvosRemaining("vermisaint")).toBe(1)  // stade 2 → ≤99
+        expect(levelEvosRemaining("divinpate")).toBe(0)   // final → aucun cap
+        expect(levelEvosRemaining("namicha")).toBe(1)     // lignée 2 stades (→Namizeus) → base ≤99
     })
 
     it("bestCounter renvoie une espèce de la box super-efficace contre le type joueur", () => {

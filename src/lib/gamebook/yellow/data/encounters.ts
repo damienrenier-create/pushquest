@@ -9,7 +9,7 @@ import { getMove } from "./moves"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
 import { rollIvs } from "./ivConfig"
-import { speciesAtLevel } from "./ace"
+import { speciesAtLevel, levelEvosRemaining } from "./ace"
 import { getSpecies, SPECIES } from "./species"
 import { SPECIAL_OBTAIN } from "./captureSpecial"
 
@@ -1105,6 +1105,11 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     else if (entry.levelMode === "weakestTeam" && ctx.weakestTeamLevel != null) level = ctx.weakestTeamLevel // ex. Namicha
     else if (entry.levelMode === "strongestTeam" && ctx.strongestTeamLevel != null) level = ctx.strongestTeamLevel + (entry.levelBonus ?? 0) // ex. Vipember = + fort équipe +5
     level = Math.max(1, Math.min(100, level))
+    // RÈGLE ÉVOLUTION (Sartay) : une espèce noEvolve NON-FINALE ne doit pas sortir à un niveau qui l'empêcherait
+    //   d'évoluer une fois capturée (il faut GAGNER les niveaux requis). Plafond = 100 − (évolutions LEVEL restantes) :
+    //   lignée 3 stades → base ≤98 ; 2 stades → base ≤99 (ex. Namicha→Namizeus) ; stade final/mono → aucun effet.
+    //   N'impacte en pratique que les niveaux DYNAMIQUES (Namicha = niveau du + faible de l'équipe) ; les fixes sont déjà dessous.
+    if (entry.noEvolve) level = Math.max(1, Math.min(level, 100 - levelEvosRemaining(entry.speciesId)))
 
     return finalizeSpawn(entry, level, rng, ctx)
 }

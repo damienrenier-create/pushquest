@@ -1311,7 +1311,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (tutoDone < FISHING_TUTORIAL.length) {
             const t = FISHING_TUTORIAL[tutoDone]
             markTrainerDefeated(`${FISHING_TUTORIAL_MARKER}${tutoDone + 1}`); persistYellowSave()
-            set({ fishing: { dir: player.direction, biteAt: t.biteAt, catch: { speciesId: t.speciesId, level: fishingLevel(avg, Math.random()), shiny: Math.random() < fishingShinyChance(t.biteAt), hard: false, baseIvs: fishingBaseIvs(t.biteAt, Math.random) } } })
+            const tutoLevel = fishingLevel(avg, Math.random())
+            set({ fishing: { dir: player.direction, biteAt: t.biteAt, catch: { speciesId: speciesAtLevel(t.speciesId, tutoLevel), level: tutoLevel, shiny: Math.random() < fishingShinyChance(t.biteAt), hard: false, baseIvs: fishingBaseIvs(t.biteAt, Math.random) } } })
             return
         }
         const world = effectiveRunWorld()
@@ -1325,7 +1326,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         let speciesId: string, level: number, hard: boolean
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
         else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
-        else { speciesId = fishingCommon(get().map.id, run, Math.random()); level = fishingLevel(avg, Math.random()); hard = false }
+        else { speciesId = fishingCommon(get().map.id, run, Math.random()); level = fishingLevel(avg, Math.random()); speciesId = speciesAtLevel(speciesId, level); hard = false } // stade NATUREL du niveau (comme les hautes herbes) → jamais un stade-1 bloqué à haut niveau
         // IV « PRÉVUS » (priorité au TEMPS D'ATTENTE, cf. fishingBaseIvs) ; le FERRAGE au mashing les remonte. Shiny → parfait (factory).
         set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs: fishingBaseIvs(biteAt, Math.random) } } })
     },

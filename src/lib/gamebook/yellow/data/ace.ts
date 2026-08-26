@@ -211,6 +211,20 @@ export function speciesAtLevel(baseId: string, level: number): string {
     return id
 }
 
+/** Nombre d'évolutions PAR NIVEAU restantes de baseId jusqu'à la forme finale (0 = final/mono ; TRADE/objet non comptés).
+ *  Sert à BORNER le niveau de spawn d'une espèce noEvolve pour qu'elle reste ÉVOLUTIVE : plafond = 100 − ce nombre
+ *  (lignée 3 stades → base ≤98 ; 2 stades → base ≤99 ; stade 2 → ≤99). */
+export function levelEvosRemaining(baseId: string): number {
+    let id = baseId, n = 0
+    for (let guard = 0; guard < 6; guard++) {
+        const evo = getSpecies(id)?.evolution
+        if (!evo) break
+        if (evo.method.kind === "LEVEL") n++
+        id = evo.toId
+    }
+    return n
+}
+
 export interface AceBuildInput {
     /** Niveau CLIQUET d'ACE pour ce combat : il ne monte QU'À sa défaite (cf. recordAceDefeat /
      *  aceBattleLevel). On l'utilise tel quel ici — AUCUNE recalibration sur le joueur à la
