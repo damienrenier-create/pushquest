@@ -81,3 +81,21 @@ export const LAB_ASSISTANT_LINES_NGPLUS = [
     "« Côté pilier, ici ce n'est plus Tonytony mais son cousin MEROREM. 1000 d'énergie cumulée au casino et ce Poison/Insecte increvable rejoint ton équipe — soigneur et coriace, comme l'autre. »",
     "« Le Prof., lui, refaçonne son instrument pour réveiller, encore une fois, le colosse endormi au sud… S'il réussit, de nouvelles routes s'ouvriront à toi, Champion d'un autre monde ! »",
 ]
+
+// ─── MODE FUN : cadeau de bienvenue du Prof. CHEN (remplace les défis physiques pour les joueurs qui ne s'entraînent pas) ───
+/** Reps offerts par cadeau Chen (mode fun). Réclamable 2× MAX. */
+export const CHEN_FUN_GIFT_REPS = 300
+/** MODE FUN — CHEN offre le cadeau. `added` = reps réellement crédités, `left` = cadeaux restants APRÈS celui-ci,
+ *  `shared` = énergie que reçoivent tous les AUTRES joueurs fun grâce à ce cadeau (200 au 1er, 500 au 2e). */
+export const CHEN_FUN_GIFT_LINES = (added: number, left: number, shared: number): string[] => [
+    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, pas besoin de compter tes pompes, on est là pour s'amuser. »",
+    `« Tiens, un coup de pouce : +${added}⚡ pour toi. Et comme tu passes me voir, TOUS tes potes du mode fun reçoivent +${shared}⚡ à leur prochaine connexion — c'est ça, l'esprit d'équipe ! »`,
+    left > 0
+        ? "« Repasse me voir quand tu veux : j'ai encore un cadeau en réserve (et tes potes en profiteront ENCORE plus). »"
+        : "« Voilà mon dernier cadeau pour toi. Tu veux plus d'énergie ? Convaincs tes amis de venir chercher LE LEUR : chaque passage d'un pote t'envoie ta part ! »",
+]
+/** MODE FUN — les 2 cadeaux ont déjà été réclamés. */
+export const CHEN_FUN_GIFT_DONE_LINES = [
+    "« Je t'ai déjà gâté deux fois, l'ami ! Pour le reste, l'énergie se gagne en jouant — combats, hauts faits, casino… »",
+    "« Et souviens-toi : chaque pote en mode fun qui vient chercher SON cadeau t'envoie ta part. Ramène du monde ! »",
+]

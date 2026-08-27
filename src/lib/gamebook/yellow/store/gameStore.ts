@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, claimChenGift } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -64,7 +64,7 @@ import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } fro
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
-import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate } from "../data/genieLamp"
@@ -1086,9 +1086,11 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
     const lvl = orcalineNextLevel()
     // NG+ : le « Dompteur » aligne des PANTHÉGEL. RUN 3 : l'ÉLEVEUR aligne le 3e STARTER (celui qu'il va te confier),
     //   évolué au bon stade pour le niveau (foreshadow du cadeau). Run 1 = Orcaline.
-    const sp = getActiveWorld() === "run3"
+    // effectiveRunWorld (pas getActiveWorld) → l'espèce affrontée suit le run REJOUÉ, cohérent avec le dialogue
+    //   (orcalineTrainerDialogue(effectiveRunWorld)) : en rejeu run 2, on annonce ET on affronte des Panthégel.
+    const sp = effectiveRunWorld() === "run3"
         ? speciesAtLevel(getRun3ThirdStarter() ?? "orcaline", lvl)
-        : getActiveWorld() === "ngplus" ? "panthegel" : "orcaline"
+        : effectiveRunWorld() === "ngplus" ? "panthegel" : "orcaline"
     const enemyTeam = [0, 1].map(() => createMonInstance(sp, lvl, { owned: false, ...trainerBoost(sp, lvl, "guard") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: ORCALINE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
@@ -2438,6 +2440,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // explique le terminal de défis + ses enjeux et t'invite à revenir après la Ligue. Le TERMINAL (3,3)
         // reste la machine qui ouvre les défis ; CHEN, lui, te guide.
         if (npc.id === "y_lab_scientist") {
+            // MODE FUN : cadeau de bienvenue de 300⚡ (×2 max), À LA PLACE des défis physiques. Compteur dans la save
+            //   (chenGiftClaims, soft-cap). Ordre anti-perte : crédit + compteur PERSISTÉS avant le fan-out best-effort.
+            //   Le don communautaire aux AUTRES joueurs fun (200 au 1er passage, 500 au 2e) est calculé CÔTÉ SERVEUR.
+            //   Fun ⇒ monde "live" → les branches NG+/run3 ci-dessous ne se déclenchent jamais (fun mis en premier).
+            if (getGameMode() === "fun") {
+                const claim = claimChenGift(CHEN_FUN_GIFT_REPS)
+                if (!claim) {
+                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_DONE_LINES } })
+                    return
+                }
+                persistYellowSave() // crédit + compteur sauvés AVANT le fan-out (best-effort)
+                const shared = claim.tier === 1 ? 200 : 500 // affichage ; le montant réel est re-dérivé serveur (eventKey)
+                void fetch("/api/gamebook/yellow/chen-gift", { method: "POST" }).catch(() => {})
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_LINES(claim.added, 2 - claim.tier, shared) } })
+                return
+            }
             // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
             if (getActiveWorld() === "ngplus" && canAbandonNgplus()) {
                 set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_ABANDON_OFFER_LINES }, pendingNgplusAbandon: true })
@@ -2763,7 +2781,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // GAMIN (plaine d'entraînement) : révèle le légendaire de la plaine dans SA fenêtre → DOUBLE ses chances
         // (flag goshHintHeard, par monde). RUN 1 = Goshendofy la NUIT (21h+) ; RUN 2 (NG+) = Ukognos à l'AUBE (5h-11h).
         if (npc.id === HH_KID_ID) {
-            const ng = getActiveWorld() === "ngplus"
+            const ng = effectiveRunWorld() === "ngplus" // effectiveRunWorld (pas getActiveWorld) → un REJEU run 2 parle bien d'UKOGNOS (pas Goshendofy) et vise l'AUBE, cohérent avec le boost de spawn
             const inWindow = ng ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())
             if (inWindow) {
                 markGoshHintHeard()

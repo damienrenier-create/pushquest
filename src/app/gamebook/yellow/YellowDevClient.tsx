@@ -78,7 +78,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -1130,6 +1130,26 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         }
                         lines.push(`« Je régale toute la communauté : +${energy} énergie (hors plafond) pour toi ! »`)
                         showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", lines)
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
+            // MODE FUN — CADEAU DU PROF. CHEN : un pote fun est allé voir Chen → don communautaire réclamé ici.
+            //   Crédit HORS-PLAFOND SOUPLE (≤ 2× cap, grantRepsSoftCap). RUN 3 : no-op → laissé en attente (garde run3).
+            if (!cancelled && getActiveWorld() !== "run3") {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/chen-gift")
+                    const j = r.ok ? await r.json() : null
+                    const energy = (j?.energy ?? 0) as number
+                    const events = (j?.events ?? []) as { fromNickname: string; tier: number }[]
+                    if (!cancelled && energy > 0) {
+                        grantRepsSoftCap(energy)
+                        persistYellowSave()
+                        const who = [...new Set(events.map((e) => e.fromNickname).filter(Boolean))].join(", ")
+                        showDialogue(DUEL_DREAM_NPC, "🎁 Cadeau de Chen", [
+                            "*Le Dieu Spaghetti surgit dans une bouffée de vapeur al dente…*",
+                            `« ${who || "Un pote"} est allé voir le Prof. CHEN — et régale toute la bande FUN : +${energy}⚡ (hors plafond) pour toi ! »`,
+                            "« Plus tes amis passent le voir, plus vous gagnez tous. À toi de les motiver ! »",
+                        ])
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }

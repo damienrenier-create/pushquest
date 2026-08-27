@@ -1175,3 +1175,23 @@ model PokerTable {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
+
+// MODE FUN — CADEAU DU PROF. CHEN : quand un joueur fun réclame son cadeau de bienvenue (2 max), TOUS les AUTRES
+// joueurs fun reçoivent un don d'énergie hors-plafond (200 au 1er passage du joueur, 500 au 2e), réclamé à leur
+// prochaine connexion (comme ShinyGift). Le PALIER est dérivé serveur via eventKey unique "chen:<userId>:<tier>"
+// (idempotence + anti-triche : impossible de re-arroser la communauté). Pas de @relation (userId String brut).
+// 100% ADDITIF (db:push). Gated côté code ((prisma as any).funChenGrant + try/catch) → compile/neutre avant db:push.
+model FunChenGrant {
+  id           String   @id @default(cuid())
+  toUserId     String   // bénéficiaire (un autre joueur fun)
+  fromUserId   String   // joueur déclencheur (annonce)
+  fromNickname String   // pseudo du déclencheur (annonce au login)
+  tier         Int      @default(1) // 1 (don 200) | 2 (don 500)
+  eventKey     String   // "chen:<fromUserId>:<tier>" → idempotence (1 vague par palier et par déclencheur)
+  energy       Int      @default(200)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+  @@index([eventKey])
+}

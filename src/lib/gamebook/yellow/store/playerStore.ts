@@ -163,6 +163,8 @@ interface PlayerState {
     orcalineWins: number
     /** DRESSEUR D'ORCALINE : jour (=creditedThrough) de la dernière victoire → 1 combat gagnant/jour. */
     orcalineDate: string
+    /** PROF. CHEN (mode FUN) : nb de cadeaux d'énergie de bienvenue déjà réclamés (0..2). */
+    chenGiftClaims: number
     /** PNJ 5 (gardien de la Grotte du Nexus) : nb de victoires du joueur → SCALING (+2 niveaux/victoire pour ses Gek).
      *  PAS de cap journalier (re-battable à chaque visite). */
     pnj5Wins: number
@@ -290,7 +292,7 @@ export interface DomeStats {
 }
 export function emptyDomeStats(): DomeStats { return { wins: 0, losses: 0, daemonUse: {}, moveUse: {} } }
 
-let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -581,6 +583,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         goshHintHeard: p.goshHintHeard ?? st.goshHintHeard ?? false,
         orcalineWins: p.orcalineWins ?? st.orcalineWins ?? 0,
         orcalineDate: p.orcalineDate ?? st.orcalineDate ?? "",
+        chenGiftClaims: p.chenGiftClaims ?? st.chenGiftClaims ?? 0,
         pnj5Wins: p.pnj5Wins ?? st.pnj5Wins ?? 0,
         ngplusBattles: p.ngplusBattles ?? st.ngplusBattles ?? 0,
         moveReminderUses: p.moveReminderUses ?? st.moveReminderUses ?? 0,
@@ -909,7 +912,7 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
-    st = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    st = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
     emit()
 }
 
@@ -918,7 +921,7 @@ export function resetForIntro() {
  *  nouveau), customDaemons GLOBAUX préservés, cadeaux de bienvenue neutralisés (l'énergie NG+ est créditée à
  *  part par saveManager). Le passage activeWorld="ngplus" + l'énergie sont gérés par saveManager.startNewGamePlus. */
 export function startNgPlusWorld(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
     emit()
 }
 
@@ -927,7 +930,7 @@ export function startNgPlusWorld(starter: MonInstance) {
  *  départ (500) + le passage activeWorld="run3" sont gérés par saveManager.startRun3. On réutilise ngplusStartedAt
  *  comme horodatage de départ du run (le run 3 n'a pas de champ dédié). */
 export function startRun3World(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
     emit()
 }
 
@@ -2176,6 +2179,36 @@ export function grantBonusEnergyUncapped(n: number, source = "✨ Bonus d'énerg
     st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }
     logEnergyIncome(source, amt)
     emit()
+}
+
+/** Plafond SOUPLE : crédite des reps AU-DESSUS du cap dur mais borné à softMult×repsCap. Le cap N'EST PAS relevé →
+ *  l'excédent est toléré puis retombe au cap dur au prochain bankReps quotidien (cadeau « souple/éphémère », ≠
+ *  grantBonusEnergyUncapped qui relève le cap durablement). Ne réduit jamais un solde déjà au-dessus du plafond
+ *  souple. Renvoie le montant réellement ajouté. Bloqué en run3 (source unique) sauf `force`. */
+export function grantRepsSoftCap(n: number, softMult = 2, force = false): number {
+    if (runMode() === "run3" && !force) return 0
+    const amt = Math.max(0, Math.floor(n))
+    if (amt <= 0) return 0
+    const soft = Math.floor(st.repsCap * Math.max(1, softMult)) // plafond souple = softMult × cap dur
+    const before = st.reps
+    const ceiling = Math.max(before, soft) // ne baisse jamais un solde déjà au-dessus du plafond souple
+    st = { ...st, reps: Math.min(ceiling, before + amt) }
+    emit()
+    return st.reps - before
+}
+
+/** PROF. CHEN (mode FUN) — cadeaux de bienvenue encore disponibles (0..2). */
+export function chenGiftsRemaining(): number { return Math.max(0, 2 - (st.chenGiftClaims ?? 0)) }
+/** PROF. CHEN (mode FUN) — réclame UN cadeau (crédit soft-cap) : incrémente le compteur (borné 2), crédite `amount`,
+ *  journalise. Renvoie { added, tier } (tier = 1 ou 2 = n° du cadeau réclamé) ou null si épuisé. */
+export function claimChenGift(amount: number): { added: number; tier: number } | null {
+    if (chenGiftsRemaining() <= 0) return null
+    const tier = (st.chenGiftClaims ?? 0) + 1
+    const added = grantRepsSoftCap(amount)
+    st = { ...st, chenGiftClaims: tier }
+    logEnergyIncome("🎁 Prof. CHEN (fun)", added)
+    emit()
+    return { added, tier }
 }
 
 // ============================================================
