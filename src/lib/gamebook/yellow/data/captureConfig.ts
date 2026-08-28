@@ -27,6 +27,14 @@ export function levelCatchFactor(level: number): number {
 /** Bonus si le joueur a atteint son quota PushQuest du jour (capture facilitée). */
 export const QUOTA_CAPTURE_BONUS = 1.3
 
+/** MODE FUN — capture SANS bonus quota (le quota n'existe pas en fun), modulée par la QUALITÉ (IV) du sauvage :
+ *  plus ses IV sont hauts, plus il résiste (un beau spécimen se mérite). avgIV ∈ [0,15] (moyenne des 5 stats)
+ *  → facteur ∈ [1, 0.6] (0 IV = neutre 1 ; 15 IV = 0.6). Toujours ≤1 → jamais plus facile que la base, pas d'exploit.
+ *  Remplace QUOTA_CAPTURE_BONUS dans startWildBattle quand gameMode === "fun". */
+export function funCaptureFactor(avgIV: number): number {
+    return 1 - (Math.max(0, Math.min(15, avgIV)) / 15) * 0.4
+}
+
 /** ESCALADE : chaque lancer de Ball RATÉ sur le sauvage courant augmente la valeur de capture du prochain
  *  de ce coefficient (×(1 + N×coef)). N=nb d'échecs du combat. L'acharnement paie, surtout sur les coriaces
  *  (un commun est pris avant que ça ne compte). Repart à 0 à chaque combat. */

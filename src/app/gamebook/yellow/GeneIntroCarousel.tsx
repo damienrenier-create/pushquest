@@ -5,6 +5,7 @@
 // répartition »). Déclenché une seule fois, après une capture. Exemple : Rochison.
 
 import { useState } from "react"
+import { getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 
 const SLIDES: { title: string; body: React.ReactNode }[] = [
     {
@@ -25,10 +26,17 @@ const SLIDES: { title: string; body: React.ReactNode }[] = [
     },
 ]
 
+// MODE FUN : pas de quota à boucler → la 3ᵉ slide parle de HASARD (loterie de génes) au lieu d'effort.
+const SLIDES_FUN: { title: string; body: React.ReactNode }[] = SLIDES.map((s, k) => k !== 2 ? s : {
+    title: "🎲 Des gènes tirés au hasard",
+    body: <>En <b>mode fun</b>, les gènes des sauvages sont <b>ALÉATOIRES</b> (pas de quota à boucler). Chaque rencontre est une <b>loterie</b> : l'IV moyen est le plus fréquent, un beau tirage est rare… mais enchaîne les rencontres et tu finiras par croiser un <b style={{ color: "#e0c020" }}>PARFAIT</b> ! Et à <b>plusieurs en ligne</b>, la chance grimpe — chassez ensemble ! 🤝</>,
+})
+
 export default function GeneIntroCarousel({ onDone }: { onDone: () => void }) {
     const [i, setI] = useState(0)
-    const last = i === SLIDES.length - 1
-    const s = SLIDES[i]
+    const slides = getGameMode() === "fun" ? SLIDES_FUN : SLIDES
+    const last = i === slides.length - 1
+    const s = slides[i]
     return (
         <div style={overlay} onClick={(e) => e.stopPropagation()}>
             <div style={box}>
@@ -36,7 +44,7 @@ export default function GeneIntroCarousel({ onDone }: { onDone: () => void }) {
                 <div style={title}>{s.title}</div>
                 <div style={body}>{s.body}</div>
                 <div style={dots}>
-                    {SLIDES.map((_, k) => <span key={k} style={{ ...dot, ...(k === i ? dotOn : null) }} />)}
+                    {slides.map((_, k) => <span key={k} style={{ ...dot, ...(k === i ? dotOn : null) }} />)}
                 </div>
                 <div style={nav}>
                     {i > 0

@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -70,8 +70,8 @@ import { funOnBadge, funOnCapture } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
-import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
-import { attackCost, effectiveQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
+import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
 import { BATTLE_LS_KEY } from "../storage/sessionKeys"
@@ -336,7 +336,13 @@ export function dispatchBattleInput(a: BattleInput) {
 
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, opts?: { fleeChance?: number }) {
     // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
-    const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
+    let captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
+    // FUN : pas de bonus quota → la capture dépend de la QUALITÉ (IV) du sauvage (hauts IV = plus dur à attraper).
+    if (getGameMode() === "fun") {
+        const iv = enemyTeam[0]?.ivs
+        const avgIV = iv ? (iv.hp + iv.atk + iv.def + iv.spe + iv.spc) / 5 : 0
+        captureModifier = funCaptureFactor(avgIV)
+    }
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -515,7 +521,12 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     // RUN 3 (concours) : coût UNIFORME (quota étalon) → INDÉPENDANT des reps du jour du joueur, pour que la
     //   compétition soit ÉGALE pour tous (un petit jour ne donne plus des attaques moins chères). Hors run 3 :
     //   coût scalé par le quota IRL (mercy des petits jours). effectiveRunWorld couvre aussi le rejeu run 3 (bulle).
-    const quota = effectiveRunWorld() === "run3" ? QUOTA_STD : effectiveQuota(getPlayer().wildCtx?.quota)
+    // FUN : coût piloté par les BADGES (0→30 … 4+→150, plafonné à 150), pas par les reps du jour (absents). run3 garde la priorité (compet égale).
+    const quota = effectiveRunWorld() === "run3"
+        ? QUOTA_STD
+        : getGameMode() === "fun"
+            ? playerAttackQuota(getPlayer().badges.length)
+            : effectiveQuota(getPlayer().wildCtx?.quota)
     const base = attackCost(getMove(slot.moveId), me.level, quota, hpFrac)
     return isAbundanceCurseActive() ? base * 10 : base // VŒU MAUDIT (Jacanon) : attaques ×10 tant que la malédiction est active
 }

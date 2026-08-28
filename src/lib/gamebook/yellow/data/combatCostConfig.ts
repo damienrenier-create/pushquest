@@ -23,6 +23,16 @@ export function effectiveQuota(rawQuota: number | undefined | null): number {
     return rawQuota && rawQuota > 1 ? rawQuota : QUOTA_STD
 }
 
+/** MODE FUN — « quota » d'attaque dérivé du NOMBRE DE BADGES (remplace le quota-reps du jour, absent en fun).
+ *  Plus tu as de badges, plus tes attaques coûtent cher, jusqu'au coût plein : 0→30 · 1→50 · 2→90 · 3→120 · 4→150 · 5+→150.
+ *  Toutes les valeurs sont bornées à QUOTA_STD (150) : le facteur min(1, quota/150) d'attackCost reste ≤1 → AUCUN
+ *  déplafonnement (5+ badges = exactement le coût plein, jamais au-delà). */
+const FUN_BADGE_QUOTA = [30, 50, 90, 120, 150] as const // index = nb de badges ; ≥4 → 150 (dernier élément)
+export function playerAttackQuota(badges: number): number {
+    const i = Math.max(0, Math.min(FUN_BADGE_QUOTA.length - 1, Math.floor(badges)))
+    return FUN_BADGE_QUOTA[i]
+}
+
 /**
  * « Puissance de coût » : reflète la VALEUR RÉELLE de l'attaque, pas juste sa puissance de base.
  * - Attaque de dégâts : puissance × NOMBRE MOYEN de coups (multi-hit) + la valeur du SOIN (drain).

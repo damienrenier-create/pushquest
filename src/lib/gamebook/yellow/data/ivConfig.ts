@@ -38,6 +38,32 @@ export function rollIvs(rng: () => number, quotaRatio: number, overshoot: number
     return ivs
 }
 
+// Bonus de GROUPE (mode fun) : +2% de chance d'IV EXCELLENT [12..15] par joueur EN LIGNE (hors soi), cap +20%.
+export const FUN_GROUP_EXCELLENT_PER_PLAYER = 0.02
+export const FUN_GROUP_EXCELLENT_CAP = 0.20
+
+/**
+ * MODE FUN — tirage IV à PALIERS (aucun quota reps en fun), UNIFORME dans le palier :
+ *   60% MOYEN [6..9] · 25% [4..5]∪[10..11] · 10% [1..3]∪[12..14] · 5% {0,15}.
+ * « L'IV très moyen est le plus fréquent ; bon/mauvais sont rares ; très bon/très mauvais très rares. »
+ * Bonus de groupe : +2%/joueur en ligne (cap +20%) d'IV EXCELLENT [12..15], PRIS sur le palier moyen
+ * (la tranche [0,bonus) est carvée du 60% → moyen effectif = 0.60 − bonus, jamais négatif car cap 0.20 < 0.60).
+ * rng injecté → testable/déterministe.
+ * @param connectedCount joueurs EN LIGNE (hors soi) → chasse groupée = meilleurs génes.
+ */
+export function funRollIvs(rng: () => number, connectedCount = 0): Record<StatKey, number> {
+    const bonus = Math.min(FUN_GROUP_EXCELLENT_CAP, FUN_GROUP_EXCELLENT_PER_PLAYER * Math.max(0, connectedCount))
+    const one = (): number => {
+        const u = rng()
+        if (u < bonus)  return 12 + Math.floor(rng() * 4)                                          // EXCELLENT 12..15 (bonus groupe, pris au moyen)
+        if (u < 0.60)   return 6 + Math.floor(rng() * 4)                                           // MOYEN 6..9 (largeur 0.60 − bonus)
+        if (u < 0.85)   return rng() < 0.5 ? 4 + Math.floor(rng() * 2) : 10 + Math.floor(rng() * 2)  // BON/MAUVAIS 4-5 | 10-11
+        if (u < 0.95)   return rng() < 0.5 ? 1 + Math.floor(rng() * 3) : 12 + Math.floor(rng() * 3)  // TRÈS BON/MAUVAIS 1-3 | 12-14
+        return rng() < 0.5 ? 0 : IV_MAX                                                            // EXTRÊMES 0 | 15
+    }
+    return { hp: one(), atk: one(), def: one(), spe: one(), spc: one() }
+}
+
 /** Somme des IV (0..75). */
 export function ivTotal(ivs: Record<StatKey, number>): number {
     return STAT_KEYS.reduce((a, k) => a + (ivs[k] ?? 0), 0)

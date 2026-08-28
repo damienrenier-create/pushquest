@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { currentArenaMapId } from "@/lib/gamebook/yellow/maps"
 
 const CREAM = "#f4ecd4"
@@ -15,6 +15,15 @@ const INK = "#2a1c10"
 const DARK = "#cdbb86"
 
 type Page = { t: string; rows: [string, string][] }
+
+// MODE FUN — réécrit à la volée les lignes qui parlent de reps/quota (absents en fun) : prix affichés en ⚡,
+// astuce quota → rotation heure/jour + IV au hasard, formule Saiyan → +1 fixe. Les autres modes rendent tel quel.
+function funifyRow(k: string, v: string): string {
+    let out = v.replace(/(\d+)\s*reps/g, "$1 ⚡") // la monnaie fun = énergie (pas de reps encodées)
+    if (k.includes("Astuce") && /quota/i.test(v)) out = "Les sauvages changent selon l'HEURE et le JOUR, et leurs IV sont tirés au HASARD → enchaîne les rencontres (et chasse à plusieurs pour de meilleurs génes)."
+    if (k === "Combien") out = "En mode fun : +1 point Saiyan par niveau (pas de quota à boucler)."
+    return out
+}
 
 function Row({ k, v }: { k: string; v: string }) {
     return <div style={{ fontSize: 12.5, lineHeight: 1.5, color: INK }}><b>{k} :</b> {v}</div>
@@ -179,7 +188,11 @@ export default function GuidePanel() {
     const arena = currentArenaMapId(badges)
     const isRock = arena === "yellow_arena_roche"
     const isFeu = arena === "yellow_arena_feu"
-    const pages = [...BASES_PAGES, ...(isFeu ? FEU_PAGES : isRock ? ROCHE_PAGES : PLANTE_PAGES)] // bases du combat (STAB…) en 1re page
+    const basePages = [...BASES_PAGES, ...(isFeu ? FEU_PAGES : isRock ? ROCHE_PAGES : PLANTE_PAGES)] // bases du combat (STAB…) en 1re page
+    // MODE FUN : réécrit les lignes reps/quota/Saiyan ; autres modes inchangés.
+    const pages = getGameMode() === "fun"
+        ? basePages.map((p) => ({ ...p, rows: p.rows.map(([k, v]) => [k, funifyRow(k, v)] as [string, string]) }))
+        : basePages
     // Remet à la 1re page à l'ouverture (et si on change d'arène).
     useEffect(() => { setPage(0) }, [open, arena])
 

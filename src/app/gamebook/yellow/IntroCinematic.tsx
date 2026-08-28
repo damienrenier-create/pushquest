@@ -8,6 +8,7 @@
 
 import { useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 
 const npc = (id: string) => `/yellow/sprites/npc/${id}.png`
 
@@ -35,6 +36,14 @@ const outro = (name: string): Line[] => [
     { speaker: "ESPRIT BOULETTE", sprite: npc("meatball_spirit"), fallback: "🟤", text: "Et que tes reps soient nombreuses. Va — l'aventure t'attend ! ✦" },
 ]
 
+// MODE FUN : pas de reps/sueur → l'appel se fait par les DÉFIS, et les sauvages tournent selon l'heure/le jour.
+const SCRIPT_FUN: Line[] = SCRIPT.map((l, k) =>
+    k === 1 ? { ...l, text: "Chaque DÉFI que tu relèves résonne jusqu'à Mon royaume… Tu es enfin PRÊT." }
+    : k === 7 ? { ...l, text: "Et — nous le voyons d'ici — les Daemons changent d'humeur au fil des HEURES et des JOURS. Observe le ciel avant de chasser…" }
+    : l)
+const outroFun = (name: string): Line[] => outro(name).map((l, k) =>
+    k === 2 ? { ...l, text: "Et que tes défis soient glorieux. Va — l'aventure t'attend ! ✦" } : l)
+
 function Portrait({ src, fallback }: { src: string; fallback: string }) {
     const [err, setErr] = useState(false)
     if (err) return <div style={S.portraitGlyph}>{fallback}</div>
@@ -46,15 +55,19 @@ export default function IntroCinematic({ onComplete }: { onComplete: (starterId:
     const [i, setI] = useState(0)
     const [chosen, setChosen] = useState<string | null>(null)
 
-    const advanceIntro = () => { if (i + 1 < SCRIPT.length) setI(i + 1); else setPhase("choose") }
+    const fun = getGameMode() === "fun"
+    const script = fun ? SCRIPT_FUN : SCRIPT
+    const outroLines = fun ? outroFun : outro
+
+    const advanceIntro = () => { if (i + 1 < script.length) setI(i + 1); else setPhase("choose") }
     const pick = (id: string) => { setChosen(id); setI(0); setPhase("outro") }
     const advanceOutro = () => {
-        const lines = outro(getSpecies(chosen!)?.name ?? "Ton Daemon")
+        const lines = outroLines(getSpecies(chosen!)?.name ?? "Ton Daemon")
         if (i + 1 < lines.length) setI(i + 1); else onComplete(chosen!)
     }
 
-    const line: Line | null = phase === "intro" ? SCRIPT[i]
-        : phase === "outro" ? outro(getSpecies(chosen!)?.name ?? "Ton Daemon")[i]
+    const line: Line | null = phase === "intro" ? script[i]
+        : phase === "outro" ? outroLines(getSpecies(chosen!)?.name ?? "Ton Daemon")[i]
             : null
 
     return (

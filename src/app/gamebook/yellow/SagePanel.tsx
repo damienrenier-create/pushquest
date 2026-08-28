@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { usePlayer, respecSaiyan, sageRespecCost, SAGE_SAIYAN_DAILY_CAP } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, respecSaiyan, sageRespecCost, SAGE_SAIYAN_DAILY_CAP, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import type { StatKey, MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -36,6 +36,9 @@ const INTRO = [
 ]
 const RULES =
     "« Retire un point d'une stat, replace-le dans une autre — pas un de perdu, pas un de créé. Mais l'énergie ne se déplace pas gratis : 1 goutte de sueur pour le 1ᵉʳ point du jour, 2 pour le 2ᵉ… jusqu'à 20 points. Au-delà, reviens demain. »"
+// MODE FUN : pas de sueur (aucune rep encodée) → le coût est en ⚡ (même barème triangulaire, même pool d'énergie).
+const RULES_FUN =
+    "« Retire un point d'une stat, replace-le dans une autre — pas un de perdu, pas un de créé. Mais l'énergie ne se déplace pas gratis : 1 ⚡ pour le 1ᵉʳ point du jour, 2 pour le 2ᵉ… jusqu'à 20 points. Au-delà, reviens demain. »"
 const DONE = "« VOILÀ. Sens-tu cette harmonie ? Tes points sont enfin là où ils comptent. File t'entraîner. »"
 const EXHAUSTED = "« Doucement, jeune bouillonnant : tu as déjà déplacé tes 20 points aujourd'hui. La salle de gravité t'attendra demain. »"
 const NO_TEAM = "« Une équipe VIDE ? On ne sculpte pas le néant, gamin. Reviens avec un Daemon. »"
@@ -183,7 +186,7 @@ export default function SagePanel() {
                         <button style={{ ...S.confirm, ...(canConfirm ? {} : S.confirmOff) }} disabled={!canConfirm} onClick={confirm}>
                             {moved >= 1 ? `Rééquilibrer (${moved} pt${moved > 1 ? "s" : ""} · ${cost}⚡)` : "Déplace au moins 1 point"}
                         </button>
-                        <div style={{ ...S.line, fontStyle: "italic", marginTop: 10 }}>{RULES}</div>
+                        <div style={{ ...S.line, fontStyle: "italic", marginTop: 10 }}>{getGameMode() === "fun" ? RULES_FUN : RULES}</div>
                     </div>
                 )}
             </div>

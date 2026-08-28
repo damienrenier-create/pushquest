@@ -15,6 +15,7 @@ import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
+import { setOnlineCount } from "@/lib/gamebook/yellow/multiplayer/onlinePresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade"
@@ -143,7 +144,7 @@ import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/specie
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
-import { attackCost, effectiveQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { attackCost, effectiveQuota, playerAttackQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { evTotal, topEvStats, evTotalCap, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
@@ -653,6 +654,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         direction: mapPlayer.direction,
         avatar: player.chosenAvatar, // FASHION VICTIM : diffuse mon avatar aux joueurs présents
     })
+
+    // PRÉSENCE GLOBALE (mode FUN uniquement) : compteur de joueurs fun en ligne sur TOUT le chapitre (canal dédié
+    // `yellow_nexus`, indépendant de la carte). Alimente onlinePresence → lu au spawn pour le bonus de groupe d'IV
+    // (chasse groupée = meilleurs génes). Seuls les fun s'y abonnent → trafic des 24 joueurs actuels INCHANGÉ.
+    const funGlobalPlayers = useCasinoPresence({
+        active: getGameMode() === "fun" && !battle && !showIntro && !!userId,
+        channel: "yellow_nexus",
+        myUserId: userId,
+        posX: mapPlayer.posX,
+        posY: mapPlayer.posY,
+        direction: mapPlayer.direction,
+        avatar: player.chosenAvatar,
+    })
+    useEffect(() => { setOnlineCount(funGlobalPlayers.length) }, [funGlobalPlayers.length])
 
     // === Chat du casino (RECO 8) ===
     const [chatOpen, setChatOpen] = useState(false)
@@ -4700,7 +4715,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
                                         {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, getGameMode() === "fun" ? playerAttackQuota(player.badges.length) : effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
                                     </div>
                                 )
                             })}

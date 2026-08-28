@@ -27,10 +27,10 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import { useFusionSprite } from "../useFusionSprite"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
-import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { attackCost, effectiveQuota, playerAttackQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun" | "reviveTarget" | "itemTarget"
 
@@ -352,7 +352,9 @@ export default function BattleScreen() {
             }
         } else if (menu === "moves") {
             const meHpFrac = player.currentHp / Math.max(1, maxHpOf(player)) // Patience : coût dynamique ∝ PV manquants (miroir EXACT du store)
-            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, effectiveQuota(repsWallet.wildCtx?.quota), meHpFrac))
+            // FUN : coût piloté par les BADGES (pas les reps du jour) — miroir EXACT du store (moveCostRepsForAction).
+            const costQuota = getGameMode() === "fun" ? playerAttackQuota(repsWallet.badges.length) : effectiveQuota(repsWallet.wildCtx?.quota)
+            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, costQuota, meHpFrac))
             // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
             // (la déduction de reps est déjà sautée côté store pour le PvP).
             const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)

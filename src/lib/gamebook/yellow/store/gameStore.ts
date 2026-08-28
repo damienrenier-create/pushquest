@@ -38,6 +38,7 @@ import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt, buildForcedSpawn } from "../data/encounters"
+import { getOnlineCount } from "../multiplayer/onlinePresence"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
@@ -2000,6 +2001,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
                     blockedSpecies: nemBlocked, // DÉFI NÉMÉSIS perdu → espèce-récompense scellée (Caninombre / Pyropanthe / …)
+                    funMode: getGameMode() === "fun",     // FUN : boost pop par créneau horaire (×1.5) + IV à PALIERS (funRollIvs)
+                    connectedCount: getOnlineCount(),     // FUN : joueurs en ligne (hors soi) → bonus de groupe d'IV excellent
                 })
                 if (wild) {
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on

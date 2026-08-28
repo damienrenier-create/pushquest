@@ -22,6 +22,7 @@ const th: React.CSSProperties = { background: INK, color: CREAM, padding: "4px 6
 const td: React.CSSProperties = { border: `1px solid ${DARK}`, padding: "4px 6px", textAlign: "center", color: INK }
 
 function CapturePage() {
+    const fun = getGameMode() === "fun"
     const rows = [
         ["🔴 Nexus (×1)", "niv < 10"],
         ["🔴 Nexus +", "niv < 15"],
@@ -39,7 +40,8 @@ function CapturePage() {
                 <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} style={{ ...td, fontWeight: j === 0 ? 700 : 400 }}>{c}</td>)}</tr>)}</tbody>
             </table>
             <P>Les <b>peu communs / rares</b> et les <b>hauts niveaux</b> sont plus durs → monte d'une ball, ou affaiblis encore plus.</P>
-            <P>➕ <b>Statut</b> : Sommeil/Gel <b>×2,5</b>, Poison/Para/Brûlure <b>×1,5</b>. <b>Quota</b> du jour atteint : <b>×1,3</b>. <b>Master-Éclair</b> : infaillible.</P>
+            <P>➕ <b>Statut</b> : Sommeil/Gel <b>×2,5</b>, Poison/Para/Brûlure <b>×1,5</b>. {!fun && <><b>Quota</b> du jour atteint : <b>×1,3</b>. </>}<b>Master-Éclair</b> : infaillible.</P>
+            {fun && <P>🎉 <b>Mode fun</b> : pas de bonus quota. En revanche, <b>plus les IV du sauvage sont hauts, plus il résiste</b> — un beau spécimen se mérite (monte d'une ball ou affaiblis-le à fond).</P>}
         </>
     )
 }
@@ -109,6 +111,16 @@ function EnergyPage() {
             </>
         )
     }
+    if (mode === "fun") {
+        // MODE FUN : pas de pompes à encoder → l'énergie vient des DÉFIS (labo), plus des reps.
+        return (
+            <>
+                <P>🎉 En <b>mode fun</b>, pas de pompes à encoder : ton énergie de combat vient des <b>DÉFIS</b> (onglet <b>« 🎉 Défis »</b> du labo, à l'étage).</P>
+                <P><b>Démarrage offert</b> : 1000⚡ + 10 Nexus-Ball. Ensuite tu recharges via <b>Blitz d'arène</b> (100→300⚡), <b>Sprint de capture</b> (50×N⚡) et le <b>Pokémon du jour</b> (20-100⚡). Le <b>Prof. Chen</b> à l'étage offre aussi 2 cadeaux.</P>
+                <P>Chaque combat t'ouvre une <b>réserve</b> d'énergie qui <b>grandit avec tes badges</b> (200 +150 par badge) ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
+            </>
+        )
+    }
     if (mode === "easy" || mode === "debutant") {
         return (
             <>
@@ -119,7 +131,6 @@ function EnergyPage() {
     }
     return (
         <>
-            {mode === "fun" && <P>🎉 <b>Démarrage offert</b> : 1000⚡ + 10 Nexus-Ball. Ensuite, tes reps rechargent ton énergie comme d'habitude.</P>}
             <P>Tes <b>vraies répétitions PushQuest</b> deviennent ton <b>énergie</b> de combat.</P>
             <P>Chaque attaque coûte des reps (selon sa puissance) : pas de sport, pas de munitions. Une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             <P>Toutes les reps faites aujourd'hui sont <b>jouables immédiatement</b> — même celles des jours non joués s'accumulent.</P>
@@ -127,16 +138,32 @@ function EnergyPage() {
     )
 }
 
-export const TOPICS: { t: string; body: ReactNode }[] = [
-    { t: "🎯 Capturer un Daemon", body: <CapturePage /> },
-    { t: "⚡ Reps → Énergie", body: <EnergyPage /> },
-    {
-        t: "🏆 Le quota du jour", body: <>
+// 🏆 « Le quota du jour » : en normal, le quota reps récompense les combats sauvages. En FUN (pas de quota), on
+//   explique plutôt la ROTATION par heure/jour et les IV tirés AU HASARD (+ la cible du jour pour viser la rareté).
+function QuotaPage() {
+    if (getGameMode() === "fun") {
+        return (
+            <>
+                <P>🎉 <b>Pas de quota</b> en mode fun. À la place, les sauvages <b>tournent selon l'HEURE et le JOUR</b> :</P>
+                <P>• Chaque <b>créneau</b> met un groupe de <b>types</b> à l'honneur (🌅 Plante/Insecte/Vol · ☀️ Normal/Combat/Sol/Roche · 🌤️ Eau/Élec/Métal · 🌆 Feu/Dragon/Psy · 🌙 Spectre/Poison/Ténèbres/Glace/Fée). Ces types popent un peu plus dans leur fenêtre — <b>les autres restent présents</b>.<br />• Les <b>hautes herbes</b> renouvellent aussi leurs espèces <b>chaque jour</b>.</P>
+                <P>Leurs <b>IV sont tirés AU HASARD</b> (aucun bonus d'effort) : l'IV moyen est le plus fréquent, un beau ou un mauvais est rare, un <b>PARFAIT</b> très rare → <b>enchaîne les rencontres</b> pour tomber sur la perle. À <b>plusieurs en ligne</b>, la chance d'excellents IV grimpe (chasse groupée) !</P>
+                <P>Pour <b>viser la rareté</b> : le <b>Pokémon du jour</b> (onglet « 🎉 Défis » du labo) te désigne une cible qui rapporte des ⚡.</P>
+            </>
+        )
+    }
+    return (
+        <>
             <P>Atteins ton <b>quota quotidien</b> et la nature te récompense en combat sauvage :</P>
             <P>• captures <b>facilitées</b> (×1,3)<br />• Daemons plus <b>rares</b> dans les herbes</P>
             <P><b>Dépasse</b> ton quota pour des potentiels génétiques (IV) encore meilleurs sur les sauvages.</P>
-        </>,
-    },
+        </>
+    )
+}
+
+export const TOPICS: { t: string; body: ReactNode }[] = [
+    { t: "🎯 Capturer un Daemon", body: <CapturePage /> },
+    { t: "⚡ Reps → Énergie", body: <EnergyPage /> },
+    { t: "🏆 Le quota du jour", body: <QuotaPage /> },
     { t: "⚔️ Table des types", body: <TypesPage /> },
     {
         t: "📊 Niveau de l'équipe", body: <>

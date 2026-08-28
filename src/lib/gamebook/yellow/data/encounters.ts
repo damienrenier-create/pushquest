@@ -8,7 +8,7 @@ import { createMonInstance } from "../battle/factory"
 import { getMove } from "./moves"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
-import { rollIvs } from "./ivConfig"
+import { rollIvs, funRollIvs } from "./ivConfig"
 import { speciesAtLevel, levelEvosRemaining } from "./ace"
 import { getSpecies, SPECIES } from "./species"
 import { SPECIAL_OBTAIN } from "./captureSpecial"
@@ -125,6 +125,8 @@ export interface EncounterCtx {
     caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe, Panthéon run 3)
     fusionLeagueWon?: boolean   // le joueur a-t-il déjà vaincu la Ligue de Fusion ? → débloque les créatures anciennes B2F (requiresFusionLeague)
     blockedSpecies?: readonly string[] // espèces DÉFINITIVEMENT bloquées pour ce joueur → ne popent JAMAIS (ex. Caninombre scellé après un défi némésis perdu)
+    funMode?: boolean          // MODE FUN uniquement : boost de pop par CRÉNEAU HORAIRE (×1.5) + IV à PALIERS (funRollIvs). Absent/false = modes normal/easy/debutant INCHANGÉS
+    connectedCount?: number    // joueurs EN LIGNE (hors soi) → bonus de groupe d'IV excellent (fun)
 }
 
 /**
@@ -1001,6 +1003,28 @@ function inHourRange(hour: number, [s, e]: [number, number]): boolean {
     return s < e ? (hour >= s && hour < e) : (hour >= s || hour < e)
 }
 
+/** POP PAR CRÉNEAU HORAIRE (FUN-ONLY) : dans chaque fenêtre, les Daemons des TYPES listés popent ×1.5.
+ *  5 créneaux qui couvrent TOUS les types (chaque type a son moment de la journée). Boost RELATIF : les autres
+ *  types ne disparaissent jamais, ils deviennent juste un peu moins fréquents pendant le créneau. Fenêtre [s,e[ ;
+ *  e≤s = enjambe minuit (cf. inHourRange). Ajuste librement fenêtres/types ici. */
+const TIME_TYPE_BOOST: readonly { range: readonly [number, number]; types: readonly string[] }[] = [
+    { range: [5, 9],   types: ["PLANTE", "INSECTE", "VOL"] },              // 🌅 aube
+    { range: [9, 13],  types: ["NORMAL", "COMBAT", "SOL", "ROCHE"] },      // ☀️ matin
+    { range: [13, 17], types: ["EAU", "ELEC", "METAL"] },                 // 🌤️ après-midi
+    { range: [17, 21], types: ["FEU", "DRAGON", "PSY"] },                 // 🌆 soirée
+    { range: [21, 5],  types: ["SPECTRE", "POISON", "TENEBRES", "GLACE", "FEE"] }, // 🌙 nuit (enjambe minuit)
+]
+const TIME_TYPE_MULT = 1.5
+
+/** Multiplicateur de pop lié à l'heure — FUN uniquement. 1 si non-fun, heure absente, hors fenêtre, ou type non concerné. */
+function timeTypeMult(speciesId: string, hour?: number, fun?: boolean): number {
+    if (!fun || hour == null) return 1
+    const slot = TIME_TYPE_BOOST.find((t) => inHourRange(hour, t.range as [number, number]))
+    if (!slot) return 1
+    const types = getSpecies(speciesId)?.types
+    return types && types.some((ty) => slot.types.includes(ty)) ? TIME_TYPE_MULT : 1
+}
+
 /** Bonus joueur (plafonné ×1.8) selon les stats PushQuest. */
 function playerMult(entry: WildEntry, p?: WildPlayerCtx): number {
     if (!p || !entry.player) return 1
@@ -1012,14 +1036,14 @@ function playerMult(entry: WildEntry, p?: WildPlayerCtx): number {
     return Math.min(1.8, m)
 }
 
-/** Poids final d'une entrée à une position donnée. */
-function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: WildPlayerCtx): number {
+/** Poids final d'une entrée à une position donnée. `hour`/`fun` (fun only) → boost de type par créneau horaire. */
+function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: WildPlayerCtx, hour?: number, fun?: boolean): number {
     let w = entry.base
     for (const b of entry.affinity ?? []) w *= affinityMult(biomeDistance(mapId, x, y, b))
     for (const b of entry.repulsion ?? []) w *= repulsionMult(biomeDistance(mapId, x, y, b))
     // Boost d'apparition lié au quota (ex. Bélunode ×3 quand le quota du jour est atteint).
     if (entry.quotaRateMult && p?.quotaReached) w *= entry.quotaRateMult
-    return w * playerMult(entry, p)
+    return w * playerMult(entry, p) * timeTypeMult(entry.speciesId, hour, fun)
 }
 
 const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(rng() * (max - min + 1))
@@ -1065,7 +1089,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
         : (e.hourRange && ctx.hour != null && !inHourRange(ctx.hour, e.hourRange)) ? 0 // gate horaire (ex. Karmaki 0-12h, Hypnoppo 12-24h)
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
-        : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+        : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
 
@@ -1227,7 +1251,7 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     // Mottoche (+ sa lignée) : au champ d'entraînement UNIQUEMENT en run 1 → filtrée en RUN 2 (exclusive à la Grotte).
     const pool = (ctx.ngplus ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche") : tg.typePools[type]) ?? []
     if (pool.length === 0) return null
-    const weights = pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+    const weights = pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
     let r = rng() * total, idx = 0
@@ -1248,7 +1272,10 @@ function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: 
     level = Math.max(1, Math.min(100, level))
     const quotaRatio = ctx.player ? ctx.player.quotaRatio : 0.5
     const overshoot = ctx.player ? ctx.player.overshoot : 0
-    const ivsByStat = rollIvs(rng, quotaRatio, overshoot)
+    // FUN : IV à PALIERS (pas de quota reps) + bonus de groupe si des potes sont en ligne. Sinon : roll piloté par l'effort.
+    const ivsByStat = ctx.funMode
+        ? funRollIvs(rng, ctx.connectedCount ?? 0)
+        : rollIvs(rng, quotaRatio, overshoot)
     const finalSpecies = entry.noEvolve ? entry.speciesId : speciesAtLevel(entry.speciesId, level)
     const shiny = rng() < 1 / 512 // CHROMATIQUE (~1/512) : IV parfaits + +10% stats (cf. createMonInstance/fullStats)
     const mon = createMonInstance(finalSpecies, level, { ivsByStat, shiny })
