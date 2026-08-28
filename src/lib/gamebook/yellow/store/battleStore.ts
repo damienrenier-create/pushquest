@@ -66,6 +66,7 @@ import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
+import { funOnBadge, funOnCapture } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -682,6 +683,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         const wild = b.enemy.team[b.enemy.activeIndex]
         if (wild) {
             addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
+            // DÉFIS FUN : avance le SPRINT (N espèces) / valide la CIBLE DU JOUR. No-op hors mode fun (aucun défi actif).
+            if (getActiveWorld() !== "replay") funOnCapture(wild.speciesId)
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
             // 🐈‍⬛ GALIJAH : à 150 ESPÈCES → arme sa chasse (décompte UI). Il se CAPTURE sur l'ÎLE ÉMERAUDE (rencontre
@@ -1064,6 +1067,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const t = getTrainer(storeState.trainer.trainerId)
             const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
+            if (badgeAwarded) funOnBadge() // DÉFI FUN arène (no-op hors mode fun / hors fenêtre)
             // RUN 3 : chaque arène vaincue RECHARGE l'énergie JUSQU'À son plafond (500→600→700→800→1000), sans
             //   jamais dépasser ni réduire la réserve → top-up = max(0, plafond - réserve actuelle). Seule source
             //   avec les 500 de départ. Forcé (le run 3 bloque les gains non-forcés).

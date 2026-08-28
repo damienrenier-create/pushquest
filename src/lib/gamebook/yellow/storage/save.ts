@@ -7,6 +7,7 @@
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
+import { emptyFunDefis, parseFunDefis, type FunDefisState } from "../data/funDefis"
 import { isHeldItem } from "../data/heldItems"
 import { CRAFT_STATS, type CraftStat, type CraftedItem } from "../data/artisane"
 import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
@@ -137,6 +138,8 @@ export interface YellowSave {
     moveReminderUses: number
     /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
     labDefi: LabDefiState
+    /** DÉFIS FUN (mode fun) : arène/sprint/cible du jour — échelle de captures, cible du jour, défi chrono actif. */
+    funDefis: FunDefisState
     /** DAEMONS CUSTOM créés (post-Ligue, Phase 2) — persistés pour être ré-enregistrés/joués. Optionnel (anciennes saves). */
     customDaemons: StoredCustomDaemon[]
     /** RUN 2 — timestamp (ms) de lancement du NG+ (undefined hors NG+). */
@@ -311,7 +314,7 @@ export const ENERGY_LOG_MAX = 80
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -705,6 +708,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         ngplusBattles: typeof o.ngplusBattles === "number" ? Math.max(0, Math.floor(o.ngplusBattles)) : 0,
         moveReminderUses: typeof o.moveReminderUses === "number" ? Math.max(0, Math.floor(o.moveReminderUses)) : 0,
         labDefi: parseLabDefi(o.labDefi),
+        funDefis: parseFunDefis(o.funDefis),
         // Défensif : on ne garde que les entrées custom PLAUSIBLES (une entrée cassée ne bloque pas le chargement).
         customDaemons: Array.isArray(o.customDaemons) ? o.customDaemons.filter(isPlausibleStoredDaemon) : [],
         ngplusStartedAt: typeof o.ngplusStartedAt === "number" && isFinite(o.ngplusStartedAt) ? Math.floor(o.ngplusStartedAt) : undefined,

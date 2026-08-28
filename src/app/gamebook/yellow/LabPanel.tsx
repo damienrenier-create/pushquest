@@ -9,13 +9,16 @@
 //   SURPRISE : roulette dorée → gagne 1000 énergies cumulées → Tonytony
 // PAUSE : tant que tu es Champion sans avoir récupéré la Daemonflûte, le labo est réservé à ta récompense.
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, logEnergyIncome, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
     physWinCount, recordPhysWin, casinoPillar, useActiveWorld,
+    getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
+import { funSprintReward } from "@/lib/gamebook/yellow/data/funDefis"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
@@ -52,12 +55,24 @@ export default function LabPanel() {
     const ngplus = world === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
     const run3 = world === "run3"     // run 3 (concours) : casino/roulette FERMÉS
     const pv = pushupDefiVariant(ngplus)         // { exercise, word: "pompes"|"squats", growth }
-    const [tab, setTab] = useState<"phys" | "ct" | "surprise">("phys")
+    const isFun = getGameMode() === "fun"
+    const [tab, setTab] = useState<"phys" | "ct" | "surprise" | "fun">(isFun ? "fun" : "phys")
     const [ctType, setCtType] = useState<PokeType | null>(null)
     const [casino, setCasino] = useState(false)
     const [ticketsOpen, setTicketsOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
+    const [now, setNow] = useState(() => Date.now())
+    // Chrono live pour l'onglet Fun (tick 1s tant qu'un défi fun est actif).
+    useEffect(() => {
+        if (!open || !isFun) return
+        const id = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(id)
+    }, [open, isFun])
+    // Cible du jour : tirée à l'ouverture (idempotent / par jour).
+    useEffect(() => {
+        if (open && isFun) { ensureFunDailyTarget(); persistYellowSave() }
+    }, [open, isFun])
 
     if (!open) return null
 
@@ -144,12 +159,54 @@ export default function LabPanel() {
                     <>
                         {/* Onglets */}
                         <div style={{ display: "flex", borderBottom: `2px solid ${DARK}` }}>
-                            {([["phys", "⚡ Physique"], ["ct", "💿 CT"], ["surprise", "🎁 Surprise"]] as const).map(([k, lbl]) => (
+                            {((isFun ? [["fun", "🎉 Défis"], ["ct", "💿 CT"], ["surprise", "🎁 Surprise"]] : [["phys", "⚡ Physique"], ["ct", "💿 CT"], ["surprise", "🎁 Surprise"]]) as ["phys" | "ct" | "surprise" | "fun", string][]).map(([k, lbl]) => (
                                 <button key={k} onClick={() => { setTab(k); setMsg(null) }} style={{ ...tabBtn, ...(tab === k ? tabOn : {}) }}>{lbl}</button>
                             ))}
                         </div>
 
                         <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
+                            {/* ─── FUN (défis chronométrés du mode fun) ─── */}
+                            {tab === "fun" && (() => {
+                                const f = player.funDefis
+                                const a = f.active
+                                const dailyName = getSpecies(f.dailySpecies)?.name ?? f.dailySpecies
+                                if (a) {
+                                    const left = Math.max(0, a.deadline - now)
+                                    const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000)
+                                    const expired = left <= 0
+                                    const title = a.kind === "arena" ? "🏆 Bats une arène (de A à Z)" : a.kind === "sprint" ? `🎯 Capture ${a.target} espèces différentes` : `⭐ Capture ${dailyName}`
+                                    const prog = a.kind === "sprint" ? `${a.caught.length}/${a.target} espèces capturées` : a.kind === "arena" ? "Gagne le badge d'une arène" : "Trouve-le à l'état sauvage"
+                                    return (
+                                        <div style={cardStyle}>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 14 }}>{title}</div>
+                                            <div style={{ fontSize: 30, fontWeight: 900, color: expired ? "#b03030" : INK, textAlign: "center", margin: "6px 0" }}>⏱ {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}</div>
+                                            <div style={{ fontSize: 12, color: INK, textAlign: "center", opacity: 0.85 }}>{expired ? "Délai dépassé — relance-le." : prog}</div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.65, marginTop: 6, textAlign: "center" }}>La récompense tombe AUTOMATIQUEMENT dès la réussite. Reste dans les temps !</div>
+                                            <button onClick={() => { abandonFunDefi(); persistYellowSave(); setMsg("Défi abandonné.") }} style={ghost}>Abandonner</button>
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <div style={{ fontSize: 12, color: INK, opacity: 0.85, lineHeight: 1.5, marginBottom: 8 }}>🎉 En mode fun, ton énergie vient de ces <b>défis chronométrés</b> (fini les pompes à encoder !). Un seul à la fois — la récompense est créditée dès que tu réussis.</div>
+                                        <div style={cardStyle}>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+100 → +300⚡</span></div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (les 4 gardes + le boss) dans l'<b>heure</b>.</div>
+                                            <button onClick={() => { startFunDefi("arena"); persistYellowSave() }} style={primary}>Lancer (1 h)</button>
+                                        </div>
+                                        <div style={cardStyle}>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🎯 Sprint de capture — <span style={{ color: "#2a7d2a" }}>+{funSprintReward(f.ladder)}⚡</span></div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Capture <b>{f.ladder} espèces DIFFÉRENTES</b> en 10 minutes. L'objectif monte à chaque réussite (et ne redescend jamais).</div>
+                                            <button onClick={() => { startFunDefi("sprint"); persistYellowSave() }} style={primary}>Lancer (10 min)</button>
+                                        </div>
+                                        <div style={cardStyle}>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>⭐ Pokémon du jour — <span style={{ color: "#2a7d2a" }}>{f.dailyDone ? "réussi ✓" : `+${f.dailyReps}⚡`}</span></div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>{f.dailyDone ? `✅ Déjà réussi aujourd'hui (${dailyName}). Reviens demain pour une nouvelle cible !` : <>Capture <b>{dailyName || "le Pokémon du jour"}</b> dans l'<b>heure</b>. Plus il est rare, plus il rapporte.</>}</div>
+                                            <button disabled={f.dailyDone || !f.dailySpecies} onClick={() => { startFunDefi("daily"); persistYellowSave() }} style={{ ...primary, opacity: (f.dailyDone || !f.dailySpecies) ? 0.5 : 1, cursor: (f.dailyDone || !f.dailySpecies) ? "default" : "pointer" }}>Lancer (1 h)</button>
+                                        </div>
+                                    </div>
+                                )
+                            })()}
                             {/* ─── PHYSIQUE ─── */}
                             {tab === "phys" && (activePhys ? (() => {
                                 // BUG FIX : le défi ACTIF affiche la cible ADAPTÉE (comme la liste), plus le label statique.

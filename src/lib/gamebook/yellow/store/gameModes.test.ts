@@ -96,10 +96,11 @@ describe("PARRAINAGE — modes de jeu (énergie)", () => {
         expect(getPlayer().items?.poke_ball).toBe(10)     // pas 20
     })
 
-    it("fun : bankReps RECRÉDITE les vrais reps (comme normal), après le don de départ", () => {
+    it("fun : bankReps NE recrédite PLUS les vrais reps (encodage muscu retiré) — comme easy/debutant", () => {
         setGameMode("fun")
+        const before = getPlayer().reps
         bankReps(500, 0, "2026-07-17")
-        expect(getPlayer().reps).toBe(500)                 // les reps encodés comptent
+        expect(getPlayer().reps).toBe(before)              // inchangé : l'énergie fun vient des DÉFIS, plus des reps encodés
     })
 
     it("fun : don de départ SEULEMENT en live", () => {

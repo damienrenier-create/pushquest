@@ -1121,6 +1121,39 @@ function hhMulberry32(seed: number): () => number {
 }
 function hashStr(s: string): number { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
 
+// ── DÉFI FUN « Pokémon du jour » ────────────────────────────────────────────────────────────────────────────────
+/** Rareté (poids de spawn de base) → reps (plus rare = plus payé), bornée 20-100. Paliers alignés sur COMMON/UNCOMMON/RARE/VERY_RARE. */
+export function rarityRepsTarget(base: number): number {
+    if (base >= COMMON) return 20
+    if (base >= UNCOMMON) return 40
+    if (base >= RARE) return 60
+    if (base >= VERY_RARE) return 80
+    return 100 // giga-rare / extrêmement rare
+}
+/** CIBLE DU JOUR (défi fun) : tirage DÉTERMINISTE (même seed pour tous) dans l'UNION des pools des zones ACCESSIBLES
+ *  (`mapIds`). Inclut les bases stade 1/2 ET les mono (base sans évolution) ; EXCLUT uniquement les LÉGENDAIRES.
+ *  Renvoie l'espèce + les reps (20-100 selon rareté). null si aucune candidate. */
+export function funDailyTarget(mapIds: readonly string[], dayKey: string): { speciesId: string; base: number; reps: number } | null {
+    const seen = new Set<string>()
+    const cand: { speciesId: string; base: number }[] = []
+    for (const mapId of mapIds) {
+        const zone = ZONES[mapId]
+        if (!zone) continue
+        const raw: WildEntry[] = zone.pool?.length ? zone.pool : (zone.trainingGrid ? Object.values(zone.trainingGrid.typePools).flat() : [])
+        for (const e of raw) {
+            if (seen.has(e.speciesId)) continue
+            seen.add(e.speciesId)
+            if (getSpecies(e.speciesId)?.rarity === "LEGENDARY") continue // pas de légendaire (Goshendofy/Ukognos…)
+            cand.push({ speciesId: e.speciesId, base: e.base })
+        }
+    }
+    if (!cand.length) return null
+    cand.sort((a, b) => (a.speciesId < b.speciesId ? -1 : 1)) // ordre STABLE → tirage indépendant de l'ordre des zones
+    const rng = hhMulberry32(hashStr(`funtarget:${dayKey || "1970-01-01"}`))
+    const e = cand[Math.floor(rng() * cand.length)]
+    return { speciesId: e.speciesId, base: e.base, reps: rarityRepsTarget(e.base) }
+}
+
 /** Types du jour pour les 9 carrés (slots 0-8) : mélange Fisher-Yates DÉTERMINISTE par date → 9 types
  *  DISTINCTS tirés des 10 (1 type « au repos » chaque jour, en rotation). Les highOnlyTypes (ex. ROCHE)
  *  ne tombent jamais sur la rangée du BAS (slots 0-2, bas niveau) : on les échange avec un slot ≥3. */
