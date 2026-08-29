@@ -27,9 +27,11 @@ const TYPE_FR: Record<PokeType, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
     POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal", TENEBRES: "Ténèbres",
 }
-// Types PROPOSABLES au joueur dans le créateur. FÉE (Ukognos) et MÉTAL (Magnetor) sont EXCLUS :
-// réservés à leurs porteurs canoniques — jamais un starter/Daemon custom Fée ou Métal.
+// Types PROPOSABLES au joueur dans le créateur. FÉE (Ukognos) et MÉTAL (Magnetor) sont EXCLUS
+// dans les runs normaux (run 1→2, boucle) : réservés à leurs porteurs canoniques.
+// EXCEPTION — MODE GENÈSE : le défi ultime « 6 forgés / 0 capture » débloque Fée et Métal.
 const SELECTABLE_TYPES = POKE_TYPES.filter((t) => t !== "FEE" && t !== "METAL")
+const SELECTABLE_TYPES_GENESIS = POKE_TYPES // Genèse : tout est permis, y compris Fée/Métal
 const STEPS = ["Concept", "Éclosion", "Type(s)", "Rôle", "Stats", "Attaques", "Récap"]
 
 function defaultSpec(): CustomSpec {
@@ -43,10 +45,12 @@ function defaultSpec(): CustomSpec {
     }
 }
 
-export default function DaemonCreator({ ownerId, nickname, close, onCreated, mode }: { ownerId: string; nickname: string; close: () => void; onCreated?: (spec: CustomSpec) => void; mode?: "ngplus" | "loop" }) {
+export default function DaemonCreator({ ownerId, nickname, close, onCreated, mode }: { ownerId: string; nickname: string; close: () => void; onCreated?: (spec: CustomSpec) => void; mode?: "ngplus" | "loop" | "genesis" }) {
     // Mode FORCÉ (post-sacre NG+ OU boucle endgame) : le créateur n'est pas dismissable et enchaîne à la création.
     const forced = !!onCreated
     const isLoop = mode === "loop" // BOUCLE ENDGAME : enchaîne sur un REJEU du run 1 (pas un NG+) → libellés adaptés
+    const isGenesis = mode === "genesis" // MODE GENÈSE : défi « 6 forgés / 0 capture » → débloque Fée & Métal
+    const selectableTypes = isGenesis ? SELECTABLE_TYPES_GENESIS : SELECTABLE_TYPES
     const [step, setStep] = useState(0)
     const [spec, setSpec] = useState<CustomSpec>(defaultSpec)
     const [created, setCreated] = useState<string | null>(null) // JSON soumis (écran de succès)
@@ -242,10 +246,15 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                         <>
                             <Lbl>Type(s) de la forme finale (stade 3) — choisis-en 1 ou 2</Lbl>
                             <div style={S.typeGrid}>
-                                {SELECTABLE_TYPES.map((t) => (
+                                {selectableTypes.map((t) => (
                                     <button key={t} onClick={() => toggleFinalType(t)} style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none" }}>{TYPE_FR[t]}</button>
                                 ))}
                             </div>
+                            {isGenesis && (
+                                <div style={{ margin: "6px 0 2px", padding: "6px 10px", background: "rgba(120,220,180,0.12)", border: "1px solid rgba(120,220,180,0.4)", borderRadius: 8, fontSize: 11.5, fontWeight: 600, color: "#8fe6c0", textAlign: "center" }}>
+                                    🌱 Mode GENÈSE : les types <b>Fée</b> et <b>Métal</b> sont exceptionnellement débloqués.
+                                </div>
+                            )}
                             {isNovelDualType(spec.finalTypes) && (
                                 <div style={{ margin: "8px 0 2px", padding: "7px 10px", background: "rgba(255,213,74,0.14)", border: "1px solid rgba(255,213,74,0.45)", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#ffd54a", textAlign: "center" }}>
                                     🌟 DOUBLE-TYPE INÉDIT ! <b>+5 % de budget BST</b> — aucun Daemon du dex ne porte cette paire.
@@ -267,7 +276,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                                         <>
                                             <Hint>Avant le stade {spec.typeChange.atStage}, ton Daemon portait ces types (⚠️ les attaques de ces anciens types comptent comme de la COUVERTURE sur la forme finale) :</Hint>
                                             <div style={S.typeGrid}>
-                                                {SELECTABLE_TYPES.map((t) => {
+                                                {selectableTypes.map((t) => {
                                                     const on = spec.typeChange!.types.includes(t)
                                                     return <button key={t} onClick={() => setSpec((s) => {
                                                         let ts = on ? s.typeChange!.types.filter((x) => x !== t) : [...s.typeChange!.types, t]

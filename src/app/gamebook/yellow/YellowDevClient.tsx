@@ -3877,6 +3877,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <DaemonCreator
                     key={`genesis-${genesisCraftStep}`}
                     ownerId={userId} nickname={nickname}
+                    mode="genesis"
                     close={() => { setGenesisCraftStep(null); genesisSpecsRef.current = [] }}
                     onCreated={(spec) => void doGenesisCraftStep(spec)}
                 />
