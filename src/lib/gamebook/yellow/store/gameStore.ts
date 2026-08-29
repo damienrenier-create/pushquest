@@ -2001,7 +2001,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     champion: getPlayerSave().isChampion,   // LIVE post-Ligue → rattrapage des inédits run 3 (champ + Grotte)
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
-                    blockedSpecies: [...(nemBlocked ?? []), ...ownCreationNemesisSpecies()], // némésis-récompense scellée (défi perdu) + TA création-némésis (ex. Charolyx pour Zyran) jamais en sauvage
+                    // némésis-récompense scellée (défi perdu) + TA création-némésis (ex. Charolyx pour Zyran) jamais en sauvage…
+                    //   SAUF au SANCTUAIRE Grotte du Nexus, où l'on capture TOUT — y compris son propre némésis (choix Sartay).
+                    blockedSpecies: [...(nemBlocked ?? []), ...(next.mapId.startsWith("yellow_grotte_nexus") ? [] : ownCreationNemesisSpecies())],
                     funMode: getGameMode() === "fun",     // FUN : boost pop par créneau horaire (×1.5) + IV à PALIERS (funRollIvs)
                     connectedCount: getOnlineCount(),     // FUN : joueurs en ligne (hors soi) → bonus de groupe d'IV excellent
                 })

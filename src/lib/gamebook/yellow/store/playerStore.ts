@@ -517,9 +517,10 @@ export function getNgplusNemesisSpeciesId(): string | null {
     } catch { return null }
 }
 
-/** SANCTUAIRE — les némésis CANONIQUES des créations qu'ON POSSÈDE ne popent PAS en sauvage (réservés à SON ACE) : ex.
- *  Zyran (owner de Possyl) ne croise jamais Charolyx dans le Manoir/la Grotte — il l'affronte via son rival ACE. Renvoie
- *  les espèces némésis (base) de ses customDaemons via CANONICAL_NEMESIS (à verser dans blockedSpecies du ctx de spawn). */
+/** Les némésis CANONIQUES des créations qu'ON POSSÈDE ne popent PAS en sauvage HORS de la Grotte du Nexus (réservés à
+ *  SON ACE) : ex. Zyran (owner de Possyl) ne croise pas Charolyx au Manoir run 2 — il l'affronte via son rival ACE.
+ *  ⚠️ EXCEPTION au SANCTUAIRE Grotte du Nexus (gérée au call-site gameStore) : on y capture TOUT, y compris le sien.
+ *  Renvoie les espèces némésis (base) de ses customDaemons via CANONICAL_NEMESIS (à verser dans blockedSpecies du ctx). */
 export function ownCreationNemesisSpecies(): string[] {
     const out = new Set<string>()
     for (const d of st.customDaemons) {
