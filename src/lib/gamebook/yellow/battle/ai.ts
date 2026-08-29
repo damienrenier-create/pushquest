@@ -86,7 +86,10 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
                 const isPhysAttacker = sStats ? sStats.atk >= sStats.spc : true
                 const boostsAtk = boosts.some((c) => c.stat === "atk"), boostsSpc = boosts.some((c) => c.stat === "spc")
                 const mismatched = (boostsAtk && !boostsSpc && !isPhysAttacker) || (boostsSpc && !boostsAtk && isPhysAttacker)
-                score = selfFrac < 0.4 || mismatched ? 2 : 18
+                // BUFF sur SOI (Danse-Lames/Focalisation…) : JAMAIS sous 50 % PV — on meurt avant d'en profiter (plainte
+                //   Ligue Fusion : le Conseil « elite » buffait à ~30 %). Score NÉGATIF = jamais devant une vraie attaque
+                //   ou un soin. Sinon 18, ou 2 si le boost ne matche pas la stat offensive dominante (+Atk sur un spécial).
+                score = selfFrac < 0.5 ? -1 : (mismatched ? 2 : 18)
             }
             // STATUT offensif : la PARALYSIE est forte à TOUT niveau de PV (ampute la vitesse + 25 % full-para) ;
             //   SOMMEIL/GEL neutralisent une menace vivante ; POISON/BRÛLURE = usure (meilleure tôt). Ne dépend plus

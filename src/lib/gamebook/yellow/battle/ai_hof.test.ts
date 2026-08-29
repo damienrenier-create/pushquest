@@ -130,6 +130,15 @@ describe("IA \"hof\" — anti-gâchis Ligue (moves immunisés + buffs)", () => {
             expect(chooseAiAction(self, foe, [self], 0, "hof", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
         }
     })
+    it("ELITE (Conseil Ligue Fusion) : ne se BUFFE PAS sous 50 % PV — Focalisation à ~30 % → il FRAPPE (bug Sartay)", () => {
+        // Le Conseil « elite » NE passe PAS par le pilote d'archétype → exerce scoreMovesHof (la vraie garde du fix).
+        const foe = mon("tonytony", 60, ["charge"]) // Normal, neutre sur l'Eau
+        const maxHp = fullStats(createMonInstance("razmaree", 60, { owned: false }), getSpecies("razmaree")!).hp
+        for (let s = 0; s < 20; s++) {
+            const self = mon("razmaree", 60, ["focalisation", "pistolet_a_o"]); self.currentHp = Math.round(maxHp * 0.3)
+            expect(chooseAiAction(self, foe, [self], 0, "elite", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
+        }
+    })
 })
 
 describe("fullStats — stats FIGÉES (Hall of Fame)", () => {
