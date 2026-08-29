@@ -348,6 +348,11 @@ export function activeFusionTier(isCleared: (marker: string) => boolean): Fusion
 export function isFusionChampion(isCleared: (marker: string) => boolean): boolean {
     return isCleared(FUSION_TIER_MARKER.bronze)
 }
+/** SALLE ULTIME (le REFLET) — SEUL le palier OR y donne accès : porte droite du miroir → salle ultime → tu affrontes
+ *  ton reflet ARGENT, puis SACRE ultime. Bronze & argent : le Dieu Spaghetti SACRE DIRECTEMENT (salle SANS porte). */
+export function fusionTierHasReflet(tier: FusionTier): boolean {
+    return tier === "or"
+}
 
 // DÉBLOCAGE de la Ligue de Fusion : la porte à dragons de l'Autel reste SCELLÉE (sprite fermé) tant que le joueur
 //   n'a pas GAGNÉ une épreuve de fusion à l'autel (fusion:TRIAL). À la 1re victoire, on pose ce marqueur (persisté

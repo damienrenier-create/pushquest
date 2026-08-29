@@ -1667,14 +1667,15 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_fusion_miroir: {
         id: "yellow_fusion_miroir", name: "LIGUE FUSION — DIEU SPAGHETTI", tiles: buildLigueRoom(), width: 22, height: 12,
-        // Salle du Dieu Spaghetti. Porte DROITE (x:19) → SALLE ULTIME (ton reflet) : GATÉE dans gameStore (ne s'ouvre
-        //   qu'après avoir battu le Dieu Spaghetti EN ARGENT/OR, sinon renvoie à l'Autel). Porte gauche (x:2) = retraite Autel.
+        // Salle du Dieu Spaghetti (fond AVEC porte = palier OR ; bronze/argent utilisent FUSION_MIROIR_BRONZE sans porte).
+        //   Porte DROITE (x:19) → SALLE ULTIME (ton reflet argent) : GATÉE dans gameStore (ne s'ouvre qu'après avoir battu
+        //   le Dieu Spaghetti EN OR cette run). Porte gauche (x:2) = retraite Autel.
         exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_ultime", targetSpawnX: 3, targetSpawnY: 6 }))
             .concat([{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }]),
         backgroundImage: "/yellow/sprites/fusion_dome_champion.jpg", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128, // salle du Dieu Spaghetti (porte droite → salle ultime)
     },
-    // SALLE ULTIME — « bats ton reflet » (argent/or) : après le Dieu Spaghetti, affronte l'équipe de fusion avec laquelle
-    //   tu as bouclé le palier PRÉCÉDENT (reflet gelé). Le trainer y_fusion_reflet barre le fond. Porte gauche → retour miroir.
+    // SALLE ULTIME — « bats ton reflet » (palier OR) : après le Dieu Spaghetti, affronte l'équipe de fusion avec laquelle
+    //   tu as bouclé l'ARGENT (reflet gelé) → sacre ULTIME. Le trainer y_fusion_reflet barre le fond. Porte gauche → retour miroir.
     yellow_fusion_ultime: {
         id: "yellow_fusion_ultime", name: "LIGUE FUSION — SALLE ULTIME", tiles: buildLigueRoom(), width: 22, height: 12,
         exits: [{ x: 2, y: 6, targetMapId: "yellow_fusion_miroir", targetSpawnX: 18, targetSpawnY: 6 }],
@@ -1925,9 +1926,9 @@ export const YELLOW_MAP_IDS = Object.keys(YELLOW_MAPS)
 
 // LIGUE DE FUSION — salle du Dieu Spaghetti en BRONZE : le boss EST la fin (pas de salle ultime), donc fond SANS
 //   PORTE (cul-de-sac) + AUCUNE porte droite (seule la porte gauche = retraite Autel). MÊME id "yellow_fusion_miroir"
-//   → tout le câblage (trainer, sacre, dialogues) reste INCHANGÉ. Résolue par gameStore.resolveActiveMap() UNIQUEMENT
-//   quand le palier actif est le BRONZE. Argent/or gardent le fond AVEC porte (fusion_dome_champion.jpg) → porte
-//   droite gated vers la salle ultime (ton reflet).
+//   → tout le câblage (trainer, sacre, dialogues) reste INCHANGÉ. Résolue par gameStore.resolveActiveMap() quand le
+//   palier actif est BRONZE **ou ARGENT** (le Dieu Spaghetti y sacre DIRECTEMENT). SEUL le palier OR garde le fond AVEC
+//   porte (fusion_dome_champion.jpg) → porte droite gated vers la salle ultime (ton reflet argent → sacre ultime).
 export const FUSION_MIROIR_BRONZE: YellowMapData = {
     ...YELLOW_MAPS.yellow_fusion_miroir,
     exits: [{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }], // porte GAUCHE (retraite) seule — pas de porte droite

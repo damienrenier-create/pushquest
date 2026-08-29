@@ -13,6 +13,7 @@ import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { leagueFusionSpecies } from "../data/leagueFusionDex"
+import { getGauntletTeam } from "./fusionGauntlet" // LEAF (types only) — pas de cycle. Fallback de gel du roster reflet.
 import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
@@ -1740,10 +1741,20 @@ export function beginFusionLeagueTry(today: string): boolean {
  *  `tier`. Reconstruit TON reflet plus tard (argent affronte le bronze, or l'argent). Clone profond → immuable. */
 export function snapshotFusionChampionRoster(tier: string) {
     const all = [...st.team, ...st.pc]
+    const clone = (m: MonInstance) => JSON.parse(JSON.stringify(m)) as MonInstance
     const flat: MonInstance[] = []
     for (const p of st.fusionRoster) {
         const a = all.find((m) => m.uid === p.a), b = all.find((m) => m.uid === p.b)
-        if (a && b) flat.push(JSON.parse(JSON.stringify(a)) as MonInstance, JSON.parse(JSON.stringify(b)) as MonInstance)
+        if (a && b) flat.push(clone(a), clone(b))
+    }
+    // FIABILISATION (fix reflet OR) : si fusionRoster est vide/illisible (vieille save, équipe modifiée en cours), on
+    //   retombe sur l'ÉQUIPE-GAUNTLET VAINQUEUR — chaque fusion porte ses parents (fusionParents) → source de vérité.
+    if (!flat.length) {
+        for (const f of getGauntletTeam() ?? []) {
+            const par = (f.instance as { fusionParents?: [string, string] }).fusionParents
+            const a = par && all.find((m) => m.uid === par[0]), b = par && all.find((m) => m.uid === par[1])
+            if (a && b) flat.push(clone(a), clone(b))
+        }
     }
     if (!flat.length) return
     // ARTISANE : boucler un palier de Ligue de Fusion RÉARME la forge (« rebattre une Ligue entre deux crafts »).

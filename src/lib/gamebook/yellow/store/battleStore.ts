@@ -68,7 +68,7 @@ import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
 import { funOnBadge, funOnCapture } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
-import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
+import { activeFusionTier, fusionTierHasReflet, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
 import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
@@ -1237,18 +1237,17 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   `fusleague_<tier>` (échelle Bronze→Argent→Or, persisté dans defeatedTrainers) → débloque le palier suivant
     //   + décroche le titre « Maître de la Chimère ». RÉCOMPENSE = titre SEUL (aucun lot matériel). Le dialogue
     //   de défaite du reflet (trainers.ts) fait l'annonce. markTrainerDefeated est idempotent.
-    // SALLE ULTIME — SACRE. Bronze : le Dieu Spaghetti (y_fusion_miroir) sacre directement. Argent/or : le boss
-    //   n'accorde PLUS le titre — il OUVRE la salle ultime, et c'est la victoire sur TON REFLET (y_fusion_reflet) qui
-    //   sacre. FALLBACK anti-soft-lock : sans roster gelé (save d'avant la feature), le boss sacre quand même.
+    // SALLE ULTIME — SACRE. Bronze & ARGENT : le Dieu Spaghetti (y_fusion_miroir) SACRE DIRECTEMENT. SEUL le palier OR
+    //   diffère : le boss n'accorde PAS le titre — il OUVRE la salle ultime, et c'est la victoire sur TON REFLET ARGENT
+    //   (y_fusion_reflet) qui sacre MÉGA-champion. FALLBACK anti-soft-lock : sans roster argent gelé, le boss sacre quand même.
     const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir"
     const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet"
     if (wonFusionBoss || wonFusionReflet) {
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
-        const prevTier = sacredTier === "or" ? "argent" : "bronze"
-        if (wonFusionBoss && sacredTier !== "bronze" && getFusionChampionRoster(prevTier).length >= 2) {
-            // Boss battu en argent/or AVEC un reflet disponible → on DIFFÈRE le sacre : la porte droite du miroir s'ouvre
-            //   sur la salle ultime. Le titre s'obtient en battant ton reflet (y_fusion_reflet).
+        if (wonFusionBoss && fusionTierHasReflet(sacredTier) && getFusionChampionRoster("argent").length >= 2) {
+            // OR : boss battu AVEC ton reflet argent gelé → on DIFFÈRE le sacre : la porte droite du miroir s'ouvre sur la
+            //   salle ultime. Le titre ULTIME s'obtient en battant ton reflet argent (y_fusion_reflet). Bronze/argent → sacre direct (else).
             setGauntletBossBeaten(true)
         } else {
             // SACRE effectif : bronze (au boss), argent/or (au reflet), ou fallback boss-sans-reflet.

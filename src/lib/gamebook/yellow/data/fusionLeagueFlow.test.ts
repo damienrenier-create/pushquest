@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest"
 import {
-    fusionLeagueKeyForTrainer, activeFusionTier, isFusionChampion,
+    fusionLeagueKeyForTrainer, activeFusionTier, isFusionChampion, fusionTierHasReflet,
     FUSION_TIER_MARKER, FUSION_LEAGUE_ORDER,
 } from "./fusionLeague"
 import { getTrainer } from "./trainers"
-import { YELLOW_MAPS } from "../maps"
+import { YELLOW_MAPS, FUSION_MIROIR_BRONZE } from "../maps"
 import { hydratePlayer, isTrainerDefeated, resetFusionLeagueProgress } from "../store/playerStore"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 
@@ -75,6 +75,20 @@ describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
         for (const id of ["yellow_fusion_glace", "yellow_fusion_combat", "yellow_fusion_spectre", "yellow_fusion_dragon", "yellow_fusion_maitre"]) {
             expect(YELLOW_MAPS[id].exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_combat_autel"), id).toBe(true)
         }
+    })
+
+    it("SALLE ULTIME (reflet) réservée au palier OR : bronze/argent = salle SANS porte, OR = porte droite", () => {
+        // Le reflet (salle ultime) n'existe QU'en OR.
+        expect(fusionTierHasReflet("bronze")).toBe(false)
+        expect(fusionTierHasReflet("argent")).toBe(false)
+        expect(fusionTierHasReflet("or")).toBe(true)
+        // Variante bronze/argent (FUSION_MIROIR_BRONZE) : PAS de porte droite (x:19), seulement la retraite gauche + sprite sans porte.
+        expect(FUSION_MIROIR_BRONZE.exits?.some((e) => e.x === 19)).toBe(false)
+        expect(FUSION_MIROIR_BRONZE.exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_combat_autel")).toBe(true)
+        expect(FUSION_MIROIR_BRONZE.backgroundImage).toContain("fusion_dome_champion_bronze")
+        // La map OR (base yellow_fusion_miroir) GARDE la porte droite → salle ultime + sprite avec porte.
+        expect(YELLOW_MAPS["yellow_fusion_miroir"].exits?.some((e) => e.x === 19 && e.targetMapId === "yellow_fusion_ultime")).toBe(true)
+        expect(YELLOW_MAPS["yellow_fusion_miroir"].backgroundImage).toContain("fusion_dome_champion.jpg")
     })
 
     it("TOUTES les portes de la venue sont sur des tuiles MARCHABLES (régression CRITICAL revue : (9,0) était un mur)", () => {

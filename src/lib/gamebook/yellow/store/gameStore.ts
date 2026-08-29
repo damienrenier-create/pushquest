@@ -27,7 +27,7 @@ import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -81,9 +81,10 @@ function resolveActiveMap(mapId: string): YellowMapData | undefined {
     if (effectiveRunWorld() === "run3" && RUN3_ARENA_MAPS[mapId]) return RUN3_ARENA_MAPS[mapId]
     // RUN 2 : arènes re-skinnées (même grille, fond différent) → arène 1 devient l'arène VOL. Hors run 2 : ignoré.
     if (effectiveRunWorld() === "ngplus" && NGPLUS_ARENA_MAPS[mapId]) return NGPLUS_ARENA_MAPS[mapId]
-    // LIGUE DE FUSION — salle du Dieu Spaghetti en BRONZE (le boss EST la fin) : fond SANS PORTE (cul-de-sac).
-    //   Argent/or gardent le fond AVEC porte (→ salle ultime, gated). Résolu à chaque pose de carte.
-    if (mapId === "yellow_fusion_miroir" && activeFusionTier((m) => isTrainerDefeated(m)) === "bronze") return FUSION_MIROIR_BRONZE
+    // LIGUE DE FUSION — salle du Dieu Spaghetti : en BRONZE **et ARGENT** le boss SACRE DIRECTEMENT → fond SANS PORTE
+    //   (cul-de-sac, retraite gauche). SEUL le palier OR garde le fond AVEC porte (→ salle ultime / ton reflet argent,
+    //   gated). Résolu à chaque pose de carte.
+    if (mapId === "yellow_fusion_miroir" && !fusionTierHasReflet(activeFusionTier((m) => isTrainerDefeated(m)))) return FUSION_MIROIR_BRONZE
     return YELLOW_MAPS[mapId]
 }
 
@@ -1525,10 +1526,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 : exit.targetMapId
             let spawnX = exit.targetSpawnX
             let spawnY = exit.targetSpawnY
-            // SALLE ULTIME — la porte droite du miroir ne mène à la salle ultime (ton reflet) qu'APRÈS avoir vaincu le
-            //   Dieu Spaghetti DANS CETTE run (argent/or, flag transient). Sinon (BRONZE — le boss EST la fin —, boss pas
-            //   encore battu, ou save d'avant la feature) → la porte est SCELLÉE : CUL-DE-SAC (on annule le pas au lieu de
-            //   téléporter à l'Autel, qui laissait croire à une salle « après » le boss). Le joueur sort par la gauche.
+            // SALLE ULTIME — la porte droite du miroir (présente au SEUL palier OR) ne mène à la salle ultime (ton reflet
+            //   argent) qu'APRÈS avoir vaincu le Dieu Spaghetti DANS CETTE run (flag transient). Sinon (boss pas encore
+            //   battu, ou save d'avant la feature) → porte SCELLÉE : CUL-DE-SAC (on annule le pas). Bronze/argent n'ont PAS
+            //   cette porte (FUSION_MIROIR_BRONZE) : le boss y sacre direct. Le joueur sort par la gauche.
             if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten()) {
                 set({ player: { ...player, direction: next.direction } }) // reste sur place, face à la porte murée
                 return
