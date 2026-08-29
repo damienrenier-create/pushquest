@@ -1700,10 +1700,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (loopOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun
             && !fusionParentReward && !fusioBallOffer && !fusioBallModal && !fusionSacre && getActiveWorld() !== "replay") {
-            setLoopModal(true)
+            // SACRE OR : la MÉGA célébration proposera la boucle via son CTA (APRÈS la fête) → on consomme l'offre sans
+            //   ouvrir le modal maintenant. Hors OR (ex. capture Ukognofy) : modal direct comme avant.
+            if (!(fusionEpilogue && fusionEpilogue.tier === "or")) setLoopModal(true)
             clearLoopOffer()
         }
-    }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre])
+    }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre, fusionEpilogue])
 
     // ÉPILOGUE « MAÎTRE DE LA CHIMÈRE » — après le sacre, EN DERNIER (une fois toutes les modales/cinématiques du sacre
     //   consommées : Fusio-Ball, boucle, Mégamonarx…), le Dieu Spaghetti prononce son laïus (EPILOGUE_INTRO_LINES) ;
@@ -4238,9 +4240,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔁 UNE NOUVELLE BOUCLE ?</div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
-                            Tu as atteint le sommet, Maître. 🍝 Le Dieu Spaghetti t&apos;offre de <b style={{ color: "#ffe36b" }}>concevoir un nouveau compagnon</b> et de <b>repartir au tout début du Nexus</b> avec lui — une traversée fraîche, rien que vous deux.
-                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
-                                Ton vrai monde reste <b>intact</b> (simple bulle de rejeu). Tu refuses ? Il te le re-proposera à ta prochaine victoire à la Ligue de Fusion.
+                            Tu as atteint le sommet, Maître. 🍝 Le Dieu Spaghetti t&apos;offre de <b style={{ color: "#ffe36b" }}>concevoir un tout nouveau Daemon</b> (assistant de création complet) et de <b>repartir du TOUT DÉBUT du Nexus</b> avec lui en STARTER.
+                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12, lineHeight: 1.55 }}>
+                                • Ton monde actuel est <b>SAUVEGARDÉ et reste INTACT</b> (bulle de rejeu isolée — rien n&apos;est perdu).<br />
+                                • <b>Gratuit</b> et rejouable autant de fois que tu veux.<br />
+                                • Tu peux dire <b>« Plus tard »</b> : l&apos;offre te reviendra à ta prochaine victoire <b>OR</b> à la Ligue de Fusion.
                             </div>
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setFusionEpilogue(null); setEpiloguePending(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>
@@ -5109,7 +5113,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     return (
                         <UltimateChampionSacre
                             roster={fusionEpilogue.roster} palmares={palmares} quests={quests}
-                            onRecreate={() => { closeEpilogue(); setLoopCreatorOpen(true) }}
+                            onRecreate={() => { closeEpilogue(); setLoopModal(true) }} // → modal qui EXPLIQUE + confirme (ou « Plus tard »)
                             onClose={closeEpilogue}
                         />
                     )

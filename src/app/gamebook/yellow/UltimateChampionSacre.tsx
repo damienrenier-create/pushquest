@@ -59,6 +59,8 @@ export default function UltimateChampionSacre({ roster, palmares, quests, onClos
 }) {
     const [act, setAct] = useState(0)
     const [parade, setParade] = useState(0)
+    const [fwOn, setFwOn] = useState(true) // FEUX D'ARTIFICE : ~10 s puis extinction (assez pour la fête, pas de boucle infinie)
+    useEffect(() => { const t = setTimeout(() => setFwOn(false), 10000); return () => clearTimeout(t) }, [])
 
     // FEUX D'ARTIFICE : 7 salves, chacune un anneau de 16 particules radiant depuis une origine aléatoire, en boucle.
     const [fireworks] = useState(() =>
@@ -116,23 +118,27 @@ export default function UltimateChampionSacre({ roster, palmares, quests, onClos
         <div style={overlay} onClick={advance}>
             <style>{KEYFRAMES}</style>
 
+            {/* FEUX D'ARTIFICE — ~10 s en fond de TOUS les actes, puis extinction (fwOn). */}
+            {fwOn && (
+                <div style={fwLayer} aria-hidden>
+                    {fireworks.map((fw, i) => (
+                        <div key={i} style={{ position: "absolute", left: `${fw.cx}%`, top: `${fw.cy}%` }}>
+                            {fw.parts.map((p, k) => (
+                                <span key={k} style={{
+                                    position: "absolute", width: 6, height: 6, borderRadius: "50%", background: fw.color,
+                                    boxShadow: `0 0 8px ${fw.color}`,
+                                    ["--dx" as string]: `${p.dx}px`, ["--dy" as string]: `${p.dy}px`,
+                                    animation: `fw 1.5s ease-out ${fw.delay}s infinite`,
+                                }} />
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* ===== ACTE 0 — L'ASCENSION ===== */}
             {act === 0 && (
                 <div style={center}>
-                    <div style={fwLayer} aria-hidden>
-                        {fireworks.map((fw, i) => (
-                            <div key={i} style={{ position: "absolute", left: `${fw.cx}%`, top: `${fw.cy}%` }}>
-                                {fw.parts.map((p, k) => (
-                                    <span key={k} style={{
-                                        position: "absolute", width: 6, height: 6, borderRadius: "50%", background: fw.color,
-                                        boxShadow: `0 0 8px ${fw.color}`,
-                                        ["--dx" as string]: `${p.dx}px`, ["--dy" as string]: `${p.dy}px`,
-                                        animation: `fw 1.5s ease-out ${fw.delay}s infinite`,
-                                    }} />
-                                ))}
-                            </div>
-                        ))}
-                    </div>
                     <div style={{ fontSize: 40, letterSpacing: 6, color: "#ffe36b", animation: "titleIn .8s ease .2s both", textShadow: "0 0 20px #ffd54a" }} aria-hidden>✦ ✦ ✦</div>
                     <div style={{ fontSize: 92, lineHeight: 1, animation: "crownBurst 1.4s cubic-bezier(.2,1.4,.35,1) both", filter: "drop-shadow(0 0 34px #ffd54a)" }}>👑</div>
                     <h1 style={{ ...bigTitle, animation: "titleIn 1s ease .9s both" }}>CHAMPION SUPRÊME<br />DU NEXUS</h1>
