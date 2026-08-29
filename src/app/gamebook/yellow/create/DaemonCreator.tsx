@@ -15,7 +15,7 @@ import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
-    BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
+    BLOOMERS, specBudget, isNovelDualType, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
     slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildNemesis,
     ATTRIBUTE_LABEL, MAX_ATTRIBUTES, TALENTS, TALENT_KEYS, MAX_TALENT_REROLLS, weakestStatKey,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
@@ -64,7 +64,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
         const next = others[Math.floor(Math.random() * others.length)] ?? s.secretTalent
         return { ...s, finalStats: { ...s.finalStats, [k]: s.finalStats[k] - 1 }, secretTalent: next, talentRerolls: rolls + 1 }
     })
-    const budget = bloomerBudget(spec.bloomer)
+    const budget = specBudget(spec.bloomer, spec.finalTypes) // +5 % si double-type INÉDIT
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0) // somme brute (sert à moduler la puissance)
     const cost = specStatCost(spec.finalStats)                            // coût réel (points au-delà du record = ×2) → c'est LUI plafonné
     const lts = useMemo(() => lineTypes(spec), [spec])
@@ -97,7 +97,8 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
         let ts = has ? s.finalTypes.filter((x) => x !== t) : [...s.finalTypes, t]
         if (ts.length === 0) ts = [t]          // au moins 1
         if (ts.length > 2) ts = [s.finalTypes[1], t] // max 2 (remplace le plus ancien)
-        return { ...s, finalTypes: ts }
+        // Le budget dépend du type (double-type INÉDIT = +5 %) → on re-cale les stats sur le nouveau plafond.
+        return { ...s, finalTypes: ts, finalStats: fitStatsToBudget(s.finalStats, specBudget(s.bloomer, ts)) }
     })
 
     const create = () => {
@@ -219,8 +220,8 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                             <Lbl>Vitesse d'éclosion (rapidité d'évolution ↔ puissance finale)</Lbl>
                             {(Object.keys(BLOOMERS) as Bloomer[]).map((b) => (
                                 <button key={b} style={{ ...S.optWide, ...(spec.bloomer === b ? S.optOn : {}) }}
-                                    onClick={() => setSpec((s) => ({ ...s, bloomer: b, finalStats: fitStatsToBudget(s.finalStats, bloomerBudget(b)) }))}>
-                                    <b>{BLOOMERS[b].label}</b> — budget <b>{bloomerBudget(b)}</b>
+                                    onClick={() => setSpec((s) => ({ ...s, bloomer: b, finalStats: fitStatsToBudget(s.finalStats, specBudget(b, s.finalTypes)) }))}>
+                                    <b>{BLOOMERS[b].label}</b> — budget <b>{specBudget(b, spec.finalTypes)}</b>
                                     <div style={S.subtle}>{BLOOMERS[b].hint}</div>
                                 </button>
                             ))}
@@ -245,6 +246,11 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                                     <button key={t} onClick={() => toggleFinalType(t)} style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none" }}>{TYPE_FR[t]}</button>
                                 ))}
                             </div>
+                            {isNovelDualType(spec.finalTypes) && (
+                                <div style={{ margin: "8px 0 2px", padding: "7px 10px", background: "rgba(255,213,74,0.14)", border: "1px solid rgba(255,213,74,0.45)", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#ffd54a", textAlign: "center" }}>
+                                    🌟 DOUBLE-TYPE INÉDIT ! <b>+5 % de budget BST</b> — aucun Daemon du dex ne porte cette paire.
+                                </div>
+                            )}
                             {spec.stages >= 2 && (
                                 <>
                                     <Lbl>Changement de type au fil des évolutions ? (1 max)</Lbl>
@@ -296,7 +302,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                         const over = cost > budget
                         return (
                         <>
-                            <Lbl>Répartis les stats de la forme finale — budget <b style={{ color: over ? "#e0683a" : "#7ce0a0" }}>{cost}/{budget}</b> · rôle guide <b>{role.label}</b> · BST {usedBst}</Lbl>
+                            <Lbl>Répartis les stats de la forme finale — budget <b style={{ color: over ? "#e0683a" : "#7ce0a0" }}>{cost}/{budget}</b>{isNovelDualType(spec.finalTypes) && <b style={{ color: "#ffd54a" }}> 🌟+5%</b>} · rôle guide <b>{role.label}</b> · BST {usedBst}</Lbl>
                             {STAT_KEYS.map((k) => {
                                 const v = spec.finalStats[k]
                                 const cat = k === "atk" ? " (attaques PHYS)" : k === "spc" ? " (attaques SPÉ)" : ""

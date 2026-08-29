@@ -72,6 +72,27 @@ export const MAX_BUDGET = 480
 /** Budget de BST distribuable sur le STADE FINAL selon la courbe (plafonné au S-tier existant). */
 export function bloomerBudget(b: Bloomer): number { return Math.min(MAX_BUDGET, Math.round(BASE_FINAL_BST * BLOOMERS[b].bstMult)) }
 
+/** Bonus de budget BST pour un DOUBLE-TYPE INÉDIT (paire absente du dex) — récompense de créativité (dépasse alors le
+ *  plafond normal, jusqu'à ~504). */
+export const NOVEL_TYPE_BONUS = 0.05
+let _dexTypePairs: Set<string> | null = null
+const typePairKey = (a: PokeType, b: PokeType) => [a, b].slice().sort().join("+")
+/** Le DOUBLE-TYPE FINAL est-il INÉDIT (aucune espèce du DEX ne porte déjà cette paire) ? Mono-type / paire existante → false. */
+export function isNovelDualType(finalTypes: PokeType[]): boolean {
+    if (finalTypes.length !== 2 || finalTypes[0] === finalTypes[1]) return false
+    if (!_dexTypePairs) {
+        _dexTypePairs = new Set()
+        for (const s of Object.values(SPECIES)) if (s.types.length === 2) _dexTypePairs.add(typePairKey(s.types[0], s.types[1]))
+    }
+    return !_dexTypePairs.has(typePairKey(finalTypes[0], finalTypes[1]))
+}
+/** Budget de BST DISTRIBUABLE (source UNIQUE du plafond) : budget d'éclosion, +5 % si le type final est un double-type
+ *  INÉDIT. Les caps PAR STAT (STAT_HARD_CAP) s'appliquent toujours → le bonus donne du total, pas des stats délirantes. */
+export function specBudget(bloomer: Bloomer, finalTypes: PokeType[]): number {
+    const base = bloomerBudget(bloomer)
+    return isNovelDualType(finalTypes) ? Math.round(base * (1 + NOVEL_TYPE_BONUS)) : base
+}
+
 /** Ratios de BST des stades par rapport au final (calqués sur les vraies lignées : base ≈ 56 % du final). */
 const STAGE_RATIOS: Record<number, number[]> = { 1: [1], 2: [0.62, 1], 3: [0.56, 0.78, 1] }
 
@@ -617,7 +638,7 @@ export function validateSpec(spec: CustomSpec): string[] {
     // Stats : intégrité (entier ≥ MIN, ≤ cap dur par stat) + budget avec surcoût au-delà du record du dex.
     // Le RÔLE n'est qu'un GUIDE (pré-remplit un profil) : plus de min/max bloquant, la personnalisation est libre
     // dans les bornes dures. Le seul verrou anti-god-tier = cap +10 % du record + coût croissant passé ce record.
-    const budget = bloomerBudget(spec.bloomer)
+    const budget = specBudget(spec.bloomer, spec.finalTypes) // +5 % si double-type INÉDIT (récompense de créativité)
     for (const k of STAT_KEYS) {
         const v = spec.finalStats[k]
         if (typeof v !== "number" || !Number.isInteger(v)) { e.push(`${STAT_LABEL[k]} invalide (doit être un entier).`); continue }

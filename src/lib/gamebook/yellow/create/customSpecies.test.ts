@@ -6,10 +6,11 @@ import {
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
     attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES, gatePower, TALENTS, TALENT_KEYS, weakestStatKey,
-    ultimatePowerCap, ultimateMoveOptions, ULTIMATE_LEVEL,
+    ultimatePowerCap, ultimateMoveOptions, ULTIMATE_LEVEL, specBudget, isNovelDualType, NOVEL_TYPE_BONUS,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
+import { POKE_TYPES } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { isDamagingMove } from "./customSpecies"
 import type { StatKey, PokeType, MoveData } from "../battle/types"
@@ -310,6 +311,23 @@ describe("création — buildCustomSpecies (inchangé : lignée légale)", () =>
         expect(partial.map((s) => s.name)).toEqual([base.name, `${base.name} II`, "Final"])
         // l'id ne dépend QUE du slug de name → identique avec ou sans stageNames
         expect(named.map((s) => s.id)).toEqual(auto.map((s) => s.id))
+    })
+})
+
+describe("bonus de BST — double-type INÉDIT (+5%)", () => {
+    it("mono-type ou paire EXISTANTE = aucun bonus (budget d'éclosion normal)", () => {
+        expect(isNovelDualType(["NORMAL"])).toBe(false)
+        expect(isNovelDualType(["FEU", "FEU"])).toBe(false)
+        expect(isNovelDualType(["NORMAL", "SPECTRE"])).toBe(false) // existe (Shady / Possyl)
+        expect(specBudget("mid", ["NORMAL", "SPECTRE"])).toBe(bloomerBudget("mid"))
+    })
+    it("un double-type INÉDIT (absent du dex) = +5% de budget, au-delà du plafond normal", () => {
+        let novel: [PokeType, PokeType] | null = null
+        for (const a of POKE_TYPES) for (const b of POKE_TYPES) if (a !== b && !novel && isNovelDualType([a, b])) novel = [a, b]
+        expect(novel, "il devrait exister au moins une paire de types inédite").not.toBeNull()
+        expect(specBudget("mid", novel!)).toBe(Math.round(bloomerBudget("mid") * (1 + NOVEL_TYPE_BONUS)))
+        expect(specBudget("mid", novel!)).toBeGreaterThan(bloomerBudget("mid"))
+        expect(NOVEL_TYPE_BONUS).toBe(0.05)
     })
 })
 
