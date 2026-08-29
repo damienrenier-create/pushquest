@@ -4244,7 +4244,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12, lineHeight: 1.55 }}>
                                 • Ton monde actuel est <b>SAUVEGARDÉ et reste INTACT</b> (bulle de rejeu isolée — rien n&apos;est perdu).<br />
                                 • <b>Gratuit</b> et rejouable autant de fois que tu veux.<br />
-                                • Tu peux dire <b>« Plus tard »</b> : l&apos;offre te reviendra à ta prochaine victoire <b>OR</b> à la Ligue de Fusion.
+                                • Tu peux dire <b>« Plus tard »</b> : l&apos;offre te reviendra à ta prochaine victoire <b>OR</b> à la Ligue de Fusion — ou en capturant un nouveau <b>légendaire</b> (Galijah).
                             </div>
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setFusionEpilogue(null); setEpiloguePending(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>

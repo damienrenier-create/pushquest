@@ -738,6 +738,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         else { const fm = nextUkognofyFailMarker(isTrainerDefeated); if (fm) markTrainerDefeated(fm) }
     }
 
+    // GALIJAH (4e légendaire) capturé APRÈS le sacre OR → RE-PROPOSE « forger une nouvelle légende » : le champion suprême
+    //   qui avait dit « plus tard » à sa boucle se la voit re-offrir en atteignant ce nouveau sommet. Gaté sur le titre OR
+    //   (sinon prématuré) + jamais en bulle de rejeu.
+    if (b.isWild && b.outcome === "caught" && b.enemy.team.some((e) => e.speciesId === "galijah")
+        && isTrainerDefeated(FUSION_TIER_MARKER.or) && getActiveWorld() !== "replay") loopOffer = true
+
     // 2-quater) RUN 3 — TEASER DIEU SPAGHETTI sur LAVAPETIT : à la 1re RENCONTRE (quel que soit l'issue) puis
     //   à la 1re CAPTURE, le Dieu Spag rappelle que c'est le Daemon qu'étudie CHEN (→ Magmator → Magnetor).
     //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
