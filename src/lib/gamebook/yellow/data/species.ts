@@ -2923,6 +2923,58 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "L'apex : un loup démoniaque colossal, cornu, zébré de lave, dont le hurlement éteint toute lumière. Plus rapide que sa proie, il consume l'ombre féline avant qu'elle ne se dresse. Némésis parfait de Shadow.",
         sprite: "/yellow/sprites/dex/tenebrir.png",
     },
+    // ── NÉMÉSIS de Possyl (création de Zyran, NORMAL/SPECTRE) : Charolyx → Bubolyx → Pestilyx (lynx charognard
+    //    TÉNÈBRES/POISON, MUR-DRAINEUR toxique). Possyl (mur physique lent, SANS soin) ne le touche jamais ×2
+    //    (Normal/Combat/Glace ×1, Spectre ×0.5) ; lui frappe Dark ×2 (spécial) + drain, et le tue à l'USURE
+    //    (Toxik + Vampigraine) en se re-soignant (Linceul + drain). Signature ATROPHIE (−2 Atq des DEUX,
+    //    priorité) → coupe l'offense physique de Possyl dès le 1er tour. Sprites à générer (Sartay). ──
+    charolyx: {
+        id: "charolyx", dexNo: 207, name: "Charolyx", types: ["TENEBRES", "POISON"],
+        baseStats: { hp: 60, atk: 15, def: 59, spe: 32, spc: 56 }, // BST 222
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "dard_venin" },
+            { level: 12, moveId: "toxik" }, { level: 18, moveId: "atrophie" },
+            { level: 24, moveId: "vampigraine" }, { level: 30, moveId: "onde_obscure" },
+            { level: 38, moveId: "focalisation" }, { level: 46, moveId: "linceul" },
+            { level: 54, moveId: "devoreur_ombres" },
+        ],
+        evolution: { toId: "bubolyx", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 60, rarity: "RARE", growthRate: "medium_slow", secretTalent: "voile",
+        role: "Ténèbres/Poison — lynx charognard (charogne)", hiddenUntilCaught: true,
+        description: "Un lynx efflanqué au pelage terne zébré d'ombres, oreilles déchirées : le charognard des marges du Nexus. Il rôde autour des dépouilles et crache déjà des spores fétides. Forgé par ACE pour traquer l'ombre possédée.",
+        sprite: "/yellow/sprites/dex/charolyx.png",
+    },
+    bubolyx: {
+        id: "bubolyx", dexNo: 208, name: "Bubolyx", types: ["TENEBRES", "POISON"],
+        baseStats: { hp: 92, atk: 18, def: 93, spe: 48, spc: 85 }, // BST 336
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "dard_venin" },
+            { level: 12, moveId: "toxik" }, { level: 18, moveId: "atrophie" },
+            { level: 24, moveId: "vampigraine" }, { level: 30, moveId: "onde_obscure" },
+            { level: 38, moveId: "focalisation" }, { level: 46, moveId: "linceul" },
+            { level: 54, moveId: "devoreur_ombres" },
+        ],
+        evolution: { toId: "pestilyx", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 110, rarity: "RARE", growthRate: "medium_slow", secretTalent: "voile",
+        role: "Ténèbres/Poison — lynx pestiféré (bubons)", hiddenUntilCaught: true,
+        description: "Le lynx s'est épaissi de bubons suintants ; ses crocs dégoulinent de venin et un halo de spores toxiques l'entoure. Il n'attaque pas — il contamine, puis attend que sa proie s'effondre pour s'en repaître.",
+        sprite: "/yellow/sprites/dex/bubolyx.png",
+    },
+    pestilyx: {
+        id: "pestilyx", dexNo: 209, name: "Pestilyx", types: ["TENEBRES", "POISON"],
+        baseStats: { hp: 122, atk: 20, def: 126, spe: 65, spc: 122 }, // BST 455 (≈ Possyl 455 ; gagne par la mécanique)
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "dard_venin" },
+            { level: 12, moveId: "toxik" }, { level: 18, moveId: "atrophie" },
+            { level: 24, moveId: "vampigraine" }, { level: 30, moveId: "onde_obscure" },
+            { level: 38, moveId: "focalisation" }, { level: 46, moveId: "linceul" },
+            { level: 54, moveId: "devoreur_ombres" },
+        ],
+        catchRate: 45, baseExp: 165, rarity: "RARE", growthRate: "medium_slow", secretTalent: "voile",
+        role: "Ténèbres/Poison — apex charognard (mur-draineur toxique)", hiddenUntilCaught: true,
+        description: "L'apex : un grand lynx d'encre qui exhale une pestilence affaiblissant tout ce qui l'approche. Immunisé à sa propre pourriture, increvable, il regarde sa proie se putréfier avant de la dévorer. Némésis parfait de Nécrossum.",
+        sprite: "/yellow/sprites/dex/pestilyx.png",
+    },
     // ── NÉMÉSIS de Bidouzen (création d'Embi, PSY/COMBAT) : les VAUTOURS DES TÉNÈBRES (TÉNÈBRES/VOL). Sweepers
     //    PHYSIQUES immunisés à l'arme n°1 de Karatame (PSY ×0) et qui le brisent en STAB VOL physique ×2 sur sa DÉF 70.
     //    Ténèbres = spéciale dans le moteur → sert la DÉFENSE (immunité psy) + le statut ; l'offense passe par VOL. ──
@@ -3244,7 +3296,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "bidouzen", "medisciple", "karatame",                   // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
     "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
-    "joeyrrant", "wallabisan", "kangoudead"]) {             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
+    "joeyrrant", "wallabisan", "kangoudead",             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
+    "charolyx", "bubolyx", "pestilyx"]) {                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -3309,6 +3362,10 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     shady: "caninombre", shade: "caninombre", shadow: "caninombre",
     // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ténèbrir.
     custom_cmpgu4uq5000069d_shady_s1: "caninombre", custom_cmpgu4uq5000069d_shady_s2: "caninombre", custom_cmpgu4uq5000069d_shady_s3: "caninombre",
+    // Possyl (création Zyran, NORMAL/SPECTRE — CUSTOM, non canonisée) → lignée CHAROLYX (Charolyx→Bubolyx→Pestilyx,
+    //   lynx charognard TÉNÈBRES/POISON, mur-draineur toxique). Possyl ne le touche jamais ×2 ; lui frappe Dark ×2
+    //   (spécial) + drain, l'empoisonne (Toxik/Vampigraine) et coupe son Atq (Miasme Sapant, prio). Ids custom → SON ACE le field.
+    custom_cmsvywl6u0001xka_possyl_s1: "charolyx", custom_cmsvywl6u0001xka_possyl_s2: "charolyx", custom_cmsvywl6u0001xka_possyl_s3: "charolyx",
     // Bidouzen (création Embi, PSY/COMBAT, désormais CANONISÉE) → lignée SÉPULCRU (Sépulcru→Macabour→Condombre,
     // vautours TÉNÈBRES/VOL) = le HARD-COUNTER : immunisé à ses nukes PSY (×0), plus rapide, et le brise en STAB VOL
     // physique ×2 sur sa DÉF 70. Formes canoniques + ids custom (l'équipe d'Embi joue son Bidouzen custom → SON ACE field Condombre).

@@ -374,6 +374,10 @@ export const DEX_SIZE: Record<string, DexSize> = {
     lycanfer: { size: [0.9, 1.35], weight: [28, 52], quip: "Un loup passé par la fournaise : à peine plus lourd qu'un berger allemand, mais qui laisse des traces de roussi sur le parquet." },
     // 173 · Ténèbrir (TENEBRES/SPECTRE)
     tenebrir: { size: [1.8, 2.6], weight: [85, 165], quip: "Deux mètres et demi de chien des enfers qui court plus vite que sa propre ombre, et reste étrangement léger pour un tel colosse cornu." },
+    // 207-209 · Charolyx / Bubolyx / Pestilyx (TENEBRES/POISON) — némésis-lynx charognard de Possyl
+    charolyx: { size: [0.35, 0.55], weight: [3, 7], quip: "Un chaton galeux qui empeste la charogne à trois mètres ; adorable tant qu'on ne respire pas par le nez." },
+    bubolyx: { size: [0.7, 1.05], weight: [12, 24], quip: "Taille d'un vrai lynx, mais constellé de bubons qui éclatent quand on le caresse. On ne le caresse pas deux fois." },
+    pestilyx: { size: [1.3, 1.9], weight: [40, 78], quip: "Presque deux mètres de fauve pestilentiel qui pèse moins qu'il n'en a l'air — la pourriture, ça se creuse de l'intérieur." },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: { size: [0.4, 0.62], weight: [2.5, 5.5], weightMode: "special", quip: "Un vieux vautour drapé dans un imper trop grand, si léger qu'on le prendrait pour un tas de plumes oublié sur une branche." },
     // 175 · Macabour (TENEBRES/VOL)

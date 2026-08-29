@@ -1066,6 +1066,24 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "Quand l'enfer se met à courir, l'ombre elle-même reste en arrière.",
         note: "J'ai voulu noter la taille de ses cornes ; il a bâillé, et la chaleur a roussi la page. Estimation finale reportée : 'très grandes'.",
     },
+    // 207 · Charolyx (TENEBRES/POISON)
+    charolyx: {
+        ecology: "Petit lynx efflanqué au pelage gris-violacé terne, zébré d'ombres, oreilles déchirées et yeux jaunes fiévreux. Charognard des marges du Nexus, il rôde autour des dépouilles et renifle la mort ; déjà, de petites spores fétides s'échappent de son souffle. Nocturne et solitaire, il ne chasse pas — il attend.",
+        dicton: "Là où le charognard s'assoit, quelque chose finit toujours par tomber.",
+        note: "Il a suivi mon groupe deux jours à distance, sans jamais approcher. Le troisième matin, ma gourde sentait le tombeau. J'ai changé d'itinéraire.",
+    },
+    // 208 · Bubolyx (TENEBRES/POISON)
+    bubolyx: {
+        ecology: "Le lynx a mûri : son échine s'est hérissée et son corps s'est constellé de bubons suintants d'un venin verdâtre. Ses crocs en dégouttent, et un halo de spores toxiques l'entoure en permanence. Il ne bondit pas sur ses proies — il les contamine d'un souffle, puis patiente pendant que le poison fait son œuvre.",
+        dicton: "Sa morsure ne tue pas. C'est l'attente, après, qui tue.",
+        note: "Un bubon a crevé quand je l'ai croqué à l'aquarelle. J'ai brûlé le carnet, les pinceaux, et la table. Par précaution.",
+    },
+    // 209 · Pestilyx (TENEBRES/POISON)
+    pestilyx: {
+        ecology: "L'apex : un grand lynx au pelage d'encre d'où s'élève une pestilence tenace qui affaiblit tout ce qui l'approche. Immunisé à sa propre pourriture, quasi increvable, il n'a besoin ni de force ni de vitesse : il exhale ses miasmes, sape ses proies, et les regarde se putréfier avant de les dévorer sans hâte.",
+        dicton: "Le fort tue vite ; le charognard, lui, a tout son temps.",
+        note: "Aucune blessure sur les carcasses qu'il laisse. Juste… le temps, accéléré. C'est la chose la plus patiente et la plus révoltante que j'aie répertoriée.",
+    },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: {
         ecology: "Petit urubu voûté drapé dans un plumage gris-brun ébouriffé qui pend comme une cape élimée. Sa tête chauve, d'un rose violacé, porte deux yeux luisant d'un violet spectral. Charognard patient, il se perche immobile des heures durant, guettant ce qui ne bouge plus, et ne bat des ailes qu'à contrecœur pour gagner le prochain festin.",
