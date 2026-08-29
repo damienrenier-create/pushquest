@@ -1048,6 +1048,24 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "Le prédateur ne poursuit pas : il est déjà devant la proie.",
         note: "Je n'ai jamais vu Shadow arriver, seulement les empreintes vertes déjà refroidies derrière moi. J'ai décidé de camper ailleurs.",
     },
+    // 210 · Possyl (NORMAL) — création canonisée de Zyran
+    possyl: {
+        ecology: "Petite ombre possédée vaguement féline, au pelage terne gris-sombre qui semble boire la lumière alentour. Deux yeux ternes flottent dans sa silhouette floue. Lente et discrète, elle s'installe dans les recoins tièdes et refuse obstinément d'en être délogée, comme accrochée au lieu qu'elle a choisi de hanter.",
+        dicton: "Ce n'est pas la vitesse qui use l'adversaire : c'est de ne jamais pouvoir s'en débarrasser.",
+        note: "Posée sur mon sac trois heures durant. J'ai fini par contourner le sac. Elle avait gagné, et elle le savait.",
+    },
+    // 211 · Possombre (NORMAL)
+    possombre: {
+        ecology: "L'ombre s'est densifiée en une silhouette trapue et voûtée, aux épaules basses et lourdes, ceinte d'une aura froide de possession. Elle ne bondit pas et ne fuit pas : elle s'ancre, encaisse tout ce qui vient et rend chaque coup avec une patience implacable.",
+        dicton: "Frappe-la tant que tu veux. Elle a tout son temps ; toi, non.",
+        note: "J'ai voulu la faire reculer d'un pas pour la mesurer. C'est moi qui ai reculé. Deux fois.",
+    },
+    // 212 · Nécrossum (NORMAL/SPECTRE)
+    necrossum: {
+        ecology: "L'apex de la possession : un colosse spectral au pelage d'ombre dense, carrure de mur et regard éteint. Presque immobile, il absorbe les assauts les plus violents sans broncher puis répond d'un coup lourd et définitif. Ni faille de type marquée ni vitesse — rien qu'une endurance qui use tout ce qui s'y frotte.",
+        dicton: "On ne bat pas Nécrossum. On abandonne avant lui.",
+        note: "Le seul Daemon dont j'ai renoncé à noter le poids : ma balance a rendu l'âme, et lui n'avait même pas fini de s'asseoir dessus.",
+    },
     // 171 · Caninombre (TENEBRES/SPECTRE)
     caninombre: {
         ecology: "Chaton au pelage noir de suie parcouru de fissures incandescentes orange-rouge, comme si des braises couvaient sous sa peau. Ses yeux rougeoient et sa queue s'achève sur une petite flamme dansante. Furtif et nocturne, il se love dans les recoins sombres et ne trahit sa présence que par la lueur suintant de ses craquelures.",

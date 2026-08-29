@@ -554,9 +554,9 @@ const ZONES: Record<string, Zone> = {
         minLevel: 5, maxLevel: 30,
         pool: [], // inutilisé : les rects fournissent le pool
         rects: [
-            // « dernier couloir » (16,2→26,5) — OBSCURÈNE exclusif (+ fusion Dractriss via draclet+electroatiss)
+            // « dernier couloir » (16,2→26,5) — POSSYL exclusif (création canonisée de Zyran ; Obscurène reste sur plage/île la nuit)
             { x1: 16, y1: 2, x2: 26, y2: 5, pool: [
-                { speciesId: "obscurene", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "possyl", base: RARE, noEvolve: true, levelRange: [15, 15] },
                 { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [5, 30] },
                 { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [5, 30] },
                 { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
@@ -883,6 +883,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
         pool: [
             { speciesId: "sepulcru", base: 60, noEvolve: true, levelRange: [16, 24] },
             { speciesId: "caninombre", base: 35, noEvolve: true, levelRange: [16, 24], captureMult: 0.2 }, // fréquent MAIS capture TRÈS difficile
+            { speciesId: "charolyx", base: 25, noEvolve: true, levelRange: [16, 24] }, // lynx charognard TÉNÈBRES/POISON (némésis de Possyl) ; NE pop PAS pour l'owner de Possyl (Zyran) — cf. blockedSpecies
             { speciesId: "joeyrrant", base: 10 },
         ],
     },

@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { SPECIES, CANONICAL_NEMESIS } from "./species"
+import { SPECIES, CANONICAL_NEMESIS, CANONIZED_CUSTOM_ALIAS } from "./species"
 import { speciesAtLevel } from "./ace"
 import { MOVES } from "./moves"
+import { CANONIZED_CUSTOM_SPRITES } from "../create/customSpecies"
+import { ownCreationNemesisSpecies } from "../store/playerStore"
 
 // NÉMÉSIS de Possyl (création de Zyran) : lignée CHAROLYX → BUBOLYX → PESTILYX (TÉNÈBRES/POISON, mur-draineur).
 describe("némésis de Possyl — lignée Charolyx (lynx charognard)", () => {
@@ -56,5 +58,38 @@ describe("némésis de Possyl — lignée Charolyx (lynx charognard)", () => {
         for (const need of ["atrophie", "toxik", "vampigraine", "linceul", "devoreur_ombres"]) {
             expect(ids, need).toContain(need)
         }
+    })
+})
+
+// LOT A — Possyl CANONISÉE (Grotte du Nexus) + intégration.
+describe("Possyl canonisée + intégration (Lot A)", () => {
+    it("Possyl → Possombre → Nécrossum canoniques (NORMAL→NORMAL/SPECTRE, dex 210-212, évo 22/40)", () => {
+        expect(SPECIES.possyl?.types).toEqual(["NORMAL"])
+        expect(SPECIES.possombre?.types).toEqual(["NORMAL"])
+        expect(SPECIES.necrossum?.types).toEqual(["NORMAL", "SPECTRE"])
+        expect(SPECIES.possyl.dexNo).toBe(210)
+        expect(SPECIES.possombre.dexNo).toBe(211)
+        expect(SPECIES.necrossum.dexNo).toBe(212)
+        expect(speciesAtLevel("possyl", 30)).toBe("possombre")
+        expect(speciesAtLevel("possyl", 50)).toBe("necrossum")
+    })
+
+    it("Nécrossum = mur physique lent fidèle (BST 455, Déf 115, Vit 50)", () => {
+        const s = SPECIES.necrossum.baseStats
+        expect(s.hp + s.atk + s.def + s.spe + s.spc).toBe(455)
+        expect(s.def).toBe(115)
+        expect(s.spe).toBe(50)
+    })
+
+    it("wiring canonisation : alias custom→canonique, sprites locaux, némésis canonique → Charolyx", () => {
+        expect(CANONIZED_CUSTOM_ALIAS.custom_cmsvywl6u0001xka_possyl_s3).toBe("necrossum")
+        const sprites = CANONIZED_CUSTOM_SPRITES.custom_cmsvywl6u0001xka_possyl
+        expect(sprites?.[0]).toContain("possyl")
+        expect(sprites?.[2]).toContain("necrossum")
+        for (const id of ["possyl", "possombre", "necrossum"]) expect(CANONICAL_NEMESIS[id]).toBe("charolyx")
+    })
+
+    it("ownCreationNemesisSpecies : vide par défaut (aucune création possédée → aucun blocage)", () => {
+        expect(ownCreationNemesisSpecies()).toEqual([])
     })
 })

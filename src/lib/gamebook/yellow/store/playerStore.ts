@@ -517,6 +517,21 @@ export function getNgplusNemesisSpeciesId(): string | null {
     } catch { return null }
 }
 
+/** SANCTUAIRE — les némésis CANONIQUES des créations qu'ON POSSÈDE ne popent PAS en sauvage (réservés à SON ACE) : ex.
+ *  Zyran (owner de Possyl) ne croise jamais Charolyx dans le Manoir/la Grotte — il l'affronte via son rival ACE. Renvoie
+ *  les espèces némésis (base) de ses customDaemons via CANONICAL_NEMESIS (à verser dans blockedSpecies du ctx de spawn). */
+export function ownCreationNemesisSpecies(): string[] {
+    const out = new Set<string>()
+    for (const d of st.customDaemons) {
+        const base = customLineageBaseId(d)
+        for (const sid of [`${base}_s1`, `${base}_s2`, `${base}_s3`]) {
+            const nem = CANONICAL_NEMESIS[sid]
+            if (nem) out.add(nem)
+        }
+    }
+    return [...out]
+}
+
 /** Migrations d'items au chargement (idempotentes). Replie les ids FANTÔMES historiques vers l'id
  *  réel, pour que les objets gagnés avant un correctif redeviennent visibles/utilisables dans le sac
  *  (le sac n'affiche que les ids définis dans ITEMS). Récupère aussi les balles déjà « perdues ».

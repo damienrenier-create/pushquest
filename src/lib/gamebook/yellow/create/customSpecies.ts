@@ -746,6 +746,8 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmq950jkh000071u_phoechaud: ["/yellow/sprites/dex/phoechaud1.png", "/yellow/sprites/dex/phoechaud2.png", "/yellow/sprites/dex/phoechaud3.png"],
     // Joeyrrant → Wallabisan → Kangoudead (Jacanon) : kangourou mort-vivant, TÉNÈBRES/FEU au stade 1 puis TÉNÈBRES/GLACE.
     custom_cmsat15v80001wvy_joeyrrant: ["/yellow/sprites/dex/joeyrrant.png", "/yellow/sprites/dex/wallabisan.png", "/yellow/sprites/dex/kangoudead.png"],
+    // Possyl → Possombre → Nécrossum (Zyran) : spectre-possédé NORMAL → NORMAL/SPECTRE, mur physique.
+    custom_cmsvywl6u0001xka_possyl: ["/yellow/sprites/dex/possyl.png", "/yellow/sprites/dex/possombre.png", "/yellow/sprites/dex/necrossum.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */

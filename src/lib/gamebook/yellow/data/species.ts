@@ -2867,6 +2867,55 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Grand félin-fantôme élancé et musclé, nimbé d'une aura d'ombre. Prédateur qui frappe à la vitesse de l'éclair et disparaît.",
         sprite: "/yellow/sprites/dex/shadow.png",
     },
+    // ── Possyl → Possombre → Nécrossum (création canonisée de ZYRAN) : spectre-possédé NORMAL → NORMAL/SPECTRE au stade
+    //    final, MUR PHYSIQUE lent SANS soin (→ némésis dédié TÉNÈBRES/POISON, la lignée Charolyx). Stats/learnset/talent fidèles. ──
+    possyl: {
+        id: "possyl", dexNo: 210, name: "Possyl", types: ["NORMAL"],
+        baseStats: { hp: 47, atk: 45, def: 52, spe: 23, spc: 38 }, // BST 205
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "mur_de_fer" },
+            { level: 24, moveId: "ombre_furtive" }, { level: 30, moveId: "voile_effroi" },
+            { level: 36, moveId: "plaquage" }, { level: 42, moveId: "frappe_audela" },
+            { level: 48, moveId: "crochet_maitre" }, { level: 54, moveId: "souffle_polaire" },
+        ],
+        evolution: { toId: "possombre", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "Normal — spectre-possédé embryonnaire (mur physique)",
+        description: "Une petite ombre possédée, vaguement féline, au pelage terne qui semble avaler la lumière. Lente, mais déjà d'une ténacité déconcertante. — Création de Zyran",
+        sprite: "/yellow/sprites/dex/possyl.png",
+    },
+    possombre: {
+        id: "possombre", dexNo: 211, name: "Possombre", types: ["NORMAL"],
+        baseStats: { hp: 71, atk: 68, def: 78, spe: 34, spc: 58 }, // BST 309
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "mur_de_fer" },
+            { level: 24, moveId: "ombre_furtive" }, { level: 30, moveId: "voile_effroi" },
+            { level: 38, moveId: "plaquage" }, { level: 46, moveId: "frappe_audela" },
+            { level: 54, moveId: "crochet_maitre" }, { level: 62, moveId: "souffle_polaire" },
+        ],
+        evolution: { toId: "necrossum", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "Normal — spectre-possédé (mur physique tenace)",
+        description: "L'ombre s'est densifiée en une silhouette trapue et voûtée, nimbée d'une aura froide de possession. Elle encaisse sans broncher et rend coup pour coup. — Création de Zyran",
+        sprite: "/yellow/sprites/dex/possombre.png",
+    },
+    necrossum: {
+        id: "necrossum", dexNo: 212, name: "Nécrossum", types: ["NORMAL", "SPECTRE"],
+        baseStats: { hp: 105, atk: 100, def: 115, spe: 50, spc: 85 }, // BST 455
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "mur_de_fer" },
+            { level: 24, moveId: "ombre_furtive" }, { level: 30, moveId: "voile_effroi" },
+            { level: 40, moveId: "plaquage" }, { level: 50, moveId: "frappe_audela" },
+            { level: 60, moveId: "crochet_maitre" }, { level: 70, moveId: "souffle_polaire" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "Normal/Spectre — apex possédé, MUR physique lent",
+        description: "L'apex de la possession : un colosse spectral au pelage d'ombre, mur immense qui absorbe les coups et frappe lourd. Ni faille de type marquée ni vitesse — juste une endurance implacable. — Création de Zyran",
+        sprite: "/yellow/sprites/dex/necrossum.png",
+    },
     // ── NÉMÉSIS de Shady : Caninombre → Lycanfer → Ténèbrir (loup ténébreux TÉNÈBRES/SPECTRE, attaquant SPÉCIAL). ──
     //    Shady (NORMAL/SPECTRE) n'a aucune faiblesse → SEUL le type TÉNÈBRES perce sa moitié Spectre (×2), et un
     //    coup SPÉCIAL frappe sa Spé-déf catastrophique (28). Immunisé à l'offense de Shady (Normal/Combat/priorité
@@ -3272,6 +3321,7 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
     custom_cmpgu4uq5000069d_shady_s3: "shadow",           // Franss
     custom_cmml4dogn00005n1_bidouzen_s3: "karatame",      // Embi
     custom_cmq5gbo5g0000g6m_guizer_s3: "mobyd",           // Task1
+    custom_cmsvywl6u0001xka_possyl_s3: "necrossum",      // Zyran
 }
 
 export function getSpecies(id: string): SpeciesData | null {
@@ -3297,6 +3347,7 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
     "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
     "joeyrrant", "wallabisan", "kangoudead",             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
+    "possyl", "possombre", "necrossum",                   // création canonisée (Zyran) — spectre-possédé NORMAL→NORMAL/SPECTRE, mur physique
     "charolyx", "bubolyx", "pestilyx"]) {                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
@@ -3362,9 +3413,11 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     shady: "caninombre", shade: "caninombre", shadow: "caninombre",
     // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ténèbrir.
     custom_cmpgu4uq5000069d_shady_s1: "caninombre", custom_cmpgu4uq5000069d_shady_s2: "caninombre", custom_cmpgu4uq5000069d_shady_s3: "caninombre",
-    // Possyl (création Zyran, NORMAL/SPECTRE — CUSTOM, non canonisée) → lignée CHAROLYX (Charolyx→Bubolyx→Pestilyx,
-    //   lynx charognard TÉNÈBRES/POISON, mur-draineur toxique). Possyl ne le touche jamais ×2 ; lui frappe Dark ×2
-    //   (spécial) + drain, l'empoisonne (Toxik/Vampigraine) et coupe son Atq (Miasme Sapant, prio). Ids custom → SON ACE le field.
+    // Possyl (création Zyran, NORMAL/SPECTRE — désormais CANONISÉE : possyl/possombre/necrossum) → lignée CHAROLYX
+    //   (Charolyx→Bubolyx→Pestilyx, lynx charognard TÉNÈBRES/POISON, mur-draineur toxique). Possyl ne le touche jamais
+    //   ×2 ; lui frappe Dark ×2 (spécial) + drain, l'empoisonne (Toxik/Vampigraine) et coupe son Atq (Atrophie, prio).
+    //   Formes canoniques + ids custom (l'équipe de Zyran joue son Possyl custom → SON ACE field le charognard).
+    possyl: "charolyx", possombre: "charolyx", necrossum: "charolyx",
     custom_cmsvywl6u0001xka_possyl_s1: "charolyx", custom_cmsvywl6u0001xka_possyl_s2: "charolyx", custom_cmsvywl6u0001xka_possyl_s3: "charolyx",
     // Bidouzen (création Embi, PSY/COMBAT, désormais CANONISÉE) → lignée SÉPULCRU (Sépulcru→Macabour→Condombre,
     // vautours TÉNÈBRES/VOL) = le HARD-COUNTER : immunisé à ses nukes PSY (×0), plus rapide, et le brise en STAB VOL

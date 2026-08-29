@@ -368,6 +368,10 @@ export const DEX_SIZE: Record<string, DexSize> = {
     shade: { size: [0.55, 0.85], weight: [7, 15], weightMode: "special", quip: "Un chat de gouttière qui s'est mis à la haute tension : le poids d'un gros matou, le double d'électricité statique." },
     // 170 · Shadow (NORMAL/SPECTRE)
     shadow: { size: [1.15, 1.7], weight: [38, 72], weightMode: "special", quip: "Grand comme un loup, mais si furtif qu'il vous double sans faire plier un brin d'herbe ni déclencher la moindre alarme." },
+    // 210-212 · Possyl / Possombre / Nécrossum (NORMAL→NORMAL/SPECTRE) — création canonisée de Zyran, mur physique possédé
+    possyl: { size: [0.3, 0.5], weight: [3, 8], quip: "Une ombre grosse comme un chat qui pèse à peine plus qu'un coussin — mais qu'on ne déloge JAMAIS du fauteuil qu'elle a élu." },
+    possombre: { size: [0.75, 1.1], weight: [16, 32], quip: "Trapu et voûté comme un molosse : on le pousse, il ne bouge pas ; on insiste, on se fatigue avant lui." },
+    necrossum: { size: [1.6, 2.2], weight: [62, 110], quip: "Deux mètres de mur spectral qui encaisse un rocher sans ciller. Le déplacer relève du terrassement, pas du dressage." },
     // 171 · Caninombre (TENEBRES/SPECTRE)
     caninombre: { size: [0.22, 0.38], weight: [1.8, 4.5], quip: "Un chaton-braise qui tient dans une main, à condition d'accepter qu'il vous chauffe la paume comme une bouillotte fêlée." },
     // 172 · Lycanfer (TENEBRES/SPECTRE)

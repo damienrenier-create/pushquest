@@ -26,14 +26,14 @@ function sample(x: number, y: number, n: number, exclusive?: string) {
 
 // (x,y) représentatif de chaque biotope + son rare exclusif attendu + les autres exclusifs (à NE PAS voir).
 const BIOTOPES = [
-    { name: "dernier/obscurène", x: 20, y: 4, excl: "obscurene", pool: ["obscurene", "mottoche", "nouillon", "revemante", "ruffiant", "electroatiss", "draclet"] },
+    { name: "dernier/possyl", x: 20, y: 4, excl: "possyl", pool: ["possyl", "mottoche", "nouillon", "revemante", "ruffiant", "electroatiss", "draclet"] },
     { name: "3e/caninombre", x: 30, y: 6, excl: "caninombre", pool: ["caninombre", "lavapetit", "piouflot", "sporbeo", "revemante"] },
     { name: "2e/hypnoppo", x: 30, y: 36, excl: "hypnoppo", pool: ["hypnoppo", "trolystrik", "draclet", "electroatiss", "cornaissant", "revemante"] },
     { name: "1er/wistree", x: 42, y: 28, excl: "wistree", pool: ["wistree", "ruffiant", "tetardoc", "trolystrik", "electroatiss"] },
     { name: "4e/shady", x: 15, y: 18, excl: "shady", pool: ["shady", "mottoche", "nouillon", "piouflot", "tetardoc"] },
     { name: "5e/gavillus", x: 4, y: 10, excl: "gavillus", pool: ["gavillus", "mottoche", "lavapetit", "nouillon", "revemante", "ruffiant"] },
 ]
-const ALL_EXCLUSIVES = ["obscurene", "caninombre", "hypnoppo", "wistree", "shady", "gavillus"]
+const ALL_EXCLUSIVES = ["possyl", "caninombre", "hypnoppo", "wistree", "shady", "gavillus"]
 
 describe("Grotte B1F — biotopes par rectangle", () => {
     it("la map B1F a des rencontres activées", () => {
