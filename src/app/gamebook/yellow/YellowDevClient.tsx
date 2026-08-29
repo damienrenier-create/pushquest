@@ -35,7 +35,8 @@ import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import RunScoreboardPanel from "./RunScoreboardPanel"
 import RunBadgesPanel from "./RunBadgesPanel"
-import FusionEpiloguePanel, { type EpilogueRosterMon } from "./FusionEpiloguePanel"
+import FusionEpiloguePanel from "./FusionEpiloguePanel"
+import UltimateChampionSacre, { type SacreRosterMon, type SacrePalmares } from "./UltimateChampionSacre"
 import { FusionDefeatOverlay } from "./FusionDefeatOverlay"
 import RustyLampModal from "./RustyLampModal"
 import GeniePanel from "./GeniePanel"
@@ -624,7 +625,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation
     // ÉPILOGUE « Maître de la Chimère » (fin de Ligue de Fusion) : snapshot du roster vainqueur figé au sacre (fusionSacre
     //   est effacé dans la foulée), + drapeau « intro jouée → monter le panneau » (showDialogue n'a pas de callback de fin).
-    const [fusionEpilogue, setFusionEpilogue] = useState<{ tier: string; roster: EpilogueRosterMon[] } | null>(null)
+    const [fusionEpilogue, setFusionEpilogue] = useState<{ tier: string; roster: SacreRosterMon[] } | null>(null)
     const [epiloguePending, setEpiloguePending] = useState(false)
     const fusioBuyingRef = useRef(false) // verrou anti-double-tap sur l'achat (mobile) : 1 débit / 1 balle max
     const fusioReofferShownRef = useRef(false) // Fusio-Ball : re-proposition montrée UNE fois par session (anti-nag)
@@ -1640,6 +1641,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             roster: fusionSacre.team.map((m) => ({
                 name: m.name, sprite: m.sprite, types: m.types, level: m.level,
                 bst: m.stats.hp + m.stats.atk + m.stats.def + m.stats.spe + m.stats.spc,
+                stats: m.stats, moves: m.moves, // + stats/moves : le SACRE ULTIME (palier OR) les défile
             })),
         })
         clearFusionSacre()
@@ -5071,24 +5073,56 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* ÉPILOGUE « Maître de la Chimère » (fin de Ligue de Fusion) : monté APRÈS le laïus du Dieu Spaghetti
                 (epiloguePending && !dialogue). Acte I = les 6 dresseurs, Acte II = le roster vainqueur figé,
                 Acte III = la checklist des secrets restants (teasers sans spoiler). Overlay propre zIndex 9600. */}
-            {!battle && evolutions.length === 0 && !dialogue && !loopCreatorOpen && epiloguePending && fusionEpilogue && getActiveWorld() !== "replay" && (
-                <FusionEpiloguePanel
-                    tierLabel={fusionEpilogue.tier.toUpperCase()}
-                    roster={fusionEpilogue.roster}
-                    quests={fusionEpilogueQuests({
-                        // NB : markers = defeatedTrainers du monde ACTIF (donc en run 2/3 « Nexus revisité » l'Acte III
-                        //   reflète ce run, pas la vie entière) ; dexCount exclut les espèces custom (fusions/Ukognofy)
-                        //   pour s'aligner sur le compteur dex visible du jeu (cf. pokedexCompletion).
-                        markers: player.defeatedTrainers,
-                        caught: getPokedex().caught,
-                        dexCount: getPokedex().caught.filter((id) => !isCustomSpeciesId(id)).length,
-                        domeChampionships: player.domeChampionships,
-                        fusionsDiscovered: historyFusions(player.fusionHistory).length,
-                        shinyCount: [...player.team, ...player.pc].filter((m) => m.shiny).length,
-                    })}
-                    onClose={() => { setFusionEpilogue(null); setEpiloguePending(false) }}
-                />
-            )}
+            {!battle && evolutions.length === 0 && !dialogue && !loopCreatorOpen && epiloguePending && fusionEpilogue && getActiveWorld() !== "replay" && (() => {
+                const caught = getPokedex().caught
+                const dexCount = caught.filter((id) => !isCustomSpeciesId(id)).length
+                const shinyCount = [...player.team, ...player.pc].filter((m) => m.shiny).length
+                // NB : markers = defeatedTrainers du monde ACTIF (en run 2/3 « Nexus revisité » l'Acte III reflète ce run).
+                const quests = fusionEpilogueQuests({
+                    markers: player.defeatedTrainers, caught, dexCount,
+                    domeChampionships: player.domeChampionships,
+                    fusionsDiscovered: historyFusions(player.fusionHistory).length,
+                    shinyCount,
+                })
+                const closeEpilogue = () => { setFusionEpilogue(null); setEpiloguePending(false) }
+                // PALIER OR = SACRE ULTIME (bats ton reflet argent) → la plus grosse célébration du jeu. Bronze/argent = panneau classique.
+                if (fusionEpilogue.tier === "or") {
+                    const s = player.stats
+                    const topOf = (rec: Record<string, number> | undefined, name: (id: string) => string | undefined): string | undefined => {
+                        const e = Object.entries(rec ?? {}).sort((a, b) => b[1] - a[1])[0]
+                        return e ? name(e[0]) : undefined
+                    }
+                    // Coup/Daemon fétiche : d'abord l'usage PvP réel, sinon repli sur le roster vainqueur (toujours dispo).
+                    const rosterMoveCount: Record<string, number> = {}
+                    for (const m of fusionEpilogue.roster) for (const mv of m.moves) rosterMoveCount[mv] = (rosterMoveCount[mv] ?? 0) + 1
+                    const tiers = ["bronze", "argent", "or"].filter((t) => player.defeatedTrainers.includes(`fusleague_${t}`))
+                    const palmares: SacrePalmares = {
+                        playtime: formatDuration(player.playtimeMs), battles: s.battles, wins: s.wins,
+                        captures: caught.length, dexCount, badges: player.badges.length,
+                        dome: player.domeChampionships, shiny: shinyCount, xpTotal: s.xpTotal, energySpent: s.energySpent,
+                        tiersLabel: tiers.length ? tiers.map((t) => t[0].toUpperCase() + t.slice(1)).join(" · ") : "—",
+                        signatureMove: topOf(player.pvpStats?.moveUse, (id) => getMove(id)?.name)
+                            ?? Object.entries(rosterMoveCount).sort((a, b) => b[1] - a[1])[0]?.[0],
+                        favDaemon: topOf(player.pvpStats?.daemonUse, (id) => getSpecies(id)?.name)
+                            ?? [...fusionEpilogue.roster].sort((a, b) => b.bst - a.bst)[0]?.name,
+                    }
+                    return (
+                        <UltimateChampionSacre
+                            roster={fusionEpilogue.roster} palmares={palmares} quests={quests}
+                            onRecreate={() => { closeEpilogue(); setLoopCreatorOpen(true) }}
+                            onClose={closeEpilogue}
+                        />
+                    )
+                }
+                return (
+                    <FusionEpiloguePanel
+                        tierLabel={fusionEpilogue.tier.toUpperCase()}
+                        roster={fusionEpilogue.roster}
+                        quests={quests}
+                        onClose={closeEpilogue}
+                    />
+                )
+            })()}
 
             {/* LIGUE DE FUSION — GÉNÉRIQUE DE DÉFAITE (5s) : après avoir QUITTÉ le combat perdu (!battle), on joue le récap
                 thématique « par quelle attaque chaque fusion est tombée » ; à la fin (onDone → clearFusionDefeat) le
