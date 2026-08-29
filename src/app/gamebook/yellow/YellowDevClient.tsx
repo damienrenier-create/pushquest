@@ -593,6 +593,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     const [profileView, setProfileView] = useState(false) // MULTI-PROFILS : overlay « Mes profils » (nouveau profil + bascule)
     const [genesisCraftStep, setGenesisCraftStep] = useState<number | null>(null) // MODE GENÈSE : étape de craft (0..5) ; null = pas en craft
+    const [genesisConfirm, setGenesisConfirm] = useState(false) // MODE GENÈSE : modal de confirmation (explication + conditions) AVANT l'assistant ×6 — depuis le sacre OR OU le menu Profils
     const genesisSpecsRef = useRef<StoredCustomDaemon[]>([]) // specs Genèse accumulés (ref → pas de race async entre créations)
     // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
     // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
@@ -3779,7 +3780,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {getAltProfileSummaries().length < MAX_ALT_PROFILES
                             ? <button style={menuBtnStyle} onClick={() => void doNewProfileRun1()}>🆕 Nouveau profil (recommencer au Run 1)</button>
                             : <div style={{ fontSize: 10, opacity: 0.6, textAlign: "center", margin: "4px 0" }}>Maximum de {MAX_ALT_PROFILES + 1} profils atteint.</div>}
-                        {getAltProfileSummaries().length < MAX_ALT_PROFILES && <button style={menuBtnStyle} onClick={openGenesisCraft}>🌱 Mode GENÈSE — 6 craftés, zéro capture</button>}
+                        {getAltProfileSummaries().length < MAX_ALT_PROFILES && <button style={menuBtnStyle} onClick={() => setGenesisConfirm(true)}>🌱 Mode GENÈSE — 6 craftés, zéro capture</button>}
                         {getAltProfileSummaries().length > 0 && <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.7, margin: "8px 0 2px" }}>BASCULER SUR :</div>}
                         {getAltProfileSummaries().map((p, i) => (
                             <button key={i} style={menuBtnStyle} onClick={() => void doSwitchProfile(i)}>
@@ -4244,11 +4245,32 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12, lineHeight: 1.55 }}>
                                 • Ton monde actuel est <b>SAUVEGARDÉ et reste INTACT</b> (bulle de rejeu isolée — rien n&apos;est perdu).<br />
                                 • <b>Gratuit</b> et rejouable autant de fois que tu veux.<br />
-                                • Tu peux dire <b>« Plus tard »</b> : l&apos;offre te reviendra à ta prochaine victoire <b>OR</b> à la Ligue de Fusion — ou en capturant un nouveau <b>légendaire</b> (Galijah).
+                                • Tu peux dire <b>« Plus tard »</b> : l&apos;offre te reviendra à ta prochaine victoire à la Ligue de Fusion.
                             </div>
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setLoopModal(false); setFusionEpilogue(null); setEpiloguePending(false); setLoopCreatorOpen(true) }}>🧬 Oui, créer &amp; repartir !</button>
                         <button style={menuBtnDimStyle} onClick={() => setLoopModal(false)}>Plus tard</button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODE GENÈSE — CONFIRMATION (depuis le sacre OR « Forger ta légende » OU le menu MES PROFILS) : explique le
+                défi « 6 forgés / zéro capture » + ses conditions, puis lance l'assistant ×6 (openGenesisCraft). */}
+            {genesisConfirm && (
+                <div style={{ ...menuOverlayStyle, zIndex: 9700 }} onClick={() => setGenesisConfirm(false)}>
+                    <div style={{ ...menuBoxStyle, background: "#14210f", color: "#e8f5d0", border: "3px solid #9affa0" }} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🌱 FORGER TA LÉGENDE — MODE GENÈSE</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
+                            Le défi ULTIME, Maître. 🍝 Conçois <b style={{ color: "#b6ff9a" }}>SIX Daemons de toutes pièces</b> et rejoue le Nexus <b>DEPUIS LE DÉBUT</b> avec eux — et EUX SEULS.
+                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12, lineHeight: 1.55 }}>
+                                • Tu crées <b>6 Daemons</b> (assistant complet) → ton équipe de départ, niveau 5.<br />
+                                • <b>ZÉRO capture</b> : aucune Ball tant que tu n&apos;as pas reconquis la <b>Ligue de Fusion</b> (la <b>FUSION</b> de tes 6 reste permise).<br />
+                                • Nouveau profil : ton monde actuel est <b>SAUVEGARDÉ et intact</b>.<br />
+                                • Pas prêt ? Lance-le quand tu veux depuis <b>MES PROFILS</b> → 🌱 Mode GENÈSE.
+                            </div>
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => { setGenesisConfirm(false); openGenesisCraft() }}>🌱 Oui, forger mes 6 légendes !</button>
+                        <button style={menuBtnDimStyle} onClick={() => setGenesisConfirm(false)}>Plus tard</button>
                     </div>
                 </div>
             )}
@@ -5113,7 +5135,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     return (
                         <UltimateChampionSacre
                             roster={fusionEpilogue.roster} palmares={palmares} quests={quests}
-                            onRecreate={() => { closeEpilogue(); setLoopModal(true) }} // → modal qui EXPLIQUE + confirme (ou « Plus tard »)
+                            onRecreate={() => { closeEpilogue(); setGenesisConfirm(true) }} // → MODE GENÈSE (6 forgés / 0 capture), avec confirmation
                             onClose={closeEpilogue}
                         />
                     )

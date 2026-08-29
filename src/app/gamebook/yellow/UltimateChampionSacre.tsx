@@ -237,7 +237,7 @@ export default function UltimateChampionSacre({ roster, palmares, quests, onClos
                             </div>
                         ))}
                     </div>
-                    <button style={btnPrimary} onClick={(e) => { e.stopPropagation(); onRecreate() }}>🔁 Forger une nouvelle légende</button>
+                    <button style={btnPrimary} onClick={(e) => { e.stopPropagation(); onRecreate() }}>🌱 Forger ta légende — 6 créatures</button>
                     <button style={btnGhost} onClick={(e) => { e.stopPropagation(); onClose() }}>Poursuivre l'aventure ▶</button>
                 </div>
             )}
