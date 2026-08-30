@@ -101,6 +101,7 @@ export const HELD_ITEMS: Record<string, HeldItemData> = {
     encens_doux: { id: "encens_doux", name: "Encens Doux", emoji: "🌫️", description: "Baisse de 5 % la précision des attaques qui ciblent le porteur.", jcPrice: 60, category: "combat", incomingAccMult: 0.95 },
     herbe_blanche: { id: "herbe_blanche", name: "Herbe Blanche", emoji: "🌿", description: "Annule la prochaine baisse de stat subie, puis se consomme.", jcPrice: 60, category: "combat", negateStatDrop: true },
     oeuf_chance: { id: "oeuf_chance", name: "Œuf Chance", emoji: "🥚", description: "Fait gagner 50 % d'XP en plus au porteur.", jcPrice: 125, category: "combat", expMult: 1.5 },
+    gemme_xp: { id: "gemme_xp", name: "Gemme d'Expérience", emoji: "💎", description: "Fait gagner 100 % d'XP en plus au porteur.", jcPrice: 375, category: "combat", expMult: 2 },
 
     // ───────── Objets SIGNATURE (verrouillés à l'espèce) ─────────
     coquille_tony: { id: "coquille_tony", name: "Coquille Tony", emoji: "🥚", description: "Réduit de 20 % les dégâts physiques subis. Réservé à Tonytony.", jcPrice: 140, category: "signature", species: "tonytony", physDmgTakenMult: 0.8 },

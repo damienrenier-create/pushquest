@@ -24,7 +24,7 @@ export function ctRewardOptions(defeatedSpeciesId: string, level: number): strin
     const moves = new Set(opponentMoveIds(defeatedSpeciesId, level))
     // Les CT-signatures EXCLUSIVES au run 2 ne sont JAMAIS offertes par l'Usine (garantie directe, en plus du
     // fait que leurs attaques ne figurent dans aucun learnset). Seul octroi = victoire du boss d'arène en NG+.
-    return CTS.filter((ct) => moves.has(ct.moveId) && !NGPLUS_EXCLUSIVE_CT_IDS.includes(ct.id) && !CLAN_CT_IDS.includes(ct.id) && ct.id !== "ct61").map((ct) => ct.id)
+    return CTS.filter((ct) => moves.has(ct.moveId) && !NGPLUS_EXCLUSIVE_CT_IDS.includes(ct.id) && !CLAN_CT_IDS.includes(ct.id) && ct.id !== "ct61" && ct.id !== "ct66").map((ct) => ct.id)
 }
 
 /** Idem mais sur toute une équipe vaincue (union des options, dédupliquée). */

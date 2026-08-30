@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { MOVES } from "./moves"
 import { CTS, getCt, run2BlackjackCtPool } from "./cts"
+import { ctDefiOptions } from "./labDefis"
+import { ctRewardOptions } from "../frontier/rewards"
 import { tryMove } from "../engine/movement"
 import type { PlayerState } from "../engine/types"
 import type { YellowMapData } from "../maps"
@@ -32,6 +34,11 @@ describe("SURF — attaque (CT)", () => {
         expect(ct?.price).toBe(0)
         expect(run2BlackjackCtPool()).not.toContain("ct66")
         expect(CTS.filter((c) => c.id === "ct66")).toHaveLength(1) // id unique
+    })
+    it("SURF ne fuite d'AUCUN pool de CT : jamais au défi labo ni en récompense d'Usine (exclusif au SURFEUR)", () => {
+        expect(ctDefiOptions().map((o) => o.ctId)).not.toContain("ct66")            // défi CT du labo
+        // Récompense Usine : même face à un vaincu qui « connaîtrait » surf, ct66 reste exclue.
+        expect(ctRewardOptions("pivinci", 80)).not.toContain("ct66")
     })
 })
 

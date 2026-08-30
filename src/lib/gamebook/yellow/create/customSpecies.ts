@@ -88,6 +88,15 @@ export function isNovelDualType(finalTypes: PokeType[]): boolean {
 }
 /** Budget de BST DISTRIBUABLE (source UNIQUE du plafond) : budget d'éclosion, +5 % si le type final est un double-type
  *  INÉDIT. Les caps PAR STAT (STAT_HARD_CAP) s'appliquent toujours → le bonus donne du total, pas des stats délirantes. */
+/** Combos de types INTERDITS à la création d'un custom (déséquilibrés). NORMAL+SPECTRE = « une seule faiblesse »
+ *  (Ténèbres), défensivement quasi-imbattable → banni (les lignées canon déjà enregistrées ne sont pas affectées). */
+export const FORBIDDEN_TYPE_PAIRS: ReadonlyArray<readonly [PokeType, PokeType]> = [["NORMAL", "SPECTRE"]]
+/** La paire de types choisie est-elle interdite à la création ? (mono-type → jamais interdit). */
+export function isForbiddenTypeCombo(types: PokeType[]): boolean {
+    if (types.length < 2) return false
+    return FORBIDDEN_TYPE_PAIRS.some(([a, b]) => types.includes(a) && types.includes(b))
+}
+
 export function specBudget(bloomer: Bloomer, finalTypes: PokeType[]): number {
     const base = bloomerBudget(bloomer)
     return isNovelDualType(finalTypes) ? Math.round(base * (1 + NOVEL_TYPE_BONUS)) : base
@@ -630,9 +639,11 @@ export function validateSpec(spec: CustomSpec): string[] {
 
     const badType = (ts: PokeType[]) => ts.length < 1 || ts.length > 2 || ts.some((t) => !POKE_TYPES.includes(t)) || (ts.length === 2 && ts[0] === ts[1])
     if (badType(spec.finalTypes)) e.push("Type final invalide (1 ou 2 types distincts).")
+    else if (isForbiddenTypeCombo(spec.finalTypes)) e.push("Combo de types interdit : Normal + Spectre (défensivement trop peu de faiblesses).")
     if (spec.typeChange) {
         if (spec.typeChange.atStage > spec.stages) e.push("Le changement de type vise un stade qui n'existe pas.")
         if (badType(spec.typeChange.types)) e.push("Types pré-changement invalides.")
+        else if (isForbiddenTypeCombo(spec.typeChange.types)) e.push("Combo pré-changement interdit : Normal + Spectre.")
     }
 
     // Stats : intégrité (entier ≥ MIN, ≤ cap dur par stat) + budget avec surcoût au-delà du record du dex.

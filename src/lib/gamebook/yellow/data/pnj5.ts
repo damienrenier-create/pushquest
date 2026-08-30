@@ -15,6 +15,11 @@ import { MAX_LEVEL } from "../battle/xp"
 export const PNJ5_NPC_ID = "y_pnj5_grotte"
 export const PNJ5_TRAINER_ID = "y_pnj5_grotte"
 export const PNJ5_MAP_ID = "yellow_grotte_nexus"
+/** Marqueur PERSISTANT « gardien vaincu cette visite » (defeatedTrainers, per-monde). Survit au refresh → les
+ *  échelles restent franchissables après un reload. Levé (re-armé) seulement après PNJ5_REARM_STEPS pas AU-DEHORS. */
+export const PNJ5_CLEARED_MARKER = "pnj5_cleared"
+/** Nombre de pas HORS grotte après lesquels le gardien se ré-arme (on peut sortir/rentrer sans se refaire happer). */
+export const PNJ5_REARM_STEPS = 10
 export const PNJ5_POS = { x: 17, y: 33 } as const
 /** Cases-PIÈGES : y marcher LANCE le défi (interception), tant que le gardien n'est pas battu CETTE visite. */
 export const PNJ5_TRIGGER: ReadonlyArray<{ x: number; y: number }> = [

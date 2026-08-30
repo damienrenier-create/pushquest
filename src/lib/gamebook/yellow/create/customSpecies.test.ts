@@ -12,7 +12,7 @@ import { getMove, MOVES } from "../data/moves"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
 import { POKE_TYPES } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
-import { isDamagingMove } from "./customSpecies"
+import { isDamagingMove, isForbiddenTypeCombo } from "./customSpecies"
 import type { StatKey, PokeType, MoveData } from "../battle/types"
 
 const bst = (s: Record<StatKey, number>) => STAT_KEYS.reduce((a, k) => a + s[k], 0)
@@ -73,6 +73,20 @@ describe("création — rareté & fiche", () => {
     it("moveCard fournit toutes les infos pour choisir", () => {
         const c = moveCard("lance_flammes", ["FEU"])!
         expect(c.stab).toBe(true); expect(c.cat).toBe("SPÉ"); expect(c.power).toBeGreaterThan(0); expect(c.rarity).toBeTruthy()
+    })
+})
+
+describe("création — combo de types interdit (Normal + Spectre)", () => {
+    it("isForbiddenTypeCombo : Normal+Spectre banni, tout le reste OK", () => {
+        expect(isForbiddenTypeCombo(["NORMAL", "SPECTRE"])).toBe(true)
+        expect(isForbiddenTypeCombo(["SPECTRE", "NORMAL"])).toBe(true) // ordre indifférent
+        expect(isForbiddenTypeCombo(["NORMAL"])).toBe(false)           // mono-type jamais interdit
+        expect(isForbiddenTypeCombo(["SPECTRE"])).toBe(false)
+        expect(isForbiddenTypeCombo(["EAU", "FEU"])).toBe(false)
+    })
+    it("validateSpec refuse un final Normal + Spectre", () => {
+        const s: CustomSpec = { ...validSpec(), finalTypes: ["NORMAL", "SPECTRE"], learnset: buildValidLearnset(["NORMAL", "SPECTRE"]) }
+        expect(validateSpec(s).some((m) => m.includes("Normal + Spectre"))).toBe(true)
     })
 })
 

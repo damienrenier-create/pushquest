@@ -475,6 +475,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
         if (isFishing) return // PÊCHE en cours : on ignore les clics d'adversaire (sinon la session resterait bloquée en combat).
+        // Un DIALOGUE (ou un combat) est ouvert → un clic sur un sprite d'adversaire ne doit RIEN relancer. Fix : les
+        //   taps servant à FAIRE DÉFILER le dialogue post-combat de l'Archiviste retombaient sur son sprite errant et
+        //   redéclenchaient une revanche « avant la fin du dialogue ». Vaut pour tous les adversaires cliquables.
+        if (dialogue || battle) return
         // L'ARCHIVISTE (Collectionneur du dex) — équipe tirée au hasard parmi les Daemons DÉJÀ VUS, niveau centré sur
         //   la moyenne du joueur (moyenne d'équipe == moyenne joueur), Daemons NATURE, IA « hof ». Ré-affrontable.
         if (uid === ARCHIVISTE_ID) {

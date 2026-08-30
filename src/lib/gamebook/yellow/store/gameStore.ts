@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -62,7 +62,7 @@ import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from ".
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
-import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
+import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER, PNJ5_REARM_STEPS } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
@@ -1154,13 +1154,13 @@ function tryLaunchAnanas(): ActiveDialogue | null {
     return null
 }
 
-// GARDIEN DE LA GROTTE DU NEXUS (PNJ 5). Nb de victoires MÉMORISÉ à l'entrée de la grotte : le gardien est
-// « battu cette visite » dès que pnj5WinsCount() dépasse ce repère → le blocage (18-20,33) se lève. Ré-armé
-// à chaque nouvelle entrée (setMap) → on le rebat à chaque visite. Runtime-only (non persistant = re-combat au reload).
-// Sentinelle -1 = « pas entré cette session » → JAMAIS cleared (échec SÛR : au pire un combat en trop, jamais un skip).
-// Couvre le reload direct DANS la grotte (setMap non rappelé) : le blocage reste actif tant qu'on n'a pas ré-entré+vaincu.
-let pnj5WinsAtEntry = -1
-const pnj5ClearedThisVisit = (): boolean => pnj5WinsAtEntry >= 0 && pnj5WinsCount() > pnj5WinsAtEntry
+// GARDIEN DE LA GROTTE DU NEXUS (PNJ 5). « Vaincu cette visite » = marqueur PERSISTANT PNJ5_CLEARED_MARKER
+// (defeatedTrainers, per-monde) posé à la victoire (battleStore) → SURVIT au refresh : les échelles restent
+// franchissables après un reload (fini le blocage relou). Le gardien ne se RÉ-ARME (marqueur levé) qu'une fois
+// le joueur SORTI de la grotte et ayant marché ≥PNJ5_REARM_STEPS pas au-dehors (cf. compteur ci-dessous) → on
+// peut quitter/rentrer sans se refaire happer, et on ne le ré-affronte qu'après 10 pas minimum dehors.
+const pnj5ClearedThisVisit = (): boolean => isTrainerDefeated(PNJ5_CLEARED_MARKER)
+let pnj5StepsOutside = 0 // pas effectués HORS grotte depuis la dernière victoire (runtime ; reset au reload = plus permissif)
 // LATENCE anti-ré-affrontement : après un déclenchement du gardien, N pas de GRÂCE avant qu'un piège (18/19,33)
 // puisse relancer le combat → le joueur peut s'éloigner / se diriger vers la sortie sans se refaire happer aussitôt.
 let pnj5GraceSteps = 0
@@ -1494,6 +1494,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // LATENCE gardien : chaque pas EFFECTIF dans la Grotte 1F consomme 1 de grâce (le piège reste inerte tant que > 0).
         if ((next.posX !== player.posX || next.posY !== player.posY) && player.mapId === PNJ5_MAP_ID && pnj5GraceSteps > 0) pnj5GraceSteps--
+        // RÉ-ARM du gardien : tant qu'il est « vaincu cette visite », chaque pas HORS grotte compte ; à PNJ5_REARM_STEPS
+        //   pas au-dehors, on lève le marqueur → il faudra le rebattre à la prochaine descente. Dans la grotte : le
+        //   compteur ne bouge pas (on reste crédité). → « pouvoir quitter la grotte, ré-affronté après 10 pas minimum ».
+        if ((next.posX !== player.posX || next.posY !== player.posY) && !player.mapId.startsWith("yellow_grotte_nexus")) {
+            if (isTrainerDefeated(PNJ5_CLEARED_MARKER)) {
+                if (++pnj5StepsOutside >= PNJ5_REARM_STEPS) { clearTrainerMarker(PNJ5_CLEARED_MARKER); pnj5StepsOutside = 0 }
+            } else pnj5StepsOutside = 0
+        }
         // SENTINELLE (PNJ 10) — INTERCEPTION : marcher sur le couloir (17-19,18) LANCE le combat tant qu'elle n'est
         // pas vaincue CETTE visite (bloqueur pur, sans gate). On ne bouge pas, on tourne face à elle et on enchaîne.
         if ((next.posX !== player.posX || next.posY !== player.posY)
@@ -3091,7 +3099,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); markTrainerDefeated(GROTTE_ENTERED_MARKER) } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10 + marqueur anti-spoiler fusions
+        // Entrée grotte (par le passeur → setMap) : le gardien N'est PLUS ré-armé ici (le marqueur PERSISTANT gère
+        //   le « vaincu cette visite » + le ré-arm après 10 pas dehors → refresh-safe). On reset juste pop fusions +
+        //   démo PNJ 7 + barrage PNJ 10 + marqueur anti-spoiler fusions.
+        if (mapId === PNJ5_MAP_ID) { grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); markTrainerDefeated(GROTTE_ENTERED_MARKER); artisaneSpotIdx = -1 } // + L'ARTISANE re-tirée à un NOUVEAU spot à chaque descente dans la Grotte
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false

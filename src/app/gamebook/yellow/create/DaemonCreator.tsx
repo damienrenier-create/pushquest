@@ -15,7 +15,7 @@ import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
-    BLOOMERS, specBudget, isNovelDualType, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
+    BLOOMERS, specBudget, isNovelDualType, isForbiddenTypeCombo, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
     slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildNemesis,
     ATTRIBUTE_LABEL, MAX_ATTRIBUTES, TALENTS, TALENT_KEYS, MAX_TALENT_REROLLS, weakestStatKey,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
@@ -101,9 +101,12 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
         let ts = has ? s.finalTypes.filter((x) => x !== t) : [...s.finalTypes, t]
         if (ts.length === 0) ts = [t]          // au moins 1
         if (ts.length > 2) ts = [s.finalTypes[1], t] // max 2 (remplace le plus ancien)
+        if (isForbiddenTypeCombo(ts)) return s // combo interdit (Normal+Spectre) → on ignore le clic (bouton grisé)
         // Le budget dépend du type (double-type INÉDIT = +5 %) → on re-cale les stats sur le nouveau plafond.
         return { ...s, finalTypes: ts, finalStats: fitStatsToBudget(s.finalStats, specBudget(s.bloomer, ts)) }
     })
+    // Un type est GRISÉ s'il formerait un combo interdit avec la sélection courante (ex. Spectre quand Normal est pris).
+    const typeIsForbidden = (t: PokeType) => !spec.finalTypes.includes(t) && isForbiddenTypeCombo([...spec.finalTypes, t])
 
     const create = () => {
         // On fige le learnset effectif dans la spec avant validation/soumission.
@@ -246,9 +249,14 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                         <>
                             <Lbl>Type(s) de la forme finale (stade 3) — choisis-en 1 ou 2</Lbl>
                             <div style={S.typeGrid}>
-                                {selectableTypes.map((t) => (
-                                    <button key={t} onClick={() => toggleFinalType(t)} style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none" }}>{TYPE_FR[t]}</button>
-                                ))}
+                                {selectableTypes.map((t) => {
+                                    const forbidden = typeIsForbidden(t)
+                                    return (
+                                        <button key={t} disabled={forbidden} onClick={() => toggleFinalType(t)}
+                                            title={forbidden ? "Combo interdit : Normal + Spectre" : undefined}
+                                            style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : forbidden ? 0.12 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none", cursor: forbidden ? "not-allowed" : "pointer", textDecoration: forbidden ? "line-through" : "none" }}>{TYPE_FR[t]}</button>
+                                    )
+                                })}
                             </div>
                             {isGenesis && (
                                 <div style={{ margin: "6px 0 2px", padding: "6px 10px", background: "rgba(120,220,180,0.12)", border: "1px solid rgba(120,220,180,0.4)", borderRadius: 8, fontSize: 11.5, fontWeight: 600, color: "#8fe6c0", textAlign: "center" }}>

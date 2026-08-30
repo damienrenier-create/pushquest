@@ -44,7 +44,7 @@ import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALI
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_WIN_NO_OUTFIT_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
 import { isSurfOutfit } from "../data/avatars"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
-import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
+import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
 import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
@@ -1003,9 +1003,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }
             rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lines }
         } else if (storeState.trainer.trainerId === PNJ5_TRAINER_ID) {
-            // GARDIEN DE LA GROTTE (PNJ 5) : ré-affrontable à CHAQUE visite (PAS de markTrainerDefeated, pas de
-            // cap journalier). Incrémente le compteur → ses 5 Gek montent de +2 niveaux (+ Saiyan) au prochain combat.
+            // GARDIEN DE LA GROTTE (PNJ 5) : ré-affrontable (pas de cap journalier). Incrémente le compteur → ses 5 Gek
+            //   montent de +2 niveaux (+ Saiyan) au prochain combat. Pose le marqueur PERSISTANT « vaincu cette visite »
+            //   → les échelles restent OK même après un refresh (levé seulement après 10 pas hors grotte, cf. gameStore).
             recordPnj5Defeat()
+            markTrainerDefeated(PNJ5_CLEARED_MARKER)
             rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
         } else if (storeState.trainer.trainerId === SURFER_NPC_ID) {
             // LE SURFEUR : ré-affrontable (PAS de markTrainerDefeated). Il ne lâche sa CT SURF QU'À qui le bat EN TENUE
