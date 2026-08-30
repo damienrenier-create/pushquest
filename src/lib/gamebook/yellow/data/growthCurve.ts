@@ -47,6 +47,10 @@ const EXCLUSIVE_FLOOR = 1.1
  *  pas la lenteur souhaitée. Ex. Jerbiwat (BST 435 = "solide") est un canon psy tardif → forcé à ×1.25 (= colosses). */
 const GROWTH_MULT_OVERRIDE: Record<string, number> = {
     jerbiwat: 1.25,
+    // LIGNÉES SIGNATURES DES 3 CLANS (Chapelle de Nouillon) — même BST (455) mais courbes distinctes.
+    // Air (picidés) = ×0.8 rapide ; Roche (pandas) = ×1.25 lente. Combat (lapins) = ×1.0 → défaut (pas d'override).
+    pivinci: 0.8, vengbec: 0.8, picassault: 0.8,
+    fujipanda: 1.25, kilipanda: 1.25, pandapurna: 1.25,
 }
 
 /** Tier correspondant à un multiplicateur (reverse-lookup pour le libellé d'une espèce à courbe forcée). */

@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -37,7 +37,9 @@ import { funFactFor } from "../data/collectionneurFunFacts" // L'ARCHIVISTE : r�
 import { archivisteDefeatLines } from "../data/collectionneurNpc" // L'ARCHIVISTE : dialogue de défaite (félicitations + dex + fun fact + revanche)
 import { leagueFusionIdForParents } from "../data/leagueFusionDex" // FUSIODEX : fusions de Ligue rencontrées
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
-import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
+import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel, baseSpeciesOf } from "../data/ace"
+import { trainerBoost } from "../data/trainers"
+import { CLANS, clanTrainDailyMarker, type ClanKey } from "../data/clans"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_WIN_NO_OUTFIT_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
 import { isSurfOutfit } from "../data/avatars"
@@ -425,6 +427,38 @@ export function startHofBattle(label: string, champTeam: ChampionMon[], expMult 
     return true
 }
 
+/** ENTRAÎNEMENT chez un CHEF DE CLAN (Chapelle de Nouillon). Équipe du chef 100 % de son type, taille = celle du
+ *  joueur, niveau slot par slot avec CLIQUET (le pic mémorisé par run ne redescend jamais → pas de sandbag), builds
+ *  « elite » (EV + points Saiyan), IA "hof", AS (finale du clan, roster[dernier]) au 6ᵉ slot dès l'équipe pleine.
+ *  XP ×2 (mon clan) / ×3 (rival) ; coût des attaques ×3 chez un rival. UN entraînement par clan et par jour : le
+ *  marqueur journalier est posé ICI, à l'ouverture — une DÉFAITE consomme quand même la journée (pas de retry). */
+export function startClanChiefBattle(clan: ClanKey, today: string): boolean {
+    const player = getPlayer()
+    const playerTeam = player.team
+    if (playerTeam.length === 0 || !playerTeam.some((m) => m.currentHp > 0)) return false // K.O. → soigne d'abord
+    const own = getClan() === clan
+    const expMult = own ? 2 : 3
+    const costMult = own ? 1 : 3
+    const roster = CLANS[clan].roster
+    const peaks = getClanTrainPeaks(clan)
+    const newPeaks: number[] = peaks.slice()
+    const enemyTeam: MonInstance[] = playerTeam.map((mine, i) => {
+        const baseId = baseSpeciesOf(roster[Math.min(i, roster.length - 1)]) // roster[dernier] = finale du clan (l'AS)
+        const lvl = Math.max(peaks[i] ?? 0, mine.level, 5) // cliquet : jamais sous le pic déjà opposé ce run
+        newPeaks[i] = lvl
+        const speciesId = speciesAtLevel(baseId, lvl) // stade naturel pour ce niveau (souche aux bas niveaux)
+        return createMonInstance(speciesId, lvl, { owned: false, ...trainerBoost(speciesId, lvl, "elite") })
+    })
+    setClanTrainPeaks(clan, newPeaks)
+    setDailyMarker(`clan_train_${clan}_`, clanTrainDailyMarker(clan, today))
+    const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: false, expMult, costMult, playerBadgeCount: player.badges.length })
+    syncPokedex(battle)
+    setStore({ battle, evolutions: [], trainer: { trainerId: `clan_train_${clan}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot()
+    return true
+}
+
 /** Combat de FUSION où le joueur pilote une équipe ÉPHÉMÈRE (Autel : épreuve `fusion:*` ; Ligue de Fusion `y_fusion_*`).
  *  → l'équipe RÉELLE n'est jamais réécrite (setTeam/évolution sautés) et une défaite ne provoque PAS de whiteout
  *  (la vraie équipe n'a pas combattu). NB : `y_fusion_*` passe quand même par markTrainerDefeated (le gating de la
@@ -528,7 +562,8 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
             ? playerAttackQuota(getPlayer().badges.length)
             : effectiveQuota(getPlayer().wildCtx?.quota)
     const base = attackCost(getMove(slot.moveId), me.level, quota, hpFrac)
-    return isAbundanceCurseActive() ? base * 10 : base // VŒU MAUDIT (Jacanon) : attaques ×10 tant que la malédiction est active
+    // VŒU MAUDIT (Jacanon) : ×10 ; ENTRAÎNEMENT clan RIVAL : ×3 (b.costMult) — composés si les deux sont actifs.
+    return base * (isAbundanceCurseActive() ? 10 : 1) * (b.costMult ?? 1)
 }
 
 export function submitPlayerAction(action: PlayerAction) {

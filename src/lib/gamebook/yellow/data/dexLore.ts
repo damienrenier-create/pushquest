@@ -1102,6 +1102,52 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "Le fort tue vite ; le charognard, lui, a tout son temps.",
         note: "Aucune blessure sur les carcasses qu'il laisse. Juste… le temps, accéléré. C'est la chose la plus patiente et la plus révoltante que j'aie répertoriée.",
     },
+    // ── LIGNÉES SIGNATURES DES 3 CLANS (Chapelle de Nouillon) — 213-221 ──
+    pivinci: {
+        ecology: "Petit pivert vif au bec toujours taché de sèves colorées qu'il picore sur les écorces. Il tambourine les troncs en rythme, moins pour se nourrir que pour marquer le monde de sa cadence, comme un artiste esquissant ses premiers traits.",
+        dicton: "On reconnaît un Pivinci au silence qu'il laisse quand il s'arrête de cogner.",
+        note: "Il a martelé le même arbre trois heures durant. Le lendemain, l'écorce dessinait un motif. Coïncidence, sûrement.",
+    },
+    vengbec: {
+        ecology: "La huppe déploie sa crête en éventail bariolé et fond en piqués secs, vindicatifs. Chaque coup de bec est placé au millimètre : ce n'est plus du martèlement, c'est du trait de fusain, net et rageur.",
+        dicton: "Sa crête se lève avant sa colère — le temps de fuir, si tu es malin.",
+        note: "Territorial jusqu'à l'obsession. Il m'a chassé de la clairière à coups de piqués, puis a lissé ses plumes, satisfait.",
+    },
+    picassault: {
+        ecology: "L'apex des piafs : un oiseau-fauve au plumage éclatant qui zèbre le ciel de fulgurances imprévisibles. Insaisissable, il enchaîne ses assauts comme on compose une œuvre — chaque passage un coup de pinceau, chaque piqué une signature.",
+        dicton: "On ne voit jamais Picassault frapper. On voit seulement l'endroit où il n'est déjà plus.",
+        note: "Impossible à photographier net : il bouge à chaque déclenchement. Mes clichés ne montrent que des traînées de couleur.",
+    },
+    lapifrappe: {
+        ecology: "Un lapin-poulain aux pattes démesurées et aux petits poings bandés, qui s'entraîne à cogner tout ce qui dépasse. La technique laisse à désirer, mais l'ardeur et les ruades compensent largement.",
+        dicton: "Petit lapin, grand coup de patte.",
+        note: "Il a mis KO un tronc mort à force de le frapper, puis s'est incliné devant lui, très sérieux. J'ai applaudi.",
+    },
+    lapunch: {
+        ecology: "Le torse se dresse, la forme centaure s'affirme : arrière-train puissant, garde haute, directs enchaînés entre deux ruades. Un boxeur qui galope, encore fougueux mais déjà redoutable.",
+        dicton: "Il frappe des poings ET des sabots — choisis ton côté pour tomber.",
+        note: "Sparring impressionnant : il alterne coups de face et ruades arrière sans jamais s'exposer deux fois pareil.",
+    },
+    lievrocogne: {
+        ecology: "Le maître lièvre-centaure : poings-marteaux, sabots dévastateurs, vitesse foudroyante. Il frappe le premier et le plus fort — mais son corps de fauve encaisse mal : chaque échange est un quitte ou double.",
+        dicton: "Livre ta garde une seconde à Lievrocogne, et c'est déjà fini.",
+        note: "La plus grosse frappe que j'aie mesurée sur un mustélidé. Aussi, le plus fragile des trois maîtres : tout dans l'attaque.",
+    },
+    fujipanda: {
+        ecology: "Un ourson panda dodu, pelage couleur granit, qui roupille sur les rochers tièdes du matin. Rien ne le réveille : ni le vacarme, ni la pluie, ni la terre qui tremble sous lui — il ronronne, imperturbable.",
+        dicton: "Un Fujipanda qui dort vaut mieux qu'un mur : au moins, le mur ne t'écrase pas s'il roule.",
+        note: "J'ai voulu le déplacer d'un sentier. Autant pousser une enclume duveteuse. Il a bâillé.",
+    },
+    kilipanda: {
+        ecology: "Un panda de pierre massif qui mâche lentement du bambou pétrifié. Sa carapace minérale encaisse tout — le poing comme le sortilège — et son calme est celui des sommets qui ont vu passer les âges.",
+        dicton: "Frappe fort, frappe malin : Kilipanda, lui, se contente de durer.",
+        note: "Aucune de mes attaques-test, physiques ou mentales, n'a laissé plus qu'une éraflure. Rassurant et un peu vexant.",
+    },
+    pandapurna: {
+        ecology: "Le monolithe vivant : un panda-montagne imperturbable qui ressent chaque séisme jusque dans ses os. Rien ne le fait plier ; mieux, l'énergie qui le frappe, il la cristallise et la retourne en vigueur. Un mur qui se soigne de ce qui l'assaille.",
+        dicton: "Les tempêtes passent. Pandapurna reste.",
+        note: "Je l'ai vu absorber une déferlante d'énergie et en ressortir… plus dispos qu'avant. La montagne se nourrit de l'orage.",
+    },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: {
         ecology: "Petit urubu voûté drapé dans un plumage gris-brun ébouriffé qui pend comme une cape élimée. Sa tête chauve, d'un rose violacé, porte deux yeux luisant d'un violet spectral. Charognard patient, il se perche immobile des heures durant, guettant ce qui ne bouge plus, et ne bat des ailes qu'à contrecœur pour gagner le prochain festin.",

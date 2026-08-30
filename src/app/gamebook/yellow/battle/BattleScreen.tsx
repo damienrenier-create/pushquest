@@ -869,7 +869,7 @@ function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
         <>
             <div style={S.detailName}>{mv.name}</div>
             <div style={S.detailMeta}>
-                <span style={{ ...S.typeChip, background: TYPE_COLORS[dispType] }}>{TYPE_FR[dispType] ?? dispType}</span>
+                <span style={{ ...S.typeChip, background: TYPE_COLORS[dispType] }}>{mv.displayType ?? TYPE_FR[dispType] ?? dispType}</span>
                 <span style={{ ...S.typeChip, background: cat.color }}>{cat.label}</span>
                 {adaptive && <span style={{ ...S.typeChip, background: "#7a5cc0" }}>ADAPT.</span>}
             </div>

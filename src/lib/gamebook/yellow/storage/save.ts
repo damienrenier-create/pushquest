@@ -253,6 +253,13 @@ export interface YellowSave {
     grotteShopBuys?: Record<string, number>
     /** FASHION VICTIM — avatar Gen3 choisi (chemin de planche), préférence cosmétique globale. Optionnel/additif. */
     chosenAvatar?: string
+    // CLANS (Chapelle de Nouillon) — per-monde (miroir de PlayerState).
+    clan?: "air" | "combat" | "roche" | null
+    clanDaemonUid?: string
+    clanCtGiven?: boolean
+    clanTransGiven?: boolean
+    clanVisitDate?: string
+    clanTrainByClan?: Record<string, number[]>
     /** ARTISANE — objets signature craftés (per-monde : liés à des uid de ce run). Optionnel/additif. */
     craftedItems?: CraftedItem[]
     /** ARTISANE — compteur d'objets craftés À VIE (GLOBAL, réconcilié dans tous les mondes par snapshot()). Additif. */
@@ -782,6 +789,16 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             ? Object.fromEntries(Object.entries(o.grotteShopBuys as Record<string, unknown>).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]))
             : undefined,
         chosenAvatar: typeof o.chosenAvatar === "string" ? o.chosenAvatar : undefined,
+        clan: (o.clan === "air" || o.clan === "combat" || o.clan === "roche") ? o.clan : (o.clan === null ? null : undefined),
+        clanDaemonUid: typeof o.clanDaemonUid === "string" ? o.clanDaemonUid : undefined,
+        clanCtGiven: o.clanCtGiven === true ? true : undefined,
+        clanTransGiven: o.clanTransGiven === true ? true : undefined,
+        clanVisitDate: typeof o.clanVisitDate === "string" ? o.clanVisitDate : undefined,
+        clanTrainByClan: o.clanTrainByClan && typeof o.clanTrainByClan === "object" && !Array.isArray(o.clanTrainByClan)
+            ? Object.fromEntries(Object.entries(o.clanTrainByClan as Record<string, unknown>)
+                .filter(([, v]) => Array.isArray(v))
+                .map(([k, v]) => [k, (v as unknown[]).filter((n): n is number => typeof n === "number").map((n) => Math.max(0, Math.floor(n)))]))
+            : undefined,
         craftedItems: sanitizeCraftedItems(o.craftedItems),
         craftsUsed: typeof o.craftsUsed === "number" ? Math.max(0, Math.floor(o.craftsUsed)) : undefined,
         craftReady: o.craftReady === true ? true : undefined,

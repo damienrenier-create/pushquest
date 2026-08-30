@@ -112,7 +112,7 @@ export default function MoveReminderPanel() {
                                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tryLearn(mv) } }}>
                                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                                 <span style={{ fontSize: 13, fontWeight: 800, color: INK }}>{mo.name}</span>
-                                                <span style={{ ...typeChip, background: TYPE_COLOR[mo.type] }}>{TYPE_FR[mo.type]}</span>
+                                                <span style={{ ...typeChip, background: TYPE_COLOR[mo.type] }}>{mo.displayType ?? TYPE_FR[mo.type]}</span>
                                                 <span style={catChip}>{cat}</span>
                                             </div>
                                             <div style={{ fontSize: 11, color: INK, opacity: 0.8, marginTop: 3 }}>

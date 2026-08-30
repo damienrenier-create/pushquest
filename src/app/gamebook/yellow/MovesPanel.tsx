@@ -29,7 +29,7 @@ const TYPE_COLOR: Record<PokeType, string> = {
 }
 const STAT_FR: Record<StageKey, string> = { atk: "Attaque", def: "Défense", spe: "Vitesse", spc: "Spécial", acc: "Précision", eva: "Esquive" }
 const STATUS_FR: Record<MajorStatus, string> = { NONE: "", BURN: "Brûlure", POISON: "Poison", TOXIC: "Poison grave", PARALYSIS: "Paralysie", SLEEP: "Sommeil", FREEZE: "Gel" }
-const VOL_FR: Record<VolatileStatus, string> = { CONFUSION: "Confusion", SEEDED: "Vampigraine (draine chaque tour)", OSMOSED: "Osmose (draine chaque tour)", FLINCH: "Peur", TRAPPED: "Piégé", RECHARGE: "Doit récupérer" }
+const VOL_FR: Record<VolatileStatus, string> = { CONFUSION: "Confusion", SEEDED: "Vampigraine (draine chaque tour)", OSMOSED: "Osmose (draine chaque tour)", FLINCH: "Peur", TRAPPED: "Piégé", RECHARGE: "Doit récupérer", CRYSTAL: "Carapace de cristal (prochaine attaque → soin)" }
 
 // moveId → libellé de CT (ex. "CT02"), pour l'affichage + le tri par n° de CT.
 const CT_BY_MOVE: Record<string, { label: string; num: number }> = {}
@@ -154,7 +154,7 @@ export default function MovesPanel({ close }: { close: () => void }) {
                                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(m) } }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                     <span style={{ fontSize: 13, fontWeight: 800, color: INK }}>{m.name}</span>
-                                    <span style={{ ...typeChip, background: TYPE_COLOR[m.type] }}>{TYPE_FR[m.type]}</span>
+                                    <span style={{ ...typeChip, background: TYPE_COLOR[m.type] }}>{m.displayType ?? TYPE_FR[m.type]}</span>
                                     <span style={catChip}>{category(m)}</span>
                                     {ct && <span style={ctChip}>{ct.label}</span>}
                                     <span style={learnChip}>{learners > 0 ? `📖 ${learners} Daemon${learners > 1 ? "s" : ""}` : "📖 CT/évo"}</span>
@@ -186,7 +186,7 @@ export default function MovesPanel({ close }: { close: () => void }) {
                             <div style={header}>
                                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                     {selected.name}
-                                    <span style={{ ...typeChip, background: TYPE_COLOR[selected.type] }}>{TYPE_FR[selected.type]}</span>
+                                    <span style={{ ...typeChip, background: TYPE_COLOR[selected.type] }}>{selected.displayType ?? TYPE_FR[selected.type]}</span>
                                 </span>
                                 <button onClick={() => setSelected(null)} style={xBtn}>✕</button>
                             </div>

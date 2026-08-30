@@ -32,7 +32,7 @@ export type MajorStatus =
 
 // Statuts volatils (peuvent coexister, disparaissent au switch/fin de combat).
 export type VolatileStatus =
-    | "CONFUSION" | "FLINCH" | "SEEDED" | "OSMOSED" | "TRAPPED" | "RECHARGE"
+    | "CONFUSION" | "FLINCH" | "SEEDED" | "OSMOSED" | "TRAPPED" | "RECHARGE" | "CRYSTAL"
 
 // ============================================================
 // Données statiques (data/)
@@ -108,6 +108,18 @@ export interface MoveEffect {
     focusCharge?: boolean
     /** VOL D'ÉCLAT (Wistree) : AVANT les dégâts, transfère TOUS les boosts POSITIFS de la cible vers le lanceur. */
     stealBoosts?: boolean
+    /** IMPACT (CT clan Combat) : applique UN SEUL effet tiré AU HASARD (≈équiprobable) parmi la liste, au lieu
+     *  de tous. Chaque entrée n'utilise que flinch / inflictStatus / statChanges (les autres champs sont ignorés). */
+    oneOf?: MoveEffect[]
+    /** CRISTALLISATION (CT clan Roche) : pose un statut volatil sur le LANCEUR lui-même (ex. "CRYSTAL"),
+     *  au lieu de la cible (contrairement à inflictVolatile). */
+    selfVolatile?: VolatileStatus
+    /** TRANSCENDANCE (CT clan, niv 80) : force l'ABSENCE de STAB — le move a un type nominal (pour la catégorie
+     *  et l'apprentissage) mais n'est JAMAIS considéré STAB, quel que soit le porteur. */
+    noStab?: boolean
+    /** TRANSCENDANCE : efficacité de type SUR-MESURE qui REMPLACE la table. Multiplicateur par type de DÉFENSEUR
+     *  (produit sur les 1-2 types du défenseur ; type non listé = ×1 ; aucune immunité ×0). */
+    effectivenessOverride?: Partial<Record<PokeType, number>>
 }
 
 export interface MoveData {
@@ -118,6 +130,9 @@ export interface MoveData {
      *  cf. moveCategory). Ce champ force phys/spéc pour une poignée de moves-signature (ex. Crocs de
      *  Feu / Griffe Draconique = FEU/DRAGON mais PHYSIQUES pour taper sur l'ATQ). Absent = règle Gen 1. */
     category?: "PHYSICAL" | "SPECIAL"
+    /** LIBELLÉ de TYPE affiché (badge UI) — override purement COSMÉTIQUE (ex. "Transcendance", type inédit).
+     *  Absent → libellé du `type` réel. N'affecte NI la catégorie, NI l'efficacité, NI l'apprentissage. */
+    displayType?: string
     /** Puissance de base (0 = move de STATUT, ne fait pas de dégâts directs). */
     power: number
     /** Précision 0..100. 0 = ne rate jamais. */

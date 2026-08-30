@@ -20,7 +20,7 @@ import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, startClanChiefBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
 import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
 import { reportSynergyDiscovery } from "../synergyGift"
@@ -43,6 +43,9 @@ import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { run2ArenaIntro, run2ArenaDefeat } from "../data/ngplusArenaDialogue"
+import { clanChiefPressA, executeClanJoin } from "./clanChief"
+import type { ClanKey } from "../data/clans"
 import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
@@ -496,6 +499,8 @@ interface GameStore {
     pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    pendingClanJoin: ClanKey | null // offre de pacte de clan en cours → scellé (don du Daemon) à la fermeture
+    pendingClanTrain: ClanKey | null // offre d'entraînement d'un chef en cours → combat lancé à la fermeture
     /** Dresseur qui vient de REPÉRER le joueur (embuscade) : affiche sa bulle « ! ».
      *  Gèle le déplacement le temps de l'alerte, puis son intro s'ouvre (cf. move). */
     trainerAlertId: string | null
@@ -788,7 +793,7 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     //   soin). L'équipe statique du trainer n'est PAS utilisée. Déjà vaincu (isChampion) → réplique, pas de re-combat.
     if (trainerId === "y_ligue_double") {
         if (getPlayerSave().isChampion) {
-            return { npcId: trainerId, npcName: currentNickname || trainer.name, lineIndex: 0, lines: trainer.defeat }
+            return { npcId: trainerId, npcName: currentNickname || trainer.name, lineIndex: 0, lines: arenaDefeatLines(trainer) }
         }
         if (!startNgPlusFinalBattle(getNgplusOldTeam() ?? [])) {
             return { npcId: trainerId, npcName: currentNickname || trainer.name, lineIndex: 0, lines: ["*Ton reflet s'estompe dans la lueur mauve… reviens quand tu seras prêt.*"] }
@@ -904,6 +909,16 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: isRematch ? 0 : trainer.reward, aiLevel: trainer.aiLevel, isRematch })
     return null
+}
+
+// RUN 2 — DIALOGUES d'arène re-typée : en NG+, un dresseur d'arène parle avec sa persona run 2 (type + nom +
+//   CADEAU exact) ; le BOSS clashe en plus l'équipe active du joueur. Hors NG+ (ou dresseur non-arène) → run 1.
+//   `effectiveRunWorld()` = même condition que le re-skin des PNJ (activeNpcs) → dialogue toujours cohérent avec le sprite.
+function arenaIntroLines(t: { id: string; intro: string[] }): string[] {
+    return (effectiveRunWorld() === "ngplus" ? run2ArenaIntro(t.id, getPlayerSave().team) : null) ?? t.intro
+}
+function arenaDefeatLines(t: { id: string; defeat: string[] }): string[] {
+    return (effectiveRunWorld() === "ngplus" ? run2ArenaDefeat(t.id) : null) ?? t.defeat
 }
 
 // Lance le combat DYNAMIQUE du sbire : équipe = miroir du lead (1re victoire du
@@ -1263,6 +1278,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
+    pendingClanJoin: null,
+    pendingClanTrain: null,
     trainerAlertId: null,
     pendingNgplusAbandon: false,
     pendingOrcaline: false,
@@ -1492,7 +1509,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && !isTrainerDefeated("y_pnj3_grotte_b2f")) {
             const tr = getTrainer("y_pnj3_grotte_b2f")
             if (tr) {
-                set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: tr.intro, lineIndex: 0 }, pendingTrainerId: tr.id })
+                set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: arenaIntroLines(tr), lineIndex: 0 }, pendingTrainerId: tr.id })
                 return
             }
         }
@@ -1507,7 +1524,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (!isTrainerDefeated(bossId)) {
                 const tr = getTrainer(bossId)
                 if (tr) {
-                    set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: tr.intro, lineIndex: 0 }, pendingTrainerId: tr.id, pendingRematch: false })
+                    set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: arenaIntroLines(tr), lineIndex: 0 }, pendingTrainerId: tr.id, pendingRematch: false })
                     return
                 }
             }
@@ -1903,7 +1920,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     const t = getTrainer(spotted.trainerId)
                     if (!t) { set({ trainerAlertId: null }); return }
                     set({
-                        dialogue: { npcId: t.id, npcName: t.name, lines: t.intro, lineIndex: 0 },
+                        dialogue: { npcId: t.id, npcName: t.name, lines: arenaIntroLines(t), lineIndex: 0 },
                         pendingTrainerId: t.id,
                         pendingRematch: false,
                     })
@@ -2020,7 +2037,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             genieAmbushCountdown = genieNow ? 0 : rollLampCountdown() // ré-arme (défaite → re-tente ; en test = immédiat)
                             const gt = getTrainer(GENIE_TRAINER_ID)
                             if (gt) {
-                                set({ encounterCooldown: 1, dialogue: { npcId: gt.id, npcName: gt.name, lines: gt.intro, lineIndex: 0 }, pendingTrainerId: gt.id, pendingRematch: false })
+                                set({ encounterCooldown: 1, dialogue: { npcId: gt.id, npcName: gt.name, lines: arenaIntroLines(gt), lineIndex: 0 }, pendingTrainerId: gt.id, pendingRematch: false })
                                 return
                             }
                         } else if (genieAmbushCountdown > 0) {
@@ -2196,6 +2213,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else if (get().pendingAce) {
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
+                } else if (get().pendingClanJoin) {
+                    const clan = get().pendingClanJoin!
+                    const d = get().dialogue
+                    set({ dialogue: { npcId: d?.npcId ?? "", npcName: d?.npcName ?? "CHEF DE CLAN", lines: executeClanJoin(clan), lineIndex: 0 }, pendingClanJoin: null })
+                } else if (get().pendingClanTrain) {
+                    const clan = get().pendingClanTrain!
+                    const d = get().dialogue
+                    // Lance le combat d'entraînement (échoue si l'équipe est K.O.) → ferme le dialogue, sinon un mot du chef.
+                    if (startClanChiefBattle(clan, new Date().toISOString().slice(0, 10))) set({ dialogue: null, pendingClanTrain: null })
+                    else set({ dialogue: { npcId: d?.npcId ?? "", npcName: d?.npcName ?? "CHEF DE CLAN", lines: ["Ta meute est à terre. Soigne-la avant de venir suer."], lineIndex: 0 }, pendingClanTrain: null })
                 } else if (get().pendingOrcaline) {
                     set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
                 } else if (get().pendingSurfer) {
@@ -2625,6 +2652,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // CHEFS DE CLAN (Chapelle de Nouillon) : pacte / visite / jalons / jalousie. Le pacte (don du Daemon)
+        //   se SCELLE à la fermeture du dialogue si pendingClanJoin est posé. Cf. store/clanChief.ts.
+        const clanRes = clanChiefPressA(npc.id, new Date().toISOString().slice(0, 10))
+        if (clanRes) {
+            set({
+                dialogue: { npcId: npc.id, npcName: npc.name, lines: clanRes.lines, lineIndex: 0 },
+                pendingClanJoin: clanRes.pendingJoin ?? null,
+                pendingClanTrain: clanRes.pendingTrain ?? null,
+            })
+            return
+        }
+
         // GÉKROC (mini-boss STATIQUE de la Centrale) : combat UNIQUE. Une fois vaincu/capturé
         // (gekrocResolved), il ne réapparaît plus → réplique "déjà descellé".
         if (npc.id === GEKROC_NPC_ID) {
@@ -2964,12 +3003,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     return
                 }
                 // Plus de rematch/revanche (ou déjà fait) → simple réplique de défaite.
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: arenaDefeatLines(trainer), lineIndex: 0 } })
             } else {
                 // TON DOUBLE (salle dorée run 2) : le PNJ porte TON pseudo. Le boss de Ligue garde son nom (Dieu Spaghetti).
                 const dispName = (trainer.id === "y_ligue_double") ? (currentNickname || npc.name) : npc.name
                 set({
-                    dialogue: { npcId: npc.id, npcName: dispName, lines: trainer.intro, lineIndex: 0 },
+                    dialogue: { npcId: npc.id, npcName: dispName, lines: arenaIntroLines(trainer), lineIndex: 0 },
                     pendingTrainerId: trainer.id, pendingRematch: false,
                 })
             }
@@ -2993,6 +3032,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Un défi ne se refuse pas : fermer l'intro lance quand même le combat.
         if (pendingTrainerId) {
             set({ dialogue: tryLaunchTrainer(pendingTrainerId, get().pendingRematch), pendingTrainerId: null, pendingRematch: false, trainerAlertId: null })
+        } else if (get().pendingClanJoin) {
+            set({ pendingClanJoin: null, dialogue: null }) // le PACTE se REFUSE : B annule (aucun don, aucun serment)
+        } else if (get().pendingClanTrain) {
+            set({ pendingClanTrain: null, dialogue: null }) // l'entraînement se refuse : B recule (aucun combat)
         } else if (get().pendingSbire) {
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else if (get().pendingAce) {

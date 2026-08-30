@@ -3024,6 +3024,145 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "L'apex : un grand lynx d'encre qui exhale une pestilence affaiblissant tout ce qui l'approche. Immunisé à sa propre pourriture, increvable, il regarde sa proie se putréfier avant de la dévorer. Némésis parfait de Nécrossum.",
         sprite: "/yellow/sprites/dex/pestilyx.png",
     },
+
+    // ══════════════ LIGNÉES SIGNATURES DES 3 CLANS (Chapelle de Nouillon) ══════════════
+    // MÊME BST par stade (300 / 372 / 455) mais répartition + courbe + learnset PROPRES à chaque type.
+    // Daemon-clan offert par le chef (cf. project chapelle) ; forme finale = AS du chef en entraînement.
+    // ── CLAN DE L'AIR — PICIDÉS (Vol pur) : speedster ESQUIVE (Vit 120, courbe ×0.8 rapide). ──
+    pivinci: {
+        id: "pivinci", dexNo: 213, name: "Pivinci", types: ["VOL"],
+        baseStats: { hp: 60, atk: 68, def: 30, spe: 79, spc: 63 }, // BST 300
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "tornade" },
+            { level: 18, moveId: "fonce_bec" }, { level: 24, moveId: "reprise_ailes" }, { level: 30, moveId: "serres_aube" },
+            { level: 38, moveId: "elan" }, { level: 46, moveId: "vol" }, { level: 54, moveId: "pique_fatal" },
+            { level: 60, moveId: "mirage" }, { level: 66, moveId: "ultrasons" }, { level: 72, moveId: "meteores" }, // status(Esquive+2) · disruption(Ultrasons: confusion+Préc−1) · coverage never-miss(Météores) — l'annoyer insaisissable
+        ],
+        evolution: { toId: "vengbec", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "fast", hiddenUntilCaught: true,
+        role: "Vol — speedster esquive (jeune pivert)",
+        description: "Un jeune pivert au bec taché de sève colorée, qui martèle les troncs en rythme comme un artiste esquissant son premier trait.",
+        sprite: "/yellow/sprites/dex/pivinci.png",
+    },
+    vengbec: {
+        id: "vengbec", dexNo: 214, name: "Vengbec", types: ["VOL"],
+        baseStats: { hp: 74, atk: 84, def: 36, spe: 98, spc: 80 }, // BST 372
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "tornade" },
+            { level: 18, moveId: "fonce_bec" }, { level: 24, moveId: "reprise_ailes" }, { level: 30, moveId: "serres_aube" },
+            { level: 38, moveId: "elan" }, { level: 46, moveId: "vol" }, { level: 54, moveId: "pique_fatal" },
+            { level: 60, moveId: "mirage" }, { level: 66, moveId: "ultrasons" }, { level: 72, moveId: "meteores" }, // status(Esquive+2) · disruption(Ultrasons: confusion+Préc−1) · coverage never-miss(Météores) — l'annoyer insaisissable
+        ],
+        evolution: { toId: "picassault", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 112, rarity: "RARE", growthRate: "fast", hiddenUntilCaught: true,
+        role: "Vol — speedster esquive (huppe vindicative)",
+        description: "La huppe déploie sa crête en éventail et fond en piqué : chaque coup de bec est calculé, vindicatif, net comme un trait de fusain.",
+        sprite: "/yellow/sprites/dex/vengbec.png",
+    },
+    picassault: {
+        id: "picassault", dexNo: 215, name: "Picassault", types: ["VOL"],
+        baseStats: { hp: 90, atk: 102, def: 44, spe: 120, spc: 99 }, // BST 455
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "tornade" },
+            { level: 18, moveId: "fonce_bec" }, { level: 24, moveId: "reprise_ailes" }, { level: 30, moveId: "serres_aube" },
+            { level: 38, moveId: "elan" }, { level: 46, moveId: "vol" }, { level: 54, moveId: "pique_fatal" },
+            { level: 60, moveId: "mirage" }, { level: 66, moveId: "ultrasons" }, { level: 72, moveId: "meteores" }, // status(Esquive+2) · disruption(Ultrasons: confusion+Préc−1) · coverage never-miss(Météores) — l'annoyer insaisissable
+        ],
+        catchRate: 45, baseExp: 166, rarity: "RARE", growthRate: "fast", hiddenUntilCaught: true,
+        role: "Vol — apex speedster esquive (Vit 120)",
+        description: "L'apex des piafs : un oiseau-fauve au plumage bariolé qui zèbre le ciel de fulgurances. Insaisissable, il compose ses assauts comme des chefs-d'œuvre.",
+        sprite: "/yellow/sprites/dex/picassault.png",
+    },
+    // ── CLAN DU COMBAT — LAPINS-CENTAURES (Combat pur) : glass-cannon PATTES & CHARGE (Atq 130, courbe ×1.0). ──
+    lapifrappe: {
+        id: "lapifrappe", dexNo: 216, name: "Lapifrappe", types: ["COMBAT"],
+        baseStats: { hp: 50, atk: 86, def: 42, spe: 70, spc: 52 }, // BST 300
+        learnset: [
+            { level: 5, moveId: "double_pied" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "balayage" },
+            { level: 18, moveId: "coup_d_boule" }, { level: 24, moveId: "focalisation" }, { level: 30, moveId: "plaquage" },
+            { level: 38, moveId: "coup_de_boutoir" }, { level: 46, moveId: "danse_lames" }, { level: 54, moveId: "crochet_maitre" },
+            { level: 60, moveId: "belier" }, { level: 66, moveId: "berceuse" }, { level: 72, moveId: "ultralaser" }, // charge(Bélier) · contrôle(Berceuse: sommeil) · nuke apex(Ultralaser 150) — l'all-in
+        ],
+        evolution: { toId: "lapunch", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        role: "Combat — glass-cannon (lapin-poulain)",
+        description: "Un lapin-poulain aux pattes démesurées et aux poings bandés, qui s'entraîne à cogner tout ce qui bouge — sans grande maîtrise, mais avec un cœur de guerrier.",
+        sprite: "/yellow/sprites/dex/lapifrappe.png",
+    },
+    lapunch: {
+        id: "lapunch", dexNo: 217, name: "Lapunch", types: ["COMBAT"],
+        baseStats: { hp: 60, atk: 106, def: 50, spe: 87, spc: 69 }, // BST 372
+        learnset: [
+            { level: 5, moveId: "double_pied" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "balayage" },
+            { level: 18, moveId: "coup_d_boule" }, { level: 24, moveId: "focalisation" }, { level: 30, moveId: "plaquage" },
+            { level: 38, moveId: "coup_de_boutoir" }, { level: 46, moveId: "danse_lames" }, { level: 54, moveId: "crochet_maitre" },
+            { level: 60, moveId: "belier" }, { level: 66, moveId: "berceuse" }, { level: 72, moveId: "ultralaser" }, // charge(Bélier) · contrôle(Berceuse: sommeil) · nuke apex(Ultralaser 150) — l'all-in
+        ],
+        evolution: { toId: "lievrocogne", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 112, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        role: "Combat — glass-cannon (centaure boxeur)",
+        description: "Le torse se dresse, la forme centaure s'affirme : ruades martiales et directs enchaînés. Un boxeur qui galope.",
+        sprite: "/yellow/sprites/dex/lapunch.png",
+    },
+    lievrocogne: {
+        id: "lievrocogne", dexNo: 218, name: "Lievrocogne", types: ["COMBAT"],
+        baseStats: { hp: 74, atk: 130, def: 60, spe: 106, spc: 85 }, // BST 455
+        learnset: [
+            { level: 5, moveId: "double_pied" }, { level: 5, moveId: "vive_attaque" }, { level: 12, moveId: "balayage" },
+            { level: 18, moveId: "coup_d_boule" }, { level: 24, moveId: "focalisation" }, { level: 30, moveId: "plaquage" },
+            { level: 38, moveId: "coup_de_boutoir" }, { level: 46, moveId: "danse_lames" }, { level: 54, moveId: "crochet_maitre" },
+            { level: 60, moveId: "belier" }, { level: 66, moveId: "berceuse" }, { level: 72, moveId: "ultralaser" }, // charge(Bélier) · contrôle(Berceuse: sommeil) · nuke apex(Ultralaser 150) — l'all-in
+        ],
+        catchRate: 45, baseExp: 166, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        role: "Combat — apex glass-cannon (Atq 130 / Vit 106)",
+        description: "Le maître lièvre-centaure : poings-marteaux et sabots dévastateurs. Il frappe le premier, frappe le plus fort — et s'écroule si on l'atteint. Tout ou rien.",
+        sprite: "/yellow/sprites/dex/lievrocogne.png",
+    },
+    // ── CLAN DE LA ROCHE — PANDAS DE PIERRE (Roche pur) : MUR ÉQUILIBRÉ ACTIF (Déf≈Spé 106, courbe ×1.25 lente). ──
+    fujipanda: {
+        id: "fujipanda", dexNo: 219, name: "Fujipanda", types: ["ROCHE"],
+        baseStats: { hp: 80, atk: 54, def: 70, spe: 26, spc: 70 }, // BST 300
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_pierres" }, { level: 12, moveId: "eboulis" },
+            { level: 18, moveId: "mur_de_fer" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "carapace_diamant" },
+            { level: 38, moveId: "plaquage" }, { level: 46, moveId: "belier" }, { level: 54, moveId: "lame_roche" },
+            { level: 60, moveId: "repos" }, { level: 66, moveId: "meteores" }, { level: 72, moveId: "roc_titanesque" }, // status(soin) · coverage never-miss(Météores) · STAB apex(Roche 120)
+        ],
+        evolution: { toId: "kilipanda", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "slow", hiddenUntilCaught: true,
+        role: "Roche — mur équilibré actif (ourson panda-caillou)",
+        description: "Un ourson panda dodu couleur granit, qui roupille sur les rochers tièdes et ne bronche pas quand la terre tremble.",
+        sprite: "/yellow/sprites/dex/fujipanda.png",
+    },
+    kilipanda: {
+        id: "kilipanda", dexNo: 220, name: "Kilipanda", types: ["ROCHE"],
+        baseStats: { hp: 100, atk: 66, def: 87, spe: 33, spc: 86 }, // BST 372
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_pierres" }, { level: 12, moveId: "eboulis" },
+            { level: 18, moveId: "mur_de_fer" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "carapace_diamant" },
+            { level: 38, moveId: "plaquage" }, { level: 46, moveId: "belier" }, { level: 54, moveId: "lame_roche" },
+            { level: 60, moveId: "repos" }, { level: 66, moveId: "meteores" }, { level: 72, moveId: "roc_titanesque" }, // status(soin) · coverage never-miss(Météores) · STAB apex(Roche 120)
+        ],
+        evolution: { toId: "pandapurna", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 112, rarity: "RARE", growthRate: "slow", hiddenUntilCaught: true,
+        role: "Roche — mur équilibré actif (panda de granit)",
+        description: "Un panda de pierre massif mâchant du bambou pétrifié. Sa carapace minérale encaisse tout, du poing au sortilège.",
+        sprite: "/yellow/sprites/dex/kilipanda.png",
+    },
+    pandapurna: {
+        id: "pandapurna", dexNo: 221, name: "Pandapurna", types: ["ROCHE"],
+        baseStats: { hp: 122, atk: 80, def: 106, spe: 40, spc: 107 }, // BST 455
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_pierres" }, { level: 12, moveId: "eboulis" },
+            { level: 18, moveId: "mur_de_fer" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "carapace_diamant" },
+            { level: 38, moveId: "plaquage" }, { level: 46, moveId: "belier" }, { level: 54, moveId: "lame_roche" },
+            { level: 60, moveId: "repos" }, { level: 66, moveId: "meteores" }, { level: 72, moveId: "roc_titanesque" }, // status(soin) · coverage never-miss(Météores) · STAB apex(Roche 120)
+        ],
+        catchRate: 45, baseExp: 166, rarity: "RARE", growthRate: "slow", hiddenUntilCaught: true,
+        role: "Roche — apex mur équilibré actif (Déf≈Spé 106, PV 122)",
+        description: "Le monolithe vivant : un panda-montagne imperturbable qui ressent chaque séisme dans ses os. Rien ne le fait plier — et ce qui le touche, il le change en force.",
+        sprite: "/yellow/sprites/dex/pandapurna.png",
+    },
     // ── NÉMÉSIS de Bidouzen (création d'Embi, PSY/COMBAT) : les VAUTOURS DES TÉNÈBRES (TÉNÈBRES/VOL). Sweepers
     //    PHYSIQUES immunisés à l'arme n°1 de Karatame (PSY ×0) et qui le brisent en STAB VOL physique ×2 sur sa DÉF 70.
     //    Ténèbres = spéciale dans le moteur → sert la DÉFENSE (immunité psy) + le statut ; l'offense passe par VOL. ──
@@ -3351,6 +3490,10 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "charolyx", "bubolyx", "pestilyx"]) {                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
+
+// LIGNÉES SIGNATURES DES 3 CLANS (Chapelle de Nouillon, Ville Jaune) : espèces du DEX RUN 1 (comptées → 150),
+// mais NON capturables en sauvage avant Sylvebarbe. Pré-Sylvebarbe = obtenues UNIQUEMENT via le pacte de clan
+// (après l'arène 1). Post-Sylvebarbe = elles pop en sauvage. `hiddenUntilCaught` = masquées du dex tant que non obtenues.
 
 // GROS LATE BLOOMERS de la Grotte du Nexus B2F (créatures très anciennes) : ENDGAME (post-Ligue Fusion) → marquées
 //   postLeague pour être exclues du dex run 1 (révélées au sacre, comme les créations canonisées).

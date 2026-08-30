@@ -169,7 +169,18 @@ export const CTS: CtData[] = [
     { id: "ct60", label: "CT60", moveId: "reflet_fatal", price: 0, gift: true, alsoTypes: ["SPECTRE", "PSY"] },
     { id: "ct61", label: "CT61", moveId: "voile_de_givre", price: 0, gift: true, alsoTypes: ["EAU"] }, // récompense des 5 frères Glaçon (Grotte Gelée) — exclusive
     { id: "ct66", label: "CT66", moveId: "surf", price: 0, gift: true, alsoTypes: ["NORMAL", "GLACE", "VOL", "DRAGON", "SOL", "ROCHE", "PSY"] }, // CADEAU du SURFEUR (150 espèces) — jamais en vente ; apprise → permet de surfer
+    // --- CT DES 3 CLANS (Chapelle de Nouillon) : offertes par le chef, INTROUVABLES ailleurs (cf. CLAN_CT_IDS).
+    //     niv 50 = CT du clan (type-restreinte) · niv 80 = Transcendance (ultime, 1× dans toute la partie). ---
+    { id: "ct67", label: "CT67", moveId: "oeil_du_cyclone", price: 0, gift: true },   // clan AIR (VOL) — Vit+1 & Esquive+1
+    { id: "ct68", label: "CT68", moveId: "impact", price: 0, gift: true },            // clan COMBAT — 1 effet au hasard (apeur/para/Atq+1)
+    { id: "ct69", label: "CT69", moveId: "cristallisation", price: 0, gift: true },   // clan ROCHE — attaque encaissée → soin
+    { id: "ct70", label: "CT70", moveId: "transcendance", price: 0, gift: true, alsoTypes: ["VOL", "ROCHE"] }, // ULTIME niv 80 — apprenable Vol/Roche/Combat
 ]
+
+/** CT DES CLANS (Chapelle de Nouillon) — octroyées UNIQUEMENT par le chef de clan (niv 50 = CT du clan, niv 80 =
+ *  Transcendance). Invariant : JAMAIS obtenables autrement (ni boutique, ni blackjack, ni défi labo, ni Zone de
+ *  Combat/Usine). À exclure de tous les pools de récompense. */
+export const CLAN_CT_IDS: readonly string[] = ["ct67", "ct68", "ct69", "ct70"]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —
  *  ni en boutique (gift), ni au défi CT du labo (CT_DEFI_EXCLUDED), ni en Zone de Combat/Usine
@@ -207,7 +218,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
  *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
  *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
 export function run2BlackjackCtPool(): string[] {
-    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58", "ct61", "ct66"]) // signatures de boss + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon) + Surf (surfeur)
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, ...CLAN_CT_IDS, "ct52", "ct58", "ct61", "ct66"]) // signatures de boss + CT de clan + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon) + Surf (surfeur)
     return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 

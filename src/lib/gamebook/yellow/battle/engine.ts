@@ -110,6 +110,8 @@ export interface BattleState {
     noItems?: boolean
     /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
     expMult?: number
+    /** Multiplicateur du COÛT en reps des attaques (1 = normal ; 3 = entraînement chez un clan RIVAL). */
+    costMult?: number
     /** OBÉISSANCE : nb de badges du joueur, injecté par le store à la création (PvE). Pilote le cap de
      *  niveau au-dessus duquel un Daemon ÉCHANGÉ peut DÉSOBÉIR. Absent → obéissance totale (aucun gate). */
     playerBadgeCount?: number
@@ -177,7 +179,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; playerBadgeCount?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; costMult?: number; playerBadgeCount?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -206,6 +208,7 @@ export function createBattle(
         fleeChance: opts.fleeChance ?? 100,
         noItems: opts.noItems ?? false,
         expMult: opts.expMult ?? 1,
+        costMult: opts.costMult ?? 1,
         playerBadgeCount: opts.playerBadgeCount,
     }
 }
@@ -796,7 +799,12 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // LUTTE (Charge Désespérée) = TYPELESS : ignore la table des types (jamais ×0/immunité) → un joueur À SEC
     // peut TOUJOURS conclure un combat, même face à un Spectre (fini le soft-lock « Normal ×0 vs Spectre »
     // + adversaire qui ne fait que soigner/endormir = combat infini).
-    const eff = move.id === STRUGGLE_MOVE_ID ? 1 : typeEffectiveness(effType, defSpecies.types)
+    // TRANSCENDANCE : efficacité SUR-MESURE (produit sur les types du défenseur) → remplace la table Gen 1.
+    const eff = move.id === STRUGGLE_MOVE_ID
+        ? 1
+        : move.effect?.effectivenessOverride
+            ? defSpecies.types.reduce((m, t) => m * (move.effect!.effectivenessOverride![t] ?? 1), 1)
+            : typeEffectiveness(effType, defSpecies.types)
     if (eff === 0) return { dealt: 0, typeEff: 0 }
     const atk = isPhysical
         ? effectiveStat(rawStats.atk, "atk", attacker.stages.atk, attacker.status)
@@ -819,7 +827,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     if (attacker.nextCritGuaranteed) { isCrit = true; attacker.nextCritGuaranteed = false }
     // TALENT Cuirasse mentale : le 1er coup porté du combat est un critique GARANTI, puis consommé.
     if (talentEffect(attacker)?.guaranteedCritOnce && !attacker.talentCritUsed) { isCrit = true; attacker.talentCritUsed = true }
-    const stab = hasStab(effType, atkSpecies.types)
+    const stab = move.effect?.noStab ? false : hasStab(effType, atkSpecies.types) // TRANSCENDANCE : jamais STAB
     // OBJET TENU + TALENT : boost de type / réduction phys / bonus conditionnels (STAB, low-HP, super-eff, type principal, crit).
     const tOutCtx = { stab, typeEff: eff, isCrit, moveType: effType, mainType: atkSpecies.types[0], targetHpFrac: defender.currentHp / Math.max(1, maxHpOf(defender)) }
     const itemMult = heldOutgoingDmgMult(attacker, effType) * heldIncomingDmgMult(defender, isPhysical)
@@ -841,6 +849,17 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
 
     // OBJET TENU — Bandeau (Focus Band) : depuis PV PLEINS, X % de survivre à 1 PV à un coup fatal.
     let dealt = result.damage
+    // CRISTALLISATION (CT clan Roche) : si le défenseur a posé sa carapace de cristal, la PROCHAINE attaque de
+    //   dégâts est ABSORBÉE et convertie en SOIN (du montant qu'elle aurait infligé), puis le bouclier est consommé.
+    //   Aucun dégât → pas de drain/recul pour l'attaquant. L'effet secondaire (statut) est quand même appliqué ensuite.
+    if (defender.volatiles.CRYSTAL) {
+        delete defender.volatiles.CRYSTAL
+        if (dealt > 0) {
+            applyHeal(state, other(side), dealt, events)
+            events.push({ kind: "message", text: `La carapace de cristal de ${displayName(defender)} absorbe l'attaque et la mue en soin !` })
+        }
+        return { dealt: 0, typeEff: eff }
+    }
     const defHeld = heldEffect(defender)
     // Bandeau (objet) OU talent Instinct de survie : % de survivre à 1 PV depuis PV pleins.
     const survivePct = (defHeld?.survive1hpPct ?? 0) + (talentEffect(defender)?.survive1hpPct ?? 0)
@@ -928,6 +947,11 @@ function applyStatusMove(state: BattleState, side: SideId, move: MoveData, event
     if (fx.inflictVolatile) {
         applyVolatile(foeMon, fx.inflictVolatile, rng, events, foeMon)
     }
+    if (fx.selfVolatile) {
+        // CRISTALLISATION : volatile posé sur le LANCEUR (persiste jusqu'à la prochaine attaque de dégâts encaissée).
+        selfMon.volatiles[fx.selfVolatile] = 1
+        events.push({ kind: "message", text: `${displayName(selfMon)} s'enveloppe d'une carapace de cristal scintillante !` })
+    }
 }
 
 function maybeApplySecondary(state: BattleState, side: SideId, move: MoveData, events: BattleEvent[], rng: Rng) {
@@ -936,6 +960,14 @@ function maybeApplySecondary(state: BattleState, side: SideId, move: MoveData, e
     let chance = (fx.chance ?? 100) * (talentEffect(active(state[side]))?.statusChanceMult ?? 1)
     if (fx.inflictStatus) chance *= talentEffect(active(state[other(side)]))?.statusResistMult ?? 1
     if (!rng.chance(chance)) return
+    if (fx.oneOf && fx.oneOf.length > 0) {
+        // IMPACT (clan Combat) : UN SEUL effet tiré AU HASARD (équiprobable) parmi la liste — apeurer / paralyser / Atq +1.
+        const pick = fx.oneOf[rng.int(0, fx.oneOf.length - 1)]
+        if (pick.inflictStatus) tryInflictStatus(state, other(side), pick.inflictStatus, events, rng)
+        if (pick.flinch) active(state[other(side)]).volatiles.FLINCH = 1
+        if (pick.statChanges) for (const sc of pick.statChanges) applyStatChange(state, sc.target === "self" ? side : other(side), sc.stat, sc.stages, events)
+        return
+    }
     if (fx.inflictStatus) tryInflictStatus(state, other(side), fx.inflictStatus, events, rng)
     if (fx.inflictVolatile) applyVolatile(active(state[other(side)]), fx.inflictVolatile, rng, events, active(state[other(side)]))
     if (fx.statChanges) {

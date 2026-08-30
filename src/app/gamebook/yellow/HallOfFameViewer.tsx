@@ -8,6 +8,8 @@ import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { CLANS, CLAN_KEYS } from "@/lib/gamebook/yellow/data/clans"
+import type { ClanHallMember } from "@/lib/gamebook/yellow/store/clanHof"
 import type { ChampionMon, FusionChampionMon } from "@/lib/gamebook/yellow/storage/save"
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
 interface FusionChampionEntry { nickname: string; wonAt: string; team: FusionChampionMon[]; tier: string }
@@ -29,19 +31,20 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [champions, setChampions] = useState<ChampionEntry[]>([])
     const [fusionChamps, setFusionChamps] = useState<FusionChampionEntry[]>([])
+    const [clanMembers, setClanMembers] = useState<ClanHallMember[]>([])
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
     const [openFusion, setOpenFusion] = useState<FusionChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
     const activeWorld = useActiveWorld()
     const player = usePlayer()
     const fusionUnlocked = player.defeatedTrainers.includes("autel_visited") // arrivé au Dôme Fusion → onglet FUSION
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion">(activeWorld === "replay" ? "live" : activeWorld)
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion" | "clans">(activeWorld === "replay" ? "live" : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
     // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
     const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
-    const worldLabel = viewWorld === "fusion" ? "FUSION" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")
+    const worldLabel = viewWorld === "fusion" ? "FUSION" : viewWorld === "clans" ? "CLANS" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")
 
     // Affronter l'équipe figée d'un Champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
     const fight = (label: string, team: ChampionMon[]) => {
@@ -70,6 +73,12 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                     if (!cancelled) setFusionChamps((jf?.champions ?? []) as FusionChampionEntry[])
                 } catch { /* silencieux */ }
             }
+            // PANTHÉON DES CLANS (onglet CLANS, toujours dispo) : membres gravés des 3 clans. Best-effort.
+            try {
+                const rcl = await fetch("/api/gamebook/yellow/clan-hall-of-fame")
+                const jcl = rcl.ok ? await rcl.json() : null
+                if (!cancelled) setClanMembers((jcl?.members ?? []) as ClanHallMember[])
+            } catch { /* silencieux */ }
         })()
         return () => { cancelled = true }
     }, [fusionUnlocked])
@@ -84,27 +93,62 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
             <div style={box} onClick={(e) => e.stopPropagation()}>
                 <div style={titleStyle}>🏛️ HALL OF FAME · {worldLabel}</div>
 
-                {/* Toggle de RUN (runs atteints) + onglet FUSION (Dôme de la Fusion) */}
-                {(availWorlds.length > 1 || fusionUnlocked) && (
-                    <div style={runToggleRow}>
-                        {availWorlds.map((w) => (
-                            <button key={w.id} onClick={() => setViewWorld(w.id)}
-                                style={{ ...runToggleBtn, borderColor: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: viewWorld === w.id ? "#11121a" : "#fff" }}>
-                                {w.label}
-                            </button>
-                        ))}
-                        {fusionUnlocked && (
-                            <button onClick={() => setViewWorld("fusion")}
-                                style={{ ...runToggleBtn, borderColor: viewWorld === "fusion" ? "#c79cff" : "rgba(255,255,255,0.15)", background: viewWorld === "fusion" ? "#8a5ae0" : "rgba(255,255,255,0.06)", color: "#fff" }}>
-                                🧬 FUSION
-                            </button>
-                        )}
-                    </div>
-                )}
+                {/* Toggle de RUN (runs atteints) + onglet FUSION (Dôme de la Fusion) + onglet CLANS (toujours dispo) */}
+                <div style={runToggleRow}>
+                    {availWorlds.map((w) => (
+                        <button key={w.id} onClick={() => setViewWorld(w.id)}
+                            style={{ ...runToggleBtn, borderColor: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: viewWorld === w.id ? "#11121a" : "#fff" }}>
+                            {w.label}
+                        </button>
+                    ))}
+                    {fusionUnlocked && (
+                        <button onClick={() => setViewWorld("fusion")}
+                            style={{ ...runToggleBtn, borderColor: viewWorld === "fusion" ? "#c79cff" : "rgba(255,255,255,0.15)", background: viewWorld === "fusion" ? "#8a5ae0" : "rgba(255,255,255,0.06)", color: "#fff" }}>
+                            🧬 FUSION
+                        </button>
+                    )}
+                    <button onClick={() => setViewWorld("clans")}
+                        style={{ ...runToggleBtn, borderColor: viewWorld === "clans" ? "#7be0a0" : "rgba(255,255,255,0.15)", background: viewWorld === "clans" ? "#2f8f5a" : "rgba(255,255,255,0.06)", color: "#fff" }}>
+                        🛡️ CLANS
+                    </button>
+                </div>
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Hall of Fame indisponible (hors-ligne ?).</div>}
-                {viewWorld === "fusion" ? (
+                {viewWorld === "clans" ? (
+                    <div style={scroll}>
+                        {CLAN_KEYS.map((k) => {
+                            const meta = CLANS[k]
+                            const roster = clanMembers.filter((m) => m.clan === k) // déjà trié par niveau (serveur)
+                            return (
+                                <div key={k} style={champCard}>
+                                    <div style={champHead}>
+                                        <span style={{ ...champName, color: "#7be0a0" }}>{meta.emoji} {meta.name.toUpperCase()}</span>
+                                        <span style={champDate}>{roster.length} serment{roster.length > 1 ? "s" : ""}</span>
+                                    </div>
+                                    {roster.length === 0 ? (
+                                        <div style={{ ...muted, padding: "6px 0" }}>Aucun serment gravé pour l&apos;instant.</div>
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                            {roster.map((m, mi) => {
+                                                const sp = getSpecies(m.speciesId)
+                                                return (
+                                                    <div key={mi} style={clanRow}>
+                                                        <span style={clanRank}>{mi + 1}</span>
+                                                        {sp?.sprite ? <img src={sp.sprite} alt={sp.name} style={clanRowImg} /> : <span style={{ fontSize: 18 }}>{meta.emoji}</span>}
+                                                        <span style={clanRowName}>{m.transcended ? "🌟 " : ""}{m.nickname}</span>
+                                                        <span style={clanRowLvl}>N.{m.level}</span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                        <div style={{ ...muted, fontSize: 10.5, padding: "4px 4px 0" }}>🌟 = Transcendance atteinte (niv 80). Les noms restent gravés d&apos;un run à l&apos;autre.</div>
+                    </div>
+                ) : viewWorld === "fusion" ? (
                     <div style={scroll}>
                         {fusionChamps.length === 0 && (
                             <div style={muted}>Aucun sacre de fusion pour l&apos;instant.<br />Bats le Dieu Spaghetti à l&apos;Autel pour graver ton équipe ! 🧬</div>
@@ -251,6 +295,11 @@ const monCard: React.CSSProperties = { width: 58, background: "rgba(255,255,255,
 const monImg: React.CSSProperties = { width: 44, height: 44, objectFit: "contain", imageRendering: "pixelated" }
 const monName: React.CSSProperties = { fontSize: 8, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
 const monLvl: React.CSSProperties = { fontSize: 8, opacity: 0.7 }
+const clanRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", borderRadius: 6, padding: "3px 8px" }
+const clanRank: React.CSSProperties = { fontSize: 11, fontWeight: 800, width: 16, textAlign: "center", opacity: 0.55 }
+const clanRowImg: React.CSSProperties = { width: 26, height: 26, objectFit: "contain", imageRendering: "pixelated" }
+const clanRowName: React.CSSProperties = { flex: 1, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+const clanRowLvl: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: "#7be0a0" }
 const fightBtn: React.CSSProperties = { marginTop: 8, width: "100%", padding: "8px 0", fontFamily: "inherit", fontSize: 12, fontWeight: 800, color: "#ffd54a", background: "rgba(255,255,255,0.05)", border: "1.5px solid #ffd54a", borderRadius: 8, cursor: "pointer" }
 const noticeStyle: React.CSSProperties = { marginTop: 10, padding: "8px 10px", fontSize: 11.5, textAlign: "center", color: "#ffd54a", background: "rgba(255,213,74,0.1)", border: "1px dashed #ffd54a", borderRadius: 8, cursor: "pointer", lineHeight: 1.5 }
 const closeBtn: React.CSSProperties = { marginTop: 12, padding: "10px 0", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, cursor: "pointer" }

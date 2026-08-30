@@ -875,6 +875,12 @@ const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }>
     y_sage_saiyan: { url: "/yellow/sprites/npc96_sage_saiyan.png" },
     // ANANAS (chercheur de baies, Route Nord) : planche Gen 3 760×160 (npc 98). Face au joueur (défauts col1/row0).
     y_ananas: { url: "/yellow/sprites/npc98_ananas.png" },
+    // CHAPELLE DE NOUILLON — SBIRE au centre du ring (10,8). Face au joueur (Sud). Planche Gen 3 760×160.
+    y_sbire: { url: "/yellow/sprites/npc_sbire_gen3.png", row: 0 },
+    // CHAPELLE — 3 chefs de clan, chacun regarde le centre : Air (1,9)→Est · Roche (9,2)→Sud · Combat (17,9)→Ouest.
+    y_clan_air: { url: "/yellow/sprites/npc_chapelle_air_gen3.png", row: 2 },     // Est
+    y_clan_roche: { url: "/yellow/sprites/npc_chapelle_roche_gen3.png", row: 0 }, // Sud
+    y_clan_combat: { url: "/yellow/sprites/npc_chapelle_combat_gen3.png", row: 1 }, // Ouest
     // LIGUE DE FUSION Johto — Conseil des Chimères (planches Gen 3 dédiées). Chacun face au joueur (row Sud).
     y_fusion_1: { url: "/yellow/sprites/npc_fusion_will_gen3.png" },   // WILL (Psy)
     y_fusion_2: { url: "/yellow/sprites/npc_fusion_koga_gen3.png" },   // KOGA (Poison)

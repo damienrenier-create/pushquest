@@ -382,6 +382,16 @@ export const DEX_SIZE: Record<string, DexSize> = {
     charolyx: { size: [0.35, 0.55], weight: [3, 7], quip: "Un chaton galeux qui empeste la charogne à trois mètres ; adorable tant qu'on ne respire pas par le nez." },
     bubolyx: { size: [0.7, 1.05], weight: [12, 24], quip: "Taille d'un vrai lynx, mais constellé de bubons qui éclatent quand on le caresse. On ne le caresse pas deux fois." },
     pestilyx: { size: [1.3, 1.9], weight: [40, 78], quip: "Presque deux mètres de fauve pestilentiel qui pèse moins qu'il n'en a l'air — la pourriture, ça se creuse de l'intérieur." },
+    // ── LIGNÉES SIGNATURES DES 3 CLANS (Chapelle de Nouillon) — 213-221 ──
+    pivinci: { size: [0.25, 0.4], weight: [0.4, 1.4], quip: "Un plumeau à ressort qui tape plus vite que ton œil ne suit." },
+    vengbec: { size: [0.35, 0.55], weight: [1, 3], quip: "Sa crête pèse plus lourd que sa rancune — et c'est peu dire." },
+    picassault: { size: [0.6, 0.95], weight: [3, 7], quip: "Léger comme une esquisse, tranchant comme un trait — bon courage pour le viser." },
+    lapifrappe: { size: [0.4, 0.6], weight: [4, 9], quip: "Deux kilos de peluche, huit de coup de patte." },
+    lapunch: { size: [0.9, 1.3], weight: [25, 45], quip: "Moitié boxeur, moitié poney : le pire des deux pour ta mâchoire." },
+    lievrocogne: { size: [1.6, 2.05], weight: [70, 112], quip: "Tout le poids est dans le poing ; le reste, c'est du carton bouilli qui galope." },
+    fujipanda: { size: [0.5, 0.8], weight: [16, 34], quip: "Une enclume duveteuse. Ne roule jamais dans une pente vers un Fujipanda." },
+    kilipanda: { size: [1.1, 1.6], weight: [90, 160], quip: "Il mâche du bambou pétrifié. Ça t'informe sur ses dents… et ta mâchoire." },
+    pandapurna: { size: [2.0, 2.8], weight: [300, 520], quip: "On l'a longtemps pris pour un sommet. Puis le sommet a bâillé." },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: { size: [0.4, 0.62], weight: [2.5, 5.5], weightMode: "special", quip: "Un vieux vautour drapé dans un imper trop grand, si léger qu'on le prendrait pour un tas de plumes oublié sur une branche." },
     // 175 · Macabour (TENEBRES/VOL)

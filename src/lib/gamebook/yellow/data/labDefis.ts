@@ -8,7 +8,7 @@
 // Tout vit dans GamebookProgress.flags de la ligne chapterId="yellow" (aucune migration SQL).
 
 import type { PokeType } from "../battle/types"
-import { CTS, NGPLUS_EXCLUSIVE_CT_IDS } from "./cts"
+import { CTS, NGPLUS_EXCLUSIVE_CT_IDS, CLAN_CT_IDS } from "./cts"
 import { getMove } from "./moves"
 
 /** Type du défi physique/CT. Physique : un seul à la fois. CT : slot indépendant (parallèle). */
@@ -250,6 +250,7 @@ const CT_DEFI_EXCLUDED = new Set([
     "ct58",                             // Mitra-Poing : CADEAU EXCLUSIF du Collectionneur (Maison Combat run 3, GAMARUTO requis) → jamais au défi CT
     "ct61",                             // Voile de Givre : CADEAU EXCLUSIF des 5 frères Glaçon (Grotte Gelée) → jamais au défi CT
     ...NGPLUS_EXCLUSIVE_CT_IDS,          // signatures EXCLUSIVES au run 2 (boss d'arène NG+) → jamais gagnables au défi CT du labo
+    ...CLAN_CT_IDS,                      // CT des clans (Chapelle de Nouillon) → octroyées SEULEMENT par le chef de clan
 ])
 
 export interface CtDefiOption {

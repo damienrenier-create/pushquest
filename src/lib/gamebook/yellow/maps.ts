@@ -247,9 +247,9 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         id: "b_npc1",
         x: 24, y: 9, w: 5, h: 3,        // footprint rows 9..11
         doorX: 1, doorY: 2,             // porte abs (25, 11) — dans le footprint (walkable)
-        targetMapId: "yellow_sbire",    // antre du sbire du dieu Spaghetti
-        targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "ANTRE",
+        targetMapId: "yellow_sbire",    // CHAPELLE DE NOUILLON (chapelle-arène du dieu Spaghetti)
+        targetSpawnX: 9, targetSpawnY: 17, // arrivée bas-centre, juste au-dessus de la porte
+        displayName: "CHAPELLE",
         kind: "casino",
     },
     {
@@ -371,13 +371,50 @@ function buildAreneEau(): TileType[][] {
     return m
 }
 
-// Antre du sbire du dieu Spaghetti : petite salle 9×7. Le sbire (PNJ y_sbire)
-// se tient derrière un autel en (4,2) — case bloquée pour qu'on ne lui marche pas
-// dessus (le moteur de mouvement ne teste pas les PNJ). On l'affronte depuis (4,3).
-function buildSbireInterior(): TileType[][] {
-    const m = fillRoom(9, 7, "floorTile")
-    m[2][4] = "table"   // autel du sbire (case du PNJ, bloquante)
-    m[6][4] = "doorMat" // sortie
+// CHAPELLE DE NOUILLON (ex-« antre du sbire ») : grande arène circulaire 20×20 calée sur
+// chapelle_nouillon.jpg (2048², tuile 102,4 px). Anneau rocheux + obstacles = murs ("tree").
+// 4 PNJ (cases "table" bloquantes) : SBIRE au centre du ring (10,8) · maître AIR (1,9) ·
+// maître ROCHE (9,2) · maître COMBAT (17,9). Sortie bas-centre (9,18)/(10,18) → Ville Jaune.
+// Grille relevée avec Sartay via l'artefact de débug map (cf. [[feedback_pushquest_debug_map_artifacts]]).
+function buildChapelleInterior(): TileType[][] {
+    const m = fillRect(20, 20, "floorTile")
+    const WALLS: [number, number][] = [
+        [0,0], [1,0], [2,0], [3,0], [4,0], [5,0], [6,0], [7,0],
+        [8,0], [9,0], [10,0], [11,0], [12,0], [13,0], [14,0], [15,0],
+        [16,0], [17,0], [18,0], [19,0], [0,1], [1,1], [2,1], [3,1],
+        [4,1], [5,1], [6,1], [7,1], [8,1], [9,1], [10,1], [11,1],
+        [12,1], [13,1], [14,1], [15,1], [16,1], [17,1], [18,1], [19,1],
+        [0,2], [1,2], [2,2], [3,2], [4,2], [5,2], [6,2], [7,2],
+        [8,2], [10,2], [11,2], [12,2], [13,2], [14,2], [15,2], [16,2],
+        [17,2], [18,2], [19,2], [0,3], [1,3], [2,3], [3,3], [4,3],
+        [5,3], [6,3], [13,3], [14,3], [15,3], [16,3], [17,3], [18,3],
+        [19,3], [0,4], [1,4], [2,4], [3,4], [12,4], [16,4], [17,4],
+        [18,4], [19,4], [0,5], [1,5], [2,5], [3,5], [17,5], [18,5],
+        [19,5], [0,6], [1,6], [2,6], [5,6], [15,6], [16,6], [18,6],
+        [19,6], [0,7], [1,7], [2,7], [5,7], [8,7], [11,7], [14,7],
+        [18,7], [19,7], [0,8], [7,8], [12,8], [19,8], [0,9], [7,9],
+        [12,9], [18,9], [19,9], [0,10], [7,10], [12,10], [18,10], [19,10],
+        [0,11], [7,11], [12,11], [19,11], [0,12], [1,12], [2,12], [5,12],
+        [8,12], [11,12], [18,12], [19,12], [0,13], [1,13], [2,13], [5,13],
+        [18,13], [19,13], [0,14], [1,14], [15,14], [16,14], [17,14], [18,14],
+        [19,14], [0,15], [1,15], [2,15], [17,15], [18,15], [19,15], [0,16],
+        [1,16], [2,16], [17,16], [18,16], [19,16], [0,17], [1,17], [2,17],
+        [3,17], [4,17], [15,17], [16,17], [17,17], [18,17], [19,17], [0,18],
+        [1,18], [2,18], [3,18], [4,18], [5,18], [6,18], [13,18], [14,18],
+        [15,18], [16,18], [17,18], [18,18], [19,18], [0,19], [1,19], [2,19],
+        [3,19], [4,19], [5,19], [6,19], [7,19], [8,19], [9,19], [10,19],
+        [11,19], [12,19], [13,19], [14,19], [15,19], [16,19], [17,19], [18,19],
+        [19,19],
+    ]
+    for (const [x, y] of WALLS) m[y][x] = "tree" // rocher/obstacle (bloquant)
+    // cases des PNJ (bloquantes) — le PNJ se tient dessus, on lui parle depuis une case adjacente
+    m[8][10] = "table"  // S — SBIRE (centre du ring)
+    m[9][1] = "table"   // A — maître de l'Air (gauche)
+    m[2][9] = "table"   // R — maître de la Roche (haut)
+    m[9][17] = "table"  // C — maître du Combat (droite)
+    // porte / sortie (bas-centre) → Ville Jaune
+    m[18][9] = "doorMat"
+    m[18][10] = "doorMat"
     return m
 }
 
@@ -1497,11 +1534,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_sbire: {
         id: "yellow_sbire",
-        name: "ANTRE DU SBIRE",
-        tiles: buildSbireInterior(),
-        width: 9,
-        height: 7,
-        exits: [returnExit("yellow_sbire", 4, 6)],
+        name: "CHAPELLE DE NOUILLON",
+        tiles: buildChapelleInterior(),
+        width: 20,
+        height: 20,
+        exits: [returnExit("yellow_sbire", 9, 18), returnExit("yellow_sbire", 10, 18)],
+        backgroundImage: "/yellow/sprites/chapelle_nouillon.jpg",
+        backgroundImageWidth: 2048, backgroundImageHeight: 2048, backgroundImageTileSize: 102.4, // 2048/20 = 102,4 → calage exact
     },
     yellow_infirmary: {
         id: "yellow_infirmary",

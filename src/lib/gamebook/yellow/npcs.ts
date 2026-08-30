@@ -618,10 +618,60 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         mapId: "yellow_sbire",
         kind: "static",
         interaction: "interactive",
-        sprite: { emoji: "🍝", color: "#c83a2a" },
-        initialX: 4,
+        sprite: { emoji: "🍝", color: "#c83a2a" }, // remplacé par NPC_GEN3_IDLE (npc_sbire_gen3, face Sud)
+        initialX: 10, // CHAPELLE : centre du ring de sable
+        initialY: 8,
+        dialoguesAfter: ["*Le sbire du dieu Spaghetti médite au centre de l'arène.*"],
+    },
+    // === CHAPELLE DE NOUILLON — 3 CHEFS DE CLAN (Air / Roche / Combat) ===
+    // TODO clan : adhésion (offre le Daemon-clan si place en équipe) · à chaque visite,
+    // énergie = équivalent-reps du niveau de ton Daemon-clan (+ 1 ball si niveau = dizaine) ·
+    // niveau 50+ → CT secrète du clan · panneau de recensement (tous les membres + niveaux).
+    // Pour l'instant : PNJ de lore uniquement (mécanique câblée au prochain build).
+    {
+        id: "y_clan_air",
+        name: "MAÎTRE DE L'AIR",
+        mapId: "yellow_sbire",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🌪️", color: "#7ecbff" }, // remplacé par NPC_GEN3_IDLE (npc_chapelle_air, face Est)
+        initialX: 1,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Une brise tourne sans fin autour de ce maître immobile.*",
+            "Je veille sur le clan de l'AIR. Nos Daemons fendent les cieux, insaisissables.",
+            "Bientôt, tu pourras prêter serment à mon clan… et l'un des nôtres te suivra.",
+        ],
+    },
+    {
+        id: "y_clan_roche",
+        name: "MAÎTRE DE LA ROCHE",
+        mapId: "yellow_sbire",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪨", color: "#c98a2a" }, // remplacé par NPC_GEN3_IDLE (npc_chapelle_roche, face Sud)
+        initialX: 9,
         initialY: 2,
-        dialoguesAfter: ["*Le sbire du dieu Spaghetti médite devant son autel.*"],
+        dialoguesAfter: [
+            "*Le maître de la Roche se tient droit comme un menhir.*",
+            "Le clan de la ROCHE ne plie jamais. Nos Daemons sont patients et incassables.",
+            "Rejoins-nous quand l'heure viendra, et tu porteras notre pierre.",
+        ],
+    },
+    {
+        id: "y_clan_combat",
+        name: "MAÎTRE DU COMBAT",
+        mapId: "yellow_sbire",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥋", color: "#8fe06a" }, // remplacé par NPC_GEN3_IDLE (npc_chapelle_combat, face Ouest)
+        initialX: 17,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Le maître du Combat frappe l'air en cadence, sans un mot de trop.*",
+            "Le clan du COMBAT forge les corps et les âmes. La force, ça se mérite.",
+            "Prête-moi serment le moment venu, et un de mes disciples entrera dans ton équipe.",
+        ],
     },
 
     // === ROUTE NORD : panneau placeholder ===

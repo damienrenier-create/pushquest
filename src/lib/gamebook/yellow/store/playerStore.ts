@@ -10,6 +10,7 @@ import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
 import { NEMESIS_ARMED_MARKER } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
+import { clanOfSpecies, type ClanKey } from "../data/clans"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { leagueFusionSpecies } from "../data/leagueFusionDex"
@@ -250,6 +251,13 @@ interface PlayerState {
     /** FASHION VICTIM — avatar (planche Gen3) choisi par le joueur ; partagé via la présence (les autres le voient).
      *  Préférence COSMÉTIQUE GLOBALE → préservée entre les runs (cf. reset de monde). Optionnel/additif → save-safe. */
     chosenAvatar?: string
+    // CLANS (Chapelle de Nouillon) — PER-MONDE (1 pacte par run, reset au NG+). Cf. data/clans.ts.
+    clan?: "air" | "combat" | "roche" | null   // clan pacté ce run (null/absent = aucun)
+    clanDaemonUid?: string                       // uid du Daemon-clan offert (pour lire son niveau + jalons)
+    clanCtGiven?: boolean                        // CT de clan déjà offerte (niv 50)
+    clanTransGiven?: boolean                     // Transcendance déjà offerte (niv 80, 1×/partie — voir aussi flag global)
+    clanVisitDate?: string                       // date de la dernière visite (guard reset quotidien)
+    clanTrainByClan?: Record<string, number[]>   // CLIQUET d'entraînement : pic de niveau MÉMORISÉ slot par slot, par clan (le chef ne sandbague jamais)
     /** ARTISANE — objets SIGNATURE craftés, liés à un uid. PER-MONDE (liés à des Daemons de ce run) → naturellement
      *  rattachés au monde. Source de vérité du « sac » ; baké sur le mon en combat. Optionnel/additif → save-safe. */
     craftedItems?: CraftedItem[]
@@ -648,6 +656,12 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         grotteShopBuys: "grotteShopBuys" in p ? p.grotteShopBuys : st.grotteShopBuys,
         chosenAvatar: "chosenAvatar" in p ? p.chosenAvatar : st.chosenAvatar,
+        clan: "clan" in p ? p.clan : st.clan,
+        clanDaemonUid: "clanDaemonUid" in p ? p.clanDaemonUid : st.clanDaemonUid,
+        clanCtGiven: "clanCtGiven" in p ? p.clanCtGiven : st.clanCtGiven,
+        clanTransGiven: "clanTransGiven" in p ? p.clanTransGiven : st.clanTransGiven,
+        clanVisitDate: "clanVisitDate" in p ? p.clanVisitDate : st.clanVisitDate,
+        clanTrainByClan: "clanTrainByClan" in p ? p.clanTrainByClan : st.clanTrainByClan,
         craftedItems: "craftedItems" in p ? p.craftedItems : st.craftedItems,
         craftsUsed: "craftsUsed" in p ? p.craftsUsed : st.craftsUsed,
         craftReady: "craftReady" in p ? p.craftReady : st.craftReady,
@@ -1637,6 +1651,56 @@ export function recordJcEnergyBuy() {
     st = { ...st, jcEnergyBuysToday: (st.jcEnergyBuysToday ?? 0) + 1 }
     emit()
 }
+// ══════════════ CLANS (Chapelle de Nouillon) — état du pacte, PER-MONDE (1 pacte/run) ══════════════
+/** Clan pacté ce run (null = aucun). */
+export function getClan(): ClanKey | null { return st.clan ?? null }
+/** Prête serment (IRRÉVERSIBLE ce run) : mémorise le clan + l'uid du Daemon-clan offert. */
+export function joinClan(clan: ClanKey, daemonUid: string) {
+    st = { ...st, clan, clanDaemonUid: daemonUid }
+    emit()
+}
+/** Niveau ACTUEL du Daemon-clan (cherché par uid en équipe puis au PC ; 0 s'il n'existe plus). */
+export function clanDaemonLevel(): number {
+    const uid = st.clanDaemonUid
+    if (!uid) return 0
+    const mon = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    return mon?.level ?? 0
+}
+/** Espèce ACTUELLE du Daemon-clan (par uid, équipe puis PC ; "" s'il n'existe plus) — pour graver le Panthéon. */
+export function clanDaemonSpeciesId(): string {
+    const uid = st.clanDaemonUid
+    if (!uid) return ""
+    const mon = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    return mon?.speciesId ?? ""
+}
+export function isClanCtGiven(): boolean { return st.clanCtGiven === true }
+export function markClanCtGiven() { st = { ...st, clanCtGiven: true }; emit() }
+export function isClanTransGiven(): boolean { return st.clanTransGiven === true }
+export function markClanTransGiven() { st = { ...st, clanTransGiven: true }; emit() }
+/** JALOUSIE : clan RIVAL dont une signature est portée en ÉQUIPE ACTIVE (≠ mon clan), ou null. */
+export function rivalClanSignatureInTeam(): ClanKey | null {
+    const mine = st.clan ?? null
+    for (const m of st.team) {
+        const c = clanOfSpecies(m.speciesId)
+        if (c && c !== mine) return c
+    }
+    return null
+}
+/** Visite du chef : true si 1re visite du JOUR (→ le caller crédite énergie/ball), et marque le jour. */
+export function claimClanVisitToday(today: string): boolean {
+    if (st.clanVisitDate === today) return false
+    st = { ...st, clanVisitDate: today }
+    emit()
+    return true
+}
+/** CLIQUET d'entraînement : pics de niveau mémorisés (slot par slot) pour l'équipe du chef `clan`. */
+export function getClanTrainPeaks(clan: ClanKey): number[] { return st.clanTrainByClan?.[clan] ?? [] }
+/** Mémorise les pics de niveau (le chef ne redescend jamais sous ce qu'il a déjà opposé ce run). */
+export function setClanTrainPeaks(clan: ClanKey, peaks: number[]) {
+    st = { ...st, clanTrainByClan: { ...(st.clanTrainByClan ?? {}), [clan]: peaks } }
+    emit()
+}
+
 /** GROTTE/BOUTIQUE JC — nb d'achats de la catégorie `cat` CE RUN (cliquet prix par catégorie ; reset par run). */
 export function getGrotteShopBuys(cat: string): number { return st.grotteShopBuys?.[cat] ?? 0 }
 /** GROTTE/BOUTIQUE JC — enregistre un achat dans `cat` → +1 (toute la catégorie prend +10 % COMPOSÉ, ce run). */
