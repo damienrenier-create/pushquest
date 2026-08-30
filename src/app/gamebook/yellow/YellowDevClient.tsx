@@ -80,7 +80,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -142,7 +142,8 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { clanOfSpecies } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { attackCost, effectiveQuota, playerAttackQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -466,6 +467,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // L'ARCHIVISTE (Collectionneur du dex) — erre sur la Ville Jaune, ré-affrontable (pas de filtre defeatedTrainers).
     const archivistes = useArchiviste(mapPlayer.mapId)
     const [archivisteFight, setArchivisteFight] = useState<{ npc: ArchivisteNpc; enemy: MonInstance[]; blurb: string } | null>(null)
+    const [highfiveTarget, setHighfiveTarget] = useState<{ userId: string; nickname: string } | null>(null) // FERVEUR DE CLAN : high-five à un allié
+    const [highfiveMsg, setHighfiveMsg] = useState("")
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
     const [confirmStartReplay, setConfirmStartReplay] = useState<"run2" | "run3" | null>(null) // « rejouer un run » : confirmation avant de lancer
@@ -526,6 +529,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
+        // 🛡️ FERVEUR DE CLAN : on N'AFFRONTE JAMAIS le reflet d'un ALLIÉ (même clan, run en cours). À la place → HIGH FIVE :
+        //   un message perso (≤50 car) + des reps (1 par caractère). Ouvre la modale d'envoi au lieu du combat.
+        const myClan = getClan()
+        if (myClan && opp.player.clan === myClan) { setHighfiveTarget({ userId: opp.userId, nickname: opp.nickname }); return }
         // RUN 3 — limite DURCIE anti-farm du double-XP : 1 SEUL match de REFLET par jour (défaite comprise), pour
         //   LES DEUX modes de reflet (hub Viridian « exacts » ET miroir eau « inversés » donnent tous deux le
         //   double-XP). effectiveRunWorld() couvre aussi le REJEU de run 3. Ailleurs (run 1/2) : 1 victoire par
@@ -556,6 +563,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
+    const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
     const [toast, setToast] = useState<string | null>(null)
     // PARRAINAGE (modes easy/debutant) — feedback quand le pool d'énergie se recharge à sec (spendReps).
     useEffect(() => {
@@ -1154,6 +1162,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }
+            // 🛡️ FERVEUR DE CLAN : Super Pasta reçue DANS LE SAC (un allié a gagné un badge avec le Daemon-clan)
+            //   + high-five d'un allié (message perso + reps). Réclamation des dons en attente. RUN 3 : en attente.
+            if (!cancelled && getActiveWorld() !== "run3") {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/clan-fervor")
+                    const j = r.ok ? await r.json() : null
+                    const pastas = (j?.pastas ?? 0) as number
+                    const energy = (j?.energy ?? 0) as number
+                    const highfives = (j?.highfives ?? []) as { fromNickname: string; message: string; energy: number }[]
+                    if (!cancelled && (pastas > 0 || highfives.length > 0)) {
+                        if (pastas > 0) addItem(SUPER_PASTA_ITEM_ID, pastas)
+                        if (energy > 0) grantBonusEnergyUncapped(energy)
+                        persistYellowSave()
+                        const lines: string[] = ["*Un parfum de basilic et l'écho d'un cri de guilde emplissent l'air…*"]
+                        if (pastas > 0) lines.push(`🍝 « Un frère de clan a décroché un badge en emmenant votre Daemon-clan au combat ! Reçois ${pastas} Super Pasta${pastas > 1 ? "s" : ""} dans ton sac. »`)
+                        for (const h of highfives.slice(0, 4)) {
+                            lines.push(`🙏 HIGH FIVE de ${h.fromNickname || "un allié"}${h.energy > 0 ? ` (+${h.energy}⚡)` : ""}${h.message ? ` : « ${h.message} »` : ""}`)
+                        }
+                        showDialogue(DUEL_DREAM_NPC, "🛡️ Ferveur de clan", lines)
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
             // MODE FUN — CADEAU DU PROF. CHEN : un pote fun est allé voir Chen → don communautaire réclamé ici.
             //   Crédit HORS-PLAFOND SOUPLE (≤ 2× cap, grantRepsSoftCap). RUN 3 : no-op → laissé en attente (garde run3).
             if (!cancelled && getActiveWorld() !== "run3") {
@@ -1618,6 +1648,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 lines.push(`🎟️ Et un ticket roulette de ${ARENA_TICKET_VALUE} énergies — joue-le à ta prochaine connexion !`)
             }
             showDialogue("y_gym_sign", "ARÈNE", lines)
+            // 🛡️ FERVEUR DE CLAN : badge gagné AVEC le Daemon-clan (ou son évolution) en équipe → une Super Pasta pour
+            //   TOUS les alliés (fan-out serveur). Best-effort, jamais en run 3 (concours) ni en rejeu (bulle jetable).
+            if (getActiveWorld() !== "run3" && getActiveWorld() !== "replay" && getClan() && getPlayer().team.some((m) => clanOfSpecies(m.speciesId) === getClan())) {
+                void fetch("/api/gamebook/yellow/clan-fervor", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ event: "badge", badgeId: `${getActiveWorld()}:${badgeAwarded}` }),
+                }).catch(() => { /* hors-ligne : silencieux */ })
+            }
             clearBadgeAwarded()
         }
     }, [badgeAwarded, battle, evolutions.length, showDialogue, activeWorld])
@@ -2853,10 +2891,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )
                                     })()}
+                                    {/* 🍝 Poche Super Pasta (cadeau de ferveur de clan) : un clic ouvre le sélecteur en mode GRATUIT → +1 niveau. */}
+                                    {(player.items[SUPER_PASTA_ITEM_ID] ?? 0) > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🍝 Ferveur de clan</div>
+                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#7be0a0", color: "#bff0d0" }}
+                                                onClick={() => { setMenu("none"); setBagItem(null); setPastaPick(true); setPastaFree(true) }}>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>Super Pasta 🎁</span><span>×{player.items[SUPER_PASTA_ITEM_ID]}</span>
+                                                </span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>+1 niveau GRATUIT à un Daemon au choix. Offerte par ta guilde !</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -4159,7 +4210,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 <button
                                     style={afford ? { ...menuBtnStyle, borderColor: "#f5d020" } : menuBtnDimStyle}
                                     disabled={!afford}
-                                    onClick={() => setPastaPick(true)}
+                                    onClick={() => { setPastaPick(true); setPastaFree(false) }}
                                     title="Fait gagner 1 niveau à un Daemon de l'équipe"
                                 >
                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
@@ -4420,7 +4471,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => setPastaPick(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>🍝 QUEL DAEMON ?</span><span>{superPastaPrice()} reps</span>
+                            <span>🍝 QUEL DAEMON ?</span><span>{pastaFree ? `🎁 gratuit ×${player.items[SUPER_PASTA_ITEM_ID] ?? 0}` : `${superPastaPrice()} reps`}</span>
                         </div>
                         {player.team.map((m) => (
                             <button
@@ -4428,13 +4479,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 style={m.level >= 100 ? menuBtnDimStyle : menuBtnStyle}
                                 disabled={m.level >= 100}
                                 onClick={() => {
-                                    const r = buySuperPasta(m.uid)
+                                    const r = pastaFree ? useSuperPastaItem(m.uid) : buySuperPasta(m.uid)
                                     if (r.ok && r.result) {
                                         setToast(`${displayName(m)} monte au niveau ${r.result.toLevel} !`)
-                                        setPastaPick(false)
+                                        // En mode gratuit : rester ouvert tant qu'il reste des Super Pastas au sac, sinon fermer.
+                                        if (pastaFree && (getPlayer().items[SUPER_PASTA_ITEM_ID] ?? 0) > 0) { /* garde le sélecteur ouvert */ }
+                                        else { setPastaPick(false); setPastaFree(false) }
                                         void processSaiyanPoints() // convertit le niveau gagné en points Saiyan
                                     } else if (r.reason === "reps") {
                                         setToast("Pas assez de reps.")
+                                    } else if (r.reason === "none") {
+                                        setToast("Tu n'as plus de Super Pasta.")
+                                        setPastaPick(false); setPastaFree(false)
                                     } else if (r.reason === "max") {
                                         setToast(`${displayName(m)} est déjà au niveau max.`)
                                     }
@@ -4445,7 +4501,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </span>
                             </button>
                         ))}
-                        <button style={menuBtnDimStyle} onClick={() => setPastaPick(false)}>← ANNULER</button>
+                        <button style={menuBtnDimStyle} onClick={() => { setPastaPick(false); setPastaFree(false) }}>← ANNULER</button>
                     </div>
                 </div>
             )}
@@ -4982,6 +5038,35 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }}
                     onCancel={() => setArchivisteFight(null)}
                 />
+            )}
+
+            {/* 🛡️ FERVEUR DE CLAN — HIGH FIVE à un allié (au lieu de l'affronter). Message ≤50 car → 1⚡/caractère. */}
+            {highfiveTarget && !battle && (
+                <div style={menuOverlayStyle} onClick={() => { setHighfiveTarget(null); setHighfiveMsg("") }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🙏 HIGH FIVE — {highfiveTarget.nickname}</div>
+                        <div style={{ fontSize: 11.5, opacity: 0.8, marginBottom: 10, lineHeight: 1.45 }}>
+                            Un frère de clan ne se combat pas ! Envoie-lui un mot d&apos;encouragement : chaque caractère lui offre <b>1⚡</b> (max 50).
+                        </div>
+                        <input value={highfiveMsg} maxLength={50} onChange={(e) => setHighfiveMsg(e.target.value)} placeholder="Ton message (50 max)…"
+                            style={{ width: "100%", boxSizing: "border-box", background: "#0f0f18", color: "#f8f8e8", border: "1px solid #7be0a0", borderRadius: 8, padding: "8px 10px", fontFamily: "inherit", fontSize: 13, marginBottom: 4 }} />
+                        <div style={{ fontSize: 10.5, opacity: 0.65, marginBottom: 10 }}>{highfiveMsg.length}/50 · offre {Math.min(50, highfiveMsg.length)}⚡ à {highfiveTarget.nickname}</div>
+                        <button style={{ ...menuBtnStyle, ...(highfiveMsg.trim().length === 0 ? { opacity: 0.5 } : {}) }} disabled={highfiveMsg.trim().length === 0}
+                            onClick={() => {
+                                const target = highfiveTarget
+                                void fetch("/api/gamebook/yellow/clan-fervor", {
+                                    method: "POST", headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ event: "highfive", toUserId: target.userId, message: highfiveMsg.slice(0, 50) }),
+                                }).then((r) => r.json()).then((j) => {
+                                    setToast(j?.error === "cooldown" ? `Tu as déjà tapé dans la main de ${target.nickname} aujourd'hui.`
+                                        : j?.error ? "High five impossible (plus dans ton clan ?)."
+                                        : `🙏 High five envoyé à ${target.nickname} !`)
+                                }).catch(() => setToast("Envoi impossible (hors-ligne)."))
+                                setHighfiveTarget(null); setHighfiveMsg("")
+                            }}>ENVOYER 🙏</button>
+                        <button style={menuBtnDimStyle} onClick={() => { setHighfiveTarget(null); setHighfiveMsg("") }}>← ANNULER</button>
+                    </div>
+                </div>
             )}
 
             {/* REJEU — MODALE « RAMENER DES DAEMONS » : à la sortie, garder jusqu'à X (= badges gagnés + 1 si Ligue)

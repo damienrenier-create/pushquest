@@ -14,9 +14,11 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { fanOutSponsorGift } from "@/lib/gamebook/yellow/sponsorGift"
+import { sameClanUserIds } from "@/lib/gamebook/yellow/clanFervor"
 
 export const dynamic = "force-dynamic"
 const SHINY_ENERGY = 50
+const SHINY_CLAN_BONUS = 150 // FERVEUR DE CLAN : ×3 du cadeau (50) EN PLUS des 50 communautaires → un allié touche 200⚡
 const SPONSOR_SHINY_ENERGY = 500 // PARRAINAGE : ×10 de la fête communautaire → grosse prime pour le pote quand on CAPTURE un shiny
 
 async function requireYellow() {
@@ -58,12 +60,21 @@ export async function POST(req: NextRequest) {
                 data: players.map((p) => ({ toUserId: p.userId, fromUserId: auth.userId, fromNickname: me.nickname, kind, speciesId, eventKey, energy: SHINY_ENERGY })),
             })
         }
+        // FERVEUR DE CLAN : un allié du MÊME clan (run en cours) reçoit un BONUS ×3 (150⚡ EN PLUS des 50
+        //   communautaires → 200⚡) quand un membre de son clan croise/capture un shiny. Une ligne clan_shiny par
+        //   allié, réclamée par le MÊME GET (qui somme toutes les énergies en attente). Idempotent via eventKey (dup).
+        const { userIds: clanMates } = await sameClanUserIds(prisma, auth.userId)
+        if (clanMates.length > 0) {
+            await sg.createMany({
+                data: clanMates.map((toUserId) => ({ toUserId, fromUserId: auth.userId, fromNickname: me.nickname, kind: "clan_shiny", speciesId, eventKey, energy: SHINY_CLAN_BONUS })),
+            })
+        }
         // PARRAINAGE : un shiny CAPTURÉ par un pote → grosse prime (+500⚡) pour son parrain + ses filleuls.
         // (En plus de la fête communautaire de 50 ci-dessus.) Idempotent : le POST entier l'est via eventKey (dup).
         if (kind === "captured") {
             await fanOutSponsorGift(prisma, auth.userId, me.nickname, "shiny", SPONSOR_SHINY_ENERGY, speciesId)
         }
-        return NextResponse.json({ ok: true, granted: players.length })
+        return NextResponse.json({ ok: true, granted: players.length, clanBonus: clanMates.length })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // table pas encore créée → neutre
     }

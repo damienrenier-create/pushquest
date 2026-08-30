@@ -22,7 +22,7 @@ import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem, MAGNETOR_EVO_ITEM } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID } from "../data/items"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
@@ -2256,6 +2256,38 @@ export function buySuperPasta(uid: string): { ok: boolean; reason?: "reps" | "in
     trackBallLockSpend(price) // VŒU DU GÉNIE : dépense hors spendReps
     emit()
     return { ok: true, result, price }
+}
+
+/** Utilise une Super Pasta du SAC (cadeau de ferveur de clan) : +1 niveau GRATUIT à un Daemon d'équipe, consomme
+ *  1 objet super_pasta. Même effet que buySuperPasta mais sans coût JC/reps. { ok:false } si aucun objet / max / introuvable. */
+export function useSuperPastaItem(uid: string): { ok: boolean; reason?: "none" | "introuvable" | "max"; result?: ExpResult } {
+    if ((st.items[SUPER_PASTA_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const orig = st.team[idx]
+    const sp = getSpecies(orig.speciesId)
+    const baseExp = Math.max(orig.exp, expForLevel(orig.level, orig.speciesId))
+    const effLevel = Math.max(orig.level, levelFromExp(orig.exp, orig.speciesId))
+    if (effLevel >= MAX_LEVEL) return { ok: false, reason: "max" }
+    const target = Math.min(MAX_LEVEL, effLevel + 1)
+    const mon: MonInstance = {
+        ...orig, ivs: { ...orig.ivs }, moves: orig.moves.map((s) => ({ ...s })),
+        pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined,
+    }
+    const hpBefore = sp ? fullStats(orig, sp).hp : orig.currentHp
+    const result = applyExp(mon, Math.max(1, expForLevel(target, orig.speciesId) - baseExp))
+    const hpAfter = sp ? fullStats(mon, sp).hp : mon.currentHp
+    mon.currentHp = Math.min(hpAfter, mon.currentHp + Math.max(0, hpAfter - hpBefore))
+    const team = st.team.slice()
+    team[idx] = mon
+    // Consomme 1 Super Pasta (rebuild sans la clé quand le stock tombe à 0 → pas de « ×0 » résiduel).
+    const items: Record<string, number> = {}
+    for (const [k, v] of Object.entries(st.items)) {
+        if (k === SUPER_PASTA_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
+    }
+    st = { ...st, team, items }
+    emit()
+    return { ok: true, result }
 }
 
 /** Augmente le plafond de stockage (badge d'arène). */

@@ -444,6 +444,24 @@ model ShinyGift {
   @@index([eventKey])
 }
 
+// FERVEUR DE CLAN — dons DIRIGÉS entre alliés du même clan (Chapelle de Nouillon). Réclamés au login.
+//   kind="pasta"    → un allié a gagné un badge avec le Daemon-clan en équipe → +1 Super Pasta DANS LE SAC (energy=0).
+//   kind="highfive" → « high five » d'un allié : message perso (≤50 car) + reps (1 rep/caractère, ≤50, cappé serveur).
+// Une ligne par bénéficiaire. Pas de @relation (userId String). Additif (db:push). Pattern gaté côté code.
+model ClanGift {
+  id           String   @id @default(cuid())
+  toUserId     String   // allié bénéficiaire
+  fromUserId   String   // allié à l'origine du don (traçabilité + gate anti-spam)
+  fromNickname String   // pseudo affiché (trusté serveur)
+  kind         String   // "pasta" | "highfive"
+  energy       Int      @default(0)
+  message      String?  // high-five : message perso (borné à 50 car côté serveur)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+}
+
 // PARRAINAGE — BONUS MUTUELS parrain↔filleul (calqué sur ShinyGift/LeagueEnergyGrant). Quand un pote
 // (parrain OU filleul) accomplit un exploit, l'autre reçoit un don d'énergie réclamé au login :
 //   kind="arena"  → +1/10 de la jauge run 1 du bénéficiaire (montant CALCULÉ au claim, energy=0 ici).

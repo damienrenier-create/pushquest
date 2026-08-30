@@ -36,6 +36,9 @@ export interface ItemData {
     /** CANNE À PÊCHE (MISC, s'utilise HORS combat, FACE À L'EAU) : ferre un Daemon aquatique. OUTIL réutilisable
      *  (jamais consommé). La présence de ce marqueur range l'objet dans la poche « Pêche » + lui donne son handler. */
     fishingRod?: boolean
+    /** SUPER PASTA (MISC, s'utilise HORS combat) : +1 niveau à un Daemon au choix. Offerte par la ferveur de clan
+     *  (badge d'un allié). Un clic dans le sac ouvre le sélecteur de Super Pasta (application GRATUITE, consomme 1). */
+    superPasta?: boolean
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -195,7 +198,16 @@ export const ITEMS: Record<string, ItemData> = {
         id: "canne_a_peche", name: "Canne à pêche", category: "MISC",
         description: "Un petit accessoire trop stylé signé Fashion Victim. À utiliser face à un plan d'eau pour ferrer un Daemon aquatique !", price: 0, fishingRod: true,
     },
+    // SUPER PASTA (objet) — offerte GRATUITEMENT par la ferveur de clan (un allié gagne un badge avec le Daemon-clan
+    //   en équipe). Reçue DANS LE SAC ; un clic ouvre le sélecteur de Super Pasta → +1 niveau à un Daemon, sans payer.
+    super_pasta: {
+        id: "super_pasta", name: "Super Pasta", category: "MISC",
+        description: "Un plat de pâtes légendaire offert par ta guilde. Donne +1 niveau au Daemon de ton choix. Cadeau de la ferveur de clan !", price: 0, superPasta: true,
+    },
 }
+
+/** Id de l'objet Super Pasta (cadeau de ferveur de clan). */
+export const SUPER_PASTA_ITEM_ID = "super_pasta"
 
 /** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
 export const MAGNETOR_EVO_ITEM = "noyau_metal"

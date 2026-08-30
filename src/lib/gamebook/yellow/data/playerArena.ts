@@ -40,6 +40,7 @@ export interface RegistryPlayer {
     favoriteDaemon?: string // espèce la + jouée (pvpStats.daemonUse) → le miroir MÈNE avec (habitudes)
     favoriteMove?: string   // attaque la + jouée (réservé à une future couche de mimétisme de moves)
     chosenAvatar?: string | null // FASHION VICTIM — skin adopté → le reflet du joueur l'affiche PARTOUT (pas un Red générique)
+    clan?: "air" | "combat" | "roche" | null // FERVEUR DE CLAN — clan actif : un allié ne se combat pas (miroir), on lui fait un HIGH FIVE
 }
 
 /** Enregistre les Daemons CUSTOM de tous les joueurs de la registry → getSpecies résout leurs reflets (sprite +

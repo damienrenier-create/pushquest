@@ -12,6 +12,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { parseSave } from "@/lib/gamebook/yellow/storage/save"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { activeClanOf } from "@/lib/gamebook/yellow/clanFervor"
 
 export const dynamic = "force-dynamic"
 
@@ -68,6 +69,7 @@ export async function GET() {
                 favoriteDaemon: topKey(s.pvpStats.daemonUse),
                 favoriteMove: topKey(s.pvpStats.moveUse),
                 chosenAvatar: s.chosenAvatar ?? null, // FASHION VICTIM : skin adopté → le reflet l'affiche partout
+                clan: activeClanOf(s), // FERVEUR DE CLAN : clan du monde ACTIF → un allié = pas de duel-miroir, mais un high-five
             }
         })
         .filter((p) => p.team.length > 0) // uniquement ceux qui ont vraiment commencé
