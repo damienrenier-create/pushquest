@@ -1300,14 +1300,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             if (gt && gt.length) {
                 fusionSacre = {
                     tier: sacredTier,
-                    team: gt.map((f) => ({
-                        name: f.result.name,
-                        sprite: getSpecies(f.speciesId)?.sprite ?? "",
-                        types: [...f.result.types],
-                        level: f.result.level,
-                        stats: { ...f.result.stats },
-                        moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
-                    })),
+                    team: gt.map((f) => {
+                        const par = getSpecies(f.speciesId)?.fusionParents // espèces parentes → re-résolution du sprite au Hall of Fame
+                        return {
+                            name: f.result.name,
+                            sprite: getSpecies(f.speciesId)?.sprite ?? "",
+                            types: [...f.result.types],
+                            level: f.result.level,
+                            stats: { ...f.result.stats },
+                            moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                            aId: par?.[0], bId: par?.[1],
+                        }
+                    }),
                 }
             }
             // 🐉🪨 MÉGAMONARX : un DRACOLITHE niv 100 dans l'équipe vainqueur TRANSCENDE (octroi one-shot). Jamais en rejeu.

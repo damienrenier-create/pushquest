@@ -10,7 +10,18 @@ import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { CLANS, CLAN_KEYS } from "@/lib/gamebook/yellow/data/clans"
 import type { ClanHallMember } from "@/lib/gamebook/yellow/store/clanHof"
+import { useFusionSprite } from "./useFusionSprite"
 import type { ChampionMon, FusionChampionMon } from "@/lib/gamebook/yellow/storage/save"
+
+// Un sprite figé « missingno » (combo non-officiel dont le sprite généré n'était pas chargé au sacre) → à ne pas afficher.
+const isMissingNoSprite = (s?: string) => !s || s.includes("missingno")
+// Sprite d'une fusion de champion : RE-résout le sprite généré (Blob) via les espèces parentes (aId/bId) au lieu de
+//   garder le MissingNo figé ; repli = sprite stocké (s'il n'est pas MissingNo), sinon la mascotte 🧬.
+function FusionSprite({ m, style, fallback }: { m: FusionChampionMon; style: React.CSSProperties; fallback: number }) {
+    const { url } = useFusionSprite(m.aId, m.bId)
+    const src = url ?? (isMissingNoSprite(m.sprite) ? null : m.sprite)
+    return src ? <img src={src} alt={m.name} style={style} /> : <div style={{ fontSize: fallback }}>🧬</div>
+}
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
 interface FusionChampionEntry { nickname: string; wonAt: string; team: FusionChampionMon[]; tier: string }
 const TIER_META: Record<string, { label: string; color: string }> = {
@@ -165,7 +176,7 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                                     <div style={teamRow}>
                                         {c.team.map((m, mi) => (
                                             <button key={mi} style={monCard} onClick={() => setOpenFusion(m)} title="Voir la fiche">
-                                                {m.sprite ? <img src={m.sprite} alt={m.name} style={monImg} /> : <div style={{ fontSize: 24 }}>🧬</div>}
+                                                <FusionSprite m={m} style={monImg} fallback={24} />
                                                 <div style={monName}>{m.name}</div>
                                                 <div style={monLvl}>N.{m.level}</div>
                                             </button>
@@ -252,7 +263,7 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
                 <div style={detailOverlay} onClick={(e) => { e.stopPropagation(); setOpenFusion(null) }}>
                     <div style={detailBox} onClick={(e) => e.stopPropagation()}>
                         <div style={detailHead}>
-                            {openFusion.sprite ? <img src={openFusion.sprite} alt={openFusion.name} style={detailImg} /> : <div style={{ fontSize: 48 }}>🧬</div>}
+                            <FusionSprite m={openFusion} style={detailImg} fallback={48} />
                             <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
                                 <div style={detailName}>{openFusion.name}</div>
                                 <div style={detailLvl}>Niveau {openFusion.level}</div>

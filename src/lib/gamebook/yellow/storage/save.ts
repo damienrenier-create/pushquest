@@ -311,6 +311,10 @@ export interface FusionChampionMon {
     level: number
     stats: { hp: number; atk: number; def: number; spe: number; spc: number }
     moves: string[]
+    /** Espèces PARENTES (aId+bId) → le Hall of Fame RE-résout le sprite généré (Blob) à l'affichage au lieu de garder
+     *  le MissingNo figé au sacre (sprite pas encore chargé pour un combo non-officiel). Optionnel (legacy sans). */
+    aId?: string
+    bId?: string
 }
 
 // v2 (2026-06) : NERF ACE — migration one-time qui remet le CLIQUET d'ACE à zéro (acePeakLevel +
