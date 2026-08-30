@@ -218,6 +218,8 @@ export interface YellowSave {
     /** ATELIER DE FUSION (salle de l'Autel) — jusqu'à 6 paires {uid parent A, uid parent B} = l'équipe de fusion
      *  du joueur (réutilisée pour la Ligue de Fusion + le futur PvP « dépôt »). Per-monde (uids du monde courant). Défaut []. */
     fusionRoster: { a: string; b: string }[]
+    /** FUSION — NOMS PERSO des fusions jouées en Ligue, clé = paire d'espèces parentes « aId>bId ». Optionnel/additif. */
+    fusionNames?: Record<string, string>
     /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
      *  (contrairement au roster) ; union monotone à la fusion des mondes. Défaut []. */
     fusionHistory: { a: string; b: string }[]
@@ -757,6 +759,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         fusionRoster: Array.isArray(o.fusionRoster)
             ? (o.fusionRoster as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(0, 6)
             : [],
+        fusionNames: o.fusionNames && typeof o.fusionNames === "object" && !Array.isArray(o.fusionNames)
+            ? Object.fromEntries(Object.entries(o.fusionNames as Record<string, unknown>).filter(([, v]) => typeof v === "string").map(([k, v]) => [k, (v as string).slice(0, 20)]))
+            : undefined,
         fusionHistory: Array.isArray(o.fusionHistory)
             ? (o.fusionHistory as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(-200) // garde les 200 PLUS RÉCENTES (cohérent avec recordFusionCreated/mergeWorlds)
             : [],

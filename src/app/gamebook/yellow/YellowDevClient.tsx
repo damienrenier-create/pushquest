@@ -23,6 +23,7 @@ import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtT
 import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
 import { FusionPreviewCard } from "./FusionPreviewCard"
+import { FusionDetailView } from "./FusionDetailView"
 import { FusionPickerView } from "./FusionPickerView"
 import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
@@ -80,7 +81,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, getFusionName, setFusionName } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -435,6 +436,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusionSpeciesRef = useRef<string[]>([])              // espèces éphémères des fusionnés (1 épreuve simple, jusqu'à 6 pour un roster) → dispose au prochain combat / unmount
     const [atelierAdd, setAtelierAdd] = useState<{ a: string; b: string } | null>(null) // ATELIER : brouillon d'ajout (Parent A + Parent B) ; null = vue d'ensemble
     const [atelierPicking, setAtelierPicking] = useState<"a" | "b" | null>(null)         // quel picker de parent est ouvert
+    const [fusionDetail, setFusionDetail] = useState<{ aId: string; bId: string } | null>(null) // ATELIER : fiche COMPLÈTE d'une fusion du roster
+    const [fusionRenaming, setFusionRenaming] = useState<{ aId: string; bId: string } | null>(null) // ATELIER : fusion en cours de renommage
+    const [fusionRenameVal, setFusionRenameVal] = useState("")
     const [fusionCompare, setFusionCompare] = useState<{ a: MonInstance; b: MonInstance } | null>(null) // vue PLEIN ÉCRAN parents vs fusionné
     // AUTEL : oublie la sélection en quittant la salle ; retire les espèces éphémères au démontage.
     useEffect(() => { if (mapPlayer.mapId !== "yellow_combat_autel" && fusionPick.length) setFusionPick([]) }, [mapPlayer.mapId, fusionPick.length])
@@ -728,7 +732,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const buildMyFusionTeam = () => {
         const all = [...player.team, ...player.pc]
         const byU = (uid: string) => all.find((m) => m.uid === uid)!
-        const built = dedupFusions(player.fusionRoster).map((p) => buildFusion(byU(p.a), byU(p.b)))
+        const built = dedupFusions(player.fusionRoster).map((p) => { const a = byU(p.a), b = byU(p.b); return buildFusion(a, b, { name: getFusionName(a.speciesId, b.speciesId) }) })
         const team = built.map((f) => f.instance)
         const species = built.map((f) => getSpecies(f.speciesId)).filter((s): s is SpeciesData => !!s)
         // MÉGAMONARX (stade ULTIME, « fruit de fusion ») : rejoint l'équipe de Ligue (1 slot, MAX 1) si activé.
@@ -3504,8 +3508,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const fusionNameOf = (p: { a: string; b: string }) => {
                     const a = byUid(p.a), b = byUid(p.b)
                     if (!a || !b) return "(invalide)"
-                    // Affiche le NOM OFFICIEL si la paire matche une fusion connue (sinon le mot-valise dérivé).
-                    return officialFusionForParents(a.speciesId, b.speciesId)?.name ?? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name
+                    // NOM PERSO du joueur en priorité (renommé à l'atelier) → sinon nom OFFICIEL → sinon mot-valise dérivé.
+                    return getFusionName(a.speciesId, b.speciesId) ?? officialFusionForParents(a.speciesId, b.speciesId)?.name ?? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name
                 }
                 const valid = dedupFusions(roster)
                 const closeIt = () => { setAtelierAdd(null); setAtelierPicking(null); closeFusionAtelier() }
@@ -3531,7 +3535,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     //   (fusion_<uidA>_<uidB>) → si on rejoue le même roster, disposer après effacerait l'espèce
                     //   qu'on vient de ré-enregistrer → combat planté. (Même ordre que l'épreuve simple.)
                     fusionSpeciesRef.current.forEach(disposeFusion)
-                    const built = valid.map((p) => buildFusion(byUid(p.a)!, byUid(p.b)!))
+                    const built = valid.map((p) => { const a = byUid(p.a)!, b = byUid(p.b)!; return buildFusion(a, b, { name: getFusionName(a.speciesId, b.speciesId) }) })
                     const lvl = Math.max(...built.map((f) => f.result.level))
                     // ÉPREUVE D'OUVERTURE : vs les 2 mêmes fusions ennemies que l'épreuve simple (Tonyront · Maîtrelmin).
                     const enemy = buildFusionTrialEnemy(lvl)
@@ -3559,10 +3563,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         return (
                                             <div key={i} style={{ padding: "6px 9px", border: "1px solid #7c4fc0", borderRadius: 8, margin: "4px 0", background: "rgba(124,79,192,0.07)" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                                    <b style={{ flex: 1, minWidth: 0, color: isValid ? "#7c4fc0" : "#c83030", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i + 1}. {fusionNameOf(p)}</b>
+                                                    {a && b
+                                                        ? <button onClick={() => setFusionDetail({ aId: a.speciesId, bId: b.speciesId })} title="Voir la fiche complète de la fusion"
+                                                            style={{ flex: 1, minWidth: 0, textAlign: "left", background: "transparent", border: "none", padding: 0, cursor: "pointer", fontWeight: 700, color: isValid ? "#7c4fc0" : "#c83030", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "inherit", fontSize: "inherit" }}>{i + 1}. {fusionNameOf(p)} 🔍</button>
+                                                        : <b style={{ flex: 1, minWidth: 0, color: "#c83030", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i + 1}. {fusionNameOf(p)}</b>}
                                                     {prev && <span style={{ fontSize: 10, opacity: 0.9, flexShrink: 0 }}>[{prev.types.join("/")}] N.{prev.level} · <span style={{ color: bst >= 500 ? "#c9a227" : "inherit", fontWeight: 700 }}>BST {bst}</span></span>}
+                                                    {a && b && <button title="Renommer cette fusion" onClick={() => { setFusionRenaming({ aId: a.speciesId, bId: b.speciesId }); setFusionRenameVal(getFusionName(a.speciesId, b.speciesId) ?? "") }}
+                                                        style={{ background: "transparent", border: "1px solid #7c4fc0", color: "#c79cff", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "1px 6px", flexShrink: 0 }}>✏️</button>}
                                                     <button onClick={() => removeAt(i)} style={{ background: "transparent", border: "1px solid #c83030", color: "#c83030", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "1px 6px", flexShrink: 0 }}>✕</button>
                                                 </div>
+                                                {a && b && fusionRenaming?.aId === a.speciesId && fusionRenaming?.bId === b.speciesId && (
+                                                    <div style={{ display: "flex", gap: 5, marginTop: 6 }}>
+                                                        <input autoFocus value={fusionRenameVal} maxLength={20} onChange={(e) => setFusionRenameVal(e.target.value)} placeholder="Nom perso (20 max ; vide = officiel)"
+                                                            style={{ flex: 1, minWidth: 0, boxSizing: "border-box", background: "#160f28", color: "#f3ecff", border: "1px solid #7c4fc0", borderRadius: 6, padding: "5px 8px", fontFamily: "inherit", fontSize: 12 }} />
+                                                        <button onClick={() => { setFusionName(a.speciesId, b.speciesId, fusionRenameVal); persistYellowSave(); setFusionRenaming(null) }}
+                                                            style={{ background: "#7c4fc0", border: "none", color: "#fff", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "0 10px" }}>OK</button>
+                                                    </div>
+                                                )}
                                                 {prev && <div style={{ fontSize: 10, opacity: 0.8, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>PV{prev.stats.hp} · At{prev.stats.atk} · Df{prev.stats.def} · Sp{prev.stats.spc} · Vi{prev.stats.spe}</div>}
                                                 {prev && <div style={{ fontSize: 9.5, opacity: 0.75, marginTop: 2 }}>⚔️ {prev.moves.map((id) => getMove(id)?.name ?? id).join(" · ")}</div>}
                                                 <div style={{ fontSize: 9.5, opacity: 0.5, marginTop: 2 }}>{nameOf(p.a)} + {nameOf(p.b)}</div>
@@ -5068,6 +5085,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 </div>
             )}
+
+            {/* ATELIER — fiche COMPLÈTE d'une fusion du roster (stats, types, forces/faiblesses, moves). */}
+            {fusionDetail && <FusionDetailView aId={fusionDetail.aId} bId={fusionDetail.bId} onClose={() => setFusionDetail(null)} />}
 
             {/* REJEU — MODALE « RAMENER DES DAEMONS » : à la sortie, garder jusqu'à X (= badges gagnés + 1 si Ligue)
                 Daemons choisis parmi l'équipe + le PC du rejeu ; le reste est perdu. */}
