@@ -7,9 +7,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
@@ -32,37 +32,48 @@ export default function DexClient() {
     const router = useRouter()
     const dex = usePokedex()
     const player = usePlayer()
+    const aw = useActiveWorld()
+    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
     // Hydrate la save (idempotent) : sinon seenThisRun en mémoire est vide → dex apparaît vide au refresh direct.
     useEffect(() => { void loadYellowSave() }, [])
 
-    // LIGNES = espèces VUES ce run (seenThisRun) → scoping strict par run, natif (plus de tiérage run3Used/cumulatif).
-    //   On mappe via SPECIES (Pokédex de BASE) et NON getSpecies : les fusions (→ FUSIODEX) et les Daemons CUSTOM des
-    //   joueurs (dexNo hashé 900-9899) ne sont PAS dans SPECIES → naturellement exclus du dex de référence.
-    const seen = useMemo<SpeciesData[]>(
-        () => player.seenThisRun.map((id) => SPECIES[id]).filter((s): s is SpeciesData => !!s),
-        [player.seenThisRun],
+    // « RENCONTRÉ ce run » = capturé (Pokédex cumulatif) OU vu ce run (seenThisRun) OU run 3 (catalogue 100% révélé,
+    //   hors ultra-secrets). Un Daemon rencontré est CLIQUABLE ; un non-rencontré = SILHOUETTE noire non-cliquable.
+    const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
+    const seenSet = useMemo(() => new Set(player.seenThisRun), [player.seenThisRun])
+    const revealed = useMemo(
+        () => (sp: SpeciesData) => caughtSet.has(sp.id) || seenSet.has(sp.id) || (isRun3 && !DEX_ULTRA_SECRET.has(sp.id)),
+        [caughtSet, seenSet, isRun3],
+    )
+
+    // CATALOGUE = TOUT le roster VISIBLE du run (tiéré par run via visibleDexSpecies) → les non-rencontrés apparaissent
+    //   en SILHOUETTE. On EXCLUT du catalogue les surprises encore secrètes : hiddenUntilCaught (clan, Gékroc, Goshendofy…)
+    //   et légendaires ultra-secrets NON rencontrés → pas même une silhouette (anti-spoiler), sauf run 3 (tout révélé).
+    const roster = useMemo<SpeciesData[]>(
+        () => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, player.seenThisRun)
+            .filter((sp) => revealed(sp) || (!sp.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(sp.id)))
+            .sort((a, b) => a.dexNo - b.dexNo),
+        [dex.caught, player.isChampion, player.seenThisRun, isRun2, isRun3, revealed],
     )
     const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun])
-    const lockedCount = useMemo(() => seen.reduce((n, sp) => n + (unlocked.has(sp.id) ? 0 : 1), 0), [seen, unlocked])
+    const encounteredCount = useMemo(() => roster.reduce((n, sp) => n + (revealed(sp) ? 1 : 0), 0), [roster, revealed])
 
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
-        return seen
-            .filter((sp) => {
-                const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
-                // ANTI-LEAK : un ultra-secret non capturé n'apparaît JAMAIS via un filtre de type, et n'est trouvable
-                // en recherche que par son NUMÉRO (jamais par son nom).
-                if (typeFilter && (secret || !sp.types.includes(typeFilter))) return false
-                if (q) {
-                    if (secret) { if (!String(sp.dexNo).includes(q)) return false }
-                    else if (!sp.name.toLowerCase().includes(q) && !String(sp.dexNo).includes(q)) return false
-                }
-                return true
-            })
-            .sort((a, b) => a.dexNo - b.dexNo)
-    }, [query, typeFilter, seen, dex.caught])
+        return roster.filter((sp) => {
+            const enc = revealed(sp)
+            // ANTI-LEAK : une SILHOUETTE (non rencontrée) n'apparaît JAMAIS via un filtre de type, et n'est trouvable
+            //   en recherche que par son NUMÉRO (jamais par son nom).
+            if (typeFilter && (!enc || !sp.types.includes(typeFilter))) return false
+            if (q) {
+                if (!enc) { if (!String(sp.dexNo).includes(q)) return false }
+                else if (!sp.name.toLowerCase().includes(q) && !String(sp.dexNo).includes(q)) return false
+            }
+            return true
+        })
+    }, [query, typeFilter, roster, revealed])
 
     return (
         <div style={S.root}>
@@ -72,7 +83,7 @@ export default function DexClient() {
                     <button onClick={() => router.push("/gamebook/yellow/dex/types")} style={S.chartBtn}>📊 Table des types</button>
                 </div>
                 <h1 style={S.title}>📖 DEX NEXUS</h1>
-                <div style={S.sub}>{entries.length} / {seen.length} espèces vues{lockedCount > 0 ? ` · 🔒 ${lockedCount} fiche(s) verrouillée(s)` : ""}</div>
+                <div style={S.sub}>{encounteredCount} / {roster.length} rencontrées ce run · les autres restent en silhouette 🕳️</div>
 
                 <input
                     value={query}
@@ -98,7 +109,23 @@ export default function DexClient() {
 
             <div style={S.list}>
                 {entries.map((sp) => {
-                    // ULTRA-SECRET non capturé : tout masqué (ombre, nom/types « ??? », BST « 5XX »). Galijah : décompte énigmatique.
+                    const enc = revealed(sp)
+                    // NON RENCONTRÉ ce run → SILHOUETTE noire, NON CLIQUABLE (« ??? », BST masqué). On sait juste
+                    //   qu'il existe (numéro), rien d'autre. C'est le catalogue complet du run, façon Pokédex à trous.
+                    if (!enc) {
+                        return (
+                            <div key={sp.id} style={{ ...S.card, ...S.cardSilhouette, cursor: "default" }} title="Pas encore rencontré ce run">
+                                <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
+                                <DexIcon sp={sp} secret />
+                                <div style={S.body}>
+                                    <div style={S.name}>???</div>
+                                    <div style={S.chips}>{sp.types.map((_t, i) => <span key={i} style={{ ...S.chip, background: "#555" }}>???</span>)}</div>
+                                </div>
+                                <div style={S.bst}><div style={S.bstNum}>{maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></div>
+                            </div>
+                        )
+                    }
+                    // ULTRA-SECRET rencontré mais non capturé : identité masquée « ??? ». Galijah : décompte énigmatique.
                     const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
                     const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
                     // FICHE verrouillée : la LIGNE apparaît (on a vu le Daemon) mais le détail est bloqué tant que L'Archiviste
@@ -129,8 +156,8 @@ export default function DexClient() {
                         </button>
                     )
                 })}
-                {seen.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre des Daemons pour les répertorier, puis bats L'Archiviste pour ouvrir leurs fiches !</div>}
-                {seen.length > 0 && entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
+                {roster.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre des Daemons pour les répertorier, puis bats L'Archiviste pour ouvrir leurs fiches !</div>}
+                {roster.length > 0 && entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
             </div>
         </div>
     )
@@ -151,6 +178,7 @@ const S: Record<string, React.CSSProperties> = {
     list: { maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 },
     card: { display: "flex", alignItems: "center", gap: 12, background: "#f8f8e8", color: "#1c1408", border: "2px solid #000", borderRadius: 8, padding: "8px 12px", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "'Courier New', monospace" },
     cardLocked: { opacity: 0.62, borderColor: "#7a7a7a", background: "#e6e4d6" },
+    cardSilhouette: { background: "#d8d6c8", borderColor: "#9a9a8a", opacity: 0.8 },
     no: { fontSize: 10, fontWeight: 700, opacity: 0.6, width: 38 },
     icon: { width: 44, height: 44, borderRadius: "50%", background: "#fff", border: "2px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, flexShrink: 0 },
     body: { flex: 1, minWidth: 0 },

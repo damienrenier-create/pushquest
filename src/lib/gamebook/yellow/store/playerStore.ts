@@ -43,8 +43,9 @@ import type { PokeType } from "../battle/types"
 
 export const TEAM_MAX = 6
 
-/** Super Pasta : +1 niveau. Prix = (60 + bonus journalier) × 1.5^achats du jour. */
-export const SUPER_PASTA_BASE = 60
+/** Super Pasta : +1 niveau. Prix = (120 + bonus journalier) × 1.5^achats du jour. Prix DOUBLÉ (ex-60) : la Super
+ *  Pasta est désormais aussi offerte gratuitement par la ferveur de clan (badge d'un allié), donc plus chère à l'achat. */
+export const SUPER_PASTA_BASE = 120
 /** Le prix plancher augmente de ce montant à chaque nouveau jour de jeu. */
 export const SUPER_PASTA_DAILY_INCREASE = 3
 export const SUPER_PASTA_GROWTH = 1.5

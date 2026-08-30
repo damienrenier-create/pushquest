@@ -8,7 +8,7 @@ import { useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion, seenZonesOf, firstCatchOf } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
-import { galijahCounterStyle, megamonarxHint } from "../dex/dexShared"
+import { galijahCounterStyle, megamonarxHint, computeTypeDefenses, TYPE_COLORS } from "../dex/dexShared"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -17,7 +17,7 @@ import { dexSize, formatSizeRange, formatWeightRange, weightModeOf } from "@/lib
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
-import type { SpeciesData, StatKey } from "@/lib/gamebook/yellow/battle/types"
+import type { SpeciesData, StatKey, PokeType } from "@/lib/gamebook/yellow/battle/types"
 
 const RARITY: Record<string, { label: string; color: string }> = {
     COMMON: { label: "Commun", color: "#8a8a8a" },
@@ -71,6 +71,28 @@ function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; 
                         </div>
                     </div>
                 </div>
+
+                {/* EFFICACITÉ DES TYPES — info NEUTRE (connue dès l'observation, aucune donnée d'individu) : la « table
+                    des types » sur la fiche, comme le Dex-catalogue. Faiblesses / résistances / immunités. */}
+                {(() => {
+                    const def = computeTypeDefenses(sp.types)
+                    const Row = ({ title, matches }: { title: string; matches: { type: PokeType; mult: number }[] }) =>
+                        matches.length === 0 ? null : (
+                            <div style={{ display: "flex", gap: 5, alignItems: "baseline", flexWrap: "wrap", marginTop: 4 }}>
+                                <span style={{ fontSize: 10.5, opacity: 0.7, minWidth: 62 }}>{title}</span>
+                                {matches.map((m) => <span key={m.type} style={{ ...S.typeChip, background: TYPE_COLORS[m.type] }}>{m.type} ×{m.mult}</span>)}
+                            </div>
+                        )
+                    return (
+                        <div style={S.section}>
+                            <b>🛡️ Efficacité des types</b>
+                            <Row title="Faible à" matches={def.weak} />
+                            <Row title="Résiste à" matches={def.resist} />
+                            <Row title="Immunisé" matches={def.immune} />
+                            {def.weak.length + def.resist.length + def.immune.length === 0 && <div style={{ marginTop: 4, opacity: 0.6, fontSize: 11 }}>Aucune faiblesse ni résistance particulière.</div>}
+                        </div>
+                    )
+                })()}
 
                 {/* LOCALISATION — historique du joueur seulement (zones croisées + ⭐ 1re capture). Zéro indice de chasse. */}
                 <div style={S.section}>
