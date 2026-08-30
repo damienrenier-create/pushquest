@@ -31,6 +31,49 @@ function activeTeamHasType(type: PokeType): boolean {
     return getPlayer().team.some((m) => getSpecies(m.speciesId)?.types.includes(type) === true)
 }
 
+/** VOIX de chaque chef pour son PITCH « meute pleine » : geste, âme du clan, bénéfice du starter, piques anti-rivaux
+ *  (keyées par le clan visé — chaque chef ne disse QUE sa proie + son prédateur, jamais son propre clan). */
+const CLAN_FLAVOR: Record<ClanKey, { gesture: string; identity: string; withStarter: string; disses: Record<ClanKey, string> }> = {
+    air: {
+        gesture: "une brise fait tournoyer sa cape sans qu'il ne bouge",
+        identity: "Le clan de l'AIR ne se laisse jamais toucher : vitesse et esquive, frapper le premier puis s'évaporer.",
+        withStarter: "il fendra les cieux et prendra de vitesse tout ce qui rampe.",
+        disses: { air: "", combat: "les brutes du Combat cognent fort, mais s'effondrent au premier revers — tu les balaieras du ciel", roche: "la Roche est solide, soit… mais lourde et prévisible : on tournoie autour d'elle jusqu'à l'épuisement" },
+    },
+    combat: {
+        gesture: "il fait craquer ses phalanges une à une",
+        identity: "Le clan du COMBAT frappe comme la foudre : puissance titanesque, aucun quartier. Qui recule est déjà à terre.",
+        withStarter: "il défoncera les murs les plus épais d'un seul coup.",
+        disses: { combat: "", roche: "la Roche se croit inébranlable ? Un bon crochet et le menhir se fissure", air: "les fuyards de l'Air voltigent joliment — jusqu'à ce qu'un poing les cloue au sol" },
+    },
+    roche: {
+        gesture: "il reste immobile comme un menhir planté depuis mille ans",
+        identity: "Le clan de la ROCHE ne plie JAMAIS : patience et endurance, encaisser chaque coup et user l'adversaire jusqu'à la poussière.",
+        withStarter: "il tiendra debout là où tous les autres tombent.",
+        disses: { roche: "", air: "les courants d'air de l'Air t'amusent ? Ils se brisent contre nos falaises", combat: "le Combat s'épuise en rage ; nous, on attend, immobiles, qu'ils s'écroulent" },
+    },
+}
+
+/** MEUTE PLEINE — pitch PERSONNALISÉ (≠ ligne générique) : petite analyse d'équipe + argument pro-clan + piques
+ *  contre les DEUX rivaux (proie + prédateur, triangle) + encouragement à revenir. Propre à chaque chef. */
+function teamFullPitch(clan: ClanKey): string[] {
+    const c = CLANS[clan]
+    const f = CLAN_FLAVOR[clan]
+    const team = getPlayer().team
+    const avg = team.length ? Math.round(team.reduce((s, m) => s + m.level, 0) / team.length) : 0
+    const myFr = CLAN_TYPE_FR[c.type] ?? c.type
+    const starter = getSpecies(c.starterId)?.name ?? "l'un des miens"
+    const analysis = activeTeamHasType(c.type)
+        ? `${c.emoji} *${f.gesture}.* Ta meute (niveau moyen ~${avg}) porte déjà du ${myFr} — le sang du ${c.name} coule en toi, je le sens.`
+        : `${c.emoji} *${f.gesture}.* Laisse-moi jauger ta meute… niveau moyen ~${avg}, et pas la moindre once de ${myFr}. Une lacune béante — que MOI seul peux combler.`
+    return [
+        analysis,
+        `${f.identity} Prête-moi serment et ${starter} entrera dans tes rangs : ${f.withStarter}`,
+        `Et surtout, ne va pas t'égarer chez les rivaux : ${f.disses[c.prey]}. Quant au ${CLANS[c.predator].name} ? ${f.disses[c.predator]}.`,
+        `Mais ta meute DÉBORDE — je ne peux rien t'offrir tant qu'elle est pleine. Libère une place, puis reviens sceller le pacte : le ${c.name} n'oublie pas ceux qui hésitent.`,
+    ]
+}
+
 const CLAN_STARTER_LEVEL = 5
 const CLAN_VISIT_BALL_ID = "poke_ball" // Nexus Ball (récompense visite quand le niveau = dizaine)
 
@@ -115,9 +158,7 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
     if (getPlayer().badges.length < CLAN_JOIN_MIN_BADGES) return { lines: [
         `${c.emoji} Prêter serment ? Pas si vite. Reviens quand tu auras décroché ton PREMIER badge d'arène.`,
     ] }
-    if (getPlayer().team.length >= TEAM_MAX) return { lines: [
-        `${c.emoji} Mon disciple n'a pas de place dans une meute pleine. Libère un slot d'équipe, puis reviens sceller le pacte.`,
-    ] }
+    if (getPlayer().team.length >= TEAM_MAX) return { lines: teamFullPitch(clan) }
     return {
         pendingJoin: clan,
         lines: [

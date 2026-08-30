@@ -22,12 +22,20 @@ describe("Pacte de clan (Phase 2)", () => {
         expect(r.lines.join(" ")).toMatch(/pacte/i)
     })
 
-    it("place pleine : le chef refuse tant qu'il n'y a pas de slot libre", () => {
+    it("place pleine : chaque chef fait un PITCH personnalisé et DIFFÉRENT (fin du bug « même discours »)", () => {
         awardBadge("feu")
         for (let i = 0; i < 6; i++) addCaught(createMonInstance("plumiot", 5, { owned: true }))
-        const r = clanChiefPressA("y_clan_air", TODAY)!
-        expect(r.pendingJoin).toBeUndefined()
-        expect(r.lines.join(" ")).toMatch(/place|slot|pleine/i)
+        const air = clanChiefPressA("y_clan_air", TODAY)!
+        const roche = clanChiefPressA("y_clan_roche", TODAY)!
+        const combat = clanChiefPressA("y_clan_combat", TODAY)!
+        for (const r of [air, roche, combat]) {
+            expect(r.pendingJoin).toBeUndefined()               // meute pleine → pas d'offre
+            expect(r.lines.join(" ")).toMatch(/place|meute/i)   // encouragement à libérer une place
+            expect(r.lines.length).toBeGreaterThanOrEqual(4)    // analyse + pro-clan + anti-rivaux + reviens
+        }
+        const a = air.lines.join(" "), rc = roche.lines.join(" "), cb = combat.lines.join(" ")
+        expect(a).not.toBe(rc); expect(rc).not.toBe(cb); expect(a).not.toBe(cb) // 3 discours DISTINCTS
+        expect(a).toMatch(/AIR/); expect(rc).toMatch(/ROCHE/); expect(cb).toMatch(/COMBAT/) // chacun vante SON clan
     })
 
     it("executeClanJoin : serment scellé + Daemon-clan niv 5 en équipe", () => {
