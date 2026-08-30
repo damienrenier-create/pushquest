@@ -638,6 +638,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [player.run3Defeated, player.defeatedTrainers, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, shopOpen, showDialogue])
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
+    const [fusioArmed, setFusioArmed] = useState(false) // ANTI-CLIC-RAPIDE : boutons inertes ~700ms à l'ouverture (le sacre finit souvent sur un tap qui traversait)
     const [loopModal, setLoopModal] = useState(false) // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (accepter/refuser)
     const [loopCreatorOpen, setLoopCreatorOpen] = useState(false) // BOUCLE ENDGAME : créateur de Daemon (mode boucle) ouvert après acceptation
     // ÉPILOGUE « Maître de la Chimère » (fin de Ligue de Fusion) : snapshot du roster vainqueur figé au sacre (fusionSacre
@@ -1740,6 +1741,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearFusioBallOffer()
         }
     }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward])
+
+    // FUSIO-BALL — ANTI-CLIC-RAPIDE : à l'ouverture de l'offre, on ARME les boutons après ~700 ms (le sacre se termine
+    //   souvent sur un tap encore en vol qui fermait l'offre instantanément). Couplé à la SUPPRESSION du clic-hors-cadre.
+    useEffect(() => {
+        if (!fusioBallModal) { setFusioArmed(false); return }
+        setFusioArmed(false)
+        const t = setTimeout(() => setFusioArmed(true), 700)
+        return () => clearTimeout(t)
+    }, [fusioBallModal])
 
     // BOUCLE ENDGAME — OFFRE « recrée ton Daemon & repars » : posée par finishBattle (capture Ukognofy / sacre OR),
     //   consommée ici une fois l'écran LIBRE. On s'enchaîne APRÈS l'offre Fusio-Ball (au sacre OR, les deux partent
@@ -4286,7 +4296,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const price = 1000
                 const canAfford = player.reps >= price
                 return (
-                    <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setFusioBallModal(false)}>
+                    <div style={{ ...menuOverlayStyle, zIndex: 9500 }}>
+                        {/* Aucune fermeture au clic HORS cadre : l'offre ne doit s'« échapper » que par un choix explicite. */}
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>✨ Dieu Spaghetti</div>
                             <div style={{ textAlign: "center", margin: "8px 0", fontSize: 13, lineHeight: 1.5 }}>
@@ -4295,12 +4306,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
                                 💪 {player.reps}/{player.repsCap}{canAfford ? "" : " — insuffisant"}
                             </div>
+                            {!fusioArmed && <div style={{ textAlign: "center", marginBottom: 8, fontSize: 11, opacity: 0.6 }}>⏳ Un instant…</div>}
                             <button
-                                style={canAfford ? menuBtnStyle : menuBtnDimStyle}
-                                disabled={!canAfford}
+                                style={(canAfford && fusioArmed) ? menuBtnStyle : menuBtnDimStyle}
+                                disabled={!canAfford || !fusioArmed}
                                 onClick={() => { if (player.ballLockRemaining > 0) { setFusioBallModal(false); return } if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) { addItem("fusio_ball", 1); clearTrainerMarker(FUSIOBALL_OWED_MARKER) } setFusioBallModal(false) }}
                             >✅ Oui, acheter (1000 reps)</button>
-                            <button style={menuBtnDimStyle} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
+                            <button style={menuBtnDimStyle} disabled={!fusioArmed} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
                         </div>
                     </div>
                 )
