@@ -567,6 +567,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [postEvoQueue, setPostEvoQueue] = useState<MonInstance[]>([])
     const [pcSwapMon, setPcSwapMon] = useState<MonInstance | null>(null) // SWAP 1-action PC→équipe : équipe pleine → qui remplacer par ce Daemon PC
     const [calepinOpen, setCalepinOpen] = useState(false) // 📓 CALEPIN : carnet UNIQUE (astuces + notes) — menu pause + sac
+    const [movesOpen, setMovesOpen] = useState(false) // ⚔️ POKÉDEX DES ATTAQUES (glossaire) — overlay lecture seule, dispo même en combat
+    const [quickRefOpen, setQuickRefOpen] = useState(false) // ⚡ ACCÈS RAPIDE (SELECT) : DEX NEXUS + glossaire d'attaques
     const [selectedFusionUid, setSelectedFusionUid] = useState<string | null>(null) // fiche d'un fusionné (Ligue de Fusion)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
@@ -1431,7 +1433,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 showDialogue("y_ace", "ACE", [
                     "*Tu rassembles tes Daemons K.O. ACE surgit, un carnet corné à la main, sourire en coin.*",
                     "« Première défaite contre moi, hein ? Tiens — un CALEPIN. VIERGE. Note-y ce que ce monde t'apprend, au fil de tes rencontres : panneaux, conseils de PNJ… tout s'y inscrira. »",
-                    "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC (ou presse SELECT). Maintenant relève-toi. »",
+                    "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC, ou au MENU (START). Maintenant relève-toi. »",
                 ])
             }
             else if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
@@ -2328,6 +2330,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }
     const goBack = (): boolean => {
+        if (movesOpen) { setMovesOpen(false); return true } // ⚔️ glossaire d'attaques (overlay lecture seule)
+        if (quickRefOpen) { setQuickRefOpen(false); return true } // ⚡ accès rapide SELECT
         if (glandModal) { advanceGland(); return true } // l'événement du gland s'avance/se ferme au B
         if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (resetStep > 0) { setResetStep(0); return true }
@@ -2453,7 +2457,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 }}
                 onB={() => { if (kartOpen) return; if (battle) { if (menu !== "none") { goBack(); return } dispatchBattleInput("b"); return } if (!goBack()) pressB() }}
                 onStart={() => { if (kartOpen) return; menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
-                onSelect={() => { if (kartOpen) return; menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                onSelect={() => {
+                    if (kartOpen) return
+                    menuTapGuard.current = Date.now()
+                    // SELECT = ACCÈS RAPIDE aux dex : DEX NEXUS (priorité) + glossaire d'attaques. Disponible même EN
+                    //   COMBAT (viewers sûrs, lecture seule) — d'où un overlay dédié plutôt que le menu pause.
+                    setQuickRefOpen((o) => !o)
+                }}
             >
                 {kartOpen && raceCfg && !raceResults ? (
                     // COURSE en cours : rendue DANS l'écran, pilotée par les boutons de la coque.
@@ -2475,6 +2485,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setMenu("none") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
+                        {/* 📓 CALEPIN en TÊTE du menu (reçu d'ACE) : carnet d'astuces + journal d'énergie. Viewer sûr → dispo aussi en combat. */}
+                        {calepinOwned(userId) && <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => { setMenu("none"); setCalepinOpen(true) }}>📓 CALEPIN — astuces &amp; notes</button>}
                         {/* (Bouton « QUITTER LA GROTTE » RETIRÉ : on ne sort de la grotte que par la porte d'entrée
                             (1F 18-19,39), l'échelle du Dôme (B1F 45,5) ou un KO d'équipe.) */}
                         {/* TÉLÉPORTATION — dans le DÔME DE FUSION : retour à un Centre Daemon (Ville Jaune / Cendreville). */}
@@ -2509,7 +2521,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {player.defeatedTrainers.includes(LAMP_RUBBED_MARKER) && (
                             <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => setMenu("genie")}>🧞 VŒUX</button>
                         )}
-                        {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
+                        {!battle && player.collectionneurDexGiven && <button style={menuBtnStyle} onClick={() => setMovesOpen(true)}>⚔️ POKÉDEX DES ATTAQUES <span style={{ opacity: 0.6, fontSize: 10 }}>(SELECT)</span></button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("palmares")}>🏆 PALMARÈS</button>
                         {(() => {
                             // Champion qui n'a pas encore créé son Daemon (Franss & co.) : accès PERMANENT au créateur
@@ -3159,7 +3171,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* Boutique (vendeur) */}
-            {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
+            {/* POKÉDEX DES ATTAQUES (glossaire) — wrapper z-index élevé pour passer AU-DESSUS du combat (viewer sûr, lecture seule). */}
+            {movesOpen && <div style={{ position: "fixed", inset: 0, zIndex: 9600 }}><MovesPanel close={() => setMovesOpen(false)} /></div>}
+
+            {/* ACCÈS RAPIDE (bouton SELECT) : DEX NEXUS (priorité) + glossaire d'attaques. Disponible même EN COMBAT. */}
+            {quickRefOpen && (
+                <div style={{ ...menuOverlayStyle, zIndex: 9550 }} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setQuickRefOpen(false) }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>⚡ ACCÈS RAPIDE</div>
+                        <button style={menuBtnStyle} onClick={() => { setQuickRefOpen(false); router.push("/gamebook/yellow/dex") }}>📖 DEX NEXUS</button>
+                        {player.collectionneurDexGiven
+                            ? <button style={menuBtnStyle} onClick={() => { setQuickRefOpen(false); setMovesOpen(true) }}>⚔️ POKÉDEX DES ATTAQUES</button>
+                            : <div style={{ fontSize: 11, opacity: 0.65, padding: "8px 6px", textAlign: "center", lineHeight: 1.4 }}>⚔️ Glossaire d&apos;attaques : bats <b>L&apos;Archiviste</b> pour l&apos;obtenir.</div>}
+                        <button style={menuBtnDimStyle} onClick={() => setQuickRefOpen(false)}>← Fermer</button>
+                    </div>
+                </div>
+            )}
             {menu === "hof" && <HallOfFameViewer close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
             {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
             {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("palmares")} hasRun2={activeWorld === "ngplus" || player.ngplusUsed} hasRun3={activeWorld === "run3" || player.run3Used} />}

@@ -59,6 +59,7 @@ const SLOT_LABEL = ["matin", "journée", "soirée", "nuit"] as const
 export const ARCHIVISTE_INTRO_LINES: string[] = [
     "HALTE-LÀ ! Ne bouge plus… non, pas toi — c'est le Daemon derrière toi qui bave sur mon carnet ! Enchanté : je suis L'ARCHIVISTE, catalogueur compulsif de Daemons.",
     "Trente ans que je noircis ce DEX. TRENTE ! Il est déjà à ta disposition — croise un Daemon, sa ligne s'inscrit ; capture-le, et tu apprends sa biologie, son dicton, ses mensurations.",
+    "Et parce que tu me plais : je te confie aussi mon GLOSSAIRE DES ATTAQUES — le Pokédex des capacités. Une attaque s'y dévoile dès que tu croises un Daemon qui la possède, que tu peux l'acheter, qu'on te la donne, ou qu'un de tes Daemons l'apprend. Presse SELECT pour l'ACCÈS RAPIDE — le DEX NEXUS et le glossaire réunis, consultables même en plein combat !",
     "MAIS — car il y a un mais — le DOSSIER DE COMBAT (stats, forces & faiblesses, attaques par niveau), ça, je ne le lâche qu'à qui me colle une bonne raclée. Question de principe ! Bats-moi et j'ouvre grand mes dossiers.",
     "Alors, tu me défies ? Ou tu comptes fixer ma loupe toute la journée ? Reviens quand ton équipe aura fière allure, jeune prodige.",
 ]
