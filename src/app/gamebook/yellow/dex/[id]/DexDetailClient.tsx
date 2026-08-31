@@ -103,7 +103,10 @@ export default function DexDetailClient({ id }: { id: string }) {
             </div>
         )
     }
-    const archivesUnlocked = player.fichesUnlockedThisRun.includes(id) // DOSSIER DE COMBAT (stats/faiblesses/attaques/évo) via L'Archiviste
+    const archivisteBeaten = player.fichesUnlockedThisRun.includes(id) // L'Archiviste a débloqué la LECTURE de ce dossier (croisé ce run + battu)
+    // DOSSIER DE COMBAT (stats/faiblesses/attaques/évo) visible = il faut POSSÉDER le Daemon (capturé) ET avoir battu L'Archiviste.
+    //   (Sans le « caught », on lirait les attaques d'un Daemon juste croisé mais jamais capturé — cf. retour Sartay razmarée.)
+    const archivesUnlocked = caught && archivisteBeaten
 
     const bst = baseStatTotal(sp.baseStats)
     const defenses = computeTypeDefenses(sp.types)
@@ -217,7 +220,9 @@ export default function DexDetailClient({ id }: { id: string }) {
                 </div>
                 ) : (
                     <div style={{ ...S.panel, textAlign: "center", opacity: 0.85, padding: "16px 8px", lineHeight: 1.5 }}>
-                        📊 <b>Dossier de combat scellé</b> — bats L&apos;ARCHIVISTE (Ville Jaune) pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b>, ses <b>attaques</b> et son <b>évolution</b>.
+                        📊 <b>Dossier de combat scellé</b> — {!caught
+                            ? <>capture ce Daemon{archivisteBeaten ? "" : " puis bats L'ARCHIVISTE"} pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b>, ses <b>attaques</b> et son <b>évolution</b>.</>
+                            : <>bats L&apos;ARCHIVISTE (Ville Jaune) pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b>, ses <b>attaques</b> et son <b>évolution</b>.</>}
                     </div>
                 )}
 

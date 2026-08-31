@@ -47,7 +47,7 @@ export default function DexClient() {
     const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
     const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
     const caughtThisRunSet = useMemo(() => new Set(player.caughtThisRun ?? []), [player.caughtThisRun])
-    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun]) // L'ARCHIVISTE : BST (stat) débloqué
+    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun]) // L'ARCHIVISTE a débloqué la lecture (BST) — mais visible seulement si AUSSI capturé
     // En run 3 (dex « catalogue complet »), les espèces NORMALES non croisées sont révélées ; mais les SURPRISES
     //   (hiddenUntilCaught : lignées de clan, némésis, Gékroc… + ultra-secrets) restent cachées tant qu'on ne les a
     //   pas rencontrées, sinon la LISTE spoilerait ce que la FICHE détail scelle (anti-spoiler cohérent liste↔fiche).
@@ -56,14 +56,14 @@ export default function DexClient() {
         [caughtSet, seenSet, isRun3],
     )
 
-    // CATALOGUE = TOUT le roster VISIBLE (tiéré par run via visibleDexSpecies) → les non-rencontrés apparaissent en
-    //   SILHOUETTE. On EXCLUT du catalogue les surprises encore secrètes : hiddenUntilCaught (clan, Gékroc, Goshendofy…)
-    //   et légendaires ultra-secrets NON rencontrés → pas même une silhouette (anti-spoiler), même en run 3.
+    // CATALOGUE « à trous » = TOUT ce qui est obtenable dans la run EN COURS + les précédentes (tiéré par visibleDexSpecies).
+    //   Les non-rencontrés apparaissent en SILHOUETTE noire « ??? » (numéro seul) — Y COMPRIS les surprises hiddenUntilCaught
+    //   (clan, némésis, Gékroc…) et les 2 légendaires ultra-secrets : on TEASE leur existence sans rien révéler (le nom, le
+    //   type et le sprite restent masqués tant qu'on ne les a pas croisés — cf. `revealed`). Un champion (Mools) voit TOUT.
     const roster = useMemo<SpeciesData[]>(
-        () => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen)
-            .filter((sp) => revealed(sp) || (!sp.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(sp.id)))
+        () => [...visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen)]
             .sort((a, b) => a.dexNo - b.dexNo),
-        [dex.caught, dex.seen, player.isChampion, isRun2, isRun3, revealed],
+        [dex.caught, dex.seen, player.isChampion, isRun2, isRun3],
     )
     const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, isRun3) // complétion À VIE (capturés / total visible)
     const multiRun = (player.ngplusUsed || player.run3Used) // n'affiche « ce run » que si plusieurs runs existent
@@ -160,7 +160,7 @@ export default function DexClient() {
                             <div style={S.bst}>
                                 {galijahRem !== null
                                     ? <div style={galijahCounterStyle(galijahRem)}>{galijahRem}</div>
-                                    : <><div style={S.bstNum}>{unlocked.has(sp.id) ? baseStatTotal(sp.baseStats) : maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
+                                    : <><div style={S.bstNum}>{caught && unlocked.has(sp.id) ? baseStatTotal(sp.baseStats) : maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
                             </div>
                         </button>
                     )

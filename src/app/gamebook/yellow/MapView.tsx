@@ -1193,7 +1193,7 @@ function RemotePlayerSprite({
             <div
                 style={{
                     position: "absolute",
-                    bottom: "100%",
+                    bottom: "85%", // ↓ rapproché du sprite (avant : 100 % = trop haut au-dessus de la tête)
                     left: "50%",
                     transform: "translateX(-50%) translateY(-1px)",
                     display: "flex",
@@ -1274,7 +1274,7 @@ function ArenaOpponentSprite({
             <div
                 style={{
                     position: "absolute",
-                    bottom: "100%",
+                    bottom: "85%", // ↓ rapproché du sprite (avant : 100 % = trop haut au-dessus de la tête)
                     left: "50%",
                     transform: "translateX(-50%) translateY(-1px)",
                     display: "flex",
