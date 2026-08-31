@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { resetForIntro, getClan, getPlayer, awardBadge, addCaught, rivalClanSignatureInTeam, clanDaemonLevel } from "./playerStore"
+import { resetForIntro, getClan, getPlayer, awardBadge, addCaught, rivalClanSignatureInTeam, clanDaemonLevel, getClansEverJoined, startNgPlusWorld, startRun3World, setGameMode } from "./playerStore"
 import { clanChiefPressA, executeClanJoin } from "./clanChief"
 import { createMonInstance } from "../battle/factory"
+import { funMemeBlockedSpecies } from "../data/clans"
 
 const TODAY = "2026-08-30"
 
@@ -69,5 +70,36 @@ describe("Pacte de clan (Phase 2)", () => {
         expect(r1.lines.join(" ")).toMatch(/⚡/)          // récompense de visite
         const r2 = clanChiefPressA("y_clan_air", TODAY)!   // même jour → plus de visite
         expect(r2.lines.join(" ")).not.toMatch(/⚡/)
+    })
+})
+
+// Registre À VIE des clans rejoints (gate FUN des lignées « meme ») — cf. data/clans.ts + gameStore blockedSpecies.
+describe("Registre clansEverJoined (gate FUN meme)", () => {
+    beforeEach(() => { resetForIntro(); setGameMode("normal") })
+
+    it("neuf : aucun clan ; pacter inscrit le clan au registre + au run courant", () => {
+        expect(getClansEverJoined()).toEqual([])
+        awardBadge("feu"); executeClanJoin("air")
+        expect(getClansEverJoined()).toEqual(["air"])
+    })
+
+    it("le registre SURVIT au NG+ puis au run 3 (à vie, tous runs)", () => {
+        awardBadge("feu"); executeClanJoin("air")
+        startNgPlusWorld(createMonInstance("pivinci", 5, { owned: true }))
+        expect(getClan()).toBeNull()                     // nouveau run : pas encore de pacte
+        expect(getClansEverJoined()).toEqual(["air"])    // …mais le clan reste débloqué À VIE
+        awardBadge("feu"); executeClanJoin("combat")     // 2e clan au run 2
+        expect(getClansEverJoined().sort()).toEqual(["air", "combat"])
+        startRun3World(createMonInstance("pivinci", 5, { owned: true }))
+        expect(getClansEverJoined().sort()).toEqual(["air", "combat"]) // préservé au run 3
+    })
+
+    it("intégration : un joueur FUN débloque UNIQUEMENT la lignée du clan pacté, tous runs", () => {
+        setGameMode("fun")
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche", "plumiot"])
+        awardBadge("feu"); executeClanJoin("air")        // rejoint l'Air → plumiot repop
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche"])
+        startNgPlusWorld(createMonInstance("pivinci", 5, { owned: true }))
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche"]) // plumiot reste débloqué au run 2
     })
 })

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { CLANS, CLAN_KEYS, ALL_CLAN_LINE_IDS, clanOfSpecies, clanOfChief, clanRelation, TRANSCENDANCE_CT_ID } from "./clans"
+import { CLANS, CLAN_KEYS, ALL_CLAN_LINE_IDS, clanOfSpecies, clanOfChief, clanRelation, TRANSCENDANCE_CT_ID, FUN_MEME_CLAN_GATE, funMemeBlockedSpecies } from "./clans"
+import { SPECIES } from "./species"
 import { typeMultiplier } from "../battle/typeChart"
 import { getSpecies } from "./species"
 import { getCt } from "./cts"
@@ -56,5 +57,25 @@ describe("Clans — données & cohérence", () => {
         expect(clanRelation("air", "air")).toBe("self")
         expect(clanRelation("air", "combat")).toBe("prey")
         expect(clanRelation("air", "roche")).toBe("predator")
+    })
+})
+
+describe("Gate « meme » du mode fun (plumiot / maitrezenc / mottoche)", () => {
+    it("les 3 espèces gatées existent et pointent vers Air / Combat / Roche", () => {
+        expect(FUN_MEME_CLAN_GATE).toEqual({ plumiot: "air", maitrezenc: "combat", mottoche: "roche" })
+        for (const id of Object.keys(FUN_MEME_CLAN_GATE)) expect(SPECIES[id], `${id} doit exister`).toBeTruthy()
+    })
+    it("HORS mode fun : jamais de blocage (normal / easy / debutant inchangés)", () => {
+        for (const mode of ["normal", "easy", "debutant"]) {
+            expect(funMemeBlockedSpecies(mode, [])).toEqual([])
+            expect(funMemeBlockedSpecies(mode, ["air", "combat", "roche"])).toEqual([])
+        }
+    })
+    it("FUN sans clan : les 3 memes sont bloquées ; chaque pacte lève UNIQUEMENT sa lignée", () => {
+        expect(funMemeBlockedSpecies("fun", []).sort()).toEqual(["maitrezenc", "mottoche", "plumiot"])
+        expect(funMemeBlockedSpecies("fun", ["air"]).sort()).toEqual(["maitrezenc", "mottoche"])       // plumiot débloqué
+        expect(funMemeBlockedSpecies("fun", ["combat"]).sort()).toEqual(["mottoche", "plumiot"])        // maitrezenc débloqué
+        expect(funMemeBlockedSpecies("fun", ["roche"]).sort()).toEqual(["maitrezenc", "plumiot"])       // mottoche débloqué
+        expect(funMemeBlockedSpecies("fun", ["air", "combat", "roche"])).toEqual([])                    // tout débloqué
     })
 })

@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, getClansEverJoined, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -46,6 +46,7 @@ import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS, RUN3_ARENA_TEAMS, arenaRevancheB
 import { run2ArenaIntro, run2ArenaDefeat } from "../data/ngplusArenaDialogue"
 import { clanChiefPressA, executeClanJoin } from "./clanChief"
 import type { ClanKey } from "../data/clans"
+import { funMemeBlockedSpecies } from "../data/clans"
 import { SIGHT_RUN_TEAMS } from "../data/sightRunTeams"
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
@@ -2031,7 +2032,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
                     // némésis-récompense scellée (défi perdu) + TA création-némésis (ex. Charolyx pour Zyran) jamais en sauvage…
                     //   SAUF au SANCTUAIRE Grotte du Nexus, où l'on capture TOUT — y compris son propre némésis (choix Sartay).
-                    blockedSpecies: [...(nemBlocked ?? []), ...(next.mapId.startsWith("yellow_grotte_nexus") ? [] : ownCreationNemesisSpecies())],
+                    //   + MODE FUN : lignées « meme » (plumiot/maitrezenc/mottoche) tant que le clan du type n'a pas été rejoint À VIE (soustractif : bloque là où elles poppaient, n'ajoute rien).
+                    blockedSpecies: [...(nemBlocked ?? []), ...(next.mapId.startsWith("yellow_grotte_nexus") ? [] : ownCreationNemesisSpecies()), ...funMemeBlockedSpecies(getGameMode(), getClansEverJoined())],
                     funMode: getGameMode() === "fun",     // FUN : boost pop par créneau horaire (×1.5) + IV à PALIERS (funRollIvs)
                     connectedCount: getOnlineCount(),     // FUN : joueurs en ligne (hors soi) → bonus de groupe d'IV excellent
                 })

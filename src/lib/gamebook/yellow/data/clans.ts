@@ -91,3 +91,23 @@ export function clanRelation(mine: ClanKey, target: ClanKey): "self" | "prey" | 
 export function clanTrainDailyMarker(clan: ClanKey, today: string): string {
     return `clan_train_${clan}_${today}`
 }
+
+// ═══════════════════════ GATE « MEME » DU MODE FUN ═══════════════════════
+// Pour un joueur en MODE FUN uniquement : 3 lignées « meme » ne poppent en sauvage QUE si le clan de leur type a été
+// rejoint (À VIE, tous runs confondus). Rejoindre le clan lève le blocage → elles repoppent EXACTEMENT là où elles
+// poppaient déjà. Gate PUREMENT SOUSTRACTIF (via ctx.blockedSpecies) : on ne fait que RETIRER, jamais AJOUTER une pop.
+// (Chaque espèce est gérée par sa POP sauvage, indépendamment de sa lignée d'évolution : plumiot pop en zones VOL,
+//  maitrezenc en pool COMBAT — bien qu'ils partagent la chaîne plumiot→faukon→maitrezenc.)
+export const FUN_MEME_CLAN_GATE: Readonly<Record<string, ClanKey>> = {
+    plumiot: "air",       // oiseau VOL commun (zones VOL) → clan de l'Air
+    maitrezenc: "combat", // sensei COMBAT (pool COMBAT) → clan du Combat
+    mottoche: "roche",    // « Magicarpe rocheux » ROCHE/SOL → clan de la Roche
+}
+
+/** Espèces « meme » à BLOQUER pour ce joueur : mode fun + clan requis NON rejoint à vie. [] hors mode fun (aucun impact). */
+export function funMemeBlockedSpecies(gameMode: string, clansEverJoined: readonly ClanKey[]): string[] {
+    if (gameMode !== "fun") return []
+    return Object.entries(FUN_MEME_CLAN_GATE)
+        .filter(([, clan]) => !clansEverJoined.includes(clan))
+        .map(([speciesId]) => speciesId)
+}
