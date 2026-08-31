@@ -10,7 +10,10 @@
 import { useMemo, useState } from "react"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { CTS } from "@/lib/gamebook/yellow/data/cts"
-import { SPECIES, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, DEX_ULTRA_SECRET, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { knownMoveIds } from "@/lib/gamebook/yellow/data/moveDexReveal"
+import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
 
@@ -52,8 +55,10 @@ const LEARNED_BY: Record<string, Learner[]> = {}
     for (const moveId in tmp) LEARNED_BY[moveId] = [...tmp[moveId].values()].sort((a, b) => a.level - b.level || a.dexNo - b.dexNo)
 }
 
-/** Icône d'un Daemon : sprite PNG, avec repli initiale-sur-pastille-de-type si l'image manque. */
-function LearnerIcon({ sp }: { sp: Learner }) {
+/** Icône d'un Daemon : sprite PNG, avec repli initiale-sur-pastille-de-type si l'image manque. `secret` (jamais
+ *  croisé dans la run en cours / précédentes) → SILHOUETTE noire « ? », identité masquée (même flag que le Dex Nexus). */
+function LearnerIcon({ sp, secret }: { sp: Learner; secret?: boolean }) {
+    if (secret) return <span style={{ width: 30, height: 30, flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#131313", borderRadius: 6, color: "#3a3a3a", fontWeight: 900, fontSize: 15 }} aria-hidden>?</span>
     return (
         <span style={{ position: "relative", width: 30, height: 30, flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center", background: TYPE_COLOR[sp.types[0]], borderRadius: 6, color: "#fff", fontWeight: 800, fontSize: 13 }}>
             {sp.name[0]}
@@ -107,9 +112,29 @@ export default function MovesPanel({ close }: { close: () => void }) {
     const [sort, setSort] = useState<SortKey>("az")
     const [query, setQuery] = useState("")
     const [selected, setSelected] = useState<MoveData | null>(null) // attaque cliquée → panneau « qui l'apprend »
+    const dex = usePokedex()
+    const player = usePlayer()
+    const aw = useActiveWorld()
+    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
+
+    // Attaques CONNUES (règles a-d : espèce croisée / CT achetable / CT reçue / Daemon possédé) → seules celles-ci
+    //   apparaissent au glossaire. Révélation progressive, à vie (dex.seen/caught globaux + inventaire courant).
+    const known = useMemo(() => knownMoveIds({
+        seen: dex.seen, caught: dex.caught,
+        ownedMons: [...player.team, ...player.pc].map((m) => ({ speciesId: m.speciesId, moves: m.moves.map((mv) => mv.moveId) })),
+        badges: player.badges, boughtCts: player.boughtCts ?? [], ownedCts: player.ownedCts ?? [],
+    }), [dex.seen, dex.caught, player.team, player.pc, player.badges, player.boughtCts, player.ownedCts])
+    const knownCount = useMemo(() => Object.values(MOVES).reduce((n, m) => n + (known.has(m.id) ? 1 : 0), 0), [known])
+
+    // « QUI L'APPREND » : mêmes règles de révélation que le DEX NEXUS. On ne montre EN CLAIR que les espèces du
+    //   catalogue de la run en cours + précédentes (visibleDexSpecies) ET rencontrées (revealed) ; le reste = silhouette.
+    const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
+    const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
+    const visibleSet = useMemo(() => new Set(visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen).map((s) => s.id)), [dex.caught, dex.seen, player.isChampion, isRun2, isRun3])
+    const revealedSp = useMemo(() => (id: string) => caughtSet.has(id) || seenSet.has(id) || (isRun3 && !SPECIES[id]?.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(id)), [caughtSet, seenSet, isRun3])
 
     const list = useMemo(() => {
-        const all = Object.values(MOVES)
+        const all = Object.values(MOVES).filter((m) => known.has(m.id))
         const q = query.trim().toLowerCase()
         const filtered = q ? all.filter((m) => m.name.toLowerCase().includes(q) || TYPE_FR[m.type].toLowerCase().includes(q)) : all
         const byName = (a: MoveData, b: MoveData) => a.name.localeCompare(b.name, "fr")
@@ -123,12 +148,12 @@ export default function MovesPanel({ close }: { close: () => void }) {
             if (cb) return 1
             return byName(a, b)
         })
-    }, [sort, query])
+    }, [sort, query, known])
 
     return (
         <div onClick={close} style={overlay}>
             <div onClick={(e) => e.stopPropagation()} style={box}>
-                <div style={header}>⚔️ POKÉDEX DES ATTAQUES <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{Object.keys(MOVES).length} capacités</span></div>
+                <div style={header}>⚔️ POKÉDEX DES ATTAQUES <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{knownCount} / {Object.keys(MOVES).length} découvertes</span></div>
 
                 <div style={{ display: "flex", gap: 6, padding: "8px 10px", borderBottom: `2px solid ${DARK}`, flexWrap: "wrap", alignItems: "center" }}>
                     <input
@@ -143,11 +168,11 @@ export default function MovesPanel({ close }: { close: () => void }) {
                 </div>
 
                 <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
-                    {list.length === 0 && <div style={muted}>Aucune attaque ne correspond.</div>}
+                    {list.length === 0 && <div style={muted}>{query ? "Aucune attaque connue ne correspond." : "Aucune attaque découverte pour l'instant — croise des Daemons, achète ou reçois des CT pour remplir ton glossaire !"}</div>}
                     {list.map((m) => {
                         const bits = effectBits(m)
                         const ct = CT_BY_MOVE[m.id]
-                        const learners = LEARNED_BY[m.id]?.length ?? 0
+                        const learners = LEARNED_BY[m.id]?.reduce((n, l) => n + (visibleSet.has(l.id) ? 1 : 0), 0) ?? 0
                         return (
                             <div key={m.id} style={{ ...card, cursor: "pointer" }} role="button" tabIndex={0}
                                 onClick={() => setSelected(m)}
@@ -178,7 +203,9 @@ export default function MovesPanel({ close }: { close: () => void }) {
             </div>
 
             {selected && (() => {
-                const learners = LEARNED_BY[selected.id] ?? []
+                // Même flag que le DEX NEXUS : on ne liste que les espèces du catalogue de la run en cours + précédentes
+                //   (visibleDexSpecies) ; parmi elles, seules les RENCONTRÉES sont en clair, les autres en silhouette « ??? ».
+                const learners = (LEARNED_BY[selected.id] ?? []).filter((s) => visibleSet.has(s.id))
                 const ct = CT_BY_MOVE[selected.id]
                 return (
                     <div onClick={(e) => { e.stopPropagation(); setSelected(null) }} style={detailOverlay}>
@@ -192,15 +219,20 @@ export default function MovesPanel({ close }: { close: () => void }) {
                             </div>
                             <div style={{ padding: "7px 12px 0", fontSize: 11, color: INK, opacity: 0.75 }}>Daemons qui l'apprennent en montant de niveau :</div>
                             <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
-                                {learners.map((s) => (
-                                    <div key={s.id} style={learnerRow}>
-                                        <LearnerIcon sp={s} />
-                                        <span style={{ fontWeight: 700, color: INK, flex: 1, fontSize: 12 }}>{s.name}</span>
-                                        {s.types.map((t) => <span key={t} style={{ ...typeChip, background: TYPE_COLOR[t] }}>{TYPE_FR[t]}</span>)}
-                                        <span style={lvlBadge}>{s.level <= 1 ? "départ/évo" : `Niv ${s.level}`}</span>
-                                    </div>
-                                ))}
-                                {learners.length === 0 && <div style={muted}>Aucun Daemon ne l'apprend en montant de niveau.</div>}
+                                {learners.map((s) => {
+                                    const rev = revealedSp(s.id) // rencontré ce run / précédents → en clair, sinon silhouette « ??? »
+                                    return (
+                                        <div key={s.id} style={learnerRow}>
+                                            <LearnerIcon sp={s} secret={!rev} />
+                                            <span style={{ fontWeight: 700, color: rev ? INK : "#8a7d5f", flex: 1, fontSize: 12 }}>{rev ? s.name : "???"}</span>
+                                            {rev
+                                                ? s.types.map((t) => <span key={t} style={{ ...typeChip, background: TYPE_COLOR[t] }}>{TYPE_FR[t]}</span>)
+                                                : s.types.map((_t, i) => <span key={i} style={{ ...typeChip, background: "#8a8a7a" }}>???</span>)}
+                                            <span style={lvlBadge}>{s.level <= 1 ? "départ/évo" : `Niv ${s.level}`}</span>
+                                        </div>
+                                    )
+                                })}
+                                {learners.length === 0 && <div style={muted}>Aucun Daemon connu ne l'apprend en montant de niveau.</div>}
                                 {ct && <div style={{ ...muted, marginTop: 8, opacity: 0.85 }}>🎓 Aussi apprenable via <b>{ct.label}</b> (tout Daemon de type compatible).</div>}
                             </div>
                         </div>
