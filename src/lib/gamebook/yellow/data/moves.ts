@@ -213,6 +213,10 @@ export const MOVES: Record<string, MoveData> = {
     machination: { id: "machination", name: "Machination", type: "TENEBRES", power: 0, accuracy: 0, pp: 15, costPower: 50, effect: { statChanges: [{ target: "self", stat: "spc", stages: 2 }] }, description: "Le lanceur ourdit un plan retors : Spécial +2 (fortement, cumulable). L'arme des sweepers spéciaux Ténèbres." },
     aimantation: { id: "aimantation", name: "Aimantation", type: "METAL", power: 0, accuracy: 0, pp: 15, costPower: 50, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }, { target: "self", stat: "spc", stages: 1 }] }, description: "Le lanceur aimante sa carcasse d'acier : +1 Défense ET +1 Spécial. Un mur offensif qui monte en puissance." },
     charme_feerique: { id: "charme_feerique", name: "Charme Féerique", type: "FEE", power: 0, accuracy: 100, pp: 15, costPower: 50, effect: { statChanges: [{ target: "target", stat: "atk", stages: -2 }] }, description: "Un charme enjôleur désarme la cible : -2 Attaque. Neutralise les gros frappeurs physiques." },
+    // ── CT d'ATTAQUE lourdes (100/90) SANS statut — types Métal/Fée/Ténèbres (le PC du Prof Chen n'avait rien à leur proposer) ──
+    fracas_acier: { id: "fracas_acier", name: "Fracas d'Acier", type: "METAL", power: 100, accuracy: 90, pp: 5, description: "Un assaut d'acier titanesque : gros dégâts MÉTAL bruts. La grosse attaque physique du type." },
+    astre_feerique: { id: "astre_feerique", name: "Astre Féerique", type: "FEE", power: 100, accuracy: 90, pp: 5, description: "Un astre de lumière féerique s'abat sur la cible : gros dégâts FÉE spéciaux. La grosse attaque du type." },
+    vortex_obscur: { id: "vortex_obscur", name: "Vortex Obscur", type: "TENEBRES", power: 100, accuracy: 90, pp: 5, description: "Un maelström de ténèbres pures engloutit la cible : gros dégâts TÉNÈBRES spéciaux." },
 }
 
 export function getMove(id: string): MoveData | null {

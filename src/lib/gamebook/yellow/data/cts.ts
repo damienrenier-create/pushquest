@@ -185,6 +185,12 @@ export const CTS: CtData[] = [
     { id: "ct74", label: "CT74", moveId: "machination", price: 0 },       // TÉNÈBRES — +2 Spé (self)
     { id: "ct75", label: "CT75", moveId: "aimantation", price: 0 },       // MÉTAL — +Déf/+Spé (self)
     { id: "ct76", label: "CT76", moveId: "charme_feerique", price: 0 },   // FÉE — -2 Atk cible
+
+    // --- CT d'ATTAQUE 100/90 SANS statut, types Métal/Fée/Ténèbres (PC du Prof Chen) : ces types n'avaient AUCUNE CT
+    //     ≥90 accessible (Fée=0, Métal=ct65 Maître, Ténèbres=ct60 reflet 85). power>0 → entrent au défi CT du labo (damage de type). ---
+    { id: "ct77", label: "CT77", moveId: "fracas_acier", price: 0 },      // MÉTAL 100
+    { id: "ct78", label: "CT78", moveId: "astre_feerique", price: 0 },    // FÉE 100
+    { id: "ct79", label: "CT79", moveId: "vortex_obscur", price: 0 },     // TÉNÈBRES 100
 ]
 
 /** CT DES CLANS (Chapelle de Nouillon) — octroyées UNIQUEMENT par le chef de clan (niv 50 = CT du clan, niv 80 =
