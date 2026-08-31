@@ -1,18 +1,9 @@
-// Nexus Jaune Éclair — page Pokédex (gated feature flag).
+// Nexus Jaune Éclair — /pokedex FUSIONNÉ dans /dex (Dex Nexus unique). Cette route redirige (liens directs / refresh).
 
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
-import { notFound } from "next/navigation"
-import PokedexClient from "./PokedexClient"
+import { redirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 
-export default async function YellowPokedexPage() {
-    const session = await getServerSession(authOptions)
-    const userId = (session?.user as { id?: string })?.id
-    const enabled = await isNexusYellowEnabled(userId)
-    if (!enabled) return notFound()
-
-    return <PokedexClient />
+export default function YellowPokedexPage() {
+    redirect("/gamebook/yellow/dex")
 }

@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
-import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
@@ -38,29 +38,32 @@ export default function DexClient() {
     const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
-    // Hydrate la save (idempotent) : sinon seenThisRun en mémoire est vide → dex apparaît vide au refresh direct.
+    // Hydrate la save (idempotent) : sinon les sets en mémoire sont vides → dex apparaît vide au refresh direct.
     useEffect(() => { void loadYellowSave() }, [])
 
-    // « RENCONTRÉ ce run » = capturé (Pokédex cumulatif) OU vu ce run (seenThisRun) OU run 3 (catalogue 100% révélé,
-    //   hors ultra-secrets). Un Daemon rencontré est CLIQUABLE ; un non-rencontré = SILHOUETTE noire non-cliquable.
+    // DEX FUSIONNÉ (ex Pokédex + Dex-catalogue) : révélation À VIE (Pokédex cumulatif = dex.seen/dex.caught GLOBAUX,
+    //   jamais réinitialisés) → aucune perte pour le vétéran. Un Daemon rencontré À VIE est CLIQUABLE ; jamais
+    //   rencontré = SILHOUETTE noire non-cliquable. Un badge « ✨ ce run » distingue ce qui a été capturé CE run.
     const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
-    const seenSet = useMemo(() => new Set(player.seenThisRun), [player.seenThisRun])
+    const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
+    const caughtThisRunSet = useMemo(() => new Set(player.caughtThisRun ?? []), [player.caughtThisRun])
     const revealed = useMemo(
         () => (sp: SpeciesData) => caughtSet.has(sp.id) || seenSet.has(sp.id) || (isRun3 && !DEX_ULTRA_SECRET.has(sp.id)),
         [caughtSet, seenSet, isRun3],
     )
 
-    // CATALOGUE = TOUT le roster VISIBLE du run (tiéré par run via visibleDexSpecies) → les non-rencontrés apparaissent
-    //   en SILHOUETTE. On EXCLUT du catalogue les surprises encore secrètes : hiddenUntilCaught (clan, Gékroc, Goshendofy…)
+    // CATALOGUE = TOUT le roster VISIBLE (tiéré par run via visibleDexSpecies) → les non-rencontrés apparaissent en
+    //   SILHOUETTE. On EXCLUT du catalogue les surprises encore secrètes : hiddenUntilCaught (clan, Gékroc, Goshendofy…)
     //   et légendaires ultra-secrets NON rencontrés → pas même une silhouette (anti-spoiler), sauf run 3 (tout révélé).
     const roster = useMemo<SpeciesData[]>(
-        () => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, player.seenThisRun)
+        () => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen)
             .filter((sp) => revealed(sp) || (!sp.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(sp.id)))
             .sort((a, b) => a.dexNo - b.dexNo),
-        [dex.caught, player.isChampion, player.seenThisRun, isRun2, isRun3, revealed],
+        [dex.caught, dex.seen, player.isChampion, isRun2, isRun3, revealed],
     )
-    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun])
-    const encounteredCount = useMemo(() => roster.reduce((n, sp) => n + (revealed(sp) ? 1 : 0), 0), [roster, revealed])
+    const comp = pokedexCompletion(player.isChampion, isRun2, isRun3, isRun3) // complétion À VIE (capturés / total visible)
+    const multiRun = (player.ngplusUsed || player.run3Used) // n'affiche « ce run » que si plusieurs runs existent
+    const caughtThisRunCount = useMemo(() => (multiRun ? roster.reduce((n, sp) => n + (caughtThisRunSet.has(sp.id) ? 1 : 0), 0) : 0), [roster, caughtThisRunSet, multiRun])
 
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -85,7 +88,8 @@ export default function DexClient() {
                     <button onClick={() => router.push("/gamebook/yellow/dex/types")} style={S.chartBtn}>📊 Table des types</button>
                 </div>
                 <h1 style={S.title}>📖 DEX NEXUS</h1>
-                <div style={S.sub}>{encounteredCount} / {roster.length} rencontrées ce run · les autres restent en silhouette 🕳️</div>
+                <div style={S.sub}>{comp.caught} / {comp.total} capturés · {comp.pct}%{caughtThisRunCount > 0 ? ` · dont ${caughtThisRunCount} ce run ✨` : ""}</div>
+                <div style={S.barTrack}><div style={{ ...S.barFill, width: `${comp.pct}%` }} /></div>
 
                 <input
                     value={query}
@@ -112,11 +116,11 @@ export default function DexClient() {
             <div style={S.list}>
                 {entries.map((sp) => {
                     const enc = revealed(sp)
-                    // NON RENCONTRÉ ce run → SILHOUETTE noire, NON CLIQUABLE (« ??? », BST masqué). On sait juste
-                    //   qu'il existe (numéro), rien d'autre. C'est le catalogue complet du run, façon Pokédex à trous.
+                    // JAMAIS RENCONTRÉ (à vie) → SILHOUETTE noire, NON CLIQUABLE (« ??? », BST masqué). On sait juste
+                    //   qu'il existe (numéro). Catalogue complet façon Pokédex à trous.
                     if (!enc) {
                         return (
-                            <div key={sp.id} style={{ ...S.card, ...S.cardSilhouette, cursor: "default" }} title="Pas encore rencontré ce run">
+                            <div key={sp.id} style={{ ...S.card, ...S.cardSilhouette, cursor: "default" }} title="Pas encore rencontré">
                                 <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                                 <DexIcon sp={sp} secret />
                                 <div style={S.body}>
@@ -127,23 +131,24 @@ export default function DexClient() {
                             </div>
                         )
                     }
-                    // ULTRA-SECRET rencontré mais non capturé : identité masquée « ??? ». Galijah : décompte énigmatique.
-                    const secret = DEX_ULTRA_SECRET.has(sp.id) && !dex.caught.includes(sp.id)
+                    const caught = caughtSet.has(sp.id)
+                    // ULTRA-SECRET vu mais NON capturé : identité masquée « ??? ». Galijah : décompte énigmatique.
+                    const secret = DEX_ULTRA_SECRET.has(sp.id) && !caught
                     const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
-                    // FICHE verrouillée : la LIGNE apparaît (on a vu le Daemon) mais le détail est bloqué tant que L'Archiviste
-                    //   n'a pas été (re)battu. On garde le clic → la page détail affiche l'écran « fiche verrouillée ».
-                    const locked = !unlocked.has(sp.id)
+                    const caughtNow = caughtThisRunSet.has(sp.id) // ✨ capturé CE run (badge)
+                    // VU mais non capturé → fiche PARTIELLE (BST masqué) ; CAPTURÉ → fiche complète (BST réel). Le détail complet
+                    //   (lore/fun-facts « archives ») reste gaté par L'Archiviste dans la page détail.
                     return (
                         <button
                             key={sp.id}
                             onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)}
-                            style={{ ...S.card, ...(locked && !secret ? S.cardLocked : {}) }}
-                            title={locked ? "Fiche verrouillée — bats L'Archiviste pour l'ouvrir" : sp.name}
+                            style={{ ...S.card, ...(caught ? {} : S.cardLocked) }}
+                            title={caught ? sp.name : secret ? "Vu — capture-le pour révéler son identité" : "Vu — capture-le pour sa fiche complète"}
                         >
                             <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                             <DexIcon sp={sp} secret={secret} />
                             <div style={S.body}>
-                                <div style={S.name}>{secret ? "???" : sp.name.toUpperCase()}</div>
+                                <div style={S.name}>{secret ? "???" : `${caughtNow ? "✨ " : ""}${sp.name.toUpperCase()}`}</div>
                                 <div style={S.chips}>{secret
                                     ? sp.types.map((_t, i) => <span key={i} style={{ ...S.chip, background: "#555" }}>???</span>)
                                     : sp.types.map((t) => <span key={t} style={{ ...S.chip, background: TYPE_COLORS[t] }}>{t}</span>)}</div>
@@ -151,14 +156,12 @@ export default function DexClient() {
                             <div style={S.bst}>
                                 {galijahRem !== null
                                     ? <div style={galijahCounterStyle(galijahRem)}>{galijahRem}</div>
-                                    : locked && !secret
-                                        ? <div style={S.lock}>🔒</div>
-                                        : <><div style={S.bstNum}>{secret ? maskedBst(baseStatTotal(sp.baseStats)) : baseStatTotal(sp.baseStats)}</div><div style={S.bstLbl}>BST</div></>}
+                                    : <><div style={S.bstNum}>{caught ? baseStatTotal(sp.baseStats) : maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
                             </div>
                         </button>
                     )
                 })}
-                {roster.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre des Daemons pour les répertorier, puis bats L'Archiviste pour ouvrir leurs fiches !</div>}
+                {roster.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre et capture des Daemons pour les révéler ! (Bats L'Archiviste pour débloquer leurs archives : lore &amp; anecdotes.)</div>}
                 {roster.length > 0 && entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
             </div>
         </div>
@@ -172,7 +175,9 @@ const S: Record<string, React.CSSProperties> = {
     back: { background: "transparent", border: "1px solid #555", borderRadius: 6, padding: "5px 12px", color: "#c8c8c8", fontFamily: "'Courier New', monospace", fontSize: 12, cursor: "pointer" },
     chartBtn: { background: "#f5d020", border: "2px solid #000", borderRadius: 6, padding: "5px 12px", color: "#1c1408", fontFamily: "'Courier New', monospace", fontSize: 12, fontWeight: 700, cursor: "pointer" },
     title: { fontSize: 18, fontWeight: 900, letterSpacing: 2, marginBottom: 4 },
-    sub: { fontSize: 11, opacity: 0.7, marginBottom: 10 },
+    sub: { fontSize: 11, opacity: 0.7, marginBottom: 6 },
+    barTrack: { height: 8, background: "#333", borderRadius: 4, overflow: "hidden", marginBottom: 10 },
+    barFill: { height: "100%", background: "#f5d020", borderRadius: 4, transition: "width 0.3s" },
     search: { width: "100%", boxSizing: "border-box", background: "#f8f8e8", color: "#1c1408", border: "2px solid #000", borderRadius: 8, padding: "8px 12px", fontFamily: "'Courier New', monospace", fontSize: 13, marginBottom: 10 },
     filterRow: { display: "flex", flexWrap: "wrap", gap: 5 },
     filterChip: { border: "1px solid #000", borderRadius: 5, padding: "3px 7px", fontSize: 9, fontWeight: 700, color: "#1c1408", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 0.5 },

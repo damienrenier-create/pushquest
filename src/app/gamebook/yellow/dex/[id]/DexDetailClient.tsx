@@ -70,44 +70,39 @@ export default function DexDetailClient({ id }: { id: string }) {
     useEffect(() => { void loadYellowSave() }, []) // hydrate la save (accès direct par URL) ; défaut = verrouillé
     const sp = SPECIES[id] // dex de référence = Pokédex de BASE uniquement (les fusions/customs sont dans le FUSIODEX)
     if (!sp) return null
-    // VERROU — modèle « L'Archiviste » : la FICHE n'est consultable que si le Daemon a été VU ce run (seenThisRun,
-    //   la LIGNE existe) ET que la fiche a été DÉBLOQUÉE en battant L'Archiviste (fichesUnlockedThisRun). Accès URL
-    //   direct à un Daemon jamais vu / pas encore débloqué → écran scellé (aucun spoiler stats/learnset/fun fact).
-    const notSeen = !player.seenThisRun.includes(id)
-    const ficheLocked = !player.fichesUnlockedThisRun.includes(id)
-    // LÉGENDAIRE ULTRA-SECRET (MégamonarX/Galijah) : fiche SCELLÉE (silhouette) tant que non CAPTURÉ — même une fois vue.
-    const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !dex.caught.includes(id)
-    if (ultraSecretLocked || notSeen || ficheLocked) {
+    // DEX FUSIONNÉ (Flavor B) — VERROU À VIE : la fiche s'ouvre dès que le Daemon a été RENCONTRÉ à vie (VU ou CAPTURÉ,
+    //   sets GLOBAUX dex.seen/dex.caught). Stats / attaques / évolution → révélées à la CAPTURE. Lore & mensurations
+    //   (« archives ») → gatés par L'Archiviste (fichesUnlockedThisRun). Ultra-secret : identité scellée tant que non capturé.
+    const caught = dex.caught.includes(id)
+    const seen = caught || dex.seen.includes(id)
+    const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !caught
+    if (ultraSecretLocked || !seen) {
         const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
         const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
         const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
         const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(dex.caught.length) : null
-        // Vu-mais-verrouillé : on montre le SPRITE (déjà croisé) ; jamais-vu / ultra-secret : silhouette noire / ❓.
-        const showSprite = ficheLocked && !notSeen && !ultraSecretLocked
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>
                         {ultraSecretLocked
                             ? <img src={sp.sprite} alt="?" style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated", filter: "brightness(0)" }} />
-                            : showSprite
-                                ? <img src={sp.sprite} alt={sp.name} style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated" }} />
-                                : "❓"}
+                            : "❓"}
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>N°{String(sp.dexNo).padStart(3, "0")}</div>
-                    <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>{showSprite ? "🔒 FICHE VERROUILLÉE" : "DAEMON INCONNU"}</div>
+                    <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
                     {gRem !== null && <div style={{ ...galijahCounterStyle(gRem), marginBottom: 8 }}>{gRem}</div>}
                     <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 320, marginLeft: "auto", marginRight: "auto" }}>
                         {ultraSecretLocked
                             ? (mHint ?? (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien."))
-                            : showSprite ? "Tu as croisé ce Daemon, mais sa fiche reste scellée. Bats L'ARCHIVISTE (Ville Jaune) pour débloquer toutes tes fiches vues !"
-                                : "Cette entrée reste scellée… tu la débloqueras en rencontrant ce Daemon."}
+                            : "Cette entrée reste scellée… tu la débloqueras en RENCONTRANT ce Daemon."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
                 </div>
             </div>
         )
     }
+    const archivesUnlocked = player.fichesUnlockedThisRun.includes(id) // palier ARCHIVES (lore/mensurations) via L'Archiviste
 
     const bst = baseStatTotal(sp.baseStats)
     const defenses = computeTypeDefenses(sp.types)
@@ -131,8 +126,14 @@ export default function DexDetailClient({ id }: { id: string }) {
                     </div>
                 </div>
 
-                {/* LORE « premium » : Biologie & Écologie · Le Dicton · Note de l'explorateur (repli sur description). */}
+                {/* ARCHIVES (lore premium) — gaté par L'ARCHIVISTE (fichesUnlockedThisRun). Non débloqué → teaser. */}
                 {(() => {
+                    if (!archivesUnlocked) return (
+                        <div style={S.desc}>
+                            <div style={{ fontWeight: 800, marginBottom: 3 }}>📜 Archives verrouillées</div>
+                            <div style={{ opacity: 0.8 }}>Bats L&apos;ARCHIVISTE (Ville Jaune) pour ouvrir les archives de ce Daemon : biologie &amp; écologie, dicton, note de l&apos;explorateur et mensurations.</div>
+                        </div>
+                    )
                     const lore = dexLore(sp.id)
                     return lore ? (
                         <div style={S.desc}>
@@ -164,6 +165,7 @@ export default function DexDetailClient({ id }: { id: string }) {
 
                 {/* MENSURATIONS — fourchette d'espèce + règle IV (la valeur exacte s'affiche sur la fiche d'un individu). */}
                 {(() => {
+                    if (!archivesUnlocked) return null // mensurations = palier ARCHIVES (avec le lore, débloqué par L'Archiviste)
                     const sz = dexSize(sp.id)
                     if (!sz) return null
                     const phys = weightModeOf(sz, sp.baseStats) === "physical"
@@ -187,7 +189,8 @@ export default function DexDetailClient({ id }: { id: string }) {
                     <div style={S.metaCell}><span style={S.metaLbl}>Courbe</span><span style={S.metaVal}>{growthLabel(sp.id)}</span></div>
                 </div>
 
-                {/* Stats de base */}
+                {/* Stats de base — révélées à la CAPTURE (vu-non-capturé = fiche partielle). */}
+                {caught ? (
                 <div style={S.panel}>
                     <div style={S.panelTitle}>STATS DE BASE</div>
                     {STAT_ORDER.map((k) => {
@@ -208,8 +211,13 @@ export default function DexDetailClient({ id }: { id: string }) {
                         <div style={S.statTrack} />
                     </div>
                 </div>
+                ) : (
+                    <div style={{ ...S.panel, textAlign: "center", opacity: 0.85, padding: "16px 8px", lineHeight: 1.5 }}>
+                        👁 <b>Vu</b> — capture ce Daemon pour révéler ses <b>stats</b>, ses <b>attaques</b> et son <b>évolution</b>.
+                    </div>
+                )}
 
-                {/* Défenses (table des types) */}
+                {/* Défenses (table des types) — connues dès l'OBSERVATION (les types sont visibles). */}
                 <div style={S.panel}>
                     <div style={S.panelTitle}>EFFICACITÉ DES TYPES</div>
                     <MatchRow title="Faible contre" matches={defenses.weak} onPick={goType} />
@@ -220,15 +228,15 @@ export default function DexDetailClient({ id }: { id: string }) {
                     )}
                 </div>
 
-                {/* Lignée évolutive */}
-                {chain.length > 1 && (
+                {/* Lignée évolutive — révélée à la CAPTURE. */}
+                {caught && chain.length > 1 && (
                     <div style={S.panel}>
                         <div style={S.panelTitle}>ÉVOLUTION</div>
                         <div style={S.evoRow}>
                             {chain.map((stage, i) => {
-                                // Un stade VOISIN dont la fiche n'est pas encore débloquée (L'Archiviste) reste « ??? » :
-                                // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
-                                const sealed = !player.fichesUnlockedThisRun.includes(stage.id)
+                                // Un stade VOISIN jamais RENCONTRÉ à vie reste « ??? » : pas de spoiler de son nom/sprite
+                                //   même si on possède un autre stade de la lignée. (Rencontré = vu OU capturé, sets globaux.)
+                                const sealed = !dex.caught.includes(stage.id) && !dex.seen.includes(stage.id)
                                 return (
                                     <div key={stage.id} style={S.evoItem}>
                                         {i > 0 && (
@@ -254,7 +262,8 @@ export default function DexDetailClient({ id }: { id: string }) {
                     </div>
                 )}
 
-                {/* Learnset */}
+                {/* Learnset — révélé à la CAPTURE. */}
+                {caught && (
                 <div style={S.panel}>
                     <div style={S.panelTitle}>CAPACITÉS (PAR NIVEAU)</div>
                     <div style={S.moveHead}>
@@ -282,6 +291,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                         )
                     })}
                 </div>
+                )}
             </div>
         </div>
     )

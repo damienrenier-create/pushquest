@@ -53,8 +53,9 @@ export function archivisteSlot(hour: number): 0 | 1 | 2 | 3 {
 
 const SLOT_LABEL = ["matin", "journée", "soirée", "nuit"] as const
 
-/** PREMIÈRE RENCONTRE — il se présente, REMET le dex (consultable de suite) et explique la règle : lignes à la
- *  rencontre, fiches complètes seulement après l'avoir battu. Affiché une fois (pose collectionneurDexGiven). */
+/** PREMIÈRE RENCONTRE — il se présente et explique son rôle : le Dex Nexus est déjà consultable (toujours), les
+ *  STATS/attaques se révèlent à la CAPTURE, et LUI débloque les ARCHIVES (lore & mensurations) une fois battu.
+ *  Affiché une fois à la rencontre (pose collectionneurDexGiven). */
 export const ARCHIVISTE_INTRO_LINES: string[] = [
     "HALTE-LÀ ! Ne bouge plus… non, pas toi — c'est le Daemon derrière toi qui bave sur mon carnet ! Enchanté : je suis L'ARCHIVISTE, catalogueur compulsif de Daemons.",
     "Trente ans que je noircis ce DEX. TRENTE ! Tiens, il est à toi — oui, TOI. Chaque bestiole que tu croises y inscrira sa ligne, et moi je tiens tout à jour, jour et nuit (surtout la nuit, je dors très mal).",

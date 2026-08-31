@@ -2482,12 +2482,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         )}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
-                        <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
-                        {/* DEX (CATALOGUE) : OFFERT par L'Archiviste (Collectionneur) à sa 1re défaite. Invisible tant
-                            qu'il n'a pas été battu 1× (marker global collectionneurDexGiven). */}
-                        {player.collectionneurDexGiven && (
-                            <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
-                        )}
+                        {/* DEX NEXUS UNIFIÉ (ex Pokédex + Dex-catalogue) : toujours accessible. Révélation à vie + outils
+                            (recherche, filtre, table des types, faiblesses). L'Archiviste débloque les ARCHIVES (lore). */}
+                        <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX NEXUS</button>
                         {/* ENCODER MES REPS → tableau de bord PushQuest (WorkoutEntry). ESSENTIEL pour les comptes INVITÉS
                             (Zyran…), dont la nav normale est masquée : ?dashboard=1 lève leur redirect (cf. app/page.tsx).
                             MODE FUN : plus d'encodage muscu → bouton masqué (leur énergie vient des DÉFIS du labo, étage). */}

@@ -83,7 +83,7 @@ export default function BattleDevClient() {
                     </div>
                     <button onClick={launch} style={S.cta}>RENCONTRE SAUVAGE →</button>
                     <div style={{ marginTop: 14 }}>
-                        <Link href="/gamebook/yellow/pokedex" style={S.link}>📷 Voir le Pokédex</Link>
+                        <Link href="/gamebook/yellow/dex" style={S.link}>📖 Voir le Dex Nexus</Link>
                     </div>
                 </div>
             )}
