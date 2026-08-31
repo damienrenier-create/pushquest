@@ -372,7 +372,7 @@ function buildAreneEau(): TileType[][] {
 }
 
 // CHAPELLE DE NOUILLON (ex-« antre du sbire ») : grande arène circulaire 20×20 calée sur
-// chapelle_nouillon.jpg (2048², tuile 102,4 px). Anneau rocheux + obstacles = murs ("tree").
+// chapelle_nouillon.webp (2048², tuile 102,4 px ; recompressé ~256 Ko). Anneau rocheux + obstacles = murs ("tree").
 // 4 PNJ (cases "table" bloquantes) : SBIRE au centre du ring (10,8) · maître AIR (1,9) ·
 // maître ROCHE (9,2) · maître COMBAT (17,9). Sortie bas-centre (9,18)/(10,18) → Ville Jaune.
 // Grille relevée avec Sartay via l'artefact de débug map (cf. [[feedback_pushquest_debug_map_artifacts]]).
@@ -1539,7 +1539,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: 20,
         height: 20,
         exits: [returnExit("yellow_sbire", 9, 18), returnExit("yellow_sbire", 10, 18)],
-        backgroundImage: "/yellow/sprites/chapelle_nouillon.jpg",
+        backgroundImage: "/yellow/sprites/chapelle_nouillon.webp",
         backgroundImageWidth: 2048, backgroundImageHeight: 2048, backgroundImageTileSize: 102.4, // 2048/20 = 102,4 → calage exact
     },
     yellow_infirmary: {
