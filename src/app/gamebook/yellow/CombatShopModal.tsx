@@ -42,7 +42,8 @@ const HELD_GROUPS: { title: string; cat: HeldItemCategory }[] = [
 // DAEMONS DE LÉGENDE : les Cerveaux/gardiens uniques (famille Gék + Sylvebarbe) rachetables au marchand si
 // jamais capturés — voie de rattrapage HORS-PRIX (dernier recours du complétionniste). Livrés niv 60.
 // Géckèbre + Geaucké ajoutés (choix Sartay 03/08) : c'est leur SEULE voie d'obtention (sinon exclus du dex).
-const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke", "sylvebarbe"]
+// NB : Gékosmic (Gékroc du RUN 3) RETIRÉ (choix Sartay) → INÉDIT au run 3, capturable UNIQUEMENT au Tunnel en run 3.
+const LEGENDARY_LOT = ["gekroc", "gekraise", "geckebre", "geaucke", "sylvebarbe"]
 const LEGENDARY_PRICE = 1500
 const LEGENDARY_LEVEL = 60
 
