@@ -175,6 +175,16 @@ export const CTS: CtData[] = [
     { id: "ct68", label: "CT68", moveId: "impact", price: 0, gift: true },            // clan COMBAT — 1 effet au hasard (apeur/para/Atq+1)
     { id: "ct69", label: "CT69", moveId: "cristallisation", price: 0, gift: true },   // clan ROCHE — attaque encaissée → soin
     { id: "ct70", label: "CT70", moveId: "transcendance", price: 0, gift: true, alsoTypes: ["VOL", "ROCHE"] }, // ULTIME niv 80 — apprenable Vol/Roche/Combat
+
+    // --- CT STATUT INÉDITES — 1 par type qui n'avait AUCUN statut (Feu/Glace/Insecte/Ténèbres/Métal/Fée). Vendues à la
+    //     BOUTIQUE DE JETONS de combat (STATUS_CT_LOT), type-restreintes (seul le type du move les apprend). power 0 →
+    //     hors défi labo. (Vol/Combat/Roche exclus : le CLAN a déjà ses CT statut ; Eau/Élec/Sol/Dragon ont un statut existant.) ---
+    { id: "ct71", label: "CT71", moveId: "fournaise", price: 0 },        // FEU — brûlure sûre
+    { id: "ct72", label: "CT72", moveId: "etreinte_glaciale", price: 0 }, // GLACE — -Vit/-Déf cible
+    { id: "ct73", label: "CT73", moveId: "fil_entravant", price: 0 },     // INSECTE — -Vit/-Préc cible
+    { id: "ct74", label: "CT74", moveId: "machination", price: 0 },       // TÉNÈBRES — +2 Spé (self)
+    { id: "ct75", label: "CT75", moveId: "aimantation", price: 0 },       // MÉTAL — +Déf/+Spé (self)
+    { id: "ct76", label: "CT76", moveId: "charme_feerique", price: 0 },   // FÉE — -2 Atk cible
 ]
 
 /** CT DES CLANS (Chapelle de Nouillon) — octroyées UNIQUEMENT par le chef de clan (niv 50 = CT du clan, niv 80 =

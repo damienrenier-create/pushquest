@@ -25,6 +25,7 @@ const ENERGY = [{ amount: 250, price: 40 }, { amount: 600, price: 85 }]
 // LAMPES TORCHES (Grotte du Nexus) — payées en JC, prix CROISSANTS avec le rayon/l'autonomie (cf. data/items.ts).
 const TORCHES: { id: string; jc: number }[] = [{ id: "torche_1", jc: 40 }, { id: "torche_2", jc: 100 }, { id: "torche_3", jc: 250 }]
 const CT_LOT = ["ct08", "ct12", "ct14", "ct15", "ct16", "ct24", "ct20", "ct10"] // CT fortes (alternative aux badges)
+const STATUS_CT_LOT = ["ct71", "ct72", "ct73", "ct74", "ct75", "ct76"] // CT STATUT inédites (1 par type sans statut : Feu/Glace/Insecte/Ténèbres/Métal/Fée), type-restreintes
 const CT_PRICE = 120
 const NOYAU_PRICE = 200 // Noyau de Métal (évo Magmator → Magnetor), vendu en JC (Sartay 02/08)
 const SYMBOLS = [
@@ -87,6 +88,7 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
 
     const ownedCt = (id: string) => player.ownedCts.includes(id) || player.boughtCts.includes(id)
     const ctOffer = CT_LOT.filter((id) => !ownedCt(id))
+    const statusCtOffer = STATUS_CT_LOT.filter((id) => !ownedCt(id))
     const symOffer = SYMBOLS.filter((s) => !symbols.includes(s.id))
     const legendaryOffer = LEGENDARY_LOT.filter((id) => !!getSpecies(id) && !getPokedex().caught.includes(id))
 
@@ -127,6 +129,14 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         {ctOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT du lot.</Empty> : ctOffer.map((id) => {
                             const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null; const price = catPrice(CT_PRICE, "ct")
                             return <Row key={id} label={mv?.name ?? id} price={price} disabled={busy || (jc ?? 0) < price}
+                                onBuy={() => spend(price, { grant: () => { grantCt(id); recordGrotteShopBuy("ct") }, toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
+                        })}
+                    </Section>
+
+                    <Section title="🎭 CT statut inédites (par type)">
+                        {statusCtOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT statut.</Empty> : statusCtOffer.map((id) => {
+                            const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null; const price = catPrice(CT_PRICE, "ct")
+                            return <Row key={id} label={`${mv?.name ?? id}${mv ? ` · ${mv.type}` : ""}`} desc={mv?.description} price={price} disabled={busy || (jc ?? 0) < price}
                                 onBuy={() => spend(price, { grant: () => { grantCt(id); recordGrotteShopBuy("ct") }, toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
                         })}
                     </Section>
