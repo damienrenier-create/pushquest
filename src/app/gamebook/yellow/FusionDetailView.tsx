@@ -26,6 +26,7 @@ const parentFromSpecies = (sp: ReturnType<typeof getSpecies>): FusionParent => (
 
 export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: string; onClose: () => void }) {
     const [err, setErr] = useState(false)
+    const [parentFiche, setParentFiche] = useState<string | null>(null) // fiche d'un PARENT ouverte par-dessus
     const spA = getSpecies(aId), spB = getSpecies(bId)
     const { url: gen } = useFusionSprite(aId, bId) // hook AVANT tout return conditionnel
     if (!spA || !spB) return null
@@ -40,6 +41,7 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
     const CAP = 200
 
     return (
+        <>
         <div style={S.overlay} onClick={onClose}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
                 <div style={S.header}>
@@ -76,20 +78,26 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
                 <div style={S.section}>⚔️ ATTAQUES</div>
                 <div style={S.moves}>{res.moves.map((id) => getMove(id)?.name ?? id).join(" · ")}</div>
 
-                <div style={S.section}>🧬 PARENTS</div>
-                <div style={S.parents}>{spA.name} <span style={{ opacity: 0.5 }}>✦</span> {spB.name}</div>
+                <div style={S.section}>🧬 PARENTS <span style={{ opacity: 0.5, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>— touche un nom pour sa fiche</span></div>
+                <div style={S.parents}>
+                    <button style={S.parentBtn} onClick={() => setParentFiche(aId)}>{spA.name} 📖</button>
+                    <span style={{ opacity: 0.5, margin: "0 4px" }}>✦</span>
+                    <button style={S.parentBtn} onClick={() => setParentFiche(bId)}>{spB.name} 📖</button>
+                </div>
 
                 <div style={S.note}>Potentiel de BASE (recette d'espèces). Au combat, les stats se recalculent sur tes vrais Daemons parents (niveau, EV/IV, Saiyan).</div>
                 <button style={S.doneBtn} onClick={onClose}>← Retour</button>
             </div>
         </div>
+        {parentFiche && <FusionSpeciesFiche speciesId={parentFiche} heading="🧬 PARENT" onClose={() => setParentFiche(null)} />}
+        </>
     )
 }
 
 // FICHE d'une ESPÈCE-FUSION POSSÉDÉE (Dractriss/Voltriss/Draconvolt…) à son VRAI stade — lue depuis getSpecies
 //   (baseStats + learnset COMPLET + évolution), PAS recalculée depuis les parents. Sert au Fusiodex « Mes fusions »
 //   pour consulter la fiche de tes fusionnés, y compris les stades évolués.
-export function FusionSpeciesFiche({ speciesId, onClose }: { speciesId: string; onClose: () => void }) {
+export function FusionSpeciesFiche({ speciesId, onClose, heading }: { speciesId: string; onClose: () => void; heading?: string }) {
     const [err, setErr] = useState(false)
     const sp = getSpecies(speciesId)
     if (!sp) return null
@@ -105,7 +113,7 @@ export function FusionSpeciesFiche({ speciesId, onClose }: { speciesId: string; 
         <div style={S.overlay} onClick={onClose}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
                 <div style={S.header}>
-                    <span style={S.no}>🐉 FUSION · N°{String(sp.dexNo).padStart(3, "0")}</span>
+                    <span style={S.no}>{heading ?? "🐉 FUSION"} · N°{String(sp.dexNo).padStart(3, "0")}</span>
                     <button style={S.close} onClick={onClose}>✕</button>
                 </div>
                 <div style={{ ...S.hero, boxShadow: `0 0 0 2px ${ring}55, 0 0 26px ${ring}55`, borderColor: ring }}>
@@ -167,7 +175,8 @@ const S: Record<string, React.CSSProperties> = {
     statFill: { display: "block", height: "100%", borderRadius: 5 },
     section: { fontSize: 10.5, fontWeight: 800, letterSpacing: 1.5, opacity: 0.6, marginTop: 13, textTransform: "uppercase" },
     moves: { fontSize: 12.5, lineHeight: 1.5, marginTop: 4, background: "rgba(36,29,56,0.55)", borderRadius: 8, padding: "8px 11px" },
-    parents: { fontSize: 13, marginTop: 4, fontWeight: 700 },
+    parents: { fontSize: 13, marginTop: 4, fontWeight: 700, display: "flex", alignItems: "center", flexWrap: "wrap" },
+    parentBtn: { background: "rgba(36,29,56,0.55)", border: "1px solid #6a5a8a", borderRadius: 8, color: "#e8dcff", fontFamily: "inherit", fontSize: 13, fontWeight: 700, padding: "5px 10px", cursor: "pointer" },
     note: { fontSize: 10.5, opacity: 0.65, fontStyle: "italic", lineHeight: 1.45, marginTop: 12 },
     doneBtn: { width: "100%", marginTop: 12, background: "linear-gradient(180deg,#8a5ae0,#6a3ac8)", border: "1px solid #c79cff", borderRadius: 10, color: "#fff", fontFamily: "'Courier New', monospace", fontSize: 13, fontWeight: 800, padding: "9px", cursor: "pointer" },
     evo: { textAlign: "center", fontSize: 11.5, marginTop: 10, padding: "6px 10px", borderRadius: 9, background: "rgba(36,29,56,0.55)", border: "1px solid #4a3a6a" },
