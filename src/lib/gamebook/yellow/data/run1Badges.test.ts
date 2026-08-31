@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, type BadgeInput } from "./run1Badges"
+import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, TIER_POINTS_FUN, RUN1_FUN_BADGE_IDS, FUN_TIER, medalForRank, medalMult, type BadgeInput } from "./run1Badges"
 import { SPECIES } from "./species"
 
 const empty: BadgeInput = {
@@ -187,5 +187,44 @@ describe("Badges run 1 — socle", () => {
             expect(r.badges.find((b) => b.id === id)!.earned, id).toBe(true)
         }
         expect(r.totalPoints).toBeGreaterThan(200)
+    })
+})
+
+describe("Badges run 1 — barème MODE FUN (8 paliers + médailles)", () => {
+    it("8 paliers 5/10/20/35/60/100/160/250", () => {
+        expect(TIER_POINTS_FUN).toEqual({ s1: 5, s2: 10, s3: 20, s4: 35, s5: 60, d1: 100, d2: 160, d3: 250 })
+    })
+    it("en fun, les points d'un badge suivent son funTier (all_arenas/champion = 250)", () => {
+        const i: BadgeInput = { ...empty, gameMode: "fun", arenaBadges: 5, isChampion: true }
+        const r = evaluateBadges(i)
+        expect(state(r, "all_arenas").points).toBe(250)
+        expect(state(r, "champion").points).toBe(250)
+        expect(state(r, "beat_arena").points).toBe(20) // s3
+        expect(state(r, "first_catch").funTier).toBe("s1")
+    })
+    it("hors fun, le barème 5-tiers est INCHANGÉ", () => {
+        const i: BadgeInput = { ...empty, arenaBadges: 5 }
+        expect(state(evaluateBadges(i), "all_arenas").points).toBe(TIER_POINTS.diamond) // 75, inchangé
+    })
+    it("en fun, le score du run 1 ne compte QUE les badges pré-Sylvebarbe", () => {
+        // fusion_champion est POST-Sylvebarbe → ne doit pas être dans RUN1_FUN_BADGE_IDS.
+        expect(RUN1_FUN_BADGE_IDS.has("all_arenas")).toBe(true)
+        expect(RUN1_FUN_BADGE_IDS.has("champion")).toBe(true)
+        expect(RUN1_FUN_BADGE_IDS.has("fusion_champion")).toBe(false)
+        expect(RUN1_FUN_BADGE_IDS.has("dome_master")).toBe(false)
+        expect(RUN1_FUN_BADGE_IDS.has("catch_megamonarx")).toBe(false)
+        // chaque badge du run 1 a bien un funTier mappé
+        for (const id of RUN1_FUN_BADGE_IDS) expect(FUN_TIER[id], id).toBeDefined()
+    })
+    it("médailles de rapidité : rang 0/1/2 → or/argent/bronze (×1,6 / ×1,4 / ×1,2), ≥3 → aucune", () => {
+        expect(medalForRank(0)).toBe("or"); expect(medalMult("or")).toBe(1.6)
+        expect(medalForRank(1)).toBe("argent"); expect(medalMult("argent")).toBe(1.4)
+        expect(medalForRank(2)).toBe("bronze"); expect(medalMult("bronze")).toBe(1.2)
+        expect(medalForRank(3)).toBe(null); expect(medalMult(null)).toBe(1)
+    })
+    it("nouveaux badges : buy_ct (achat CT) + capture Gecko/Panthère", () => {
+        expect(state(evaluateBadges({ ...empty, ctBought: true }), "buy_ct").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, caught: ["gekroc"] }), "catch_gecko").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, caught: ["pantheon"] }), "catch_panther").earned).toBe(true)
     })
 })

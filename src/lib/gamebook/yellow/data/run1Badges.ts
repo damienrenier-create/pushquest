@@ -29,6 +29,19 @@ export type BadgeTier = "bronze" | "silver" | "gold" | "diamond" | "legend"
 export const TIER_POINTS: Record<BadgeTier, number> = { bronze: 5, silver: 15, gold: 30, diamond: 75, legend: 150 }
 export const TIER_EMOJI: Record<BadgeTier, string> = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎", legend: "🌟" }
 
+// ════════ BARÈME « MODE FUN » (8 paliers, ⭐×1-5 / 💎×1-3) — parallèle, N'ÉCRASE PAS le barème 5-tiers ci-dessus
+//   (les 7 potes en mode normal gardent TIER_POINTS bit-à-bit). Choisi par Sartay. Cf. artefact « Hauts Faits · Run 1 ».
+export type TierFun = "s1" | "s2" | "s3" | "s4" | "s5" | "d1" | "d2" | "d3"
+export const TIER_POINTS_FUN: Record<TierFun, number> = { s1: 5, s2: 10, s3: 20, s4: 35, s5: 60, d1: 100, d2: 160, d3: 250 }
+export const TIER_EMOJI_FUN: Record<TierFun, string> = { s1: "⭐", s2: "⭐⭐", s3: "⭐⭐⭐", s4: "⭐⭐⭐⭐", s5: "⭐⭐⭐⭐⭐", d1: "💎", d2: "💎💎", d3: "💎💎💎" }
+// Médailles de RAPIDITÉ (fun) : 1ᵉʳ fun à décrocher le badge = OR, 2ᵉ = ARGENT, 3ᵉ = BRONZE, ensuite = rien.
+export type FunMedal = "or" | "argent" | "bronze" | null
+export const MEDAL_MULT: Record<"or" | "argent" | "bronze", number> = { or: 1.6, argent: 1.4, bronze: 1.2 }
+export const MEDAL_EMOJI: Record<"or" | "argent" | "bronze", string> = { or: "🥇", argent: "🥈", bronze: "🥉" }
+/** Médaille correspondant à un rang d'obtention (0-indexé) parmi les funs : 0→or, 1→argent, 2→bronze, ≥3→aucune. */
+export function medalForRank(rank: number): FunMedal { return rank === 0 ? "or" : rank === 1 ? "argent" : rank === 2 ? "bronze" : null }
+export function medalMult(m: FunMedal): number { return m ? MEDAL_MULT[m] : 1 }
+
 /** Ensemble des espèces requises pour le badge « Pokédex run 1 complet ». Les légendaires ULTRA-SECRETS
  *  (DEX_ULTRA_SECRET : MégamonarX/Galijah, obtention hors-normes) en sont EXCLUS — ils restent dans le Pokédex
  *  (cartes « ??? » capturables) mais ne bloquent pas la complétion. Calculé une fois. */
@@ -82,6 +95,9 @@ export interface BadgeInput {
     pokerPlayed?: boolean         // pokerFirstGameDone (a joué au moins une partie de poker)
     heldItemEquipped?: boolean    // un Daemon (équipe ou PC) porte un objet tenu
     giftCts?: number              // ownedCts.length (CT-cadeaux/trophées de boss possédées)
+    ctBought?: boolean            // a ACHETÉ au moins une CT à la boutique (boughtCts.length ≥ 1)
+    // MODE DE JEU : "fun" → barème 8 paliers (TIER_POINTS_FUN) au lieu du barème 5-tiers. Sinon inchangé.
+    gameMode?: string
 }
 
 const shinyCount = (i: BadgeInput) => i.mons.filter((m) => m.shiny).length
@@ -228,11 +244,48 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "poker", label: "Jouer une partie de poker", tier: "bronze", secret: true, cat: "special", earned: (i) => i.pokerPlayed === true, reveal: (i) => i.pokerPlayed === true },
     { id: "held_item", label: "Équiper un objet tenu à un Daemon", tier: "silver", secret: true, cat: "special", earned: (i) => i.heldItemEquipped === true, reveal: (i) => i.heldItemEquipped === true },
     { id: "gift_ct", label: "Obtenir une CT-cadeau (trophée de boss)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.giftCts ?? 0) >= 1, reveal: (i) => (i.giftCts ?? 0) >= 1 },
+    { id: "buy_ct", label: "Acheter une CT à la boutique", tier: "bronze", secret: false, cat: "special", earned: (i) => i.ctBought === true },
 
     // ── ⑩ COLLECTIONS de lignées — réunir toute une famille (🔒 révélées dès qu'on croise la famille) ──
+    { id: "catch_gecko", label: "Capturer un Gecko élémentaire", tier: "silver", secret: true, cat: "collection", earned: (i) => GECKO_IDS.some((id) => has(i, id)), reveal: (i) => sawAny(i, ...GECKO_IDS) },
+    { id: "catch_panther", label: "Capturer une Panthère élémentaire", tier: "silver", secret: true, cat: "collection", earned: (i) => has(i, "pantheon") || PANTHEON_EVOS.some((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
     { id: "geckos_all", label: "Réunir les 5 Geckos élémentaires", tier: "gold", secret: true, cat: "collection", earned: (i) => GECKO_IDS.every((id) => has(i, id)), reveal: (i) => sawAny(i, ...GECKO_IDS) },
     { id: "panthers_all", label: "Réunir les 6 Panthères élémentaires", tier: "diamond", secret: true, cat: "collection", earned: (i) => PANTHEON_EVOS.every((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
 ]
+
+// ════════ MODE FUN — palier (TierFun) de CHAQUE badge (affichage) + quels badges comptent au RUN 1 (pré-Sylvebarbe). ════════
+// Les badges POST-Sylvebarbe (fusion / Dôme / légendaires ultimes / Sylvebarbe) portent un funTier POUR L'AFFICHAGE mais
+//   NE COMPTENT PAS dans le score gelé du run 1 — ils iront au RUN FUSION (cf. RUN1_FUN_BADGE_IDS). Réf. artefact « Hauts Faits · Run 1 ».
+export const FUN_TIER: Record<string, TierFun> = {
+    // — pré-Sylvebarbe (RUN 1) —
+    first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1", buy_ct: "s1",
+    full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", orcaline: "s2", beach: "s2",
+    nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2", catch_gecko: "s2", catch_panther: "s2",
+    beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3",
+    types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", pantheon_evo: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4", nexus_deep: "s4",
+    ace7: "s5", tonytony: "s5", geckos_all: "s5",
+    dex100: "d1", level100: "d1", shiny_trade: "d1", panthers_all: "d1",
+    goshendofy: "d2", shiny6: "d2",
+    all_arenas: "d3", champion: "d3", dex_run1: "d3", league_6shiny: "d3",
+    // — post-Sylvebarbe (RUN FUSION) : affichage seul, hors score run 1 —
+    sylvebarbe: "d1", catch_megamonarx: "d3", catch_galijah: "d2", catch_ukognofy: "d2",
+    dome_bronze: "s3", dome_gold: "d1", dome_master: "d2", tour_master: "d2", usine_master: "d2",
+    fusion_first: "s2", fusion_league: "s4", fusion_champion: "d1", catch_fusion: "s4", fusiodex5: "s2", fusiodex15: "s4",
+    fusleague_bronze_run: "d1", fusleague_argent_run: "d2", fusion_gold: "d3",
+}
+/** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
+export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
+    "first_catch", "evolve", "beat_trainer", "sbire", "poker", "grotte_nexus", "buy_ct",
+    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "nexus_guardian", "held_item", "gift_ct", "bet_win", "casino_win", "ace1", "catch_gecko", "catch_panther",
+    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi", "berries",
+    "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena", "nexus_deep",
+    "ace7", "tonytony", "geckos_all",
+    "dex100", "level100", "shiny_trade", "panthers_all",
+    "goshendofy", "shiny6",
+    "all_arenas", "champion", "dex_run1", "league_6shiny",
+])
+/** Palier fun d'un badge (repli s2 si non mappé). */
+export function funTierOf(id: string): TierFun { return FUN_TIER[id] ?? "s2" }
 
 // ════════════════ RÉCOMPENSES EN REPS (⚡) — créditées UNE FOIS à l'obtention, distribuées en DRIP (1000⚡/jour) ════════════════
 // Barème choisi par Sartay. SEULS les hauts faits PRÉ-Sylvebarbe rapportent (l'endgame — fusion/dôme/Sylvebarbe/
@@ -252,9 +305,9 @@ export const BADGE_REPS: Record<string, number> = {
     // ⑦ Exploration
     grotte_nexus: 100, nexus_guardian: 250, nexus_deep: 600, ice_cave: 600, beach: 250, aqua_arena: 600,
     // ⑨ Side-quests
-    berries: 250, poker: 100, held_item: 250, gift_ct: 250,
+    berries: 250, poker: 100, held_item: 250, gift_ct: 250, buy_ct: 50,
     // ⑩ Lignées
-    geckos_all: 500, panthers_all: 500,
+    geckos_all: 500, panthers_all: 500, catch_gecko: 100, catch_panther: 100,
     // ── 6 NOUVEAUX (détection Phase 2 : marqueurs dédiés / collectionneurDexGiven / berry_found:<id>) ──
     fashion_outfit: 100, archiviste_dexupdate: 100, sage_saiyan: 100, daemon_uses_berry: 100, blackjack_win: 100,
     // berry_found:<id> = 50 (phoenix 100) → géré dynamiquement (cf. BERRY_FOUND_REPS).
@@ -284,18 +337,24 @@ export function rewardLabel(id: string): string {
     return BADGE_LABELS[id] ?? EXTRA_REWARD_LABELS[id] ?? (id.startsWith("berry_found:") ? "Baie inédite découverte" : id)
 }
 
-export interface BadgeState { id: string; tier: BadgeTier; points: number; earned: boolean; revealed: boolean }
+export interface BadgeState { id: string; tier: BadgeTier; funTier: TierFun; points: number; earned: boolean; revealed: boolean; isRun1: boolean }
 export interface BadgeResult { badges: BadgeState[]; totalPoints: number; earnedCount: number }
 
-/** Évalue TOUS les badges pour une save → état par badge + score total (= Σ points des badges gagnés). Pur. */
+/** Évalue TOUS les badges pour une save → état par badge + score total (= Σ points des badges gagnés). Pur.
+ *  `points` = points de BASE (SANS médaille) : barème 8-paliers si gameMode="fun", sinon barème 5-tiers historique.
+ *  En fun, `totalPoints`/`earnedCount` ne comptent QUE les badges du RUN 1 (pré-Sylvebarbe). Les médailles (rapidité)
+ *  sont un multiplicateur CROSS-JOUEUR appliqué en dehors (route serveur), pas ici. */
 export function evaluateBadges(i: BadgeInput): BadgeResult {
+    const fun = i.gameMode === "fun"
     let totalPoints = 0, earnedCount = 0
     const badges = BADGES.map((b) => {
         const earned = b.earned(i)
         const revealed = !b.secret || earned || (b.reveal ? b.reveal(i) : false)
-        const points = b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS[b.tier]
-        if (earned) { totalPoints += points; earnedCount++ }
-        return { id: b.id, tier: b.tier, points, earned, revealed }
+        const funTier = funTierOf(b.id)
+        const isRun1 = RUN1_FUN_BADGE_IDS.has(b.id)
+        const points = fun ? TIER_POINTS_FUN[funTier] : (b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS[b.tier])
+        if (earned && (!fun || isRun1)) { totalPoints += points; earnedCount++ }
+        return { id: b.id, tier: b.tier, funTier, points, earned, revealed, isRun1 }
     })
     return { badges, totalPoints, earnedCount }
 }
@@ -307,7 +366,7 @@ export function badgeScore(i: BadgeInput): number {
 
 /** Construit le BadgeInput depuis une YellowSave (monde run 1). `caught` peut être surchargé (run-scopé : la bulle
  *  de rejeu ou un run-1 gelé passent caughtThisRun ; sinon le pokédex global sert de défaut). Champs manquants tolérés. */
-export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly string[]): BadgeInput {
+export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly string[], gameMode?: string): BadgeInput {
     const mons = [...(s.team ?? []), ...(s.pc ?? [])]
     const caughtIds = caught ?? s.pokedex?.caught ?? []
     const seenIds = s.pokedex?.seen ?? []
@@ -350,6 +409,8 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         pokerPlayed: s.pokerFirstGameDone === true,
         heldItemEquipped: mons.some((m) => !!m.heldItem),
         giftCts: (s.ownedCts ?? []).length,
+        ctBought: (s.boughtCts ?? []).length >= 1, // a acheté ≥ 1 CT à la boutique (achat unique persisté)
+        gameMode, // "fun" → barème 8 paliers ; sinon barème 5-tiers historique
         // FUSIONS (dérivés DIRECTS via isFusionId : set canonique d'ids) → rétroactifs, aucun nouveau champ save
         caughtFusion: caughtIds.some(isFusionId),
         fusionsDiscovered: seenIds.filter(isFusionId).length,
