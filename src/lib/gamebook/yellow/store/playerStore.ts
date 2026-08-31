@@ -221,6 +221,7 @@ interface PlayerState {
     /** ATELIER DE FUSION — jusqu'à 6 paires {uid A, uid B} = l'équipe de fusion du joueur (Ligue de Fusion + PvP). */
     fusionRoster: { a: string; b: string }[]
     fusionNames?: Record<string, string> // NOMS PERSO des fusions (clé "aId>bId") → affichés à l'atelier + en Ligue de Fusion
+    fusionMoveOrders?: Record<string, string[]> // ORDRE PERSO des attaques d'une fusion (clé "aId>bId") → slots 1..4 en Ligue/atelier
     fusionHistory: { a: string; b: string }[] // JOURNAL permanent des fusions créées (speciesId des 2 parents, a=tête). Fusiodex.
     /** JOURNAL D'ÉNERGIE — dernières ENTRÉES {ts, source, amount} (diagnostic calepin). Per-monde, borné, optionnel (défaut absent). */
     energyLog?: { ts: number; source: string; amount: number }[]
@@ -647,6 +648,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fichesUnlockedThisRun: p.fichesUnlockedThisRun ?? st.fichesUnlockedThisRun ?? [],
         fusionRoster: p.fusionRoster ?? st.fusionRoster ?? [],
         fusionNames: "fusionNames" in p ? p.fusionNames : st.fusionNames,
+        fusionMoveOrders: "fusionMoveOrders" in p ? p.fusionMoveOrders : st.fusionMoveOrders,
         fusionHistory: p.fusionHistory ?? st.fusionHistory ?? [],
         energyLog: p.energyLog ?? st.energyLog ?? [],
         run3LavapetitSeen: p.run3LavapetitSeen ?? st.run3LavapetitSeen ?? false,
@@ -879,6 +881,18 @@ export function setFusionName(aId: string, bId: string, name: string) {
     for (const [k, v] of Object.entries(st.fusionNames ?? {})) if (k !== key) next[k] = v
     if (clean) next[key] = clean
     st = { ...st, fusionNames: Object.keys(next).length ? next : undefined }
+    emit()
+}
+
+/** ORDRE PERSO des attaques d'une fusion (par espèces parentes), ou undefined si ordre par défaut. */
+export function getFusionMoves(aId: string, bId: string): string[] | undefined { return st.fusionMoveOrders?.[fusionNameKey(aId, bId)] }
+/** Mémorise l'ordre des attaques d'une fusion (permutation de ses attaques naturelles). Tableau vide = retour au défaut. Persisté. */
+export function setFusionMoves(aId: string, bId: string, moves: string[]) {
+    const key = fusionNameKey(aId, bId)
+    const next: Record<string, string[]> = {}
+    for (const [k, v] of Object.entries(st.fusionMoveOrders ?? {})) if (k !== key) next[k] = v
+    if (moves.length) next[key] = [...moves]
+    st = { ...st, fusionMoveOrders: Object.keys(next).length ? next : undefined }
     emit()
 }
 

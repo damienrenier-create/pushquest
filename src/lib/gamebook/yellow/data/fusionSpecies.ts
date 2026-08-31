@@ -248,3 +248,13 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
         parents: [a.name, b.name],
     }
 }
+
+/** Applique un ORDRE PERSO d'attaques (stocké par le joueur) sur la liste NATURELLE d'une fusion : garde les attaques
+ *  encore présentes dans l'ordre choisi, puis complète avec les nouvelles (si les parents ont changé de capacités).
+ *  Sans ordre stocké → ordre naturel intact. Le résultat est TOUJOURS le même ENSEMBLE que `natural`, juste réordonné. */
+export function reorderToStored(natural: readonly string[], stored?: readonly string[]): string[] {
+    if (!stored || stored.length === 0) return [...natural]
+    const kept = stored.filter((m) => natural.includes(m))
+    const added = natural.filter((m) => !kept.includes(m))
+    return [...kept, ...added]
+}

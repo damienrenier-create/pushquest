@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeFusion, fuseStats, fuseTypes, fusionName, fusionWeights, typeRepStat, type FusionParent } from "./fusionSpecies"
+import { computeFusion, fuseStats, fuseTypes, fusionName, fusionWeights, typeRepStat, reorderToStored, type FusionParent } from "./fusionSpecies"
 import { SPECIES } from "./species"
 import type { PokeType } from "../battle/types"
 
@@ -140,5 +140,28 @@ describe("fusion — moveset & objets tenus", () => {
         expect(computeFusion(P("razmaree", 50, "obj_a"), P("divinpate", 50, "obj_b")).heldItems).toEqual(["obj_a", "obj_b"])
         expect(computeFusion(P("razmaree", 50, "obj_a"), P("divinpate")).heldItems).toEqual(["obj_a"])
         expect(computeFusion(P("razmaree"), P("divinpate")).heldItems).toEqual([])
+    })
+})
+
+describe("reorderToStored — ordre perso des attaques d'une fusion", () => {
+    const natural = ["a", "b", "c", "d"]
+    it("sans ordre stocké → ordre naturel (copie)", () => {
+        expect(reorderToStored(natural)).toEqual(natural)
+        expect(reorderToStored(natural, [])).toEqual(natural)
+        expect(reorderToStored(natural, undefined)).not.toBe(natural) // copie, pas la même référence
+    })
+    it("ordre stocké valide → permutation appliquée", () => {
+        expect(reorderToStored(natural, ["d", "c", "b", "a"])).toEqual(["d", "c", "b", "a"])
+        expect(reorderToStored(natural, ["c", "a", "d", "b"])).toEqual(["c", "a", "d", "b"])
+    })
+    it("résultat = TOUJOURS le même ENSEMBLE que natural (aucune perte/ajout)", () => {
+        const r = reorderToStored(natural, ["b", "d", "a", "c"])
+        expect([...r].sort()).toEqual([...natural].sort())
+        expect(r).toHaveLength(natural.length)
+    })
+    it("parents ont changé de capacités : on garde l'ordre des survivantes, on ajoute les nouvelles à la fin", () => {
+        // stocké réfère "x" (disparue) et omet "d" (nouvelle) → x ignorée, d ajoutée en fin
+        expect(reorderToStored(natural, ["c", "x", "a", "b"])).toEqual(["c", "a", "b", "d"])
+        expect(reorderToStored(["a", "b"], ["z", "y"])).toEqual(["a", "b"]) // stock 100% périmé → naturel
     })
 })
