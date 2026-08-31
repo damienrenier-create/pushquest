@@ -147,6 +147,8 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
 
                 <div style={hintStyle}>{meta.hint}</div>
 
+                {tab === "run1" && <Run1RulesBox />}
+
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
 
@@ -175,6 +177,26 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
             </div>
 
             {profile && <PlayerBadgesModal userId={profile.userId} nickname={profile.nickname} close={() => setProfile(null)} />}
+        </div>
+    )
+}
+
+/** RUN 1 (DÉCOUVERTE, mode fun) — encart TOUJOURS visible : les RÈGLES + le CALCUL du score gelé. */
+function Run1RulesBox() {
+    const tiers: [string, number][] = [["⭐", 5], ["⭐⭐", 10], ["⭐⭐⭐", 20], ["⭐⭐⭐⭐", 35], ["⭐⭐⭐⭐⭐", 60], ["💎", 100], ["💎💎", 160], ["💎💎💎", 250]]
+    const medals: [string, string][] = [["🥇 OR", "×1,6"], ["🥈 ARGENT", "×1,4"], ["🥉 BRONZE", "×1,2"], ["▫️ normal", "×1"]]
+    const sub = { fontSize: 10.5, textTransform: "uppercase" as const, letterSpacing: 0.5, opacity: 0.6, margin: "7px 0 3px" }
+    const chipRow = { display: "flex", flexWrap: "wrap" as const, gap: 5 }
+    const chip = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 7px", fontVariantNumeric: "tabular-nums" as const }
+    return (
+        <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,213,74,0.35)", borderRadius: 10, padding: "10px 12px", margin: "0 0 10px", fontSize: 12, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 800, color: "#ffd54a", marginBottom: 5 }}>🧭 RUN 1 — DÉCOUVERTE · comment se calcule ton score</div>
+            <div>Score <b>GELÉ</b> = somme des points de tes badges <b>obtenus avant Sylvebarbe</b>. Points d&apos;un badge = <b>palier × médaille</b>.</div>
+            <div style={sub}>Palier — difficulté</div>
+            <div style={chipRow}>{tiers.map(([e, p]) => <span key={e} style={chip}>{e} <b>{p}</b></span>)}</div>
+            <div style={sub}>Médaille — RAPIDITÉ (course entre funs)</div>
+            <div style={chipRow}>{medals.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
+            <div style={{ marginTop: 7 }}>⚡ Le <b>1ᵉʳ</b> fun à débloquer un badge décroche l&apos;<b>OR</b> — plus tu es rapide, plus tu marques. Classement <b>perso</b> + <b>par clan</b> (somme des points des membres).</div>
         </div>
     )
 }
