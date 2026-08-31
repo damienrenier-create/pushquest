@@ -41,7 +41,7 @@ export const CLAN_JOIN_MIN_BADGES = 1
 
 export const CLANS: Record<ClanKey, ClanData> = {
     air: {
-        key: "air", name: "clan de l'Air", emoji: "🐦", type: "VOL",
+        key: "air", name: "clan de l'Air", emoji: "🌬️", type: "VOL",
         chiefNpcId: "y_clan_air",
         starterId: "pivinci", lineIds: ["pivinci", "vengbec", "picassault"], finalId: "picassault",
         ctId: "ct67",
@@ -49,7 +49,7 @@ export const CLANS: Record<ClanKey, ClanData> = {
         prey: "combat", predator: "roche",
     },
     combat: {
-        key: "combat", name: "clan du Combat", emoji: "🥊", type: "COMBAT",
+        key: "combat", name: "clan du Combat", emoji: "💪", type: "COMBAT",
         chiefNpcId: "y_clan_combat",
         starterId: "lapifrappe", lineIds: ["lapifrappe", "lapunch", "lievrocogne"], finalId: "lievrocogne",
         ctId: "ct68",
@@ -57,7 +57,7 @@ export const CLANS: Record<ClanKey, ClanData> = {
         prey: "roche", predator: "air",
     },
     roche: {
-        key: "roche", name: "clan de la Roche", emoji: "🐼", type: "ROCHE",
+        key: "roche", name: "clan de la Roche", emoji: "🪨", type: "ROCHE",
         chiefNpcId: "y_clan_roche",
         starterId: "fujipanda", lineIds: ["fujipanda", "kilipanda", "pandapurna"], finalId: "pandapurna",
         ctId: "ct69",
