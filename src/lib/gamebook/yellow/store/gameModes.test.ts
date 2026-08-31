@@ -96,6 +96,17 @@ describe("PARRAINAGE — modes de jeu (énergie)", () => {
         expect(getPlayer().items?.poke_ball).toBe(10)     // pas 20
     })
 
+    it("fun : RATTRAPAGE — un compte déjà servi sous l'ancien don (cap<10000) est relevé à 10000 une fois", () => {
+        // Compte fun EXISTANT (ex. DaKumba) : don reçu (modeFillsUsed=1) mais sous l'ancienne valeur 1000 → cap bas.
+        hydratePlayer({ reps: 1532, repsCap: 1536, repsBankedTotal: -1, stats: { ...emptyYellowStats(), modeFillsUsed: 1 } })
+        setGameMode("fun")
+        ensureModeStartGrant()
+        expect(getPlayer().reps).toBe(10000)     // relevé au nouveau pécule
+        expect(getPlayer().repsCap).toBe(10000)
+        ensureModeStartGrant()                    // idempotent : cap déjà à 10000 → aucun re-tirage
+        expect(getPlayer().reps).toBe(10000)
+    })
+
     it("fun : bankReps NE recrédite PLUS les vrais reps (encodage muscu retiré) — comme easy/debutant", () => {
         setGameMode("fun")
         const before = getPlayer().reps

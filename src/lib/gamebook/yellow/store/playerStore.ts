@@ -431,11 +431,23 @@ export function ensureModeStartGrant(): void {
     //   fun n'a pas de remplissages) → aucun nouveau champ de save.
     if (gameMode === "fun") {
         if (runMode() !== "live") return
-        if ((st.stats.modeFillsUsed ?? 0) > 0) return
-        const before = st.reps
-        st = { ...st, reps: Math.max(st.reps, FUN_START_GRANT), repsCap: Math.max(st.repsCap, FUN_START_GRANT), stats: { ...st.stats, modeFillsUsed: 1 } }
-        logEnergyIncome("🎁 Bienvenue (mode fun)", st.reps - before)
-        addItem("poke_ball", 10) // 10 Nexus-Ball pour bien démarrer (addItem émet déjà)
+        if ((st.stats.modeFillsUsed ?? 0) <= 0) {
+            // PREMIER don (nouveau compte fun).
+            const before = st.reps
+            st = { ...st, reps: Math.max(st.reps, FUN_START_GRANT), repsCap: Math.max(st.repsCap, FUN_START_GRANT), stats: { ...st.stats, modeFillsUsed: 1 } }
+            logEnergyIncome("🎁 Bienvenue (mode fun)", st.reps - before)
+            addItem("poke_ball", 10) // 10 Nexus-Ball pour bien démarrer (addItem émet déjà)
+            return
+        }
+        // RATTRAPAGE : don déjà reçu sous l'ANCIENNE valeur (1000⚡) → on relève au nouveau pécule UNE fois. Le
+        //   plafond (`repsCap`, monotone) sert de verrou : une fois relevé à FUN_START_GRANT, ce bloc ne re-tire plus
+        //   (les gains de reps ultérieurs ne baissent jamais le cap). Aucun nouveau champ de save requis.
+        if (st.repsCap < FUN_START_GRANT) {
+            const before = st.reps
+            st = { ...st, reps: Math.max(st.reps, FUN_START_GRANT), repsCap: Math.max(st.repsCap, FUN_START_GRANT) }
+            logEnergyIncome("🎁 Rattrapage mode fun (10 000⚡)", st.reps - before)
+            emit()
+        }
         return
     }
     if (MODE_CFG[gameMode].fill <= 0) return
