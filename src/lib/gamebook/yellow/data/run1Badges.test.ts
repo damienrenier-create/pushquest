@@ -194,11 +194,13 @@ describe("Badges run 1 — barème MODE FUN (8 paliers + médailles)", () => {
     it("8 paliers 5/10/20/35/60/100/160/250", () => {
         expect(TIER_POINTS_FUN).toEqual({ s1: 5, s2: 10, s3: 20, s4: 35, s5: 60, d1: 100, d2: 160, d3: 250 })
     })
-    it("en fun, les points d'un badge suivent son funTier (all_arenas/champion = 250)", () => {
+    it("en fun, les points d'un badge suivent son funTier (champion 250, 5 arènes 160)", () => {
         const i: BadgeInput = { ...empty, gameMode: "fun", arenaBadges: 5, isChampion: true }
         const r = evaluateBadges(i)
-        expect(state(r, "all_arenas").points).toBe(250)
-        expect(state(r, "champion").points).toBe(250)
+        expect(state(r, "champion").points).toBe(250)   // d3
+        expect(state(r, "all_arenas").points).toBe(160) // d2 (revalorisé)
+        expect(state(r, "orcaline").funTier).toBe("s3") // 20 pts
+        expect(state(r, "pantheon_evo").points).toBe(100) // d1
         expect(state(r, "beat_arena").points).toBe(20) // s3
         expect(state(r, "first_catch").funTier).toBe("s1")
     })

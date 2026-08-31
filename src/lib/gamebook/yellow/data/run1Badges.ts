@@ -258,16 +258,19 @@ export const BADGES: readonly BadgeDef[] = [
 //   NE COMPTENT PAS dans le score gelé du run 1 — ils iront au RUN FUSION (cf. RUN1_FUN_BADGE_IDS). Réf. artefact « Hauts Faits · Run 1 ».
 export const FUN_TIER: Record<string, TierFun> = {
     // — pré-Sylvebarbe (RUN 1) —
-    first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1", buy_ct: "s1",
-    full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", orcaline: "s2", beach: "s2",
-    nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2", catch_gecko: "s2", catch_panther: "s2",
-    beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3",
-    types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", pantheon_evo: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4", nexus_deep: "s4",
-    ace7: "s5", tonytony: "s5", geckos_all: "s5",
+    first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1",
+    full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", beach: "s2",
+    nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2",
+    beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3",
+    types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4",
+    pantheon_evo: "d1", // faire évoluer Panthéon → 100 pts (revalorisé)
+    ace7: "s5", tonytony: "s5", buy_ct: "s5", // achat CT = 60 pts (⚠️ à confirmer — valeur élevée pour un achat)
     dex100: "d1", level100: "d1", shiny_trade: "d1", panthers_all: "d1",
-    goshendofy: "d2", shiny6: "d2",
-    all_arenas: "d3", champion: "d3", dex_run1: "d3", league_6shiny: "d3",
+    goshendofy: "d2", shiny6: "d2", all_arenas: "d2", // battre les 5 arènes → 160 pts
+    champion: "d3", dex_run1: "d3", league_6shiny: "d3",
     // — post-Sylvebarbe (RUN FUSION) : affichage seul, hors score run 1 —
+    nexus_deep: "s4", // fond de la Grotte (B2F) = Grotte Fusion → run fusion
+    geckos_all: "s5", catch_gecko: "s2", catch_panther: "s2", // lignées geckos/panthères → run fusion
     sylvebarbe: "d1", catch_megamonarx: "d3", catch_galijah: "d2", catch_ukognofy: "d2",
     dome_bronze: "s3", dome_gold: "d1", dome_master: "d2", tour_master: "d2", usine_master: "d2",
     fusion_first: "s2", fusion_league: "s4", fusion_champion: "d1", catch_fusion: "s4", fusiodex5: "s2", fusiodex15: "s4",
@@ -276,13 +279,15 @@ export const FUN_TIER: Record<string, TierFun> = {
 /** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "first_catch", "evolve", "beat_trainer", "sbire", "poker", "grotte_nexus", "buy_ct",
-    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "nexus_guardian", "held_item", "gift_ct", "bet_win", "casino_win", "ace1", "catch_gecko", "catch_panther",
-    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi", "berries",
-    "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena", "nexus_deep",
-    "ace7", "tonytony", "geckos_all",
-    "dex100", "level100", "shiny_trade", "panthers_all",
+    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "nexus_guardian", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
+    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi",
+    "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena",
+    "ace7", "tonytony",
+    "dex100", "level100", "shiny_trade",
     "goshendofy", "shiny6",
     "all_arenas", "champion", "dex_run1", "league_6shiny",
+    // RETIRÉS du run 1 (→ run FUSION / run 2) : geckos_all, catch_gecko, catch_panther, nexus_deep (B2F=Grotte Fusion),
+    //   panthers_all (cross-run), berries (→ run 2, cf. baie Phénix).
 ])
 /** Palier fun d'un badge (repli s2 si non mappé). */
 export function funTierOf(id: string): TierFun { return FUN_TIER[id] ?? "s2" }

@@ -542,6 +542,20 @@ model FeatFirst {
   at       DateTime @default(now())
 }
 
+// 🏅 MÉDAILLES DE RAPIDITÉ (mode fun) — grave la 1re fois qu'un joueur FUN décroche un haut fait du run 1. Le RANG
+// d'obtention (par badgeId, trié par `at` croissant) donne la médaille : 1er = OR, 2e = ARGENT, 3e = BRONZE, ensuite rien.
+// UNE ligne par (joueur, badge) (contrainte d'unicité). Additif (db:push), gated côté code (cf. /api/gamebook/yellow/fun-badges).
+model YellowFunBadgeEarn {
+  id       String   @id @default(cuid())
+  userId   String
+  nickname String
+  badgeId  String
+  at       DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([badgeId, at])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.
