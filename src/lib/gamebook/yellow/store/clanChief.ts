@@ -20,8 +20,9 @@ import { markCaught } from "./pokedexStore"
 import { persistYellowSave } from "./saveManager"
 import { postClanHallEntry } from "./clanHof"
 
-/** Résultat d'un press-A sur un chef : lignes de dialogue + intention en attente (scellée/annulée à la fermeture). */
-export interface ClanChiefResult { lines: string[]; pendingJoin?: ClanKey; pendingTrain?: ClanKey }
+/** Résultat d'un press-A sur un chef : lignes de dialogue + intention en attente (scellée/annulée à la fermeture).
+ *  showRoster = ouvrir le PANTHÉON du clan (membres + niveau du Daemon-clan confié) quand on visite SON chef. */
+export interface ClanChiefResult { lines: string[]; pendingJoin?: ClanKey; pendingTrain?: ClanKey; showRoster?: ClanKey }
 
 /** Libellé FR du type d'un clan (seuls VOL/COMBAT/ROCHE servent ici). */
 const CLAN_TYPE_FR: Partial<Record<PokeType, string>> = { VOL: "Vol", COMBAT: "Combat", ROCHE: "Roche" }
@@ -142,7 +143,7 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
             postClanHallEntry({ clan, level: clanDaemonLevel(), speciesId: clanDaemonSpeciesId(), transcended: isClanTransGiven() })
         }
         persistYellowSave()
-        return { lines, pendingTrain }
+        return { lines, pendingTrain, showRoster: clan } // + ouvre le Panthéon du clan (membres + niveaux)
     }
 
     // (b) MEMBRE d'un AUTRE clan → ENTRAÎNEMENT RIVAL (×3 coût / ×3 XP, 1×/jour), gate par le TRIANGLE.

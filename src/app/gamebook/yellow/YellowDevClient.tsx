@@ -24,6 +24,7 @@ import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/mult
 import TradeAnimation from "./TradeAnimation"
 import { FusionPreviewCard } from "./FusionPreviewCard"
 import { FusionDetailView } from "./FusionDetailView"
+import ClanRosterPanel from "./ClanRosterPanel"
 import { FusionPickerView } from "./FusionPickerView"
 import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
@@ -315,6 +316,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeFusionMenu = useGameStore((s) => s.closeFusionMenu)
     const fusionAtelierOpen = useGameStore((s) => s.fusionAtelierOpen) // ORDINATEUR DE FUSION (atelier 6 slots)
     const closeFusionAtelier = useGameStore((s) => s.closeFusionAtelier)
+    const clanRosterOpen = useGameStore((s) => s.clanRosterOpen) // PANTHÉON du clan (membres + niveaux), ouvert chez son chef
+    const closeClanRoster = useGameStore((s) => s.closeClanRoster)
     const openPc = useGameStore((s) => s.openPc)
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
     const guideOpen = useGameStore((s) => s.guideOpen)
@@ -5100,6 +5103,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* ATELIER — fiche COMPLÈTE d'une fusion du roster (stats, types, forces/faiblesses, moves). */}
             {fusionDetail && <FusionDetailView aId={fusionDetail.aId} bId={fusionDetail.bId} onClose={() => setFusionDetail(null)} />}
+
+            {/* PANTHÉON DU CLAN — membres + niveau du Daemon-clan confié (ouvert en visitant son chef). */}
+            {!battle && clanRosterOpen && <ClanRosterPanel clan={clanRosterOpen} close={closeClanRoster} />}
 
             {/* REJEU — MODALE « RAMENER DES DAEMONS » : à la sortie, garder jusqu'à X (= badges gagnés + 1 si Ligue)
                 Daemons choisis parmi l'équipe + le PC du rejeu ; le reste est perdu. */}

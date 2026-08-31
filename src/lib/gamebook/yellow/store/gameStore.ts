@@ -501,6 +501,7 @@ interface GameStore {
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     pendingClanJoin: ClanKey | null // offre de pacte de clan en cours → scellé (don du Daemon) à la fermeture
     pendingClanTrain: ClanKey | null // offre d'entraînement d'un chef en cours → combat lancé à la fermeture
+    clanRosterOpen: ClanKey | null // PANTHÉON du clan ouvert (membres + niveaux) en visitant son chef ; null = fermé
     /** Dresseur qui vient de REPÉRER le joueur (embuscade) : affiche sa bulle « ! ».
      *  Gèle le déplacement le temps de l'alerte, puis son intro s'ouvre (cf. move). */
     trainerAlertId: string | null
@@ -586,6 +587,7 @@ interface GameStore {
     closeUsineMenu: () => void
     closeFusionMenu: () => void
     closeFusionAtelier: () => void
+    closeClanRoster: () => void
     openPc: () => void
     closeSign: () => void
     closePoster: () => void
@@ -1280,6 +1282,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingAce: false,
     pendingClanJoin: null,
     pendingClanTrain: null,
+    clanRosterOpen: null,
     trainerAlertId: null,
     pendingNgplusAbandon: false,
     pendingOrcaline: false,
@@ -2668,6 +2671,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 dialogue: { npcId: npc.id, npcName: npc.name, lines: clanRes.lines, lineIndex: 0 },
                 pendingClanJoin: clanRes.pendingJoin ?? null,
                 pendingClanTrain: clanRes.pendingTrain ?? null,
+                clanRosterOpen: clanRes.showRoster ?? null,
             })
             return
         }
@@ -3182,6 +3186,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeUsineMenu: () => set({ usineMenuOpen: false }),
     closeFusionMenu: () => set({ fusionMenuOpen: false }),
     closeFusionAtelier: () => set({ fusionAtelierOpen: false }),
+    closeClanRoster: () => set({ clanRosterOpen: null }),
     openPc: () => set({ pcOpen: true, fusionAtelierOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),
