@@ -53,13 +53,13 @@ export function archivisteSlot(hour: number): 0 | 1 | 2 | 3 {
 
 const SLOT_LABEL = ["matin", "journée", "soirée", "nuit"] as const
 
-/** PREMIÈRE RENCONTRE — il se présente et explique son rôle : le Dex Nexus est déjà consultable (toujours), les
- *  STATS/attaques se révèlent à la CAPTURE, et LUI débloque les ARCHIVES (lore & mensurations) une fois battu.
- *  Affiché une fois à la rencontre (pose collectionneurDexGiven). */
+/** PREMIÈRE RENCONTRE — il se présente et explique son rôle : le Dex Nexus est déjà consultable (toujours) ; VOIR un
+ *  Daemon révèle son sprite+types, le CAPTURER apprend sa biologie/dicton/mensurations, et LUI (une fois battu) donne
+ *  le DOSSIER DE COMBAT (stats, forces/faiblesses, attaques). Affiché une fois à la rencontre (pose collectionneurDexGiven). */
 export const ARCHIVISTE_INTRO_LINES: string[] = [
     "HALTE-LÀ ! Ne bouge plus… non, pas toi — c'est le Daemon derrière toi qui bave sur mon carnet ! Enchanté : je suis L'ARCHIVISTE, catalogueur compulsif de Daemons.",
-    "Trente ans que je noircis ce DEX. TRENTE ! Tiens, il est à toi — oui, TOI. Chaque bestiole que tu croises y inscrira sa ligne, et moi je tiens tout à jour, jour et nuit (surtout la nuit, je dors très mal).",
-    "MAIS — car il y a un mais — la FICHE COMPLÈTE (poids, humeur, petits secrets honteux), je ne la lâche qu'à qui me colle une bonne raclée. Question de principe ! Bats-moi et j'ouvre grand les archives.",
+    "Trente ans que je noircis ce DEX. TRENTE ! Il est déjà à ta disposition — croise un Daemon, sa ligne s'inscrit ; capture-le, et tu apprends sa biologie, son dicton, ses mensurations.",
+    "MAIS — car il y a un mais — le DOSSIER DE COMBAT (stats, forces & faiblesses, attaques par niveau), ça, je ne le lâche qu'à qui me colle une bonne raclée. Question de principe ! Bats-moi et j'ouvre grand mes dossiers.",
     "Alors, tu me défies ? Ou tu comptes fixer ma loupe toute la journée ? Reviens quand ton équipe aura fière allure, jeune prodige.",
 ]
 
@@ -69,7 +69,7 @@ export function archivisteDefeatLines(monName: string, fact: string | null, matc
     const remaining = Math.max(0, ARCHIVISTE_MAX_MATCHES_PER_DAY - matchesPlayedToday)
     const lines = [
         "AH ! Battu ! Magnifiquement, honteusement battu ! Ça ne m'était plus arrivé depuis… euh… bref, bravo !",
-        "Marché conclu, je m'incline : j'ouvre les archives ! Toutes les fiches des Daemons que tu as croisés sont désormais COMPLÈTES dans ton dex — poids, secrets, tout le tralala.",
+        "Marché conclu, je m'incline : j'ouvre mes DOSSIERS DE COMBAT ! Stats, forces & faiblesses et attaques de tous les Daemons que tu as croisés sont désormais RÉVÉLÉS dans ton dex.",
         fact
             ? `Et cadeau du perdant, un petit fait sur ton ${monName} : ${fact}`
             : `Et prends bien soin de ton ${monName}, c'est une pièce de collection, ça !`,

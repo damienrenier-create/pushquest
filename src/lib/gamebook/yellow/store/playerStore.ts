@@ -215,8 +215,8 @@ interface PlayerState {
     caughtThisRun: string[]
     /** L'ARCHIVISTE — LIGNES du dex vues CE run (per-monde) → scoping strict par run. */
     seenThisRun: string[]
-    /** L'ARCHIVISTE — palier ARCHIVES (lore & mensurations) débloqué CE run (per-monde), rempli en bloc à SA DÉFAITE.
-     *  (Dex FUSIONNÉ : les stats/attaques se révèlent à la CAPTURE ; ce set ne gate plus que les archives premium.) */
+    /** L'ARCHIVISTE — DOSSIER DE COMBAT (stats, forces/faiblesses, attaques, évolution) débloqué CE run (per-monde),
+     *  rempli en bloc à SA DÉFAITE. (Dex FUSIONNÉ : voir = sprite+types ; capturer = biologie/dicton/mensurations.) */
     fichesUnlockedThisRun: string[]
     /** ATELIER DE FUSION — jusqu'à 6 paires {uid A, uid B} = l'équipe de fusion du joueur (Ligue de Fusion + PvP). */
     fusionRoster: { a: string; b: string }[]

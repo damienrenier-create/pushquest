@@ -47,6 +47,7 @@ export default function DexClient() {
     const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
     const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
     const caughtThisRunSet = useMemo(() => new Set(player.caughtThisRun ?? []), [player.caughtThisRun])
+    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun]) // L'ARCHIVISTE : BST (stat) débloqué
     const revealed = useMemo(
         () => (sp: SpeciesData) => caughtSet.has(sp.id) || seenSet.has(sp.id) || (isRun3 && !DEX_ULTRA_SECRET.has(sp.id)),
         [caughtSet, seenSet, isRun3],
@@ -156,12 +157,12 @@ export default function DexClient() {
                             <div style={S.bst}>
                                 {galijahRem !== null
                                     ? <div style={galijahCounterStyle(galijahRem)}>{galijahRem}</div>
-                                    : <><div style={S.bstNum}>{caught ? baseStatTotal(sp.baseStats) : maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
+                                    : <><div style={S.bstNum}>{unlocked.has(sp.id) ? baseStatTotal(sp.baseStats) : maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
                             </div>
                         </button>
                     )
                 })}
-                {roster.length === 0 && <div style={S.empty}>Ton dex est vide. Rencontre et capture des Daemons pour les révéler ! (Bats L'Archiviste pour débloquer leurs archives : lore &amp; anecdotes.)</div>}
+                {roster.length === 0 && <div style={S.empty}>Ton dex est vide. Croise des Daemons pour les révéler, capture-les pour leur biologie ! (Bats L'Archiviste pour leur dossier de combat : stats, faiblesses &amp; attaques.)</div>}
                 {roster.length > 0 && entries.length === 0 && <div style={S.empty}>Aucun Daemon ne correspond.</div>}
             </div>
         </div>

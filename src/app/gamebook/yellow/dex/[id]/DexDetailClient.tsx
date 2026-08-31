@@ -102,7 +102,7 @@ export default function DexDetailClient({ id }: { id: string }) {
             </div>
         )
     }
-    const archivesUnlocked = player.fichesUnlockedThisRun.includes(id) // palier ARCHIVES (lore/mensurations) via L'Archiviste
+    const archivesUnlocked = player.fichesUnlockedThisRun.includes(id) // DOSSIER DE COMBAT (stats/faiblesses/attaques/évo) via L'Archiviste
 
     const bst = baseStatTotal(sp.baseStats)
     const defenses = computeTypeDefenses(sp.types)
@@ -126,12 +126,12 @@ export default function DexDetailClient({ id }: { id: string }) {
                     </div>
                 </div>
 
-                {/* ARCHIVES (lore premium) — gaté par L'ARCHIVISTE (fichesUnlockedThisRun). Non débloqué → teaser. */}
+                {/* BIOLOGIE / DICTON / NOTE — appris à la CAPTURE (« on possède le Daemon, on connaît sa nature »). */}
                 {(() => {
-                    if (!archivesUnlocked) return (
+                    if (!caught) return (
                         <div style={S.desc}>
-                            <div style={{ fontWeight: 800, marginBottom: 3 }}>📜 Archives verrouillées</div>
-                            <div style={{ opacity: 0.8 }}>Bats L&apos;ARCHIVISTE (Ville Jaune) pour ouvrir les archives de ce Daemon : biologie &amp; écologie, dicton, note de l&apos;explorateur et mensurations.</div>
+                            <div style={{ fontWeight: 800, marginBottom: 3 }}>👁 Vu</div>
+                            <div style={{ opacity: 0.8 }}>Capture ce Daemon pour apprendre sa <b>biologie</b>, son <b>dicton</b> et ses <b>mensurations</b>.</div>
                         </div>
                     )
                     const lore = dexLore(sp.id)
@@ -165,7 +165,7 @@ export default function DexDetailClient({ id }: { id: string }) {
 
                 {/* MENSURATIONS — fourchette d'espèce + règle IV (la valeur exacte s'affiche sur la fiche d'un individu). */}
                 {(() => {
-                    if (!archivesUnlocked) return null // mensurations = palier ARCHIVES (avec le lore, débloqué par L'Archiviste)
+                    if (!caught) return null // mensurations apprises à la CAPTURE (avec la biologie)
                     const sz = dexSize(sp.id)
                     if (!sz) return null
                     const phys = weightModeOf(sz, sp.baseStats) === "physical"
@@ -189,8 +189,8 @@ export default function DexDetailClient({ id }: { id: string }) {
                     <div style={S.metaCell}><span style={S.metaLbl}>Courbe</span><span style={S.metaVal}>{growthLabel(sp.id)}</span></div>
                 </div>
 
-                {/* Stats de base — révélées à la CAPTURE (vu-non-capturé = fiche partielle). */}
-                {caught ? (
+                {/* DOSSIER DE COMBAT (stats) — débloqué par L'ARCHIVISTE (fichesUnlockedThisRun). */}
+                {archivesUnlocked ? (
                 <div style={S.panel}>
                     <div style={S.panelTitle}>STATS DE BASE</div>
                     {STAT_ORDER.map((k) => {
@@ -213,11 +213,12 @@ export default function DexDetailClient({ id }: { id: string }) {
                 </div>
                 ) : (
                     <div style={{ ...S.panel, textAlign: "center", opacity: 0.85, padding: "16px 8px", lineHeight: 1.5 }}>
-                        👁 <b>Vu</b> — capture ce Daemon pour révéler ses <b>stats</b>, ses <b>attaques</b> et son <b>évolution</b>.
+                        📊 <b>Dossier de combat scellé</b> — bats L&apos;ARCHIVISTE (Ville Jaune) pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b> et ses <b>attaques</b>.
                     </div>
                 )}
 
-                {/* Défenses (table des types) — connues dès l'OBSERVATION (les types sont visibles). */}
+                {/* Défenses (table des types) — DOSSIER DE COMBAT de L'ARCHIVISTE. */}
+                {archivesUnlocked && (
                 <div style={S.panel}>
                     <div style={S.panelTitle}>EFFICACITÉ DES TYPES</div>
                     <MatchRow title="Faible contre" matches={defenses.weak} onPick={goType} />
@@ -227,9 +228,10 @@ export default function DexDetailClient({ id }: { id: string }) {
                         <div style={S.muted}>Aucune interaction particulière.</div>
                     )}
                 </div>
+                )}
 
-                {/* Lignée évolutive — révélée à la CAPTURE. */}
-                {caught && chain.length > 1 && (
+                {/* Lignée évolutive — DOSSIER DE COMBAT de L'ARCHIVISTE. */}
+                {archivesUnlocked && chain.length > 1 && (
                     <div style={S.panel}>
                         <div style={S.panelTitle}>ÉVOLUTION</div>
                         <div style={S.evoRow}>
@@ -262,8 +264,8 @@ export default function DexDetailClient({ id }: { id: string }) {
                     </div>
                 )}
 
-                {/* Learnset — révélé à la CAPTURE. */}
-                {caught && (
+                {/* Learnset (attaques) — DOSSIER DE COMBAT de L'ARCHIVISTE. */}
+                {archivesUnlocked && (
                 <div style={S.panel}>
                     <div style={S.panelTitle}>CAPACITÉS (PAR NIVEAU)</div>
                     <div style={S.moveHead}>
