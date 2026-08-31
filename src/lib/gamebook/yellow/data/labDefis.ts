@@ -268,6 +268,7 @@ export function ctDefiOptions(): CtDefiOption[] {
     const out: CtDefiOption[] = []
     for (const ct of CTS) {
         if (CT_DEFI_EXCLUDED.has(ct.id)) continue
+        if (ct.gift) continue // CADEAUX (arène/PNJ/clan/Maître/trophée) : JAMAIS regagnables au défi labo — comme la boutique (purchasableCts filtre gift). Couvre ct17/19/21/22/26/27/60 + ct62-65 Maître.
         const mv = getMove(ct.moveId)
         if (!mv || !mv.power || mv.power <= 0) continue
         out.push({ ctId: ct.id, type: mv.type, moveId: ct.moveId, power: mv.power, baseThreshold: mv.power * 100 })

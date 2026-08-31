@@ -6,7 +6,7 @@
 // moveset de l'adversaire vaincu). Le choix + l'octroi (grantCt) se font à l'intégration.
 
 import { SPECIES } from "../data/species"
-import { CTS, NGPLUS_EXCLUSIVE_CT_IDS, CLAN_CT_IDS } from "../data/cts"
+import { CTS } from "../data/cts"
 
 /** Moveset d'un adversaire GÉNÉRÉ = 4 dernières capacités du learnset ≤ niveau (= règle de la factory). */
 export function opponentMoveIds(speciesId: string, level: number): string[] {
@@ -22,9 +22,10 @@ export function opponentMoveIds(speciesId: string, level: number): string[] {
  *  figure dans le moveset du vaincu. Peut être vide (aucune de ses attaques n'a de CT). */
 export function ctRewardOptions(defeatedSpeciesId: string, level: number): string[] {
     const moves = new Set(opponentMoveIds(defeatedSpeciesId, level))
-    // Les CT-signatures EXCLUSIVES au run 2 ne sont JAMAIS offertes par l'Usine (garantie directe, en plus du
-    // fait que leurs attaques ne figurent dans aucun learnset). Seul octroi = victoire du boss d'arène en NG+.
-    return CTS.filter((ct) => moves.has(ct.moveId) && !NGPLUS_EXCLUSIVE_CT_IDS.includes(ct.id) && !CLAN_CT_IDS.includes(ct.id) && ct.id !== "ct61" && ct.id !== "ct66").map((ct) => ct.id)
+    // L'Usine ne récompense JAMAIS avec une CT-CADEAU (gift : signatures d'arène, clan, Maître, trophées, NG+, SURF…).
+    // Elles ont leur source dédiée. `!ct.gift` couvre d'un coup les gift-signatures (ct17/19/21/22/26/27) qui figuraient
+    // au learnset de finaux non-exclusifs (fuite réelle), + NG+/clan/ct61/ct66 (tous gift).
+    return CTS.filter((ct) => moves.has(ct.moveId) && !ct.gift).map((ct) => ct.id)
 }
 
 /** Idem mais sur toute une équipe vaincue (union des options, dédupliquée). */
