@@ -71,7 +71,7 @@ import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, U
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
-import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate } from "../data/genieLamp"
+import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate, GENIE_MIN_BADGES } from "../data/genieLamp"
 import { antiNemesisFor } from "../data/genieAmbush"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_NO_TEAM_LINES, nemesisIntroLines, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisChallengeFor, nemesisBattleTrainerId, buildNemesisChallengeTeam } from "../data/nemesisChallenge"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -2040,7 +2040,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   décompte N∈[3,10] (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
                     //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
-                    if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID) && !getPlayerSave().genieArcSeen) {
+                    if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID) && !getPlayerSave().genieArcSeen && getPlayerSave().badges.length >= GENIE_MIN_BADGES) {
                         const genieNow = genieArcImmediate() // phase de test (allowlist) → pop dès la 1re rencontre, sans garde PV
                         if (genieAmbushCountdown < 0) genieAmbushCountdown = genieNow ? 0 : rollLampCountdown()
                         const genieTeamHp = team.map((m) => { const gsp = getSpecies(m.speciesId); return { hp: m.currentHp, maxHp: gsp ? fullStats(m, gsp).hp : m.currentHp } })

@@ -34,6 +34,8 @@ export function genieArcEnabledFor(nickname?: string | null): boolean {
     if (GENIE_ARC_ALL) return true
     return !!nickname && GENIE_ARC_NICKS.includes(nickname.trim().toLowerCase())
 }
+/** Nb de badges d'arène requis AVANT que l'embuscade du génie puisse apparaître (« pas avant le 2e badge »). */
+export const GENIE_MIN_BADGES = 2
 
 /** Tire le compteur d'embuscade N ∈ [MIN, MAX]. `rng` optionnel (défaut Math.random). */
 export function rollLampCountdown(rng: () => number = Math.random): number {
