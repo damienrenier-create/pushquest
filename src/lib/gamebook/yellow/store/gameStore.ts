@@ -76,7 +76,7 @@ import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate, GENIE_MIN_BADGES } from "../data/genieLamp"
 import { antiNemesisFor } from "../data/genieAmbush"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_NO_TEAM_LINES, nemesisIntroLines, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisChallengeFor, nemesisBattleTrainerId, buildNemesisChallengeTeam } from "../data/nemesisChallenge"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
 // 15×10 unifiée + fond glace/combat/spectre) UNIQUEMENT si on joue en run 3. Hors run 3 (et pour toute autre carte),
@@ -2812,12 +2812,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_AQUILORD_NEED_LINES } })
                 return
             }
-            // RUN 1/2 : service Roctaur (→ Rochison / Morrow).
+            // RUN 1/2 : service Roctaur (→ Rochison en run 1 / Morrow en run 2). Morrow étant désormais EXCLUSIF au run 2,
+            //   posséder un Morrow (forcément gagné en run 2) ne bloque PLUS le service Rochison en run 1 (ex-garde legacy
+            //   « obtenu jadis en run 1 » retiré : il mis-firait en post-game/run fusion via le Pokédex GLOBAL — bug Sartay).
             const ngplus = world === "ngplus"
-            if (!ngplus && getPokedex().caught.includes(HH_TRADE_RECEIVE)) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_HAS_MORROW_LINES } })
-                return
-            }
             const give = getPlayerSave().team.find((m) => m.speciesId === HH_TRADE_GIVE) // ÉQUIPE uniquement (jamais le PC)
             if (!give) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ngplus ? HH_TRADER_NEED_LINES : HH_TRADER_NEED_LINES_RUN1 } })
