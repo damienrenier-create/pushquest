@@ -48,14 +48,17 @@ export default function DexClient() {
     const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
     const caughtThisRunSet = useMemo(() => new Set(player.caughtThisRun ?? []), [player.caughtThisRun])
     const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun]) // L'ARCHIVISTE : BST (stat) débloqué
+    // En run 3 (dex « catalogue complet »), les espèces NORMALES non croisées sont révélées ; mais les SURPRISES
+    //   (hiddenUntilCaught : lignées de clan, némésis, Gékroc… + ultra-secrets) restent cachées tant qu'on ne les a
+    //   pas rencontrées, sinon la LISTE spoilerait ce que la FICHE détail scelle (anti-spoiler cohérent liste↔fiche).
     const revealed = useMemo(
-        () => (sp: SpeciesData) => caughtSet.has(sp.id) || seenSet.has(sp.id) || (isRun3 && !DEX_ULTRA_SECRET.has(sp.id)),
+        () => (sp: SpeciesData) => caughtSet.has(sp.id) || seenSet.has(sp.id) || (isRun3 && !sp.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(sp.id)),
         [caughtSet, seenSet, isRun3],
     )
 
     // CATALOGUE = TOUT le roster VISIBLE (tiéré par run via visibleDexSpecies) → les non-rencontrés apparaissent en
     //   SILHOUETTE. On EXCLUT du catalogue les surprises encore secrètes : hiddenUntilCaught (clan, Gékroc, Goshendofy…)
-    //   et légendaires ultra-secrets NON rencontrés → pas même une silhouette (anti-spoiler), sauf run 3 (tout révélé).
+    //   et légendaires ultra-secrets NON rencontrés → pas même une silhouette (anti-spoiler), même en run 3.
     const roster = useMemo<SpeciesData[]>(
         () => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, isRun3, dex.seen)
             .filter((sp) => revealed(sp) || (!sp.hiddenUntilCaught && !DEX_ULTRA_SECRET.has(sp.id)))
@@ -137,14 +140,14 @@ export default function DexClient() {
                     const secret = DEX_ULTRA_SECRET.has(sp.id) && !caught
                     const galijahRem = secret && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
                     const caughtNow = caughtThisRunSet.has(sp.id) // ✨ capturé CE run (badge)
-                    // VU mais non capturé → fiche PARTIELLE (BST masqué) ; CAPTURÉ → fiche complète (BST réel). Le détail complet
-                    //   (lore/fun-facts « archives ») reste gaté par L'Archiviste dans la page détail.
+                    // Carte cliquable dès qu'on l'a croisé. La CAPTURE débloque la biologie sur la page détail ; le BST réel
+                    //   (dossier de combat) reste masqué « ??? » tant que L'Archiviste n'est pas battu ce run (fichesUnlockedThisRun).
                     return (
                         <button
                             key={sp.id}
                             onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)}
                             style={{ ...S.card, ...(caught ? {} : S.cardLocked) }}
-                            title={caught ? sp.name : secret ? "Vu — capture-le pour révéler son identité" : "Vu — capture-le pour sa fiche complète"}
+                            title={caught ? sp.name : secret ? "Vu — capture-le pour révéler son identité" : "Vu — capture-le pour sa biologie"}
                         >
                             <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                             <DexIcon sp={sp} secret={secret} />

@@ -71,8 +71,9 @@ export default function DexDetailClient({ id }: { id: string }) {
     const sp = SPECIES[id] // dex de référence = Pokédex de BASE uniquement (les fusions/customs sont dans le FUSIODEX)
     if (!sp) return null
     // DEX FUSIONNÉ (Flavor B) — VERROU À VIE : la fiche s'ouvre dès que le Daemon a été RENCONTRÉ à vie (VU ou CAPTURÉ,
-    //   sets GLOBAUX dex.seen/dex.caught). Stats / attaques / évolution → révélées à la CAPTURE. Lore & mensurations
-    //   (« archives ») → gatés par L'Archiviste (fichesUnlockedThisRun). Ultra-secret : identité scellée tant que non capturé.
+    //   sets GLOBAUX dex.seen/dex.caught). VU = sprite + nom + types + localisation. CAPTURÉ = biologie / dicton / mensurations
+    //   (+ méta rareté/capture). DOSSIER DE COMBAT (stats, forces & faiblesses, attaques, évolution, rôle) → gaté par
+    //   L'ARCHIVISTE (fichesUnlockedThisRun). Ultra-secret : identité scellée tant que non capturé.
     const caught = dex.caught.includes(id)
     const seen = caught || dex.seen.includes(id)
     const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !caught
@@ -122,7 +123,8 @@ export default function DexDetailClient({ id }: { id: string }) {
                         <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                         <h1 style={S.name}>{sp.name.toUpperCase()}</h1>
                         <div style={S.chipRow}>{sp.types.map((t) => <TypeChip key={t} type={t} big />)}</div>
-                        {sp.role && <div style={S.role}>{sp.role}</div>}
+                        {/* Le RÔLE paraphrase la répartition de stats (« frêle agressif », « mur », « sweeper ») → dossier de combat (L'Archiviste). */}
+                        {archivesUnlocked && sp.role && <div style={S.role}>{sp.role}</div>}
                     </div>
                 </div>
 
@@ -181,13 +183,15 @@ export default function DexDetailClient({ id }: { id: string }) {
                     )
                 })()}
 
-                {/* Méta */}
+                {/* Méta (rareté / taux de capture / exp / courbe) — données techniques apprises à la CAPTURE (pas au simple VU). */}
+                {caught && (
                 <div style={S.metaRow}>
                     <div style={S.metaCell}><span style={S.metaLbl}>Rareté</span><span style={S.metaVal}>{sp.rarity}</span></div>
                     <div style={S.metaCell}><span style={S.metaLbl}>Capture</span><span style={S.metaVal}>{sp.catchRate}</span></div>
                     <div style={S.metaCell}><span style={S.metaLbl}>Exp. base</span><span style={S.metaVal}>{sp.baseExp}</span></div>
                     <div style={S.metaCell}><span style={S.metaLbl}>Courbe</span><span style={S.metaVal}>{growthLabel(sp.id)}</span></div>
                 </div>
+                )}
 
                 {/* DOSSIER DE COMBAT (stats) — débloqué par L'ARCHIVISTE (fichesUnlockedThisRun). */}
                 {archivesUnlocked ? (
@@ -213,7 +217,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                 </div>
                 ) : (
                     <div style={{ ...S.panel, textAlign: "center", opacity: 0.85, padding: "16px 8px", lineHeight: 1.5 }}>
-                        📊 <b>Dossier de combat scellé</b> — bats L&apos;ARCHIVISTE (Ville Jaune) pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b> et ses <b>attaques</b>.
+                        📊 <b>Dossier de combat scellé</b> — bats L&apos;ARCHIVISTE (Ville Jaune) pour révéler ses <b>stats</b>, ses <b>forces &amp; faiblesses</b>, ses <b>attaques</b> et son <b>évolution</b>.
                     </div>
                 )}
 
