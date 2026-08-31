@@ -37,10 +37,18 @@ const outro = (name: string): Line[] => [
 ]
 
 // MODE FUN : pas de reps/sueur → l'appel se fait par les DÉFIS, et les sauvages tournent selon l'heure/le jour.
-const SCRIPT_FUN: Line[] = SCRIPT.map((l, k) =>
-    k === 1 ? { ...l, text: "Chaque DÉFI que tu relèves résonne jusqu'à Mon royaume… Tu es enfin PRÊT." }
-    : k === 7 ? { ...l, text: "Et — nous le voyons d'ici — les Daemons changent d'humeur au fil des HEURES et des JOURS. Observe le ciel avant de chasser…" }
-    : l)
+// On insère aussi un DISCOURS D'OBJECTIF clair (le but de la run 1 fun) juste avant le don du starter (index 8).
+const SCRIPT_FUN: Line[] = (() => {
+    const mapped = SCRIPT.map((l, k) =>
+        k === 1 ? { ...l, text: "Chaque DÉFI que tu relèves résonne jusqu'à Mon royaume… Tu es enfin PRÊT." }
+        : k === 7 ? { ...l, text: "Et — nous le voyons d'ici — les Daemons changent d'humeur au fil des HEURES et des JOURS. Observe le ciel avant de chasser…" }
+        : l)
+    const objectif: Line[] = [
+        { speaker: "GRAND PRÊTRE", sprite: npc("high_priest"), fallback: "⛪", text: "Ta quête ici ? EXPLORER le Nexus, CAPTURER un maximum de Daemons et accomplir de grands HAUTS FAITS — chacun te rapporte un badge et des points." },
+        { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "✦ Et tes amis vivent la MÊME aventure ! Le plus RAPIDE à décrocher un haut fait rafle l'OR. Ton score se fige à la fin du voyage — un classement vous départagera tous. Mais surtout : AMUSE-TOI, mortel. ✦" },
+    ]
+    return [...mapped.slice(0, 8), ...objectif, ...mapped.slice(8)]
+})()
 const outroFun = (name: string): Line[] => outro(name).map((l, k) =>
     k === 2 ? { ...l, text: "Et que tes défis soient glorieux. Va — l'aventure t'attend ! ✦" } : l)
 

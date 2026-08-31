@@ -375,9 +375,10 @@ export function startReplayWorld(run: "run1" | "run2" | "run3", starter: MonInst
 //  - "normal"   : énergie = vrais reps (bankReps) — comportement historique, seuls comptes concernés = les 7 potes.
 //  - "easy"     : 3000 au départ + 1 recharge de 3000 à sec  → 2 remplissages = 6000 en tout.
 //  - "debutant" : 1000 au départ + 5 recharges de 1000 à sec → 6 remplissages = 6000 en tout.
-//  - "fun"      : lien "amis" (nexus-fun-2026). Don de DÉPART unique = 1000⚡ + 10 Nexus-Ball, PUIS l'énergie
-//                 fonctionne comme en normal (les vrais reps encodés comptent, cf. bankReps). Interface muscu
-//                 simplifiée (cf. SimpleRepsDashboard). PAS de système de remplissages (fill=0).
+//  - "fun"      : lien "amis" (nexus-fun-2026). Don de DÉPART unique = 10000⚡ + 10 Nexus-Ball (gros pécule
+//                 pour vivre la découverte sans se soucier de l'énergie), PUIS l'énergie fonctionne comme en
+//                 normal (les vrais reps encodés comptent, cf. bankReps). Interface muscu simplifiée (cf.
+//                 SimpleRepsDashboard). PAS de système de remplissages (fill=0).
 // La recharge se déclenche quand l'énergie ne suffit plus pour agir (spendReps) ou tombe pile à 0, tant qu'il
 // reste des remplissages (compteur `stats.modeFillsUsed`, persisté). Modes actifs UNIQUEMENT sur le monde live.
 export type GameMode = "normal" | "easy" | "debutant" | "fun"
@@ -391,6 +392,9 @@ const MODE_CFG: Record<GameMode, { fill: number; maxFills: number }> = {
     debutant: { fill: 1000, maxFills: 6 },
     fun: { fill: 0, maxFills: 0 }, // fun : pas de remplissages (reps comptent comme en normal) — don de départ géré à part
 }
+/** Mode fun : pécule de bienvenue UNIQUE (⚡ + relève le plafond d'autant). Généreux pour vivre la DÉCOUVERTE
+ *  sans se soucier de l'énergie. Voir ensureModeStartGrant (crédité une seule fois, monde live). */
+const FUN_START_GRANT = 10000
 /** Remplissages d'énergie restants pour les modes easy/debutant (0 en normal). Pour l'affichage. */
 export function modeFillsRemaining(): number {
     const cfg = MODE_CFG[gameMode]
@@ -419,17 +423,17 @@ function tryModeRecharge(): boolean {
 }
 
 /** À l'arrivée (après chargement / nouvelle partie) : crédite le don de DÉPART du mode (easy/debutant : un
- *  remplissage ; fun : 1000⚡ + 10 Nexus-Ball), une seule fois (idempotent via modeFillsUsed>0, monde live).
+ *  remplissage ; fun : FUN_START_GRANT⚡ + 10 Nexus-Ball), une seule fois (idempotent via modeFillsUsed>0, monde live).
  *  No-op en normal ou si déjà démarré. */
 export function ensureModeStartGrant(): void {
-    // FUN : don de bienvenue unique = 1000⚡ + 10 Nexus-Ball. Ensuite l'énergie vient des vrais reps (bankReps)
+    // FUN : don de bienvenue unique = FUN_START_GRANT⚡ + 10 Nexus-Ball. Ensuite l'énergie vient des vrais reps (bankReps)
     //   + des interactions PNJ/joueurs, exactement comme en normal. Réutilise modeFillsUsed comme verrou (le mode
     //   fun n'a pas de remplissages) → aucun nouveau champ de save.
     if (gameMode === "fun") {
         if (runMode() !== "live") return
         if ((st.stats.modeFillsUsed ?? 0) > 0) return
         const before = st.reps
-        st = { ...st, reps: Math.max(st.reps, 1000), repsCap: Math.max(st.repsCap, 1000), stats: { ...st.stats, modeFillsUsed: 1 } }
+        st = { ...st, reps: Math.max(st.reps, FUN_START_GRANT), repsCap: Math.max(st.repsCap, FUN_START_GRANT), stats: { ...st.stats, modeFillsUsed: 1 } }
         logEnergyIncome("🎁 Bienvenue (mode fun)", st.reps - before)
         addItem("poke_ball", 10) // 10 Nexus-Ball pour bien démarrer (addItem émet déjà)
         return

@@ -85,14 +85,14 @@ describe("PARRAINAGE — modes de jeu (énergie)", () => {
         setGameMode("fun"); expect(getGameMode()).toBe("fun")
     })
 
-    it("fun : don de départ = 1000⚡ + 10 Nexus-Ball, une seule fois", () => {
+    it("fun : don de départ = 10000⚡ + 10 Nexus-Ball, une seule fois", () => {
         setGameMode("fun")
         ensureModeStartGrant()
-        expect(getPlayer().reps).toBe(1000)               // 1000⚡ au départ
-        expect(getPlayer().repsCap).toBeGreaterThanOrEqual(1000)
+        expect(getPlayer().reps).toBe(10000)              // 10000⚡ au départ (gros pécule découverte)
+        expect(getPlayer().repsCap).toBeGreaterThanOrEqual(10000)
         expect(getPlayer().items?.poke_ball).toBe(10)     // 10 Nexus-Ball
         ensureModeStartGrant()                             // idempotent
-        expect(getPlayer().reps).toBe(1000)
+        expect(getPlayer().reps).toBe(10000)
         expect(getPlayer().items?.poke_ball).toBe(10)     // pas 20
     })
 

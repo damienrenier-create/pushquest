@@ -11,7 +11,7 @@ function RegisterForm() {
     const promoCode = searchParams.get("promoCode") || ""
     // Lien d'invitation /register?invite=<code> → crée un compte INVITÉ (hors-concours).
     const invite = searchParams.get("invite") || ""
-    // Lien "AMIS SIMPLIFIÉ" (nexus-fun-2026) : mode "fun" FORCÉ côté serveur (1000⚡ + 10 Nexus-Ball) + interface
+    // Lien "AMIS SIMPLIFIÉ" (nexus-fun-2026) : mode "fun" FORCÉ côté serveur (10000⚡ + 10 Nexus-Ball) + interface
     //   muscu allégée → on masque le sélecteur de mode ici (le serveur ignore ce que le client enverrait de toute façon).
     const isFunInvite = invite === "nexus-fun-2026"
     // PARRAINAGE /register?parrain=<pseudo> → le pseudo du parrain (contexte invité + choix du mode de jeu).
@@ -83,7 +83,7 @@ function RegisterForm() {
                         <p className="text-gray-500">Créez votre compte pour commencer</p>
                         {isFunInvite ? (
                             <p className="mt-3 inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1 text-xs font-semibold">
-                                🎉 Mode fun — 1000⚡ + 10 Nexus-Ball offerts, zéro prise de tête muscu !
+                                🎉 Mode fun — 10 000⚡ + 10 Nexus-Ball offerts, zéro prise de tête muscu !
                             </p>
                         ) : parrain ? (
                             <p className="mt-3 inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-3 py-1 text-xs font-semibold">
