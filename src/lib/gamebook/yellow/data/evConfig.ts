@@ -102,3 +102,25 @@ export function topEvStats(ev?: Partial<Record<StatKey, number>>): StatKey[] {
     if (!ev) return []
     return STAT_KEYS.filter((k) => (ev[k] ?? 0) > 0).sort((a, b) => (ev[b] ?? 0) - (ev[a] ?? 0))
 }
+
+/** Boss « pré-entraîné » (ex. Galijah paliers 190/200) : répartit un BUDGET total d'EV sur les 5 stats,
+ *  PROPORTIONNELLEMENT aux stats de BASE (le boss se spécialise dans ses points forts), plafonné EV_STAT_CAP/stat.
+ *  Renvoie une réserve d'EV (mon.ev). La somme rendue = `total` (borné à 5×252), l'arrondi/débordement est corrigé. */
+export function distributeEvs(base: Partial<Record<StatKey, number>>, total: number): Partial<Record<StatKey, number>> {
+    const T = Math.max(0, Math.min(EV_STAT_CAP * STAT_KEYS.length, Math.floor(total)))
+    const sumBase = STAT_KEYS.reduce((a, k) => a + Math.max(0, base[k] ?? 0), 0) || 1
+    const ev: Record<StatKey, number> = { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
+    let remaining = T
+    for (const k of STAT_KEYS) {
+        const want = Math.min(EV_STAT_CAP, Math.round((T * Math.max(0, base[k] ?? 0)) / sumBase))
+        ev[k] = want
+        remaining -= want
+    }
+    const ordered = [...STAT_KEYS].sort((a, b) => (base[b] ?? 0) - (base[a] ?? 0))
+    for (let i = 0, guard = 0; remaining !== 0 && guard < 2000; guard++, i++) {
+        const k = ordered[i % STAT_KEYS.length]
+        if (remaining > 0 && ev[k] < EV_STAT_CAP) { ev[k]++; remaining-- }
+        else if (remaining < 0 && ev[k] > 0) { ev[k]--; remaining++ }
+    }
+    return ev
+}

@@ -81,7 +81,9 @@ export default function DexDetailClient({ id }: { id: string }) {
         const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
         const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
         const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
-        const gRem = ultraSecretLocked && id === "galijah" ? galijahCountdown(dex.caught.length) : null
+        // GALIJAH : une fois CROISÉ (vu, pas capturé), L'ARCHIVISTE complète sa fiche scellée avec le calendrier de repop.
+        const gSeenNotCaught = ultraSecretLocked && id === "galijah" && dex.seen.includes("galijah")
+        const gRem = ultraSecretLocked && id === "galijah" && !gSeenNotCaught ? galijahCountdown(dex.caught.length) : null
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
@@ -93,9 +95,11 @@ export default function DexDetailClient({ id }: { id: string }) {
                     <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                     <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
                     {gRem !== null && <div style={{ ...galijahCounterStyle(gRem), marginBottom: 8 }}>{gRem}</div>}
-                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 320, marginLeft: "auto", marginRight: "auto" }}>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 340, marginLeft: "auto", marginRight: "auto", lineHeight: 1.5 }}>
                         {ultraSecretLocked
-                            ? (mHint ?? (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien."))
+                            ? (mHint ?? (gSeenNotCaught
+                                ? <span>🔍 <b>L&apos;ARCHIVISTE a complété cette fiche.</b> Ce colosse <b>REVIENT, plus fort</b>, à mesure que ton Pokédex grandit : <b>150</b> esp. → niv 70 · <b>160</b> → +10 niv · <b>170</b> → +20 niv · <b>180</b> → niv 100 · <b>190</b> → niv 100 à demi-dressé · <b>200</b> → niv 100 pleinement dressé. Rate-le, et un adversaire plus redoutable t&apos;attend.</span>
+                                : (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien.")))
                             : "Cette entrée reste scellée… tu la débloqueras en RENCONTRANT ce Daemon."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>

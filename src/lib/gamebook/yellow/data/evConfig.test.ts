@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { gainEv, signatureStat, evStatBonus, evTotal, topEvStats, evTotalCap, EV_STAT_CAP, EV_TOTAL_CAP } from "./evConfig"
+import { gainEv, signatureStat, evStatBonus, evTotal, topEvStats, evTotalCap, distributeEvs, EV_STAT_CAP, EV_TOTAL_CAP } from "./evConfig"
 import { getSpecies } from "./species"
 import { computeStat } from "../battle/stats"
 import type { MonInstance } from "../battle/types"
@@ -116,5 +116,28 @@ describe("EV — plafond modulé post-Ligue (evTotalCap)", () => {
         const third = gainEv(m, "def", EV_STAT_CAP)
         expect(third).toBe(561 - 2 * EV_STAT_CAP) // room = 561-504 = 57
         expect(evTotal(m.ev)).toBe(561)
+    })
+})
+
+describe("distributeEvs (Galijah pré-entraîné)", () => {
+    const base = { hp: 100, atk: 120, def: 90, spe: 110, spc: 130 }
+    it("répartit EXACTEMENT le budget demandé (somme = total)", () => {
+        expect(evTotal(distributeEvs(base, 255))).toBe(255) // palier 190 = 50 %
+        expect(evTotal(distributeEvs(base, EV_TOTAL_CAP))).toBe(EV_TOTAL_CAP) // palier 200 = 100 % (510)
+    })
+    it("respecte le cap par stat (252) et n'a aucune valeur négative", () => {
+        const ev = distributeEvs(base, EV_TOTAL_CAP)
+        for (const k of ["hp", "atk", "def", "spe", "spc"] as const) {
+            expect(ev[k] ?? 0).toBeGreaterThanOrEqual(0)
+            expect(ev[k] ?? 0).toBeLessThanOrEqual(EV_STAT_CAP)
+        }
+    })
+    it("investit davantage dans les stats de BASE les plus hautes", () => {
+        const ev = distributeEvs(base, 400)
+        expect((ev.spc ?? 0)).toBeGreaterThan((ev.def ?? 0)) // spc(130) base > def(90) base
+    })
+    it("total 0 ou négatif → réserve vide", () => {
+        expect(evTotal(distributeEvs(base, 0))).toBe(0)
+        expect(evTotal(distributeEvs(base, -50))).toBe(0)
     })
 })

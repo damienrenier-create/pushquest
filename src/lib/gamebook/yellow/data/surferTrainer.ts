@@ -49,6 +49,9 @@ export const SURFER_DONE_LINES = [
     "Yo le surfeur ! L'océan te réussit, à ce que je vois. 🌊",
     "Un petit run entre potes de la vague ? Allez, on remet ça !",
 ]
+/** GALIJAH — greffé à N'IMPORTE QUEL dialogue du Surfeur dès que le joueur a CROISÉ Galijah sans le capturer :
+ *  le Surfeur s'émerveille et renvoie vers L'ARCHIVISTE (qui, lui, complète la fiche avec le calendrier de repop). */
+export const SURFER_GALIJAH_HINT = "Wooooah dude… t'as CROISÉ le Daemon giga-rare ?! 🤯 De ouf ! On raconte qu'il lui arrive de REVENIR… plus balèze à chaque fois. Va voir L'ARCHIVISTE, ce type sait TOUT — il t'expliquera quand la bête repointe son nez. 🏄"
 /** Déjà la CT et déjà affronté aujourd'hui → reviens demain. */
 export const SURFER_DONE_TODAY_LINES = [
     "Mes potes de la vague récupèrent, dude. Reviens demain pour une nouvelle session ! 🤙",

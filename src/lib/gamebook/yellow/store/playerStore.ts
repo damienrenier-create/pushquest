@@ -1589,19 +1589,32 @@ export function isGalijahArmed(): boolean {
     const caught = getPokedex().caught
     return caught.length >= GALIJAH_CAPTURE_THRESHOLD && !caught.includes("galijah")
 }
-export const GALIJAH_APPEARED_MARKER = "galijah_appeared"    // Galijah A DÉJÀ apparu sur l'île → re-gated jusqu'à 200 espèces
-export const GALIJAH_REAPPEAR_THRESHOLD = 200                // espèces distinctes pour qu'il REVIENNE après une 1re apparition manquée
-/** GALIJAH — peut-il APPARAÎTRE sur l'île MAINTENANT ? Pas capturé, ≥150 espèces, ET (jamais apparu OU ≥200 espèces).
- *  (Le tirage 25 %/combat + « jamais au 1er combat du jour » est côté gameStore.) */
+// GALIJAH — PALIERS DE RÉAPPARITION (demande Sartay) : non capturé, il REPOPE de plus en plus fort à mesure que le
+//   Pokédex GLOBAL grossit. 6 paliers indexés sur le nb d'espèces distinctes : 150 (base niv 70) → 160 (+10 niv) →
+//   170 (+20 niv) → 180 (niv 100) → 190 (niv 100 + 50 % d'EV) → 200+ (niv 100 + 100 % d'EV). Marqueur PAR PALIER dans
+//   defeatedTrainers (per-monde → un run neuf redonne une chance au palier courant, l'espèce restant globale).
+export const GALIJAH_TIER_LEVELS = [70, 80, 90, 100, 100, 100] as const // niveau de spawn par palier 0..5
+export const GALIJAH_TIER_EVPCT = [0, 0, 0, 0, 0.5, 1] as const         // fraction d'EV_TOTAL_CAP distribuée par palier
+/** Palier de Galijah selon le nb d'ESPÈCES distinctes au Pokédex (−1 si <150 ; 0 à 150, +1 tous les 10, plafonné 5 à 200+). */
+export function galijahTier(caughtCount: number): number {
+    if (caughtCount < GALIJAH_CAPTURE_THRESHOLD) return -1
+    return Math.min(5, Math.floor((caughtCount - GALIJAH_CAPTURE_THRESHOLD) / 10))
+}
+const galijahTierMarker = (tier: number) => `galijah_appeared_t${tier}`
+/** GALIJAH — peut-il APPARAÎTRE MAINTENANT ? Pas capturé, ≥150 espèces, ET pas déjà apparu AU PALIER COURANT
+ *  (sinon il attend le palier suivant, +10 espèces). Tirage 25 %/combat + « jamais au 1er combat du jour » = gameStore. */
 export function galijahCanAppear(): boolean {
     const dex = getPokedex().caught
     if (dex.includes("galijah") || dex.length < GALIJAH_CAPTURE_THRESHOLD) return false
-    if (st.defeatedTrainers.includes(GALIJAH_APPEARED_MARKER) && dex.length < GALIJAH_REAPPEAR_THRESHOLD) return false
-    return true
+    const tier = galijahTier(dex.length)
+    return tier >= 0 && !st.defeatedTrainers.includes(galijahTierMarker(tier))
 }
-/** GALIJAH — marque qu'il vient d'APPARAÎTRE (→ re-gated jusqu'à 200 espèces s'il n'est pas capturé). Idempotent. */
+/** GALIJAH — marque qu'il vient d'APPARAÎTRE au palier courant (→ ne repope qu'au palier suivant). Idempotent. */
 export function markGalijahAppeared(): void {
-    if (!st.defeatedTrainers.includes(GALIJAH_APPEARED_MARKER)) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, GALIJAH_APPEARED_MARKER] }; emit() }
+    const tier = galijahTier(getPokedex().caught.length)
+    if (tier < 0) return
+    const m = galijahTierMarker(tier)
+    if (!st.defeatedTrainers.includes(m)) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, m] }; emit() }
 }
 /** GALIJAH — désarme la chasse (une fois le spawn forcé posé, ou après capture/fuite). */
 export function disarmGalijah() {

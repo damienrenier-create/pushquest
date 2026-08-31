@@ -31,11 +31,12 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, getGameMode, getClansEverJoined, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
+import { distributeEvs, EV_TOTAL_CAP } from "../data/evConfig"
 import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt, buildForcedSpawn } from "../data/encounters"
 import { getOnlineCount } from "../multiplayer/onlinePresence"
@@ -55,7 +56,7 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, A
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
-import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
+import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, SURFER_GALIJAH_HINT, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
@@ -1958,8 +1959,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // ÎLE ÉMERAUDE — RENCONTRES : surfer sur l'eau (ou marcher dans l'herbe haute) = rencontre sauvage. L'île n'a
         //   AUCUNE entrée ZONES → géré à la main. Pool FILLER faible (plumiot / ruffiant / mimimoy si pas capturé /
         //   obscurène très rare, niv 5) + GALIJAH légendaire. TOUT est NO-FLEE. Galijah : JAMAIS au 1er combat du jour,
-        //   puis 25 %/combat s'il est éligible (galijahCanAppear : ≥150 esp, pas capturé, pas déjà apparu OU ≥200 esp).
-        //   Apparu → re-gated jusqu'à 200 (le message de non-apparition revient). Niv 70, capture LÉGENDAIRE.
+        //   puis 25 %/combat s'il est éligible (galijahCanAppear : ≥150 esp, pas capturé, pas déjà apparu à ce PALIER).
+        //   PALIERS : plus le Pokédex grossit, plus il repope fort — 150 niv 70 → 160 +10 → 170 +20 → 180 niv 100 →
+        //   190 niv 100 +50 % EV → 200 niv 100 +100 % EV. Apparu → re-gate jusqu'au palier suivant. Capture LÉGENDAIRE.
         if (moved && map.id === "yellow_ile_emeraude" && (onWildTile === "water" || onWildTile === "grassTall")
             && !map.encountersPaused && !combatLockedByDebt() && getActiveWorld() !== "replay"
             && get().encounterCooldown <= 0 && get().repelSteps <= 0) {
@@ -1971,8 +1973,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const dex = getPokedex().caught
                 let spawn: MonInstance
                 if (!firstOfDay && galijahCanAppear() && Math.random() < 0.25) {
-                    spawn = buildForcedSpawn("galijah", 70, true); Object.assign(spawn, { captureMult: 0.3 }) // capture LÉGENDAIRE (très faible)
-                    markGalijahAppeared(); persistYellowSave() // apparu → re-gated jusqu'à 200 espèces s'il est manqué
+                    // PALIER de repop selon le nb d'espèces : niveau croissant (70→100) puis EV (190=50 %, 200=100 %).
+                    const gTier = Math.max(0, galijahTier(dex.length))
+                    spawn = buildForcedSpawn("galijah", GALIJAH_TIER_LEVELS[gTier], true); Object.assign(spawn, { captureMult: 0.3 }) // capture LÉGENDAIRE (très faible)
+                    const gEvPct = GALIJAH_TIER_EVPCT[gTier]
+                    if (gEvPct > 0) { const gSp = getSpecies("galijah"); if (gSp) spawn.ev = distributeEvs(gSp.baseStats, Math.round(EV_TOTAL_CAP * gEvPct)) } // paliers 190/200 : Galijah PRÉ-ENTRAÎNÉ
+                    markGalijahAppeared(); persistYellowSave() // apparu → re-gate jusqu'au palier suivant (+10 espèces)
                 } else {
                     const pool = ["plumiot", "ruffiant"]
                     if (!dex.includes("mimimoy")) pool.push("mimimoy") // Mimimoy seulement s'il n'est pas encore capturé
@@ -2868,20 +2874,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         //   prévient qu'il ne lâche sa CT SURF qu'à qui le bat EN TENUE de surfeur (géré en battleStore). Après la CT :
         //   rematch 1×/jour. (Le seuil 150 ne concerne QUE le pop de Galijah.)
         if (npc.id === SURFER_NPC_ID) {
+            // GALIJAH croisé mais pas capturé → le Surfeur s'émerveille et renvoie vers L'ARCHIVISTE (greffé à tout dialogue).
+            const gHint = (getPokedex().seen.includes("galijah") && !getPokedex().caught.includes("galijah")) ? [SURFER_GALIJAH_HINT] : []
             if (hasSurfCt()) {
                 if (!surferRematchAvailableToday(new Date().toISOString().slice(0, 10))) {
-                    set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_TODAY_LINES, lineIndex: 0 } })
+                    set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: [...SURFER_DONE_TODAY_LINES, ...gHint], lineIndex: 0 } })
                     return
                 }
-                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_DONE_LINES, lineIndex: 0 }, pendingSurfer: true })
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: [...SURFER_DONE_LINES, ...gHint], lineIndex: 0 }, pendingSurfer: true })
                 return
             }
             if (getPokedex().caught.length < SURFER_SPECIES_GATE) { // < 135 espèces → pas encore prêt (teaser, pas de combat)
-                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_NOT_READY_LINES, lineIndex: 0 } })
+                set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: [...SURFER_NOT_READY_LINES, ...gHint], lineIndex: 0 } })
                 return
             }
             // ≥135, pas de CT → combat (peu importe la tenue) ; il prévient que le cadeau exige la tenue (cf. SURFER_CHALLENGE_LINES).
-            set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: SURFER_CHALLENGE_LINES, lineIndex: 0 }, pendingSurfer: true })
+            set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: [...SURFER_CHALLENGE_LINES, ...gHint], lineIndex: 0 }, pendingSurfer: true })
             return
         }
 
