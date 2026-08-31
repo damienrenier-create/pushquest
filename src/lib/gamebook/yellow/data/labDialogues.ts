@@ -94,6 +94,17 @@ export const CHEN_FUN_GIFT_LINES = (added: number, left: number, shared: number)
         ? "« Repasse me voir quand tu veux : j'ai encore un cadeau en réserve (et tes potes en profiteront ENCORE plus). »"
         : "« Voilà mon dernier cadeau pour toi. Tu veux plus d'énergie ? Convaincs tes amis de venir chercher LE LEUR : chaque passage d'un pote t'envoie ta part ! »",
 ]
+/** MODE FUN — OFFRE (explication + contrepartie), AVANT de créditer : le joueur confirme ensuite (modale Oui/Non). */
+export const CHEN_FUN_GIFT_OFFER_LINES = (reps: number, shared: number): string[] => [
+    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, pas besoin de compter tes pompes, on est là pour s'amuser. »",
+    `« Je peux te filer un coup de pouce : +${reps}⚡ rien que pour toi. La contrepartie ? C'est du bon karma : TOUS tes potes du mode fun reçoivent alors +${shared}⚡ à leur prochaine connexion — l'esprit d'équipe ! »`,
+    "« Mais l'énergie, ça se mérite un peu : je ne te la donne QUE si tu en manques vraiment. Alors — tu veux ce cadeau ? »",
+]
+/** MODE FUN — le joueur a DÉJÀ assez d'énergie (≥ 1000⚡) → pas de cadeau, reviens à sec. */
+export const CHEN_FUN_GIFT_ENOUGH_LINES = [
+    "« Hé, tu débordes déjà d'énergie, l'ami ! Garde-la pour l'aventure. »",
+    "« Reviens me voir quand tu seras vraiment à sec (sous les 1000⚡) — là, je te donnerai un vrai coup de pouce. »",
+]
 /** MODE FUN — les 2 cadeaux ont déjà été réclamés. */
 export const CHEN_FUN_GIFT_DONE_LINES = [
     "« Je t'ai déjà gâté deux fois, l'ami ! Pour le reste, l'énergie se gagne en jouant — combats, hauts faits, casino… »",

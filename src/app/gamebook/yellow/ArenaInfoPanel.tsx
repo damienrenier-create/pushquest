@@ -8,8 +8,10 @@
 //   3. Stratégie : conseils (couverture, niveau à viser, alertes).
 // Tout est calculé auto par arenaInfo() → correct en run 1 ET run 2 (arènes re-typées).
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { arenaInfo, run3ArenaInfo, type Run3ArenaInfo } from "@/lib/gamebook/yellow/data/arenaInfos"
+import { markSeen } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import type { BadgeId } from "@/lib/gamebook/yellow/data/cts"
 import type { PokeType } from "@/lib/gamebook/yellow/battle/types"
 
@@ -43,6 +45,14 @@ function Sprite({ id, name }: { id: string; name: string }) {
 export default function ArenaInfoPanel({ badge, isRun2, isRun3, onClose }: { badge: BadgeId; isRun2: boolean; isRun3?: boolean; onClose: () => void }) {
     const info = useMemo(() => (isRun3 ? run3ArenaInfo(badge) : arenaInfo(badge, isRun2)), [badge, isRun2, isRun3])
     const [page, setPage] = useState(0)
+    // SCOUTER une arène = RENCONTRER les Daemons du boss → ils s'inscrivent au DEX NEXUS (vus). Idempotent + persisté.
+    useEffect(() => {
+        const team = info?.team
+        if (!team?.length) return
+        let added = false
+        for (const m of team) { if (m.speciesId) { markSeen(m.speciesId); added = true } }
+        if (added) persistYellowSave()
+    }, [info])
     if (!info) return null
     const r3 = isRun3 ? (info as Run3ArenaInfo) : null
     const go = (d: number) => setPage((p) => Math.max(0, Math.min(2, p + d)))

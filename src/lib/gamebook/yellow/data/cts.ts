@@ -35,6 +35,9 @@ export interface CtData {
     alsoTypes?: PokeType[]
     /** EXCLUSIVE AU LABO : jamais en boutique. S'obtient UNIQUEMENT en réussissant le défi CT du labo. */
     labOnly?: boolean
+    /** SOURCE SPÉCIALE (jeton de combat / PC du Prof. Chen par type) : JAMAIS en boutique reps, et ne compte comme
+     *  « connue » au Pokédex des attaques que si RÉELLEMENT rencontrée/reçue (pas via l'onglet achat). */
+    offShop?: boolean
     /** Nb de badges MINIMUM pour l'acheter (CT fortes débloquées au fil de la progression). 0/absent = dès le départ. */
     minBadges?: number
 }
@@ -179,18 +182,18 @@ export const CTS: CtData[] = [
     // --- CT STATUT INÉDITES — 1 par type qui n'avait AUCUN statut (Feu/Glace/Insecte/Ténèbres/Métal/Fée). Vendues à la
     //     BOUTIQUE DE JETONS de combat (STATUS_CT_LOT), type-restreintes (seul le type du move les apprend). power 0 →
     //     hors défi labo. (Vol/Combat/Roche exclus : le CLAN a déjà ses CT statut ; Eau/Élec/Sol/Dragon ont un statut existant.) ---
-    { id: "ct71", label: "CT71", moveId: "fournaise", price: 0 },        // FEU — brûlure sûre
-    { id: "ct72", label: "CT72", moveId: "etreinte_glaciale", price: 0 }, // GLACE — -Vit/-Déf cible
-    { id: "ct73", label: "CT73", moveId: "fil_entravant", price: 0 },     // INSECTE — -Vit/-Préc cible
-    { id: "ct74", label: "CT74", moveId: "machination", price: 0 },       // TÉNÈBRES — +2 Spé (self)
-    { id: "ct75", label: "CT75", moveId: "aimantation", price: 0 },       // MÉTAL — +Déf/+Spé (self)
-    { id: "ct76", label: "CT76", moveId: "charme_feerique", price: 0 },   // FÉE — -2 Atk cible
+    { id: "ct71", label: "CT71", moveId: "fournaise", price: 0, offShop: true },        // FEU — brûlure sûre (jeton)
+    { id: "ct72", label: "CT72", moveId: "etreinte_glaciale", price: 0, offShop: true }, // GLACE — -Vit/-Déf cible (jeton)
+    { id: "ct73", label: "CT73", moveId: "fil_entravant", price: 0, offShop: true },     // INSECTE — -Vit/-Préc cible (jeton)
+    { id: "ct74", label: "CT74", moveId: "machination", price: 0, offShop: true },       // TÉNÈBRES — +2 Spé (self) (jeton)
+    { id: "ct75", label: "CT75", moveId: "aimantation", price: 0, offShop: true },       // MÉTAL — +Déf/+Spé (self) (jeton)
+    { id: "ct76", label: "CT76", moveId: "charme_feerique", price: 0, offShop: true },   // FÉE — -2 Atk cible (jeton)
 
     // --- CT d'ATTAQUE 100/90 SANS statut, types Métal/Fée/Ténèbres (PC du Prof Chen) : ces types n'avaient AUCUNE CT
     //     ≥90 accessible (Fée=0, Métal=ct65 Maître, Ténèbres=ct60 reflet 85). power>0 → entrent au défi CT du labo (damage de type). ---
-    { id: "ct77", label: "CT77", moveId: "fracas_acier", price: 0 },      // MÉTAL 100
-    { id: "ct78", label: "CT78", moveId: "astre_feerique", price: 0 },    // FÉE 100
-    { id: "ct79", label: "CT79", moveId: "vortex_obscur", price: 0 },     // TÉNÈBRES 100
+    { id: "ct77", label: "CT77", moveId: "fracas_acier", price: 0, offShop: true },      // MÉTAL 100 (PC de Chen / défi)
+    { id: "ct78", label: "CT78", moveId: "astre_feerique", price: 0, offShop: true },    // FÉE 100 (PC de Chen / défi)
+    { id: "ct79", label: "CT79", moveId: "vortex_obscur", price: 0, offShop: true },     // TÉNÈBRES 100 (PC de Chen / défi)
 ]
 
 /** CT DES CLANS (Chapelle de Nouillon) — octroyées UNIQUEMENT par le chef de clan (niv 50 = CT du clan, niv 80 =
@@ -245,6 +248,7 @@ export function purchasableCts(badges: BadgeId[], bought: string[] = []): CtData
     return CTS.filter((c) => {
         if (c.gift) return false // jamais en vente : obtenue uniquement en cadeau
         if (c.labOnly) return false // exclusive au labo : obtenue uniquement au défi CT, jamais en boutique
+        if (c.offShop) return false // source spéciale (jeton / PC de Chen) : jamais en boutique reps
         if (bought.includes(c.id)) return false // achat unique déjà effectué → retirée du shop
         if (c.minBadges && badges.length < c.minBadges) return false // CT forte : débloquée à N badges
         if (c.champion) return has3

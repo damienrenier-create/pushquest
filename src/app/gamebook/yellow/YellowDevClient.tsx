@@ -348,6 +348,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closePoster = useGameStore((s) => s.closePoster)
     const dialogue = useGameStore((s) => s.dialogue)
     const pendingNgplusAbandon = useGameStore((s) => s.pendingNgplusAbandon) // NG+ : offre d'abandon CHEN → confirmation
+    const pendingChenGift = useGameStore((s) => s.pendingChenGift) // MODE FUN : offre de cadeau ⚡ CHEN → confirmation
+    const confirmChenGift = useGameStore((s) => s.confirmChenGift)
     const setMap = useGameStore((s) => s.setMap)
     const teleportToHealCenter = useGameStore((s) => s.teleportToHealCenter)
     const launchRematch = useGameStore((s) => s.launchRematch)
@@ -424,6 +426,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
     const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
     const [abandonConfirm, setAbandonConfirm] = useState(false) // overlay de confirmation d'abandon du NG+ (chez CHEN)
+    const [chenGiftConfirm, setChenGiftConfirm] = useState(false) // MODE FUN : overlay de confirmation du cadeau ⚡ de CHEN
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -1576,6 +1579,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         setAbandonConfirm(true)
     }, [pendingNgplusAbandon, dialogue, battle])
 
+    // MODE FUN — après l'offre de cadeau de CHEN (dialogue refermé), ouvre la modale de CONFIRMATION (Oui/Non).
+    useEffect(() => {
+        if (!pendingChenGift || dialogue || battle) return
+        useGameStore.setState({ pendingChenGift: false })
+        setChenGiftConfirm(true)
+    }, [pendingChenGift, dialogue, battle])
+
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule
     // fois par sacre — la ref se réarme quand le générique se ferme (clearChampion → championRun=null).
@@ -2436,6 +2446,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     if (kartOpen) return
                     if (glandModal) { advanceGland(); return } // événement du gland : A avance aussi la modale
                     if (battle) { if (menu === "none") dispatchBattleInput("a"); return }
+                    // DIALOGUE OUVERT : A avance TOUJOURS le texte (pressA). Sans ce garde, si le joueur est ADJACENT à un
+                    //   reflet/PNJ (Archiviste inclus), A appelait handleArenaClick — bloqué par son garde `if (dialogue) return`
+                    //   → le texte ne défilait plus (freeze du dialogue de l'Archiviste). Corrigé.
+                    if (dialogue) { pressA(); return }
                     // Dans le casino, A face à un autre joueur = le défier.
                     if (inCasino) {
                         const target = facingRemote()
@@ -4052,6 +4066,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             } else setToast("Trop tard : tu es déjà engagé dans le New Game+.")
                         }}>🔥 OUI, j&apos;abandonne (perte définitive)</button>
                         <button style={menuBtnDimStyle} onClick={() => setAbandonConfirm(false)}>← NON, je continue mon NG+</button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODE FUN — confirmation du CADEAU ⚡ du Prof. CHEN (le joueur choisit de recevoir l'énergie ou non). */}
+            {chenGiftConfirm && (
+                <div style={menuOverlayStyle} onClick={() => setChenGiftConfirm(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🎁 Cadeau du Prof. CHEN</div>
+                        <div style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.6, opacity: 0.9, marginBottom: 4 }}>
+                            Accepter le coup de pouce en <b>⚡</b> ?<br />
+                            <span style={{ opacity: 0.75 }}>Tes potes du mode fun reçoivent aussi leur part à leur prochaine connexion.</span>
+                        </div>
+                        <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => { setChenGiftConfirm(false); confirmChenGift() }}>✅ OUI, je prends l&apos;énergie</button>
+                        <button style={menuBtnDimStyle} onClick={() => setChenGiftConfirm(false)}>✋ Non merci</button>
                     </div>
                 </div>
             )}

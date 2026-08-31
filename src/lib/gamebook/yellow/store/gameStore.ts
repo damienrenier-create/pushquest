@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, ownCreationNemesisSpecies } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -70,7 +70,7 @@ import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } fro
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
-import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES } from "../data/labDialogues"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate, GENIE_MIN_BADGES } from "../data/genieLamp"
@@ -508,6 +508,8 @@ interface GameStore {
      *  Gèle le déplacement le temps de l'alerte, puis son intro s'ouvre (cf. move). */
     trainerAlertId: string | null
     pendingNgplusAbandon: boolean // NG+ : offre d'abandon de CHEN en cours → confirmation UI à la fermeture du dialogue
+    pendingChenGift: boolean // MODE FUN : offre de cadeau ⚡ de CHEN en cours → modale de confirmation (Oui/Non) à la fermeture du dialogue
+    confirmChenGift: () => void // MODE FUN : le joueur a confirmé → crédite le cadeau + fan-out communautaire
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingSurfer: boolean // défi/dialogue du SURFEUR en cours → petit combat à la fermeture
     pendingAnanas: boolean // intro d'ANANAS en cours → combat à la fermeture
@@ -1287,6 +1289,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     clanRosterOpen: null,
     trainerAlertId: null,
     pendingNgplusAbandon: false,
+    pendingChenGift: false,
+    confirmChenGift: () => {
+        const claim = claimChenGift(CHEN_FUN_GIFT_REPS)
+        if (!claim) { set({ pendingChenGift: false }); return }
+        persistYellowSave() // crédit + compteur sauvés AVANT le fan-out (best-effort)
+        const shared = claim.tier === 1 ? 200 : 500 // affichage ; montant réel re-dérivé serveur (eventKey)
+        void fetch("/api/gamebook/yellow/chen-gift", { method: "POST" }).catch(() => {})
+        set({ pendingChenGift: false, dialogue: { npcId: "y_lab_scientist", npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_LINES(claim.added, 2 - claim.tier, shared) } })
+    },
     pendingOrcaline: false,
     pendingSurfer: false,
     pendingAnanas: false,
@@ -2496,16 +2507,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
             //   (chenGiftClaims, soft-cap). Ordre anti-perte : crédit + compteur PERSISTÉS avant le fan-out best-effort.
             //   Le don communautaire aux AUTRES joueurs fun (200 au 1er passage, 500 au 2e) est calculé CÔTÉ SERVEUR.
             //   Fun ⇒ monde "live" → les branches NG+/run3 ci-dessous ne se déclenchent jamais (fun mis en premier).
-            if (getGameMode() === "fun") {
-                const claim = claimChenGift(CHEN_FUN_GIFT_REPS)
-                if (!claim) {
+            // MODE FUN (jamais en run 3 — le concours n'accorde aucune énergie hors arène) : Chen EXPLIQUE d'abord son
+            //   cadeau et sa contrepartie, puis le joueur CONFIRME (modale Oui/Non → confirmChenGift). Rien n'est crédité
+            //   ici. Offert UNIQUEMENT si le joueur est réellement à court (< 1000⚡).
+            if (getGameMode() === "fun" && getActiveWorld() !== "run3") {
+                if (chenGiftsRemaining() <= 0) {
                     set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_DONE_LINES } })
                     return
                 }
-                persistYellowSave() // crédit + compteur sauvés AVANT le fan-out (best-effort)
-                const shared = claim.tier === 1 ? 200 : 500 // affichage ; le montant réel est re-dérivé serveur (eventKey)
-                void fetch("/api/gamebook/yellow/chen-gift", { method: "POST" }).catch(() => {})
-                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_LINES(claim.added, 2 - claim.tier, shared) } })
+                if (getPlayerSave().reps >= 1000) {
+                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_ENOUGH_LINES } })
+                    return
+                }
+                const shared = (getPlayerSave().chenGiftClaims ?? 0) === 0 ? 200 : 500
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_OFFER_LINES(CHEN_FUN_GIFT_REPS, shared) }, pendingChenGift: true })
                 return
             }
             // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
