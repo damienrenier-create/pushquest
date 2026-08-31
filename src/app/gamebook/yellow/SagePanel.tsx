@@ -34,6 +34,11 @@ const INTRO = [
     "« Mes deux garçons t'ont sûrement parlé de moi : l'un piste les bêtes, l'autre espionne les fiches… Moi, gamin, je SCULPTE la puissance brute. »",
     "« Tu as gâché de la sueur en la mettant au mauvais endroit ? Ça arrive. Présente-moi un Daemon de ton équipe : on va rééquilibrer tout ça. »",
 ]
+// MODE FUN : aucune rep encodée → on retire la « sueur » de l'intro (2ᵉ réplique), le reste est identique.
+const INTRO_FUN = [
+    INTRO[0],
+    "« Des points mal répartis ? Ça arrive. Présente-moi un Daemon de ton équipe : on va rééquilibrer tout ça. »",
+]
 const RULES =
     "« Retire un point d'une stat, replace-le dans une autre — pas un de perdu, pas un de créé. Mais l'énergie ne se déplace pas gratis : 1 goutte de sueur pour le 1ᵉʳ point du jour, 2 pour le 2ᵉ… jusqu'à 20 points. Au-delà, reviens demain. »"
 // MODE FUN : pas de sueur (aucune rep encodée) → le coût est en ⚡ (même barème triangulaire, même pool d'énergie).
@@ -129,7 +134,7 @@ export default function SagePanel() {
                     // ── Choix du Daemon de l'équipe ──
                     <div style={S.scroll}>
                         {flash && <div style={S.flash}>{flash}</div>}
-                        {INTRO.map((l, i) => <div key={i} style={{ ...S.line, fontStyle: "italic" }}>{l}</div>)}
+                        {(getGameMode() === "fun" ? INTRO_FUN : INTRO).map((l, i) => <div key={i} style={{ ...S.line, fontStyle: "italic" }}>{l}</div>)}
                         <div style={S.section}>Quel Daemon veux-tu rééquilibrer ?</div>
                         <div style={S.grid}>
                             {player.team.map((m) => {

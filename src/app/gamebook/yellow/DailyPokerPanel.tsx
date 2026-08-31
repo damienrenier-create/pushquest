@@ -5,7 +5,7 @@
 // et revient demain. Aucune triche — vrai cash game. Jouable tant qu'il reste des boss non ruinés.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, creditReps, logEnergyIncome, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, creditReps, logEnergyIncome, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCashPoker } from "@/lib/gamebook/yellow/multiplayer/useCashPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -107,7 +107,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
 
                 {phase === "intro" && (
                     <div style={{ fontSize: 12.5, lineHeight: 1.6 }}>
-                        <p style={{ margin: "4px 0" }}>Table à <b>6</b> : toi + <b>5 boss</b> de la Ligue et des arènes. <b>Vraies reps</b> — tu gagnes et tu perds pour de vrai.</p>
+                        <p style={{ margin: "4px 0" }}>Table à <b>6</b> : toi + <b>5 boss</b> de la Ligue et des arènes. {getGameMode() === "fun" ? <>Ta <b>vraie énergie ⚡</b> est en jeu</> : <><b>Vraies reps</b></>} — tu gagnes et tu perds pour de vrai.</p>
                         <ul style={{ margin: "6px 0", paddingLeft: 18, opacity: 0.9 }}>
                             <li>Chaque boss démarre avec un tapis <b>= ton buy-in</b> (jamais plus que toi), mais <b>garde ses gains</b> d'une partie à l'autre.</li>
                             <li>Un boss que tu <b>ruines</b> (tapis 0) <b>quitte la table</b> et ne revient que <b>demain</b>.</li>

@@ -5205,7 +5205,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={menuTitleStyle}>🧞 Un vœu de {genieOffer.sourceNickname}</div>
                         <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
                             Le génie de <b>{genieOffer.sourceNickname}</b> te tend la main : <b>+{genieOffer.amount}⚡</b> pour toi, cadeau !
-                            <br />⚠️ Si tu refuses, <b>{genieOffer.sourceNickname}</b> devra faire <b>{genieOffer.pushupPerRefusal} pompes</b> de plus (l'orgueil du génie).
+                            <br />⚠️ Si tu refuses, <b>{genieOffer.sourceNickname}</b> {getGameMode() === "fun" ? <>écopera d&apos;un <b>gage</b> supplémentaire</> : <>devra faire <b>{genieOffer.pushupPerRefusal} pompes</b> de plus</>} (l&apos;orgueil du génie).
                         </div>
                         <button style={menuBtnStyle} onClick={() => respondGenieOffer("accept")}>✅ Accepter {genieOffer.amount}⚡</button>
                         <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={() => respondGenieOffer("refuse")}>✋ Refuser</button>

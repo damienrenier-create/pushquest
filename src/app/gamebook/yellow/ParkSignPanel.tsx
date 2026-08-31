@@ -105,8 +105,9 @@ function EnergyPage() {
     if (run >= 3) {
         return (
             <>
-                <P>En <b>concours (run 3)</b>, tes pompes ne rechargent <b>pas</b> ton énergie : tu démarres avec <b>500⚡</b> et chaque <b>arène vaincue</b> te recharge (jusqu'à 1000).</P>
-                <P>Ici, tes vraies répétitions servent tes <b>points Saiyan</b> (entraînement) — pas tes munitions.</P>
+                <P>En <b>concours (run 3)</b>, ton énergie ne se recharge <b>pas</b> toute seule : tu démarres avec <b>500⚡</b> et chaque <b>arène vaincue</b> te recharge (jusqu'à 1000).</P>
+                {/* La ligne « vraies répétitions → points Saiyan » n'a de sens qu'en muscu : masquée en mode fun (aucune rep). */}
+                {mode !== "fun" && <P>Ici, tes vraies répétitions servent tes <b>points Saiyan</b> (entraînement) — pas tes munitions.</P>}
                 <P>Chaque attaque coûte de l'énergie ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             </>
         )

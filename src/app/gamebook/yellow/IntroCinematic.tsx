@@ -40,7 +40,8 @@ const outro = (name: string): Line[] => [
 // On insère aussi un DISCOURS D'OBJECTIF clair (le but de la run 1 fun) juste avant le don du starter (index 8).
 const SCRIPT_FUN: Line[] = (() => {
     const mapped = SCRIPT.map((l, k) =>
-        k === 1 ? { ...l, text: "Chaque DÉFI que tu relèves résonne jusqu'à Mon royaume… Tu es enfin PRÊT." }
+        k === 0 ? { ...l, text: "✦ TOI, là-bas. Oui, toi qui rêves d'aventure dans le monde réel. Tu M'as appelé sans le savoir. ✦" }
+        : k === 1 ? { ...l, text: "Chaque DÉFI que tu relèves résonne jusqu'à Mon royaume… Tu es enfin PRÊT." }
         : k === 7 ? { ...l, text: "Et — nous le voyons d'ici — les Daemons changent d'humeur au fil des HEURES et des JOURS. Observe le ciel avant de chasser…" }
         : l)
     const objectif: Line[] = [
