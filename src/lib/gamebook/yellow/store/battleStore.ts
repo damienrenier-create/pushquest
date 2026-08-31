@@ -566,6 +566,13 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     return base * (isAbundanceCurseActive() ? 10 : 1) * (b.costMult ?? 1)
 }
 
+/** Coût AFFICHÉ (UI) de l'attaque du slot `moveIndex` du Daemon actif — MIROIR EXACT de la déduction réelle
+ *  (inclut costMult ×3 entraînement rival, vœu maudit ×10, quota run3/fun). Source de vérité unique pour BattleScreen. */
+export function moveCostForDisplay(moveIndex: number): number {
+    const b = storeState.battle
+    return b ? moveCostRepsForAction(b, moveIndex) : 0
+}
+
 export function submitPlayerAction(action: PlayerAction) {
     const battle = storeState.battle
     // Défense-en-profondeur : après la fin d'un combat, storeState.battle reste l'objet ENDED (non null) → sans le

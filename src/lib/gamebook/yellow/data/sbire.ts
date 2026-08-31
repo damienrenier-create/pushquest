@@ -263,11 +263,27 @@ export const SBIRE_TIPS: string[][] = [
     //  sont désormais lisibles sur les PANNEAUX de la map Nord — cf. data/parkSigns.ts.)
 ]
 
+/** CONSEILS CLAN — le sbire médite désormais au cœur de la CHAPELLE DE NOUILLON : il est le mieux placé pour parler
+ *  des pactes et des clans. Une bulle « clan » est AJOUTÉE à chaque conseil (cycle indépendant). Édite librement. */
+export const SBIRE_CLAN_TIPS: string[] = [
+    "🍝 Un mot sur les CLANS : trois maîtres t'entourent ici. Bats l'arène 1, puis prête serment à UN seul — c'est un pacte de sang, définitif pour tout ce run.",
+    "🍝 Le triangle sacré : l'AIR fend le COMBAT, le COMBAT brise la ROCHE, la ROCHE écrase l'AIR. Choisis ton camp en connaissance de cause.",
+    "🍝 Ton clan est jaloux : porte en équipe la signature d'un clan RIVAL, et ton maître te coupe tous ses bienfaits. Range l'intrus au PC pour réparer.",
+    "🍝 Fais grandir ton Daemon-clan : au niveau 50, ton maître t'offre sa CT secrète ; au niveau 80, la Transcendance ultime.",
+    "🍝 Entraîne-toi chez ton maître pour DOUBLER ton XP. Ose les clans rivaux : XP ET coût TRIPLÉS… mais quel butin d'expérience.",
+    "🍝 La ferveur récompense la meute : quand un frère de clan croise un shiny, tu touches le TRIPLE des reps prévues.",
+    "🍝 Un frère décroche un badge avec le Daemon-clan en équipe ? Toute la guilde reçoit une Super Pasta dans son sac.",
+    "🍝 On n'affronte JAMAIS le reflet d'un frère de clan — on lui tape dans la main : un high-five, un petit mot, et quelques reps offerts.",
+    "🍝 Reviens voir ton maître chaque jour : il te verse de l'énergie à hauteur du niveau de ton Daemon-clan (et une Nexus Ball aux dizaines).",
+]
+
 /**
- * Conseil (liste de bulles) à afficher pour la n-ième victoire (1-indexée),
- * en cyclant sur le pool une fois tous les conseils vus.
+ * Conseil (liste de bulles) à afficher pour la n-ième victoire (1-indexée), en cyclant sur le pool une fois tous
+ * les conseils vus. On AJOUTE en dernière bulle un conseil CLAN (le sbire médite au cœur de la Chapelle).
  */
 export function sbireExplanation(winNumber: number): string[] {
-    const i = (Math.max(1, winNumber) - 1) % SBIRE_TIPS.length
-    return SBIRE_TIPS[i]
+    const n = Math.max(1, winNumber)
+    const tip = SBIRE_TIPS[(n - 1) % SBIRE_TIPS.length]
+    const clanTip = SBIRE_CLAN_TIPS[(n - 1) % SBIRE_CLAN_TIPS.length]
+    return [...tip, clanTip]
 }

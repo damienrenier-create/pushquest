@@ -54,9 +54,9 @@ const CLAN_FLAVOR: Record<ClanKey, { gesture: string; identity: string; withStar
     },
 }
 
-/** MEUTE PLEINE — pitch PERSONNALISÉ (≠ ligne générique) : petite analyse d'équipe + argument pro-clan + piques
- *  contre les DEUX rivaux (proie + prédateur, triangle) + encouragement à revenir. Propre à chaque chef. */
-function teamFullPitch(clan: ClanKey): string[] {
+/** CORPS du pitch d'un chef (≠ ligne générique) : petite analyse d'équipe + argument pro-clan + piques contre les
+ *  DEUX rivaux (proie + prédateur, triangle). Propre à chaque chef. Complété par une CLÔTURE selon le contexte. */
+function clanPitchBody(clan: ClanKey): string[] {
     const c = CLANS[clan]
     const f = CLAN_FLAVOR[clan]
     const team = getPlayer().team
@@ -70,7 +70,22 @@ function teamFullPitch(clan: ClanKey): string[] {
         analysis,
         `${f.identity} Prête-moi serment et ${starter} entrera dans tes rangs : ${f.withStarter}`,
         `Et surtout, ne va pas t'égarer chez les rivaux : ${f.disses[c.prey]}. Quant au ${CLANS[c.predator].name} ? ${f.disses[c.predator]}.`,
-        `Mais ta meute DÉBORDE — je ne peux rien t'offrir tant qu'elle est pleine. Libère une place, puis reviens sceller le pacte : le ${c.name} n'oublie pas ceux qui hésitent.`,
+    ]
+}
+
+/** MEUTE PLEINE : pitch + encouragement à libérer une place (pas de signature possible). */
+function teamFullPitch(clan: ClanKey): string[] {
+    const c = CLANS[clan]
+    return [...clanPitchBody(clan), `Mais ta meute DÉBORDE — je ne peux rien t'offrir tant qu'elle est pleine. Libère une place, puis reviens sceller le pacte : le ${c.name} n'oublie pas ceux qui hésitent.`]
+}
+
+/** OFFRE du pacte : pitch + explication du PACTE DE SANG + demande de CONFIRMATION explicite (A signe / B recule). */
+function clanOfferPitch(clan: ClanKey): string[] {
+    const c = CLANS[clan]
+    return [
+        ...clanPitchBody(clan),
+        `Alors, tu es prêt à rejoindre le ${c.name} ? C'est un PACTE DE SANG, IRRÉVERSIBLE ce run : plus JAMAIS tu ne pourras servir un autre clan. En échange, l'un des miens entre dans ta meute, et je te guide — CT du clan au niveau 50, Transcendance au niveau 80.`,
+        `⚔️ CONFIRMES-TU ? Presse [A] pour SIGNER DE TON SANG — c'est définitif — ou [B] pour reculer encore.`,
     ]
 }
 
@@ -159,14 +174,7 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
         `${c.emoji} Prêter serment ? Pas si vite. Reviens quand tu auras décroché ton PREMIER badge d'arène.`,
     ] }
     if (getPlayer().team.length >= TEAM_MAX) return { lines: teamFullPitch(clan) }
-    return {
-        pendingJoin: clan,
-        lines: [
-            `${c.emoji} Tu veux rejoindre le ${c.name} ?`,
-            "C'est un PACTE DE SANG, IRRÉVERSIBLE ce run : plus jamais tu ne pourras servir un autre clan. En retour, l'un des miens entre dans ta meute, et je te guide (CT au niv 50, Transcendance au niv 80).",
-            "Presse pour SCELLER le pacte… ou recule.",
-        ],
-    }
+    return { pendingJoin: clan, lines: clanOfferPitch(clan) }
 }
 
 /** CONFIRMATION du pacte (fermeture du dialogue) : don du Daemon-clan niv 5 + serment gravé. */

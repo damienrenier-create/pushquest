@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS } from "./sbire"
+import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS, SBIRE_CLAN_TIPS } from "./sbire"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -80,9 +80,13 @@ describe("sbire du dieu Spaghetti — 6 combats/jour", () => {
         }
     })
 
-    it("les conseils sont 1-indexés (tableaux de bulles) et cyclent sur le pool", () => {
-        expect(sbireExplanation(1)).toEqual(SBIRE_TIPS[0])
-        expect(sbireExplanation(SBIRE_TIPS.length)).toEqual(SBIRE_TIPS[SBIRE_TIPS.length - 1])
-        expect(sbireExplanation(SBIRE_TIPS.length + 1)).toEqual(SBIRE_TIPS[0])
+    it("les conseils cyclent sur le pool + AJOUTENT un conseil CLAN en dernière bulle", () => {
+        // Le conseil régulier reste en tête (mêmes bulles), un conseil CLAN est ajouté à la fin.
+        expect(sbireExplanation(1).slice(0, SBIRE_TIPS[0].length)).toEqual(SBIRE_TIPS[0])
+        expect(sbireExplanation(1).at(-1)).toBe(SBIRE_CLAN_TIPS[0])
+        // Cycle du pool régulier (le +1 revient au tout premier conseil).
+        expect(sbireExplanation(SBIRE_TIPS.length + 1).slice(0, SBIRE_TIPS[0].length)).toEqual(SBIRE_TIPS[0])
+        // Chaque conseil se termine par une bulle clan (🍝).
+        expect(sbireExplanation(3).at(-1)).toContain("🍝")
     })
 })

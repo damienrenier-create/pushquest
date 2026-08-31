@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
 import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -351,10 +351,9 @@ export default function BattleScreen() {
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
             }
         } else if (menu === "moves") {
-            const meHpFrac = player.currentHp / Math.max(1, maxHpOf(player)) // Patience : coût dynamique ∝ PV manquants (miroir EXACT du store)
-            // FUN : coût piloté par les BADGES (pas les reps du jour) — miroir EXACT du store (moveCostRepsForAction).
-            const costQuota = getGameMode() === "fun" ? playerAttackQuota(repsWallet.badges.length) : effectiveQuota(repsWallet.wildCtx?.quota)
-            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, costQuota, meHpFrac))
+            // Coût AFFICHÉ = miroir EXACT de la déduction du store (inclut ×3 entraînement rival, ×10 vœu maudit,
+            //   quota run3/fun, coût ∝ PV manquants) → source de vérité unique, plus de désync affichage/débit.
+            const costs = player.moves.map((_s, i) => moveCostForDisplay(i))
             // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
             // (la déduction de reps est déjà sautée côté store pour le PvP).
             const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)
