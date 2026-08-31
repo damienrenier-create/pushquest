@@ -13,6 +13,7 @@ export interface ArenaOpponent {
     x: number
     y: number
     avatar?: string // skin adopté (chosenAvatar) → le reflet l'affiche partout
+    clan?: "air" | "combat" | "roche" | null // FERVEUR DE CLAN — badge de clan affiché au-dessus du nom sur la carte
     player: RegistryPlayer
 }
 
@@ -67,6 +68,7 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
         x: positions[i][0],
         y: positions[i][1],
         avatar: p.chosenAvatar ?? undefined,
+        clan: p.clan ?? null,
         player: p,
     }))
     return { mode, opponents }

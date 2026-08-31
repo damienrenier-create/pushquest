@@ -14,6 +14,7 @@ import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } 
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
+import { CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_SPRITE_RECT, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -353,7 +354,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     remotePlayers?: RemotePlayer[]
     chatBubbles?: Record<string, ChatBubble>
     myUserId?: string
-    arenaOpponents?: { userId: string; nickname: string; x: number; y: number; avatar?: string }[]
+    arenaOpponents?: { userId: string; nickname: string; x: number; y: number; avatar?: string; clan?: "air" | "combat" | "roche" | null }[]
     onArenaClick?: (userId: string) => void
     /** FASHION VICTIM — avatar Gen3 du JOUEUR LOCAL (pour qu'il se voie lui-même changé). */
     myAvatar?: string
@@ -1237,7 +1238,7 @@ function ArenaOpponentSprite({
     screenPos,
     onClick,
 }: {
-    o: { userId: string; nickname: string; x: number; y: number; avatar?: string }
+    o: { userId: string; nickname: string; x: number; y: number; avatar?: string; clan?: "air" | "combat" | "roche" | null }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     onClick: () => void
 }) {
@@ -1283,6 +1284,10 @@ function ArenaOpponentSprite({
                     pointerEvents: "none",
                 }}
             >
+                {o.clan && (
+                    <span title={`Membre du ${CLANS[o.clan].name}`}
+                        style={{ fontSize: "clamp(10px, 2.4dvw, 14px)", lineHeight: 1, filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.6))" }}>{CLANS[o.clan].emoji}</span>
+                )}
                 <span style={{ fontSize: "clamp(9px, 2.2dvw, 13px)" }}>⚔️</span>
                 <span
                     style={{
