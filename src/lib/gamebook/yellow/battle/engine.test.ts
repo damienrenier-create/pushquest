@@ -559,3 +559,25 @@ describe("capture ratée — séquence d'échec théâtral (miss + punchline)", 
         expect(la?.kind === "message" && lb?.kind === "message" && la.text === lb.text).toBe(true)
     })
 })
+
+describe("ANTI-STALEMATE — HARA-KIRI²", () => {
+    it("deux Normal/Spectre mutuellement immunisés → double K.O. et le combat FINIT (plus d'impasse infinie)", () => {
+        const inert = ["tranche", "griffe_spectrale"] // Normal + Spectre : 0 dégât sur un Normal/Spectre (immunité mutuelle)
+        const player = [createMonInstance("shadow", 50, { moveIds: inert }), createMonInstance("cailloutchi", 50)]
+        const enemy = [createMonInstance("shadow", 50, { moveIds: inert })]
+        const start = createBattle(player, enemy, { isWild: false, seed: 777 })
+        const { final, turns } = autoPlay(start)
+        expect(final.phase).toBe("ended")                 // le combat se TERMINE (le hara-kiri brise l'impasse)
+        expect(turns).toBeLessThan(20)                    // débloqué autour de ~10-12 tours, pas 300
+        expect(final.enemy.team[0].currentHp).toBe(0)     // le Shadow adverse est K.O. (hara-kiri)
+        expect(final.player.team[0].currentHp).toBe(0)    // notre Shadow aussi (double K.O.)
+    })
+    it("un combat NORMAL (dégâts réels) ne déclenche JAMAIS le hara-kiri", () => {
+        const player = [createMonInstance("cerfeuillu", 60, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] })]
+        const enemy = [createMonInstance("cailloutchi", 20)]
+        const { final } = autoPlay(createBattle(player, enemy, { isWild: false, seed: 42 }))
+        expect(final.phase).toBe("ended")
+        expect(final.outcome).toBe("win")                 // victoire propre, pas un double K.O. de hara-kiri
+        expect(final.player.team[0].currentHp).toBeGreaterThan(0)
+    })
+})

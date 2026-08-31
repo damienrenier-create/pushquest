@@ -58,6 +58,11 @@ export interface BattleState {
     isWild: boolean
     aiLevel: AiLevel
     turn: number
+    /** ANTI-STALEMATE : nb de tours consécutifs SANS le moindre changement (PV/stages/statut des 2 actifs) + signature
+     *  de la dernière position. À STALL_LIMIT, le Daemon piloté par l'IA déclenche HARA-KIRI² (double K.O.) pour débloquer
+     *  une impasse type Normal/Spectre (immunité mutuelle → personne ne se touche jamais). */
+    stallTurns?: number
+    stallSig?: string
     phase: "select" | "ended"
     outcome: Outcome | null
     /** Side devant choisir un remplaçant suite à un KO (sinon null). */
@@ -217,6 +222,13 @@ export function createBattle(
 // Résolution d'un tour
 // ============================================================
 
+const STALL_LIMIT = 10 // tours consécutifs SANS changement avant HARA-KIRI² (règle anti-impasse, ex. Normal/Spectre)
+/** Signature de position des 2 actifs (uid + PV + stages + statut) → identique d'un tour à l'autre = personne ne bouge. */
+function stallSignature(state: BattleState): string {
+    const sig = (m: BattleMon) => `${m.uid}#${m.currentHp}#${JSON.stringify(m.stages)}#${m.status ?? ""}`
+    return sig(active(state.player)) + "||" + sig(active(state.enemy))
+}
+
 export function resolveTurn(prev: BattleState, playerAction: PlayerAction): BattleState {
     if (prev.phase === "ended") return prev
 
@@ -332,6 +344,19 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     // contexte c'est un no-op sûr (ne devrait jamais arriver — l'UI ne le propose que là).
     if (playerAction.kind === "stay") {
         return commit(state, events, rng, prev.turn, /*advance*/ false)
+    }
+
+    // ANTI-STALEMATE : le combat piétine depuis STALL_LIMIT tours (aucun dégât ni changement d'état — ex. Normal/Spectre
+    //   mutuellement immunisés). Le Daemon piloté par l'IA déclenche HARA-KIRI² : double K.O. pour débloquer l'impasse.
+    if ((state.stallTurns ?? 0) >= STALL_LIMIT && active(state.player).currentHp > 0 && active(state.enemy).currentHp > 0) {
+        const foe = active(state.enemy), me = active(state.player)
+        events.push({ kind: "message", text: `L'impasse a assez duré… ${displayName(foe)} déclenche HARA-KIRI² et emporte les deux combattants !` })
+        foe.currentHp = 0; me.currentHp = 0
+        events.push({ kind: "hp", side: "enemy", hp: 0, max: maxHpOf(foe) })
+        events.push({ kind: "hp", side: "player", hp: 0, max: maxHpOf(me) })
+        state.stallTurns = 0
+        checkFaints(state, events)
+        return commit(state, events, rng, prev.turn, /*advance*/ true)
     }
 
     // --- Construit les actions des deux camps ---
@@ -1695,6 +1720,13 @@ function commit(state: BattleState, events: BattleEvent[], rng: Rng, prevTurn: n
             state.outcome = "enemyfled"
             events.push({ kind: "message", text: `${displayName(wild)} décroche et file à toute vitesse ! Plus moyen de le rattraper…` })
             events.push({ kind: "end", outcome: "enemyfled" })
+        }
+        // ANTI-STALEMATE : signature de la position (2 actifs). Identique au tour précédent = aucun dégât ni changement
+        //   d'état → on compte les tours de piétinement (HARA-KIRI² déclenché à STALL_LIMIT, cf. resolveTurn).
+        if (state.phase !== "ended") {
+            const sig = stallSignature(state)
+            state.stallTurns = sig === state.stallSig ? (state.stallTurns ?? 0) + 1 : 0
+            state.stallSig = sig
         }
     }
     return state

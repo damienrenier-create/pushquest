@@ -61,8 +61,10 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_frere_blizzard: [{ speciesId: "yetiroche", level: 53 }, { speciesId: "auroraur", level: 53 }, { speciesId: "cryotyran", level: 54 }, { speciesId: "orcaline", level: 55 }],
         // PLAGE (dresseurs à vue) — RUN 2 : thème SPECTRE (remix Sartay ; les spectres ont migré du Manoir vers la crique).
         y_plage_pecheur: [{ speciesId: "brookhante", level: 50 }, { speciesId: "archibouh", level: 51 }],
-        y_plage_nageuse: [{ speciesId: "chouhante", level: 50 }, { speciesId: "shadow", level: 51 }, { speciesId: "revemante", level: 52 }],
-        y_plage_marin: [{ speciesId: "shadow", level: 50 }, { speciesId: "brookhante", level: 51 }],
+        // Shadow (NORMAL/SPECTRE) : 2 attaques TÉNÈBRES (devoreur_ombres/onde_obscure) FORCÉES → seules capables de percer
+        //   un adversaire Normal/Spectre (ex. Nécrossum de Zyran), sinon immunité mutuelle = combat impossible à finir.
+        y_plage_nageuse: [{ speciesId: "chouhante", level: 50 }, { speciesId: "shadow", level: 51, moves: ["devoreur_ombres", "onde_obscure", "griffe_spectrale", "tranche"] }, { speciesId: "revemante", level: 52 }],
+        y_plage_marin: [{ speciesId: "shadow", level: 50, moves: ["devoreur_ombres", "onde_obscure", "griffe_spectrale", "tranche"] }, { speciesId: "brookhante", level: 51 }],
     },
     // ── RUN 3 ──
     run3: {
