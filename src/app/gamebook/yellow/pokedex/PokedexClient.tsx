@@ -38,9 +38,9 @@ function DexIcon({ sp, seen, caught, big }: { sp: SpeciesData; seen: boolean; ca
                 qu'un gros truc existe sans pouvoir l'identifier. Les autres non-vus gardent un simple « ? ». */}
             {!seen
                 ? (DEX_ULTRA_SECRET.has(sp.id) && !err
-                    ? <img src={sp.sprite} alt="?" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+                    ? <img src={sp.sprite} alt="?" onError={() => setErr(true)} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
                     : "?")
-                : err ? sp.name[0] : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+                : err ? sp.name[0] : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
         </div>
     )
 }

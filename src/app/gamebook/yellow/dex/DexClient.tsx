@@ -14,15 +14,17 @@ import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
 
-// Vignette : sprite PNG, repli sur l'initiale si le fichier manque. `secret` = ULTRA-SECRET non capturé → on ne
-// montre que l'OMBRE NOIRE du sprite (silhouette, brightness(0)) pour ne pas révéler l'identité.
+// Vignette. `secret` (non rencontré / ultra-secret) → SILHOUETTE : bloc noir CSS PUR, on ne TÉLÉCHARGE PAS le PNG
+//   (identité masquée de toute façon → perf : un catalogue de 150+ entrées ne fetch plus des dizaines de Mo de PNG).
+//   Les sprites RÉVÉLÉS sont chargés en `loading="lazy"` (seuls ceux à l'écran partent au réseau).
 function DexIcon({ sp, secret }: { sp: SpeciesData; secret?: boolean }) {
     const [err, setErr] = useState(false)
+    if (secret) return <div style={S.icon}><div style={{ width: "72%", height: "72%", borderRadius: 8, background: "#131313", display: "flex", alignItems: "center", justifyContent: "center", color: "#3a3a3a", fontSize: 18, fontWeight: 900 }} aria-hidden>?</div></div>
     return (
         <div style={S.icon}>
-            {err ? (secret ? "?" : sp.name[0]) : (
-                <img src={sp.sprite} alt={secret ? "?" : sp.name} onError={() => setErr(true)}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(secret ? { filter: "brightness(0)" } : {}) }} />
+            {err ? sp.name[0] : (
+                <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)} loading="lazy" decoding="async"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
             )}
         </div>
     )

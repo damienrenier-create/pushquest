@@ -12,13 +12,21 @@ import { hasFusionSpriteInMemory, rememberFusionSprite } from "./fusionSpriteReg
 
 const BASE = "/api/gamebook/yellow/fusion-sprite"
 
-/** GET le statut d'une paire ; mémorise l'URL si READY. Renvoie l'URL ou null. Aucune génération. */
+// CACHE NÉGATIF (session) : paires dont le serveur a répondu NON-READY → on ne re-GET plus au remontage (Hall of Fame
+//   / Fusiodex remontent N fiches → sans ça, N requêtes DB à chaque ouverture). Une paire qui DEVIENT prête passe par
+//   le POST d'engagement (Ligue) qui écrit le cache POSITIF (registre mémoire, consulté AVANT ce cache négatif).
+const negativeChecked = new Set<string>()
+
+/** GET le statut d'une paire ; mémorise l'URL si READY (cache positif) ou l'absence (cache négatif). Aucune génération. */
 export async function fetchFusionStatus(aId: string, bId: string): Promise<string | null> {
+    const k = fusionPairKey(aId, bId)
+    if (negativeChecked.has(k)) return null // déjà vérifiée non-prête cette session → aucune requête réseau
     try {
         const r = await fetch(`${BASE}?a=${encodeURIComponent(aId)}&b=${encodeURIComponent(bId)}`)
         const j = await r.json()
         if (j?.status === "READY" && j.url) { rememberFusionSprite(aId, bId, j.url); return j.url }
-    } catch { /* hors-ligne : placeholder */ }
+        negativeChecked.add(k) // le serveur a répondu NON-READY (NONE/PENDING/FAILED) → plus de re-GET au remontage
+    } catch { /* erreur réseau : NE PAS cacher négatif (retry possible au prochain montage) */ }
     return null
 }
 
