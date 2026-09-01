@@ -122,7 +122,7 @@ function replayScoreFromBubble(w: unknown, run: string): { score: number; factor
     return run1BadgeScore(world, caught)
 }
 
-interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }
+interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number; fun?: boolean }
 
 export const dynamic = "force-dynamic"
 
@@ -175,6 +175,7 @@ export async function GET() {
     const run3Map = new Map<string, LeaderEntry>()
     const run3EnergyMap = new Map<string, LeaderEntry>() // « Survivant » : Σ énergie restante par arène (run 3)
     const duelsMap = new Map<string, { nickname: string; wins: number }>() // classement « Duelliste » : reflets battus (cumul cross-run)
+    let viewerFun = false // le SPECTATEUR est-il en mode fun ? (barèmes ≠ → classement run 1 séparé fun / non-fun)
 
     // 1) PULL — recalcule depuis la save. RUN 2/3 sont recalculés dès que leur MONDE existe (flags.ngplusWorld /
     //    flags.run3World), qu'il soit ACTIF ou GELÉ → un joueur qui a FINI son run garde son score FIGÉ visible
@@ -197,11 +198,13 @@ export async function GET() {
         for (const s of saves) {
             const f = (s.flags ?? {}) as Record<string, unknown>
             const nickname = s.user?.nickname ?? "?"
+            const isFun = s.user?.gameMode === "fun"
+            if (s.userId === auth.userId) viewerFun = isFun // le mode du SPECTATEUR (filtre le classement run 1)
             const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
             // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
             //   MODE FUN : barème 8 paliers × médailles de rapidité ; sinon barème 5-tiers historique (potes intacts).
-            const r1 = s.user?.gameMode === "fun" ? run1FunScore(f, s.userId, rankMap) : run1FromWorld(f)
-            if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
+            const r1 = isFun ? run1FunScore(f, s.userId, rankMap) : run1FromWorld(f)
+            if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined, fun: isFun })
             // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
             if (viewerDone) {
                 // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
@@ -262,10 +265,13 @@ export async function GET() {
     } catch { /* table pas encore créée → pull seul */ }
 
     const toList = (m: Map<string, LeaderEntry>) =>
-        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
+        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
-    return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
+    // RUN 1 : barème FUN (8 paliers) ≠ barème non-fun (5-tiers) → classements SÉPARÉS. Le spectateur ne voit QUE le sien.
+    const run1 = toList(run1Map).filter((e) => Boolean(e.fun) === viewerFun)
+
+    return NextResponse.json({ ok: true, run1, run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).

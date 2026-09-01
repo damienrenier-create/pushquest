@@ -44,6 +44,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const [firsts, setFirsts] = useState<Record<string, { userId: string; nickname: string }>>({}) // 🥇 1ers du groupe (feat-first)
     const [tab, setTab] = useState<TabId>("run1")
     const [expanded, setExpanded] = useState<string | null>(null) // RUN 2 : userId de l'entrée dépliée (détail des axes)
+    const [showRules, setShowRules] = useState(false) // RUN 1 fun : carrousel Classement ↔ Règles (allège l'écran)
     const [profile, setProfile] = useState<{ userId: string; nickname: string } | null>(null)
 
     useEffect(() => {
@@ -147,13 +148,20 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
 
                 <div style={hintStyle}>{meta.hint}</div>
 
-                {tab === "run1" && getGameMode() === "fun" && <Run1RulesBox />}
+                {/* RUN 1 fun : carrousel Classement ↔ Règles → les règles n'alourdissent plus l'écran de scores. */}
+                {tab === "run1" && getGameMode() === "fun" && (
+                    <div style={carouselRow}>
+                        <button onClick={() => setShowRules(false)} style={{ ...segBtn, ...(showRules ? {} : segBtnOn) }}>🏅 Classement</button>
+                        <button onClick={() => setShowRules(true)} style={{ ...segBtn, ...(showRules ? segBtnOn : {}) }}>📖 Règles & médailles</button>
+                    </div>
+                )}
+                {tab === "run1" && getGameMode() === "fun" && showRules && <Run1RulesBox />}
 
-                {state === "loading" && <div style={muted}>Chargement…</div>}
+                {state === "loading" && !(tab === "run1" && getGameMode() === "fun" && showRules) && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
 
-                {/* Onglets de RUN : top 10 + ta ligne */}
-                {state === "ok" && tab !== "duels" && tab !== "run4" && (
+                {/* Onglets de RUN : top 10 + ta ligne (masqué quand on affiche les règles du run 1 fun) */}
+                {state === "ok" && tab !== "duels" && tab !== "run4" && !(tab === "run1" && getGameMode() === "fun" && showRules) && (
                     fullList.length === 0
                         ? <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à briller ! {tab === "run1" ? "🥇" : tab === "run3" ? "🏆" : tab === "run3energy" ? "🔋" : "🏅"}</div>
                         : <div style={scroll}>
@@ -308,6 +316,9 @@ const titleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: 
 const tabsRow: React.CSSProperties = { display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }
 const tabBtn: React.CSSProperties = { flex: "1 1 auto", padding: "6px 4px", border: "1.5px solid", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 10.5, whiteSpace: "nowrap" }
 const hintStyle: React.CSSProperties = { fontSize: 9.5, opacity: 0.65, textAlign: "center", lineHeight: 1.4, marginBottom: 10 }
+const carouselRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 10 }
+const segBtn: React.CSSProperties = { flex: 1, padding: "6px 4px", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 11.5, background: "rgba(255,255,255,0.05)", color: "#c9d2e8" }
+const segBtnOn: React.CSSProperties = { background: "#ffd54a", color: "#11121a", borderColor: "#ffd54a" }
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.75, textAlign: "center", padding: "16px 8px", lineHeight: 1.6 }
 const scroll: React.CSSProperties = { overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }
 const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, borderRadius: 8, padding: "8px 10px" }
