@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         // Chapitre 2 mais reste hors-concours (cf. isGuest). Code partagé par Sartay.
         const GUEST_INVITE_CODE = process.env.GUEST_INVITE_CODE || "nexus-ami-2026"
         // Lien "AMIS SIMPLIFIÉ" : /register?invite=nexus-fun-2026. Compte invité en mode "fun" FORCÉ
-        //   (1000⚡ + 10 Nexus-Ball au départ, reps encodés simplement) → interface muscu allégée. Sert à
+        //   (10 000⚡ + 10 Nexus-Ball au départ, reps encodés simplement) → interface muscu allégée. Sert à
         //   amener des potes sans la barrière muscu. N'affecte PAS le lien invité classique ci-dessus.
         const FUN_INVITE_CODE = process.env.FUN_INVITE_CODE || "nexus-fun-2026"
         const isFunInvite = typeof invite === "string" && invite === FUN_INVITE_CODE

@@ -1019,7 +1019,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // RUN 3 — reload en pleine arène : loadYellowSave vient d'établir le monde (setActiveWorld). Si hydrate()
             //   a posé la carte de BASE avant (course de montage), on re-résout maintenant vers la variante re-thémée.
             if (!cancelled) useGameStore.getState().refreshActiveMap()
-            // easy/debutant : remplissage d'énergie de DÉPART ; fun : 1000⚡ + 10 Nexus-Ball (idempotent — une fois par run).
+            // easy/debutant : remplissage d'énergie de DÉPART ; fun : 10 000⚡ + 10 Nexus-Ball (idempotent — une fois par run).
             if (!cancelled) ensureModeStartGrant()
             // HAUTS FAITS — DRIP à la CONNEXION : on paie les reps des trophées gagnés-non-encore-payés, jusqu'à 1000⚡/jour
             //   (le reste attend la prochaine connexion). Chaque trophée payé = une ligne annoncée par le Dieu Spaghetti.
