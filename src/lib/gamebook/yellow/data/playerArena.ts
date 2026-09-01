@@ -152,10 +152,11 @@ function reachableCells(mapId: string): [number, number][] {
  * à un TYPE de sol (`tileType`, ex. "grassTall" = hautes herbes), mélangées et tronquées à `count`. `rand` = source
  * d'aléa (Math.random côté UI). Déterministe pour un `rand` donné → testable.
  */
-export function roamingSpots(mapId: string, count: number, rand: () => number, tileType?: string): [number, number][] {
+export function roamingSpots(mapId: string, count: number, rand: () => number, tileType?: string, minDist = 0): [number, number][] {
     const m = YELLOW_MAPS[mapId]
     if (!m) return []
     const exits = new Set((m.exits ?? []).map((e) => `${e.x},${e.y}`))
+    // reachableCells = cases ACCESSIBLES (donc walkable) ; on garde le type de tuile voulu et on exclut les sorties.
     const spots = reachableCells(mapId).filter(([x, y]) =>
         !exits.has(`${x},${y}`) && (!tileType || m.tiles[y]?.[x] === tileType))
     // Fisher-Yates → placement « hasardeux » (copie issue de filter → ne mute pas le cache).
@@ -163,7 +164,15 @@ export function roamingSpots(mapId: string, count: number, rand: () => number, t
         const j = Math.floor(rand() * (i + 1))
         const tmp = spots[i]; spots[i] = spots[j]; spots[j] = tmp
     }
-    return spots.slice(0, Math.max(0, count))
+    const n = Math.max(0, count)
+    if (minDist <= 1) return spots.slice(0, n)
+    // ESPACEMENT : sélection gloutonne, chaque case retenue à distance de Chebyshev >= minDist de toutes les autres.
+    const picked: [number, number][] = []
+    const farEnough = (x: number, y: number) => picked.every(([px, py]) => Math.max(Math.abs(px - x), Math.abs(py - y)) >= minDist)
+    for (const s of spots) { if (picked.length >= n) break; if (farEnough(s[0], s[1])) picked.push(s) }
+    // Filet de sécurité (map petite/encombrée) : si trop peu de cases assez espacées, on complète avec le reste.
+    if (picked.length < n) for (const s of spots) { if (picked.length >= n) break; if (!picked.includes(s)) picked.push(s) }
+    return picked
 }
 
 /** Niveau "représentatif" d'une équipe = niveau du Daemon le plus haut. */

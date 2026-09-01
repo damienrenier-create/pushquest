@@ -54,7 +54,7 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
     // « hasardeux ») ; arène fixe = cases prédéfinies. useMemo → stable tant qu'on reste sur la map.
     const positions = useMemo<[number, number][]>(
         () => (!active ? []
-            : isFunRouteNord ? roamingSpots(mapId, ROUTE_NORD_SPOT_COUNT, Math.random, "grassTall") // hautes herbes, >= 10 cases
+            : isFunRouteNord ? roamingSpots(mapId, ROUTE_NORD_SPOT_COUNT, Math.random, "grassTall", 3) // hautes herbes, espacées ≥ 3 cases
             : roaming ? roamingSpots(mapId, ARENA_OPPONENTS, Math.random)
             : ARENA_POSITIONS[mapId] ?? []),
         [active, roaming, isFunRouteNord, mapId],
