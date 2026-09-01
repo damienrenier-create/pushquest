@@ -61,16 +61,27 @@ describe("Défi némésis — récompense + registre par joueur", () => {
         }
     })
 
-    it("registre : Jacanon→Caninombre, Mools→Pyropanthe (insensible casse/espaces), autres = aucun défi", () => {
+    it("registre : Jacanon→Caninombre, Mools→Pyropanthe, Rob→Voltapanthe (insensible casse/espaces), autres = aucun défi", () => {
         expect(nemesisChallengeFor("Jacanon")?.rewardSpecies).toBe("caninombre")
         expect(nemesisChallengeFor("  jacanon ")?.rewardSpecies).toBe("caninombre")
         expect(nemesisChallengeFor("Mools")?.rewardSpecies).toBe("pyropanthe")
         expect(nemesisChallengeFor("MOOLS")?.rewardSpecies).toBe("pyropanthe")
+        expect(nemesisChallengeFor("Rob")?.rewardSpecies).toBe("voltapanthe")
+        expect(nemesisChallengeFor("rob ")?.rewardSpecies).toBe("voltapanthe")
         expect(nemesisChallengeFor("Sartay")).toBeNull()
         expect(nemesisChallengeFor("")).toBeNull()
         expect(isNemesisChallengePlayer("Jacanon")).toBe(true)
         expect(isNemesisChallengePlayer("Mools")).toBe(true)
+        expect(isNemesisChallengePlayer("Rob")).toBe(true)
         expect(isNemesisChallengePlayer("PersonneDInconnu")).toBe(false)
+    })
+
+    it("récompense de Rob : Voltapanthe (panthère ÉLEC, évo Panthéon) parfaite niv 5", () => {
+        const r = buildNemesisReward("voltapanthe")
+        expect(getSpecies(r.speciesId)?.types).toContain("ELEC")
+        expect(r.level).toBe(5)
+        expect(r.growthMult).toBe(1.25)
+        expect(Object.values(r.ivs).every((v) => v === 15)).toBe(true)
     })
 
     it("trainerId de combat porte l'espèce (round-trip) + marqueur de blocage par espèce", () => {

@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
-import { NEMESIS_ARMED_MARKER } from "../data/nemesisChallenge"
+import { NEMESIS_ARMED_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
@@ -1279,6 +1279,9 @@ export function applyTradeEvolution(uid: string): EvolutionResult | null {
 export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): EvolutionResult | null {
     if ((st.items[GEKROC_STONE_ITEM] ?? 0) <= 0) return null
     if (!PANTHEON_STONE_EVOS.some((e) => e.speciesId === targetSpeciesId)) return null
+    // SCEAU DU NÉMÉSIS (vœu du génie perdu) : « plus JAMAIS » vaut aussi pour la Pierre — une panthère scellée
+    //   ne peut plus être obtenue par évolution. Cf. nemesisRewardBlockedMarker (posé à la défaite, battleStore).
+    if (st.defeatedTrainers.includes(nemesisRewardBlockedMarker(targetSpeciesId))) return null
     const inTeam = st.team.findIndex((m) => m.uid === uid)
     const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
     const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)

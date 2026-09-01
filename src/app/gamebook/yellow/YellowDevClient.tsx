@@ -95,6 +95,7 @@ import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
+import { nemesisRewardBlockedMarker } from "@/lib/gamebook/yellow/data/nemesisChallenge"
 import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -4692,27 +4693,32 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => setPantheonEvo(null)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🪨 PIERRE GÉKROC — QUEL TYPE ?</div>
-                        {PANTHEON_STONE_EVOS.map(({ type, speciesId }) => (
-                            <button
-                                key={speciesId}
-                                style={menuBtnStyle}
-                                onClick={() => {
-                                    const res = evolvePantheonWithStone(pantheonEvo.uid, speciesId)
-                                    if (res) {
-                                        setToast(`${res.fromName} évolue en ${res.toName} !`)
-                                        persistYellowSave()
-                                        setPantheonEvo(null)
-                                        setSelected(null) // ferme la fiche (le Daemon a changé d'espèce)
-                                    } else {
-                                        setToast("Évolution impossible.")
-                                    }
-                                }}
-                            >
-                                <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <span>{type}</span><span>{getSpecies(speciesId)?.name}</span>
-                                </span>
-                            </button>
-                        ))}
+                        {PANTHEON_STONE_EVOS.map(({ type, speciesId }) => {
+                            // SCEAU DU NÉMÉSIS (vœu du génie perdu) : la panthère scellée reste visible mais grisée.
+                            const sealed = getPlayer().defeatedTrainers.includes(nemesisRewardBlockedMarker(speciesId))
+                            return (
+                                <button
+                                    key={speciesId}
+                                    style={sealed ? menuBtnDimStyle : menuBtnStyle}
+                                    onClick={() => {
+                                        if (sealed) { setToast("Le miroir a jugé : cette panthère t'est scellée à jamais."); return }
+                                        const res = evolvePantheonWithStone(pantheonEvo.uid, speciesId)
+                                        if (res) {
+                                            setToast(`${res.fromName} évolue en ${res.toName} !`)
+                                            persistYellowSave()
+                                            setPantheonEvo(null)
+                                            setSelected(null) // ferme la fiche (le Daemon a changé d'espèce)
+                                        } else {
+                                            setToast("Évolution impossible.")
+                                        }
+                                    }}
+                                >
+                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>{type}</span><span>{sealed ? "🚫 SCELLÉ" : getSpecies(speciesId)?.name}</span>
+                                    </span>
+                                </button>
+                            )
+                        })}
                         <button style={menuBtnDimStyle} onClick={() => setPantheonEvo(null)}>← ANNULER</button>
                     </div>
                 </div>

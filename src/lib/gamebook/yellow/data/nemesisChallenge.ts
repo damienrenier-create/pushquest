@@ -23,6 +23,7 @@ export interface NemesisChallenge {
 export const NEMESIS_CHALLENGES: readonly NemesisChallenge[] = [
     { nickname: "Jacanon", rewardSpecies: "caninombre" },
     { nickname: "Mools", rewardSpecies: "pyropanthe" },
+    { nickname: "Rob", rewardSpecies: "voltapanthe" }, // vœu « un électrique qui TABASSE » → panthère élec (évo Panthéon)
 ]
 
 /** Récompense COMMUNE : niveau 5, IV parfaits (15), croissance LENTE (comme un légendaire). */
@@ -35,7 +36,7 @@ export const NEMESIS_CHALLENGE_TRAINER_ID = "y_nemesis_challenge"
 /** Marqueurs d'état (dans defeatedTrainers — persistés partout, one-shot). Le blocage est PAR ESPÈCE. */
 export const NEMESIS_ARMED_MARKER = "nemesis_challenge_armed"   // vœu accepté → le défi est disponible
 export const NEMESIS_DONE_MARKER = "nemesis_challenge_done"     // l'unique essai est consommé (win OU lose)
-export function nemesisRewardBlockedMarker(species: string): string { return `${species}_blocked` } // défaite → l'espèce ne pope plus jamais
+export function nemesisRewardBlockedMarker(species: string): string { return `${species}_blocked` } // défaite → l'espèce ne pope plus jamais + la Pierre Gékroc refuse d'y évoluer un Panthéon (sceau total)
 
 /** Emplacement du PNJ : Centre Pokémon de la Ville Jaune, case (1,7), regard vers la DROITE. */
 export const NEMESIS_CHALLENGE_MAP_ID = "yellow_infirmary"
