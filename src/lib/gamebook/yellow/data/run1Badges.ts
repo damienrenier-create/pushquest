@@ -16,6 +16,7 @@
 import { getSpecies, visibleDexSpecies, SPECIES, DEX_ULTRA_SECRET } from "./species"
 import { FUSION_BASE_IDS } from "./fusionBaseSpecies"
 import { getTrainer } from "./trainers"
+import { clanOfSpecies } from "./clans"
 import type { YellowSave } from "../storage/save"
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
@@ -102,6 +103,8 @@ export interface BadgeInput {
     calepinReceived?: boolean     // a reçu le CALEPIN (1ʳᵉ défaite contre ACE)
     funDefisDone?: readonly string[] // types de DÉFIS FUN complétés (arene / sprint / cible)
     starterKoLevel?: number       // niveau du STARTER à sa 1ʳᵉ chute (sinon niveau actuel s'il n'est jamais tombé) → points variables
+    clanJoined?: boolean          // a prêté serment à un clan (save.clan non nul)
+    clanDaemonAt50?: boolean      // un Daemon de SON clan a atteint le niveau 50 (CT du clan)
     // MODE DE JEU : "fun" → barème 8 paliers (TIER_POINTS_FUN) au lieu du barème 5-tiers. Sinon inchangé.
     gameMode?: string
 }
@@ -188,6 +191,8 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "beat_mirror", label: "Battre le reflet d'un joueur", tier: "silver", secret: false, cat: "social", earned: (i) => i.mirrorWins >= 1 },
     { id: "beat_mirror_higher", label: "Battre un reflet au niveau cumulé SUPÉRIEUR", tier: "gold", secret: false, cat: "social", earned: (i) => i.mirrorWinHigherLevel === true },
     { id: "pvp_win", label: "Gagner un combat PvP", tier: "silver", secret: false, cat: "social", earned: (i) => i.pvpWins >= 1 },
+    { id: "clan_pact", label: "Prêter serment à un clan", tier: "silver", secret: true, cat: "social", earned: (i) => i.clanJoined === true, reveal: (i) => i.clanJoined === true },
+    { id: "clan_daemon_50", label: "Mener le Daemon de ton clan au niveau 50", tier: "gold", secret: true, cat: "social", earned: (i) => i.clanDaemonAt50 === true, reveal: (i) => i.clanJoined === true },
 
     // ── ④ Rencontres spéciales & secrets (🔒 révélés à la rencontre) ──
     { id: "pantheon", label: "Choper Panthéon", tier: "silver", secret: true, cat: "special", earned: (i) => has(i, "pantheon"), reveal: (i) => sawAny(i, "pantheon") },
@@ -278,9 +283,9 @@ export const FUN_TIER: Record<string, TierFun> = {
     first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1", get_dex: "s1", get_calepin: "s1",
     full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", beach: "s2",
     nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2",
-    fashion: "s2", first_fish: "s2", defi_arene: "s2", defi_sprint: "s2", defi_cible: "s2",
+    fashion: "s2", first_fish: "s2", defi_arene: "s2", defi_sprint: "s2", defi_cible: "s2", clan_pact: "s2",
     beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3", find_lamp: "s3",
-    types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4",
+    types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4", clan_daemon_50: "s4",
     pantheon_evo: "d1", // faire évoluer Panthéon → 100 pts (revalorisé)
     ace7: "s5", tonytony: "s5", buy_ct: "s5", starter_ko: "s5", // achat CT = 60 pts ; starter_ko = points VARIABLES (niveau)
     dex100: "d1", level100: "d1", shiny_trade: "d1", panthers_all: "d1",
@@ -298,9 +303,9 @@ export const FUN_TIER: Record<string, TierFun> = {
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct", "get_dex", "get_calepin",
     "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
-    "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible",
+    "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible", "clan_pact",
     "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi", "find_lamp",
-    "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena",
+    "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena", "clan_daemon_50",
     "ace7", "tonytony", "starter_ko",
     "dex100", "level100", "shiny_trade",
     "goshendofy", "shiny6",
@@ -320,7 +325,7 @@ export const BADGE_REPS: Record<string, number> = {
     // ② Collection
     types3: 100, types10: 300, dex10: 50, dex50: 500, dex100: 1000, dex_run1: 1000,
     // ③ Social
-    trade_pnj: 250, trade_player: 250, beat_mirror: 250, beat_mirror_higher: 250, pvp_win: 250,
+    trade_pnj: 250, trade_player: 250, beat_mirror: 250, beat_mirror_higher: 250, pvp_win: 250, clan_pact: 100, clan_daemon_50: 250,
     // ④ Spéciales & secrets
     pantheon: 250, pantheon_evo: 250, gekroc: 250, manoir_surprise: 250, orcaline: 250, masterball: 250, tonytony: 250, find_lamp: 250,
     sbire: 100, ace1: 100, ace7: 100, lab_defi: 100, level100: 1000, bet_win: 100, casino_win: 100, goshendofy: 1000,
@@ -456,6 +461,8 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
             const mon = uid ? mons.find((mm) => mm.uid === uid) : undefined
             return mon?.level ?? 0
         })(),
+        clanJoined: s.clan != null, // a prêté serment à un clan (irréversible dans le run)
+        clanDaemonAt50: s.clan != null && mons.some((m) => m.level >= 50 && clanOfSpecies(m.speciesId) === s.clan), // Daemon du clan niv 50
         gameMode, // "fun" → barème 8 paliers ; sinon barème 5-tiers historique
         // FUSIONS (dérivés DIRECTS via isFusionId : set canonique d'ids) → rétroactifs, aucun nouveau champ save
         caughtFusion: caughtIds.some(isFusionId),

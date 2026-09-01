@@ -237,6 +237,14 @@ describe("Badges run 1 — barème MODE FUN (8 paliers + médailles)", () => {
         expect(state(evaluateBadges({ ...empty, funDefisDone: ["arene"] }), "defi_arene").earned).toBe(true)
         expect(state(evaluateBadges({ ...empty, funDefisDone: ["sprint"] }), "defi_sprint").earned).toBe(true)
     })
+    it("badges clan : serment (clan_pact) + Daemon du clan au niveau 50 (clan_daemon_50)", () => {
+        expect(state(evaluateBadges({ ...empty, clanJoined: true }), "clan_pact").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, clanDaemonAt50: true }), "clan_daemon_50").earned).toBe(true)
+        // détection depuis la save : save.clan non nul ⇒ serment prêté
+        const i = badgeInputFromSave({ team: [], pc: [], clan: "air", defeatedTrainers: [] } as Parameters<typeof badgeInputFromSave>[0])
+        expect(i.clanJoined).toBe(true)
+        expect(badgeInputFromSave({ team: [], pc: [], clan: null } as Parameters<typeof badgeInputFromSave>[0]).clanJoined).toBe(false)
+    })
     it("KO du starter : points VARIABLES = niveau (même en fun), earned dès qu'il a un niveau", () => {
         const r = evaluateBadges({ ...empty, gameMode: "fun", starterKoLevel: 42 })
         expect(state(r, "starter_ko").earned).toBe(true)
