@@ -196,6 +196,7 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "manoir_surprise", label: "Trouver la surprise du Manoir Hanté", tier: "gold", secret: true, cat: "special", earned: (i) => i.hhCollectorWins >= 1, reveal: (i) => i.hhCollectorWins >= 1 },
     { id: "orcaline", label: "Choper Orcaline", tier: "silver", secret: true, cat: "special", earned: (i) => has(i, "orcaline") || i.orcalineWins >= 1, reveal: (i) => sawAny(i, "orcaline") || i.orcalineWins >= 1 },
     { id: "masterball", label: "Choper la Master Ball", tier: "gold", secret: true, cat: "special", earned: (i) => i.hasMasterBall, reveal: (i) => i.hasMasterBall },
+    { id: "find_lamp", label: "Trouver la Lampe du Génie", tier: "gold", secret: true, cat: "special", earned: (i) => hasMk(i, "y_genie_ambush") || hasMk(i, "lamp_rubbed"), reveal: (i) => hasMk(i, "y_genie_ambush") || hasMk(i, "lamp_rubbed") },
     { id: "tonytony", label: "Choper Tonytony", tier: "diamond", secret: true, cat: "special", earned: (i) => has(i, "tonytony"), reveal: (i) => sawAny(i, "tonytony") },
     { id: "goshendofy", label: "Choper Goshendofy", tier: "legend", secret: true, cat: "special", earned: (i) => has(i, "goshendofy"), reveal: (i) => sawAny(i, "goshendofy") },
     // Légendaires ULTIMES de l'endgame (obtention hors-normes → tier légende/diamant, révélés à la RENCONTRE) :
@@ -278,7 +279,7 @@ export const FUN_TIER: Record<string, TierFun> = {
     full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", beach: "s2",
     nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2",
     fashion: "s2", first_fish: "s2", defi_arene: "s2", defi_sprint: "s2", defi_cible: "s2",
-    beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3",
+    beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3", find_lamp: "s3",
     types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4",
     pantheon_evo: "d1", // faire évoluer Panthéon → 100 pts (revalorisé)
     ace7: "s5", tonytony: "s5", buy_ct: "s5", starter_ko: "s5", // achat CT = 60 pts ; starter_ko = points VARIABLES (niveau)
@@ -298,7 +299,7 @@ export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct", "get_dex", "get_calepin",
     "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
     "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible",
-    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi",
+    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi", "find_lamp",
     "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena",
     "ace7", "tonytony", "starter_ko",
     "dex100", "level100", "shiny_trade",
@@ -321,7 +322,7 @@ export const BADGE_REPS: Record<string, number> = {
     // ③ Social
     trade_pnj: 250, trade_player: 250, beat_mirror: 250, beat_mirror_higher: 250, pvp_win: 250,
     // ④ Spéciales & secrets
-    pantheon: 250, pantheon_evo: 250, gekroc: 250, manoir_surprise: 250, orcaline: 250, masterball: 250, tonytony: 250,
+    pantheon: 250, pantheon_evo: 250, gekroc: 250, manoir_surprise: 250, orcaline: 250, masterball: 250, tonytony: 250, find_lamp: 250,
     sbire: 100, ace1: 100, ace7: 100, lab_defi: 100, level100: 1000, bet_win: 100, casino_win: 100, goshendofy: 1000,
     // ⑤ Shiny
     shiny1: 1000, shiny6: 1000, shiny_trade: 1000, league_6shiny: 3000,
