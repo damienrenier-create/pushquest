@@ -4,6 +4,8 @@
 // le joueur) → ferre un Daemon aquatique (combat sauvage). Le pool = les espèces EAU, miroir de HH_TYPE_POOLS.EAU
 // (data/encounters.ts) pour rester cohérent avec les Hautes Herbes « eau ». Module PUR (testable, sans store).
 
+import { getSpecies } from "./species"
+
 export const FISHING_ROD_ITEM_ID = "canne_a_peche"
 
 // ── ESPÈCES ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -25,9 +27,15 @@ export const FISHING_BY_MAP: Record<string, readonly string[]> = {
     yellow_grotte_gelee: ["tetardoc"],  // l'eau de la Grotte Gelée
     yellow_cendreville: ["obscurene"],  // l'eau de la ville (Obscurène, Eau/Ténèbres, a quitté le manoir)
 }
-/** L'espèce commune ferrée : signature du plan d'eau (FISHING_BY_MAP) sinon le commun run-based. `rand`∈[0,1) → déterministe/testable. */
-export function fishingCommon(mapId: string, run: string, rand: number): string {
-    const pool = FISHING_BY_MAP[mapId] ?? FISHING_COMMONS[run] ?? FISHING_COMMONS.run1
+/** L'espèce commune ferrée : signature du plan d'eau (FISHING_BY_MAP) sinon le commun run-based. `rand`∈[0,1) → déterministe/testable.
+ *  `postSylvebarbe` (défaut true) : en RUN 1 avant Sylvebarbe, une signature TÉNÈBRES (Obscurène à Cendreville) est
+ *  RETIRÉE → on retombe sur le commun run-based (les TÉNÈBRES restent hors du run 1 pré-Sylvebarbe, cf. rencontres). */
+export function fishingCommon(mapId: string, run: string, rand: number, postSylvebarbe = true): string {
+    let pool = FISHING_BY_MAP[mapId] ?? FISHING_COMMONS[run] ?? FISHING_COMMONS.run1
+    if (!postSylvebarbe) {
+        const filtered = pool.filter((id) => !getSpecies(id)?.types.includes("TENEBRES"))
+        if (filtered.length !== pool.length) pool = filtered.length ? filtered : (FISHING_COMMONS[run] ?? FISHING_COMMONS.run1)
+    }
     return pool[Math.min(pool.length - 1, Math.floor(Math.max(0, Math.min(0.999999, rand)) * pool.length))]
 }
 /** Le RARE du moment selon l'HEURE locale : Osquille de JOUR (8h-20h), Rô de NUIT (20h-8h). */

@@ -46,6 +46,9 @@ interface WildEntry {
     hourRange?: [number, number]  // ne pop QUE dans cette fenêtre horaire [début, fin[ (0-23). fin<=début = enjambe minuit (ex. [20,8]). Sinon poids 0
     requiresFusionLeague?: boolean // ne pop QU'APRÈS la 1re victoire à la Ligue de Fusion (créatures anciennes B2F) — sinon poids 0
     catchOnce?: boolean           // UNE SEULE capture sur ce compte (ex. Pyropanthe) → ne repop plus une fois dans le Pokédex
+    postSylvebarbe?: boolean       // RUN 1 : ne pop QU'APRÈS l'éveil de Sylvebarbe (endgame). Sinon poids 0. Sert à tenir les TÉNÈBRES
+                                   //   (type tardif, cf. table = run 3) hors du run 1 pré-Sylvebarbe (ex. Obscurène/Sépulcru de la Plage).
+                                   //   Sans effet en run 2/3 (pools dédiés) : ctx.sylvebarbeAwake n'y est pas requis (voir tenebresGateOff).
 }
 
 /** Carré d'herbes hautes (grille 3×3) : rectangle (cols × rows) + tier (0 = rangée BAS … 2 = rangée HAUT,
@@ -127,6 +130,13 @@ export interface EncounterCtx {
     blockedSpecies?: readonly string[] // espèces DÉFINITIVEMENT bloquées pour ce joueur → ne popent JAMAIS (ex. Caninombre scellé après un défi némésis perdu)
     funMode?: boolean          // MODE FUN uniquement : boost de pop par CRÉNEAU HORAIRE (×1.5) + IV à PALIERS (funRollIvs). Absent/false = modes normal/easy/debutant INCHANGÉS
     connectedCount?: number    // joueurs EN LIGNE (hors soi) → bonus de groupe d'IV excellent (fun)
+    sylvebarbeAwake?: boolean  // RUN 1 : Sylvebarbe vaincu (endgame ouvert) → lève les entrées `postSylvebarbe` (ex. TÉNÈBRES de la Plage). En run 2/3 (ngplus/run3), le gate est ignoré (pools dédiés).
+}
+
+/** Le gate `postSylvebarbe` est-il levé pour ce contexte ? → OUI en run 2/3 (pools dédiés, TÉNÈBRES assumées) ou une
+ *  fois Sylvebarbe vaincu en run 1. NON en run 1 pré-Sylvebarbe (les entrées `postSylvebarbe` ont alors poids 0). */
+function tenebresGateOff(ctx: EncounterCtx): boolean {
+    return !!ctx.ngplus || !!ctx.run3 || !!ctx.sylvebarbeAwake
 }
 
 /**
@@ -519,8 +529,8 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "plumiot", base: COMMON },                                 // l'oiseau Vol commun de la Route Nord
             { speciesId: "draclet", base: UNCOMMON },                               // Vol/Dragon : PLUS commun ici (reste super-rare en Route Nord)
             { speciesId: "crocavern", base: UNCOMMON },
-            { speciesId: "sepulcru", base: UNCOMMON, hourRange: [8, 20] },          // JOUR (8h→20h)
-            { speciesId: "obscurene", base: RARE, rare: true, hourRange: [20, 8] },  // NUIT (20h→8h) — RÉDUIT (UNCOMMON→RARE) : Obscurène pop désormais aussi sur l'île Émeraude
+            { speciesId: "sepulcru", base: UNCOMMON, hourRange: [8, 20], postSylvebarbe: true },          // JOUR (8h→20h) — TÉNÈBRES : run 1 SEULEMENT post-Sylvebarbe (endgame)
+            { speciesId: "obscurene", base: RARE, rare: true, hourRange: [20, 8], postSylvebarbe: true },  // NUIT (20h→8h) — TÉNÈBRES : run 1 SEULEMENT post-Sylvebarbe. (Pop aussi sur l'île Émeraude, post-Ligue par accès.)
             { speciesId: "karmaki", base: RARE, rare: true, hourRange: [0, 12] },   // rare, matinée (0h→12h)
             { speciesId: "hypnoppo", base: RARE, rare: true, hourRange: [12, 24] }, // rare, après-midi/soir (12h→24h)
         ],
@@ -1090,6 +1100,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
         : (e.hourRange && ctx.hour != null && !inHourRange(ctx.hour, e.hourRange)) ? 0 // gate horaire (ex. Karmaki 0-12h, Hypnoppo 12-24h)
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
+        : (e.postSylvebarbe && !tenebresGateOff(ctx)) ? 0 // TÉNÈBRES de la Plage (Obscurène/Sépulcru) : hors run 1 pré-Sylvebarbe
         : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null

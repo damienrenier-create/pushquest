@@ -1365,7 +1365,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         let speciesId: string, level: number, hard: boolean
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
         else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
-        else { speciesId = fishingCommon(get().map.id, run, Math.random()); level = fishingLevel(avg, Math.random()); speciesId = speciesAtLevel(speciesId, level); hard = false } // stade NATUREL du niveau (comme les hautes herbes) → jamais un stade-1 bloqué à haut niveau
+        else { const postSylve = run !== "run1" || getPlayerSave().sylvebarbeAwake; speciesId = fishingCommon(get().map.id, run, Math.random(), postSylve); level = fishingLevel(avg, Math.random()); speciesId = speciesAtLevel(speciesId, level); hard = false } // stade NATUREL du niveau ; TÉNÈBRES (Obscurène/Cendreville) hors run 1 pré-Sylvebarbe
         // IV « PRÉVUS » (priorité au TEMPS D'ATTENTE, cf. fishingBaseIvs) ; le FERRAGE au mashing les remonte. Shiny → parfait (factory).
         set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs: fishingBaseIvs(biteAt, Math.random) } } })
     },
@@ -2047,6 +2047,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     ngplus: effectiveRunWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
                     run3: effectiveRunWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
                     champion: getPlayerSave().isChampion,   // LIVE post-Ligue → rattrapage des inédits run 3 (champ + Grotte)
+                    sylvebarbeAwake: getPlayerSave().sylvebarbeAwake, // run 1 : lève les TÉNÈBRES `postSylvebarbe` (Plage) une fois l'endgame ouvert
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                     fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
                     // némésis-récompense scellée (défi perdu) + TA création-némésis (ex. Charolyx pour Zyran) jamais en sauvage…
