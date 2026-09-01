@@ -43,7 +43,7 @@ import type { PokeType } from "../battle/types"
 
 export const TEAM_MAX = 6
 
-/** Super Pasta : +1 niveau. Prix = (120 + bonus journalier) × 1.5^achats du jour. Prix DOUBLÉ (ex-60) : la Super
+/** Super Pasta : +1 niveau. Prix = (120 + bonus journalier) × 1.5^achats du RUN. Prix DOUBLÉ (ex-60) : la Super
  *  Pasta est désormais aussi offerte gratuitement par la ferveur de clan (badge d'un allié), donc plus chère à l'achat. */
 export const SUPER_PASTA_BASE = 120
 /** Le prix plancher augmente de ce montant à chaque nouveau jour de jeu. */
@@ -75,7 +75,7 @@ interface PlayerState {
     spagGift: boolean
     /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
     pastaGodGift: boolean
-    /** Nb de Super Pastas achetés aujourd'hui (remis à 0 chaque jour ; gonfle le prix ×1.5). */
+    /** Nb de Super Pastas achetés DANS LE RUN (remis à 0 au démarrage d'un run, plus chaque jour ; gonfle le prix ×1.5). */
     pastaBoughtToday: number
     /** VŒU DU GÉNIE (cap casino) : énergie MISÉE au casino aujourd'hui (reset quotidien). */
     casinoSpentToday: number
@@ -1433,6 +1433,32 @@ export function spendCasinoBet(bet: number): { ok: boolean; reason?: string } {
 /** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
  *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
 export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean }
+/** VŒU DU GÉNIE — retire `levels` niveaux EFFECTIFS à un Daemon (cherché dans l'équipe puis dans le PC), désigné par
+ *  son `speciesId`. Plancher au niveau 1. L'espèce n'est PAS touchée : un Divinpâte ramené sous son palier reste un
+ *  Divinpâte (pas de dé-évolution). Les PV courants sont re-clampés au nouveau max. Renvoie false si la cible est
+ *  introuvable → le vœu n'est pas marqué appliqué, l'effet sera retenté au prochain login (le joueur a pu la ranger). */
+function applyLevelDrain(speciesId: string | undefined, levels: number): boolean {
+    if (!speciesId) return false
+    let inTeam = true
+    let idx = st.team.findIndex((m) => m.speciesId === speciesId)
+    if (idx < 0) { idx = st.pc.findIndex((m) => m.speciesId === speciesId); inTeam = false }
+    if (idx < 0) return false
+    const arr = (inTeam ? st.team : st.pc).slice()
+    const orig = arr[idx]
+    const sp = getSpecies(orig.speciesId)
+    const effLevel = Math.max(orig.level, levelFromExp(orig.exp, orig.speciesId))
+    const target = Math.max(1, effLevel - levels)
+    if (target >= effLevel) return true                                     // déjà au plancher → rien à retirer
+    const mon: MonInstance = {
+        ...orig, ivs: { ...orig.ivs }, moves: orig.moves.map((s) => ({ ...s })),
+        pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined,
+        level: target, exp: expForLevel(target, orig.speciesId),
+    }
+    if (sp) mon.currentHp = Math.max(1, Math.min(mon.currentHp, fullStats(mon, sp).hp))
+    arr[idx] = mon
+    st = inTeam ? { ...st, team: arr } : { ...st, pc: arr }
+    return true
+}
 /** Applique UN effet atomique. Renvoie true si le type est RECONNU (→ marquable). Type inconnu → false : le vœu n'est
  *  PAS marqué appliqué, donc un déploiement futur qui ajoute le `case` l'appliquera au prochain login (zéro perte). */
 function runGenieEffect(e: GenieEffect): boolean {
@@ -1443,6 +1469,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "item": if (e.id) addItem(e.id, Math.max(1, Math.floor(e.qty ?? 1))); return true             // cadeau d'objet
         case "cap": st = { ...st, repsCap: Math.max(0, st.repsCap + amt) }; return true                     // ajuste le plafond (+/-)
         case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; return true     // malus d'⚡
+        case "level_drain": return applyLevelDrain(e.id, Math.max(1, amt))                                  // le Daemon `id` recrache N niveaux
         case "force_encounter": if (e.id) {
             // Si un vœu écrase une rencontre GALIJAH en attente, on RE-ARME Galijah (sinon sa chasse serait perdue).
             const clobbersGalijah = st.forcedEncounter?.includes('"galijah"') && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)
@@ -1703,7 +1730,9 @@ export function creditDailyReps(today: string) {
     st = {
         ...st,
         creditedThrough: today,
-        pastaBoughtToday: 0,
+        // SUPER PASTA : le compteur ne repart PLUS chaque jour — il court sur tout le RUN (remis à 0 seulement par
+        //   resetForIntro / startNgPlusWorld / startRun3World). L'escalade ×1.5 devient donc définitive dans un run :
+        //   la pâte reste un luxe rare au lieu d'un achat quotidien. Nom du champ conservé (compat save).
         potionBuysToday: 0, // BOURSE : l'inflation perso des soins se recharge chaque jour
         jcEnergyBuysToday: 0, // BOURSE : l'inflation « recharge JC » se recharge chaque jour
         casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : la mise dépensée du jour repart à zéro (plafond FLAT 250/jour désormais)
@@ -2313,7 +2342,7 @@ export function recordPnj5Defeat(): number {
     return winsBefore
 }
 
-/** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */
+/** Prix actuel d'un Super Pasta : (120 + bonus journalier) × 1.5^(achats du RUN). */
 export function superPastaPrice(): number {
     return Math.round((SUPER_PASTA_BASE + st.pastaDayBonus) * SUPER_PASTA_GROWTH ** st.pastaBoughtToday)
 }
