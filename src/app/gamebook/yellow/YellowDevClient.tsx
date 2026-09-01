@@ -85,7 +85,7 @@ import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
-import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel } from "@/lib/gamebook/yellow/data/run1Badges"
+import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -1146,9 +1146,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const grants = (j?.grants ?? 0) as number
                     const champs = (j?.champions ?? []) as string[]
                     if (!cancelled && grants > 0) {
-                        // +1/3 du quota par sacre, MAIS plafonné à 1000 ⚡/sacre : sinon les joueurs au repsCap
-                        // gonflé (poker/casino) recevaient des milliers d'énergie d'un seul coup (ex. Mools cap 11550 → 3850).
-                        const per = Math.min(1000, Math.floor(getPlayer().repsCap / 3))
+                        // MODE FUN : la jauge vaut 10 000 → le 1/3-du-quota donnait toujours 1000. On scale plutôt sur le
+                        //   DERNIER BADGE d'arène du receveur (run 1 & 2) : 1 badge = 100, 2 = 200, … 5 = 500. Run 3 déjà exclu
+                        //   plus haut (aucun cadeau). Run FUSION = 1000 (à brancher quand ce run existera comme monde séparé).
+                        // NON-FUN (7 potes) : formule historique inchangée (1/3 du quota, plafond 1000/sacre).
+                        const per = getGameMode() === "fun"
+                            ? 100 * Math.min(5, Math.max(1, getPlayer().badges.length))
+                            : Math.min(1000, Math.floor(getPlayer().repsCap / 3))
                         const got = grantReps(per * grants); logEnergyIncome("🏛️ Sacre (champion)", got)
                         persistYellowSave()
                         const who = [...new Set(champs.filter(Boolean))].join(", ")
@@ -1585,6 +1589,27 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         useGameStore.setState({ pendingChenGift: false })
         setChenGiftConfirm(true)
     }, [pendingChenGift, dialogue, battle])
+
+    // MODE FUN — MÉDAILLES DE RAPIDITÉ : enregistre côté serveur l'ORDRE d'obtention des hauts faits RUN 1 et ANNONCE
+    //   les nouvelles médailles décrochées (1ᵉʳ/2ᵉ/3ᵉ fun). Se resynchronise à chaque BADGE D'ARÈNE gagné + au chargement.
+    //   La grille des médailles s'affiche, elle, dans le panneau Trophées (GET). Best-effort, fun-only.
+    useEffect(() => {
+        if (getGameMode() !== "fun") return
+        let cancelled = false
+        const r = evaluateBadges(badgeInputFromSave({ ...getPlayer(), pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0], undefined, "fun"))
+        const earnedRun1 = r.badges.filter((b) => b.earned && b.isRun1).map((b) => b.id)
+        if (!earnedRun1.length) return
+        fetch("/api/gamebook/yellow/fun-badges", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ badges: earnedRun1 }) })
+            .then((rr) => (rr.ok ? rr.json() : null))
+            .then((j) => {
+                if (cancelled || !j?.ok) return
+                const medals = (j.medals ?? {}) as Record<string, "or" | "argent" | "bronze">
+                const newly = (j.newlyEarned ?? []) as string[]
+                const wins = newly.filter((id) => medals[id]).map((id) => `${MEDAL_EMOJI[medals[id]]} ${medals[id].toUpperCase()} · ${BADGE_LABELS[id] ?? id}`)
+                if (wins.length) setToast(`🏅 Médaille de rapidité décrochée ! ${wins.join(" · ")}`)
+            }).catch(() => {})
+        return () => { cancelled = true }
+    }, [player.badges.length])
 
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule

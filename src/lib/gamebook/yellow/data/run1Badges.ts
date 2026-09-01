@@ -278,8 +278,8 @@ export const FUN_TIER: Record<string, TierFun> = {
 }
 /** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
-    "first_catch", "evolve", "beat_trainer", "sbire", "poker", "grotte_nexus", "buy_ct",
-    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "nexus_guardian", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
+    "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct",
+    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
     "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi",
     "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena",
     "ace7", "tonytony",

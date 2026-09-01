@@ -20,7 +20,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
-import { badgeInputFromSave, evaluateBadges, BADGES } from "@/lib/gamebook/yellow/data/run1Badges"
+import { badgeInputFromSave, evaluateBadges, BADGES, medalForRank, medalMult } from "@/lib/gamebook/yellow/data/run1Badges"
 
 /** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
 function run1BadgeScore(f: Record<string, unknown>, caught?: readonly string[]): { score: number; factors: ScoreFactor[] } {
@@ -68,6 +68,29 @@ function run1FromWorld(f: Record<string, unknown>): { score: number; factors: Sc
     const orFlag = (k: string) =>
         f[k] === true || (f.ngplusWorld as Record<string, unknown> | null)?.[k] === true || (f.run3World as Record<string, unknown> | null)?.[k] === true
     return run1BadgeScore({ ...f, leagueSixShiny: orFlag("leagueSixShiny"), mirrorWinHigherLevel: orFlag("mirrorWinHigherLevel") })
+}
+
+/** RUN 1 — MODE FUN : score = Σ (palier 8-tiers × médaille de rapidité) sur les hauts faits PRÉ-Sylvebarbe GAGNÉS.
+ *  Le rang (donc la médaille) vient de `rankMap` (badgeId → userIds triés par date d'obtention, table YellowFunBadgeEarn).
+ *  Non-rangé (badge gagné mais pas encore enregistré, ou > 3e) → médaille nulle → ×1. */
+function run1FunScore(f: Record<string, unknown>, userId: string, rankMap: Map<string, string[]>): { score: number; factors: ScoreFactor[] } {
+    const orFlag = (k: string) =>
+        f[k] === true || (f.ngplusWorld as Record<string, unknown> | null)?.[k] === true || (f.run3World as Record<string, unknown> | null)?.[k] === true
+    const input = badgeInputFromSave(
+        { ...f, leagueSixShiny: orFlag("leagueSixShiny"), mirrorWinHigherLevel: orFlag("mirrorWinHigherLevel") } as Parameters<typeof badgeInputFromSave>[0],
+        undefined, "fun",
+    )
+    const r = evaluateBadges(input)
+    let score = 0, earned = 0
+    for (const b of r.badges) {
+        if (!b.earned || !b.isRun1) continue
+        earned++
+        const list = rankMap.get(b.id)
+        score += b.points * medalMult(list ? medalForRank(list.indexOf(userId)) : null)
+    }
+    const rounded = Math.round(score)
+    const factor: ScoreFactor = { key: "badges", label: "🎖️ Hauts faits (fun)", ratio: 0, max: 0, points: rounded, detail: `${earned} hauts faits · médailles de rapidité incluses` }
+    return { score: rounded, factors: [factor] }
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -162,14 +185,22 @@ export async function GET() {
     try {
         const saves = await prisma.gamebookProgress.findMany({
             where: { chapterId: YELLOW_CHAPTER_ID },
-            select: { userId: true, flags: true, user: { select: { nickname: true } } },
+            select: { userId: true, flags: true, user: { select: { nickname: true, gameMode: true } } },
         })
+        // MÉDAILLES DE RAPIDITÉ (mode fun) : ordre d'obtention par badge (table gated). badgeId → userIds triés par `at`.
+        //   Le rang dans ce tableau donne la médaille (0=or, 1=argent, 2=bronze). Table absente → pas de médailles (×1).
+        const rankMap = new Map<string, string[]>()
+        try {
+            const rows = (await (prisma as any).yellowFunBadgeEarn.findMany({ select: { userId: true, badgeId: true }, orderBy: [{ badgeId: "asc" }, { at: "asc" }, { id: "asc" }] })) as { userId: string; badgeId: string }[]
+            for (const row of rows) { const a = rankMap.get(row.badgeId) ?? []; a.push(row.userId); rankMap.set(row.badgeId, a) }
+        } catch { /* table pas encore créée → médailles neutres */ }
         for (const s of saves) {
             const f = (s.flags ?? {}) as Record<string, unknown>
             const nickname = s.user?.nickname ?? "?"
             const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
             // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
-            const r1 = run1FromWorld(f)
+            //   MODE FUN : barème 8 paliers × médailles de rapidité ; sinon barème 5-tiers historique (potes intacts).
+            const r1 = s.user?.gameMode === "fun" ? run1FunScore(f, s.userId, rankMap) : run1FromWorld(f)
             if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
             // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
             if (viewerDone) {

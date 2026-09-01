@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
-import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import PlayerBadgesModal from "./PlayerBadgesModal"
@@ -147,7 +147,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
 
                 <div style={hintStyle}>{meta.hint}</div>
 
-                {tab === "run1" && <Run1RulesBox />}
+                {tab === "run1" && getGameMode() === "fun" && <Run1RulesBox />}
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
