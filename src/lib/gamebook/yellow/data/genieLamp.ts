@@ -12,9 +12,10 @@ export const LAMP_ITEM_ID = "lampe_rouillee"
 /** Marker (defeatedTrainers) posé quand la lampe est frottée → débloque l'onglet 🧞 (pas de nouveau champ de save). */
 export const LAMP_RUBBED_MARKER = "lamp_rubbed"
 
-/** Compteur avant embuscade : N tiré UNE fois par joueur dans [MIN, MAX]. */
-export const LAMP_CD_MIN = 3
-export const LAMP_CD_MAX = 10
+/** Compteur avant embuscade : N COMBATS (rencontres sauvages) tiré dans [MIN, MAX], APRÈS le 2e badge (GENIE_MIN_BADGES).
+ *  Choix créateur : entre 8 et 20 combats avant que la lampe puisse apparaître. */
+export const LAMP_CD_MIN = 8
+export const LAMP_CD_MAX = 20
 /** L'embuscade ne se déclenche que si l'équipe est au-dessus de ce ratio de PV (fraîche → combat facile & juste). */
 export const LAMP_HP_MIN_RATIO = 0.9
 /** Plancher absolu du niveau du colporteur. */

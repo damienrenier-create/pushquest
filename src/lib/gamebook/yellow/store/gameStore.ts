@@ -2056,7 +2056,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 })
                 if (wild) {
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
-                    //   décompte N∈[3,10] (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
+                    //   décompte N∈[8,20] COMBATS (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente
                     //   (N re-tiré) ; gagner → markTrainerDefeated (battleStore) coupe ce garde à vie.
                     if (genieArcEnabledFor(currentNickname) && !isTrainerDefeated(GENIE_TRAINER_ID) && !getPlayerSave().genieArcSeen && getPlayerSave().badges.length >= GENIE_MIN_BADGES) {
