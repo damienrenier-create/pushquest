@@ -103,6 +103,11 @@ export const FUN_MEME_CLAN_GATE: Readonly<Record<string, ClanKey>> = {
     couperin: "combat",   // BASE de la lignée COMBAT (couperin→maitrezenc) : c'est ELLE qui pop en sauvage → clan du Combat
     maitrezenc: "combat", // évolution COMBAT (au cas où elle pop aussi) → clan du Combat
     mottoche: "roche",    // « Magicarpe rocheux » ROCHE/SOL → clan de la Roche
+    // TOUTE la lignée diamant suit mottoche : quadroc pop en DIRECT dans la Grotte Rocheuse (porte dérobée
+    //   constatée en prod : un Quadroc chez un fun du clan de l'Air) ; les autres stades « au cas où » (maitrezenc).
+    //   Lignée COMPLÈTE (9 stades) : mottoche→dumotte→quadroc→octoroc→hexaroc→diamantine→amadiam→golemini→megalithe.
+    dumotte: "roche", quadroc: "roche", octoroc: "roche", hexaroc: "roche", diamantine: "roche", amadiam: "roche",
+    golemini: "roche", megalithe: "roche",
 }
 
 /** Clan « meme » d'une espèce (via FUN_MEME_CLAN_GATE), ou null si ce n'est pas une espèce meme gatée. */

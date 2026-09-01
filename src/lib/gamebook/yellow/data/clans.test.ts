@@ -60,9 +60,15 @@ describe("Clans — données & cohérence", () => {
     })
 })
 
-describe("Gate « meme » du mode fun (plumiot / maitrezenc / mottoche)", () => {
-    it("les espèces gatées existent et pointent vers Air / Combat / Roche (combat = couperin BASE + maitrezenc évo)", () => {
-        expect(FUN_MEME_CLAN_GATE).toEqual({ plumiot: "air", couperin: "combat", maitrezenc: "combat", mottoche: "roche" })
+/** La lignée diamant COMPLÈTE suit mottoche (quadroc pope en direct dans la Grotte Rocheuse — porte dérobée vue en prod). */
+const DIAMANT_LINE = ["amadiam", "diamantine", "dumotte", "golemini", "hexaroc", "megalithe", "mottoche", "octoroc", "quadroc"] as const
+
+describe("Gate « meme » du mode fun (plumiot / maitrezenc / lignée mottoche)", () => {
+    it("les espèces gatées existent et pointent vers Air / Combat / Roche (roche = lignée diamant ENTIÈRE)", () => {
+        expect(FUN_MEME_CLAN_GATE).toEqual({
+            plumiot: "air", couperin: "combat", maitrezenc: "combat",
+            mottoche: "roche", dumotte: "roche", quadroc: "roche", octoroc: "roche", hexaroc: "roche", diamantine: "roche", amadiam: "roche", golemini: "roche", megalithe: "roche",
+        })
         for (const id of Object.keys(FUN_MEME_CLAN_GATE)) expect(SPECIES[id], `${id} doit exister`).toBeTruthy()
     })
     it("HORS mode fun : jamais de blocage (normal / easy / debutant inchangés)", () => {
@@ -72,10 +78,13 @@ describe("Gate « meme » du mode fun (plumiot / maitrezenc / mottoche)", () => 
         }
     })
     it("FUN sans clan : les memes sont bloquées ; chaque pacte lève UNIQUEMENT sa lignée (combat = couperin+maitrezenc)", () => {
-        expect(funMemeBlockedSpecies("fun", []).sort()).toEqual(["couperin", "maitrezenc", "mottoche", "plumiot"])
-        expect(funMemeBlockedSpecies("fun", ["air"]).sort()).toEqual(["couperin", "maitrezenc", "mottoche"]) // plumiot débloqué
-        expect(funMemeBlockedSpecies("fun", ["combat"]).sort()).toEqual(["mottoche", "plumiot"])              // couperin + maitrezenc débloqués
-        expect(funMemeBlockedSpecies("fun", ["roche"]).sort()).toEqual(["couperin", "maitrezenc", "plumiot"]) // mottoche débloqué
+        expect(funMemeBlockedSpecies("fun", []).sort()).toEqual(["couperin", "maitrezenc", "plumiot", ...DIAMANT_LINE].sort())
+        expect(funMemeBlockedSpecies("fun", ["air"]).sort()).toEqual(["couperin", "maitrezenc", ...DIAMANT_LINE].sort()) // plumiot débloqué
+        expect(funMemeBlockedSpecies("fun", ["combat"]).sort()).toEqual(["plumiot", ...DIAMANT_LINE].sort())              // couperin + maitrezenc débloqués
+        expect(funMemeBlockedSpecies("fun", ["roche"]).sort()).toEqual(["couperin", "maitrezenc", "plumiot"]) // lignée diamant débloquée
         expect(funMemeBlockedSpecies("fun", ["air", "combat", "roche"])).toEqual([])                          // tout débloqué
+    })
+    it("un fun du clan de l'Air ne voit PAS pop quadroc (bug DaKumba 2026-09-01)", () => {
+        expect(funMemeBlockedSpecies("fun", ["air"])).toContain("quadroc")
     })
 })
