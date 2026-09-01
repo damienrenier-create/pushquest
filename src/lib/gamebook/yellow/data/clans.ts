@@ -105,6 +105,11 @@ export const FUN_MEME_CLAN_GATE: Readonly<Record<string, ClanKey>> = {
     mottoche: "roche",    // « Magicarpe rocheux » ROCHE/SOL → clan de la Roche
 }
 
+/** Clan « meme » d'une espèce (via FUN_MEME_CLAN_GATE), ou null si ce n'est pas une espèce meme gatée. */
+export function funMemeClanOf(speciesId: string): ClanKey | null {
+    return FUN_MEME_CLAN_GATE[speciesId] ?? null
+}
+
 /** Espèces « meme » à BLOQUER pour ce joueur : mode fun + clan requis NON rejoint à vie. [] hors mode fun (aucun impact). */
 export function funMemeBlockedSpecies(gameMode: string, clansEverJoined: readonly ClanKey[]): string[] {
     if (gameMode !== "fun") return []

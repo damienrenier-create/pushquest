@@ -3171,6 +3171,11 @@ export function swapTeamPc(pcUid: string, teamUid?: string): { ok: boolean; reas
 
 /** RELÂCHE définitivement un Daemon de la RÉSERVE (PC) — retiré du jeu, ne revient pas. On ne relâche QUE depuis
  *  le PC (l'équipe n'est jamais concernée) → aucun risque de se retrouver sans Daemon. Refuse si posé sur l'étal. */
+/** Relâche un Daemon (ÉQUIPE ou PC) par uid — sert à retirer un meme de clan « illégal » (mode fun). No-op si listé pour échange. */
+export function releaseAnyMon(uid: string): boolean {
+    if (st.team.some((m) => m.uid === uid)) { st = { ...st, team: st.team.filter((m) => m.uid !== uid) }; emit(); return true }
+    return releaseFromPc(uid).ok
+}
 export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "listed" } {
     const idx = st.pc.findIndex((m) => m.uid === uid)
     if (idx < 0) return { ok: false, reason: "introuvable" }

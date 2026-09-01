@@ -84,7 +84,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
@@ -145,7 +145,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem, SUPER_PASTA_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
-import { clanOfSpecies } from "@/lib/gamebook/yellow/data/clans"
+import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { attackCost, effectiveQuota, playerAttackQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -480,6 +480,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [archivisteFight, setArchivisteFight] = useState<{ npc: ArchivisteNpc; enemy: MonInstance[]; blurb: string } | null>(null)
     const [highfiveTarget, setHighfiveTarget] = useState<{ userId: string; nickname: string } | null>(null) // FERVEUR DE CLAN : high-five à un allié
     const [clanChoice, setClanChoice] = useState<{ userId: string; nickname: string } | null>(null) // reflet d'allié de clan : choix ⚔️ affronter / 🙏 high-five
+    const [illegalMeme, setIllegalMeme] = useState<{ uid: string; name: string; clan: "air" | "combat" | "roche" } | null>(null) // fun : possède un meme de clan sans le clan → rejoindre/relâcher
+    const [memeCheck, setMemeCheck] = useState(0) // re-déclenche la détection du meme illégal après une action
     const [highfiveMsg, setHighfiveMsg] = useState("")
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
@@ -1591,6 +1593,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         useGameStore.setState({ pendingChenGift: false })
         setChenGiftConfirm(true)
     }, [pendingChenGift, dialogue, battle])
+
+    // MODE FUN — MEME DE CLAN « ILLÉGAL » : le joueur possède un Daemon meme (couperin/plumiot/mottoche…) dont le clan
+    //   n'a JAMAIS été rejoint (pop d'avant le fix, échange, etc.) → il doit REJOINDRE ce clan ou le RELÂCHER (modale bloquante).
+    useEffect(() => {
+        if (getGameMode() !== "fun") { setIllegalMeme(null); return }
+        const ever = getClansEverJoined()
+        const bad = [...player.team, ...player.pc].map((m) => ({ m, clan: funMemeClanOf(m.speciesId) })).find((x) => x.clan && !ever.includes(x.clan))
+        setIllegalMeme(bad?.clan ? { uid: bad.m.uid, name: getSpecies(bad.m.speciesId)?.name ?? bad.m.speciesId, clan: bad.clan } : null)
+    }, [player.team, player.pc, memeCheck])
 
     // MODE FUN — MÉDAILLES DE RAPIDITÉ : enregistre côté serveur l'ORDRE d'obtention des hauts faits RUN 1 et ANNONCE
     //   les nouvelles médailles décrochées (1ᵉʳ/2ᵉ/3ᵉ fun). Se resynchronise à chaque BADGE D'ARÈNE gagné + au chargement.
@@ -5218,6 +5229,26 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 </div>
             )}
+
+            {/* MODE FUN — meme de clan possédé SANS le clan : REJOINDRE le clan (il devient le Daemon-clan) OU le RELÂCHER. Bloquant. */}
+            {illegalMeme && !battle && (() => {
+                const clanName = CLANS[illegalMeme.clan].name
+                const myClan = getClan()
+                const canJoin = !myClan || myClan === illegalMeme.clan // clan unique par run : rejoindre seulement si aucun clan (ou déjà le même)
+                return (
+                    <div style={{ ...menuOverlayStyle, zIndex: 9700 }}>
+                        <div style={menuBoxStyle}>
+                            <div style={menuTitleStyle}>⚠️ {illegalMeme.name} — Daemon de clan</div>
+                            <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
+                                <b>{illegalMeme.name}</b> appartient au <b>{clanName}</b>, mais tu n&apos;en fais pas partie.{" "}
+                                {canJoin ? "Rejoins ce clan (il en devient ton Daemon-clan), ou relâche-le." : "Tu es déjà dans un autre clan → tu dois le relâcher."}
+                            </div>
+                            {canJoin && <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => { joinClan(illegalMeme.clan, illegalMeme.uid); persistYellowSave(); setMemeCheck((c) => c + 1) }}>🤝 Rejoindre le {clanName}</button>}
+                            <button style={{ ...menuBtnStyle, marginTop: 6, borderColor: "#c83030", color: "#ff8a6a" }} onClick={() => { releaseAnyMon(illegalMeme.uid); persistYellowSave(); setMemeCheck((c) => c + 1) }}>🕊️ Relâcher {illegalMeme.name}</button>
+                        </div>
+                    </div>
+                )
+            })()}
             {highfiveTarget && !battle && (
                 <div style={menuOverlayStyle} onClick={() => { setHighfiveTarget(null); setHighfiveMsg("") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
