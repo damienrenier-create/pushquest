@@ -100,7 +100,8 @@ export function clanTrainDailyMarker(clan: ClanKey, today: string): string {
 //  maitrezenc en pool COMBAT — bien qu'ils partagent la chaîne plumiot→faukon→maitrezenc.)
 export const FUN_MEME_CLAN_GATE: Readonly<Record<string, ClanKey>> = {
     plumiot: "air",       // oiseau VOL commun (zones VOL) → clan de l'Air
-    maitrezenc: "combat", // sensei COMBAT (pool COMBAT) → clan du Combat
+    couperin: "combat",   // BASE de la lignée COMBAT (couperin→maitrezenc) : c'est ELLE qui pop en sauvage → clan du Combat
+    maitrezenc: "combat", // évolution COMBAT (au cas où elle pop aussi) → clan du Combat
     mottoche: "roche",    // « Magicarpe rocheux » ROCHE/SOL → clan de la Roche
 }
 

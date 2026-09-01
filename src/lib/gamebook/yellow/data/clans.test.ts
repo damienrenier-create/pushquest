@@ -61,8 +61,8 @@ describe("Clans — données & cohérence", () => {
 })
 
 describe("Gate « meme » du mode fun (plumiot / maitrezenc / mottoche)", () => {
-    it("les 3 espèces gatées existent et pointent vers Air / Combat / Roche", () => {
-        expect(FUN_MEME_CLAN_GATE).toEqual({ plumiot: "air", maitrezenc: "combat", mottoche: "roche" })
+    it("les espèces gatées existent et pointent vers Air / Combat / Roche (combat = couperin BASE + maitrezenc évo)", () => {
+        expect(FUN_MEME_CLAN_GATE).toEqual({ plumiot: "air", couperin: "combat", maitrezenc: "combat", mottoche: "roche" })
         for (const id of Object.keys(FUN_MEME_CLAN_GATE)) expect(SPECIES[id], `${id} doit exister`).toBeTruthy()
     })
     it("HORS mode fun : jamais de blocage (normal / easy / debutant inchangés)", () => {
@@ -71,11 +71,11 @@ describe("Gate « meme » du mode fun (plumiot / maitrezenc / mottoche)", () => 
             expect(funMemeBlockedSpecies(mode, ["air", "combat", "roche"])).toEqual([])
         }
     })
-    it("FUN sans clan : les 3 memes sont bloquées ; chaque pacte lève UNIQUEMENT sa lignée", () => {
-        expect(funMemeBlockedSpecies("fun", []).sort()).toEqual(["maitrezenc", "mottoche", "plumiot"])
-        expect(funMemeBlockedSpecies("fun", ["air"]).sort()).toEqual(["maitrezenc", "mottoche"])       // plumiot débloqué
-        expect(funMemeBlockedSpecies("fun", ["combat"]).sort()).toEqual(["mottoche", "plumiot"])        // maitrezenc débloqué
-        expect(funMemeBlockedSpecies("fun", ["roche"]).sort()).toEqual(["maitrezenc", "plumiot"])       // mottoche débloqué
-        expect(funMemeBlockedSpecies("fun", ["air", "combat", "roche"])).toEqual([])                    // tout débloqué
+    it("FUN sans clan : les memes sont bloquées ; chaque pacte lève UNIQUEMENT sa lignée (combat = couperin+maitrezenc)", () => {
+        expect(funMemeBlockedSpecies("fun", []).sort()).toEqual(["couperin", "maitrezenc", "mottoche", "plumiot"])
+        expect(funMemeBlockedSpecies("fun", ["air"]).sort()).toEqual(["couperin", "maitrezenc", "mottoche"]) // plumiot débloqué
+        expect(funMemeBlockedSpecies("fun", ["combat"]).sort()).toEqual(["mottoche", "plumiot"])              // couperin + maitrezenc débloqués
+        expect(funMemeBlockedSpecies("fun", ["roche"]).sort()).toEqual(["couperin", "maitrezenc", "plumiot"]) // mottoche débloqué
+        expect(funMemeBlockedSpecies("fun", ["air", "combat", "roche"])).toEqual([])                          // tout débloqué
     })
 })

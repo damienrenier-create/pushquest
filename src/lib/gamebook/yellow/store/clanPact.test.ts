@@ -96,10 +96,10 @@ describe("Registre clansEverJoined (gate FUN meme)", () => {
 
     it("intégration : un joueur FUN débloque UNIQUEMENT la lignée du clan pacté, tous runs", () => {
         setGameMode("fun")
-        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche", "plumiot"])
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["couperin", "maitrezenc", "mottoche", "plumiot"])
         awardBadge("feu"); executeClanJoin("air")        // rejoint l'Air → plumiot repop
-        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche"])
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["couperin", "maitrezenc", "mottoche"])
         startNgPlusWorld(createMonInstance("pivinci", 5, { owned: true }))
-        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["maitrezenc", "mottoche"]) // plumiot reste débloqué au run 2
+        expect(funMemeBlockedSpecies("fun", getClansEverJoined()).sort()).toEqual(["couperin", "maitrezenc", "mottoche"]) // plumiot reste débloqué au run 2
     })
 })
