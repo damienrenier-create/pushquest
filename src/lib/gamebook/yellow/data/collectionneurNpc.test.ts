@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation, archivisteDefeatLines, ARCHIVISTE_INTRO_LINES } from "./collectionneurNpc"
+import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation, archivisteDefeatLines, ARCHIVISTE_INTRO_LINES, archivisteBadgeLevelOffset } from "./collectionneurNpc"
 import { baseSpeciesOf } from "./ace"
 
 const POOL = ["feuillichot", "broutame", "piouflot", "tetardoc", "draclet", "cailloutchi", "sporbeo", "namicha"]
@@ -25,6 +25,18 @@ describe("archivisteGreeting — matrice jour × heure", () => {
     it("borne les jours hors [0,6] (getDay défensif)", () => {
         expect(typeof archivisteGreeting(-1, 12)).toBe("string")
         expect(typeof archivisteGreeting(9, 12)).toBe("string")
+    })
+})
+
+describe("archivisteBadgeLevelOffset — difficulté par progression d'arène", () => {
+    it("facile avant l'arène 1, notre niveau à l'arène 3, un peu au-dessus après", () => {
+        expect(archivisteBadgeLevelOffset(0)).toBe(-6) // avant arène 1 : facile
+        expect(archivisteBadgeLevelOffset(1)).toBe(-3) // un peu facile
+        expect(archivisteBadgeLevelOffset(2)).toBe(0)  // notre niveau
+        expect(archivisteBadgeLevelOffset(3)).toBe(3)  // un peu au-dessus
+        expect(archivisteBadgeLevelOffset(4)).toBe(6)  // encore un peu au-dessus
+        expect(archivisteBadgeLevelOffset(5)).toBe(6)  // plafonné
+        expect(archivisteBadgeLevelOffset(8)).toBe(6)  // plafonné (post-Ligue / NG+)
     })
 })
 

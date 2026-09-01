@@ -9,6 +9,14 @@
 
 // Récompense = HYPER Nexus-Ball (id "hyper_ball" — meilleur taux de capture). (Avant : "poke_ball" = Nexus-Ball de base.)
 export const DUEL_NEXUS_BALL_ID = "hyper_ball"
+
+/** Ball de récompense d'un duel-reflet selon la PROGRESSION D'ARÈNE (nb de badges), demande Sartay :
+ *  arènes 1-2 (0-1 badge) → Nexus-Ball · arènes 3-4-5 (2-4 badges) → Super Nexus-Ball · après l'arène 5 (5 badges) → HYPER Nexus-Ball. */
+export function duelRewardBall(badgeCount: number): { id: string; label: string } {
+    if (badgeCount >= 5) return { id: "hyper_ball", label: "une HYPER Nexus-Ball" }
+    if (badgeCount >= 2) return { id: "super_ball", label: "une SUPER Nexus-Ball" }
+    return { id: "poke_ball", label: "une Nexus-Ball" }
+}
 // XP des duels-reflets = DOUBLE de la normale (récompense d'un vrai défi contre un autre joueur).
 export const DUEL_EXP_MULT = 2
 export const DUEL_LOSS_CONSOLE_REPS = 30
@@ -32,8 +40,8 @@ const WIN_LINES: readonly string[] = [
     "Par tous les coudes de macaronis ! Le reflet de %O n'a pas tenu une louche face à toi.",
 ]
 /** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. */
-export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number }): string[] {
-    const gifts = ["✨ XP DOUBLÉE", "🎁 une HYPER Nexus-Ball"]
+export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string }): string[] {
+    const gifts = ["✨ XP DOUBLÉE", `🎁 ${r.ballLabel}`]
     if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (tu as sué pour cette victoire !)`)
     if (r.ctDropped) gifts.push("🌑 la CT60 « Reflet Fatal » — une relique INÉDITE des ténèbres !")
     return [

@@ -77,7 +77,7 @@ import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun,
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
-import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
@@ -158,7 +158,7 @@ import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/type
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
 import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
-import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, ARCHIVISTE_DAILY_LIMIT_LINES, ARCHIVISTE_MAX_MATCHES_PER_DAY, archivisteEscalation, buildArchivisteTeam, archivisteGreeting } from "@/lib/gamebook/yellow/data/collectionneurNpc"
+import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, ARCHIVISTE_DAILY_LIMIT_LINES, ARCHIVISTE_MAX_MATCHES_PER_DAY, archivisteEscalation, buildArchivisteTeam, archivisteGreeting, archivisteBadgeLevelOffset } from "@/lib/gamebook/yellow/data/collectionneurNpc"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
@@ -517,7 +517,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const seed = Math.floor(Math.random() * 1e9) >>> 0
             // ESCALADE du jour : match 1 = base, match 2 = +3 niv/50 Saiyan, match 3 = +6 niv/95 Saiyan.
             const { levelBonus, saiyanPoints } = archivisteEscalation(played)
-            const enemy = buildArchivisteTeam(getPokedex().seen, mean, seed, team.length, levelBonus, saiyanPoints)
+            // DIFFICULTÉ par progression d'arène : facile avant l'arène 1, « notre niveau » à l'arène 3, un peu au-dessus après.
+            const badgeOffset = archivisteBadgeLevelOffset(getPlayer().badges.length)
+            const enemy = buildArchivisteTeam(getPokedex().seen, Math.max(1, mean + badgeOffset), seed, team.length, levelBonus, saiyanPoints)
             if (enemy.length === 0) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Tu n'as encore croisé aucun Daemon digne d'être fiché ! Reviens quand tu en auras rencontré quelques-uns."]); return }
             const now = new Date()
             const blurb = archivisteGreeting(now.getDay(), now.getHours()) // dialogue passionné jour×heure (le fun fact est pour la défaite)
@@ -1470,7 +1472,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (duelResult.won) {
             recordDuelWin(opp.userId)
             if (duelResult.enemyHigher) recordMirrorWinHigherLevel() // badge « Reflet niveau-sup »
-            addItem(DUEL_NEXUS_BALL_ID, 1)
+            // Récompense graduée par progression d'arène : Nexus-Ball (arènes 1-2) → Super (3-5) → HYPER (post-arène 5).
+            const rewardBall = duelRewardBall(getPlayer().badges.length)
+            addItem(rewardBall.id, 1)
             // Remboursement au KO : plus le vainqueur a perdu de Daemons (galère), plus il récupère d'énergie dépensée.
             const refund = Math.round(duelResult.energySpent * Math.min(6, duelResult.faints) / 6)
             if (refund > 0) grantReps(refund)
@@ -1484,7 +1488,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
             }).catch(() => {})
-            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp }))
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label }))
         } else {
             logEnergyIncome("⚔️ Consolation de duel", grantReps(DUEL_LOSS_CONSOLE_REPS))
             persistYellowSave()

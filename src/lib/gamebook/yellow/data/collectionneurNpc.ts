@@ -155,6 +155,13 @@ export function archivisteFunFact(speciesId: string, hour: number): string {
 /** Espèces exclues de l'équipe de L'Archiviste (légendaires ultra-secrets — anti-spoiler / anti-OP). */
 const ARCHIVISTE_TEAM_EXCLUDE: ReadonlySet<string> = DEX_ULTRA_SECRET
 
+/** DIFFICULTÉ selon la progression d'arène (nb de badges) : L'Archiviste est FACILE avant l'arène 1 puis monte d'un
+ *  cran par badge, jusqu'à « un peu au-dessus » après l'arène 5. Offset de niveau ajouté à la moyenne d'équipe :
+ *  0 badge → −6 (facile) · 1 → −3 (un peu facile) · 2 → 0 (notre niveau) · 3 → +3 · 4+ → +6 (un peu au-dessus). */
+export function archivisteBadgeLevelOffset(badgeCount: number): number {
+    return Math.max(-6, Math.min(6, (Math.max(0, badgeCount) - 2) * 3))
+}
+
 /** Équipe de L'Archiviste : `count` Daemons tirés au hasard parmi `pool` (= dex.seen), niveaux = `playerMean` +
  *  offsets à SOMME NULLE (±5) → moyenne d'équipe == playerMean (exact avant clamp [1,100]). Daemons NATURE :
  *  on ne passe QUE { owned:false } → zéro EV, zéro point Saiyan, pas de shiny (cf. fullStats). Déterministe/seed. */
