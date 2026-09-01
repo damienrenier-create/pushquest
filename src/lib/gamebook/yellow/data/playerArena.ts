@@ -170,8 +170,8 @@ export function roamingSpots(mapId: string, count: number, rand: () => number, t
     const picked: [number, number][] = []
     const farEnough = (x: number, y: number) => picked.every(([px, py]) => Math.max(Math.abs(px - x), Math.abs(py - y)) >= minDist)
     for (const s of spots) { if (picked.length >= n) break; if (farEnough(s[0], s[1])) picked.push(s) }
-    // Filet de sécurité (map petite/encombrée) : si trop peu de cases assez espacées, on complète avec le reste.
-    if (picked.length < n) for (const s of spots) { if (picked.length >= n) break; if (!picked.includes(s)) picked.push(s) }
+    // On PRIVILÉGIE l'espacement : on ne complète PAS avec des cases rapprochées → on affiche moins de reflets si la
+    //   zone ne peut pas tous les espacer (« jusqu'à N »). Tous les reflets retournés sont donc à >= minDist les uns des autres.
     return picked
 }
 
