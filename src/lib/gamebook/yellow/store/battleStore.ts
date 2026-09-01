@@ -336,7 +336,11 @@ export function dispatchBattleInput(a: BattleInput) {
 // Actions (mutent l'état via le moteur pur)
 // ============================================================
 
-export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, opts?: { fleeChance?: number }) {
+// Le prochain combat sauvage vient-il d'une session de PÊCHE ? (posé par startWildBattle, lu à la capture pour le
+//   haut fait « 1ʳᵉ prise »). Réinitialisé à chaque nouveau combat sauvage (false si non-pêche) → aucun faux positif.
+let fromFishingBattle = false
+export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, opts?: { fleeChance?: number; fromFishing?: boolean }) {
+    fromFishingBattle = opts?.fromFishing === true
     // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
     let captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     // FUN : pas de bonus quota → la capture dépend de la QUALITÉ (IV) du sauvage (hauts IV = plus dur à attraper).
@@ -712,6 +716,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const isRun2GhostLoss = storeState.trainer?.trainerId?.startsWith("run2ghost:") === true && b.outcome !== "win"
     if (!isFactory && !isRun2GhostLoss) setTeam(b.player.team.map(toMonInstance))
 
+    // HAUT FAIT « KO du starter » (run 1) : grave le NIVEAU du starter à sa 1ʳᵉ chute (plus il tombe tard/haut, plus le
+    //   badge vaut de points). UID mémorisé à l'intro (marqueur starter_uid:), 1 seule fois (marqueur starter_ko:). Combats
+    //   réels seulement (pas les équipes de location/fusion). Marqueurs → aucun champ de save à migrer.
+    if (!isFactory) {
+        const mk = getPlayer().defeatedTrainers ?? []
+        if (!mk.some((m) => m.startsWith("starter_ko:"))) {
+            const suid = mk.find((m) => m.startsWith("starter_uid:"))?.slice("starter_uid:".length)
+            const ko = suid ? b.player.team.find((m) => m.uid === suid && m.currentHp <= 0) : undefined
+            if (ko) markTrainerDefeated(`starter_ko:${ko.level}`)
+        }
+    }
+
     // LIGUE DE FUSION — chaque fusionné reverse la MOITIÉ de son XP de combat à ses 2 PARENTS (vrais Daemons du
     //   roster), OPTION A : CHAQUE parent reçoit cette moitié (le duo progresse comme un Daemon normal). Applique
     //   aussi level-ups + apprentissages, gagne le delta de PV au level-up, puis persiste équipe + boîte. Se joue à
@@ -736,6 +752,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         const wild = b.enemy.team[b.enemy.activeIndex]
         if (wild) {
             addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
+            // HAUT FAIT « 1ʳᵉ prise » : capture issue d'une session de PÊCHE (marqueur SAVE permanent).
+            if (fromFishingBattle) { markTrainerDefeated("ach_fish_first"); fromFishingBattle = false }
             // DÉFIS FUN : avance le SPRINT (N espèces) / valide la CIBLE DU JOUR. No-op hors mode fun (aucun défi actif).
             if (getActiveWorld() !== "replay") funOnCapture(wild.speciesId)
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.

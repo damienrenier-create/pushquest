@@ -229,4 +229,25 @@ describe("Badges run 1 — barème MODE FUN (8 paliers + médailles)", () => {
         expect(state(evaluateBadges({ ...empty, caught: ["gekroc"] }), "catch_gecko").earned).toBe(true)
         expect(state(evaluateBadges({ ...empty, caught: ["pantheon"] }), "catch_panther").earned).toBe(true)
     })
+    it("badges à détection : dex / calepin / tenue / pêche / défis", () => {
+        expect(state(evaluateBadges({ ...empty, dexReceived: true }), "get_dex").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, calepinReceived: true }), "get_calepin").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, outfitCustomized: true }), "fashion").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, fishCaught: true }), "first_fish").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, funDefisDone: ["arene"] }), "defi_arene").earned).toBe(true)
+        expect(state(evaluateBadges({ ...empty, funDefisDone: ["sprint"] }), "defi_sprint").earned).toBe(true)
+    })
+    it("KO du starter : points VARIABLES = niveau (même en fun), earned dès qu'il a un niveau", () => {
+        const r = evaluateBadges({ ...empty, gameMode: "fun", starterKoLevel: 42 })
+        expect(state(r, "starter_ko").earned).toBe(true)
+        expect(state(r, "starter_ko").points).toBe(42) // pas le palier s5, la valeur variable
+        expect(state(evaluateBadges({ ...empty, starterKoLevel: 0 }), "starter_ko").earned).toBe(false)
+    })
+    it("badgeInputFromSave : marqueurs defeatedTrainers → détections", () => {
+        const i = badgeInputFromSave({ team: [], pc: [], defeatedTrainers: ["ach_fish_first", "ach_calepin", "ach_defi_arene", "starter_ko:37"] } as Parameters<typeof badgeInputFromSave>[0], undefined, "fun")
+        expect(i.fishCaught).toBe(true)
+        expect(i.calepinReceived).toBe(true)
+        expect(i.funDefisDone).toContain("arene")
+        expect(i.starterKoLevel).toBe(37)
+    })
 })

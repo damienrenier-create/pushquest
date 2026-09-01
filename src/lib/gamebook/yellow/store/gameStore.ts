@@ -1400,7 +1400,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const inst = createMonInstance(c.speciesId, c.level, { owned: false, shiny: c.shiny, ivsByStat })
         if (c.hard) Object.assign(inst, { captureMult: 0.45, captureRequiresDamage: true })
         const seed = Math.floor(Math.random() * 1e9) >>> 0
-        startWildBattle(getPlayerSave().team, [inst], seed)
+        startWildBattle(getPlayerSave().team, [inst], seed, { fromFishing: true }) // → haut fait « 1ʳᵉ prise » à la capture
     },
     cancelFishing: () => set({ fishing: null }),
     buyFashionOutfit: (base, priceReps) => {

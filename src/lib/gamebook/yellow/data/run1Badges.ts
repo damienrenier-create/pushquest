@@ -96,6 +96,12 @@ export interface BadgeInput {
     heldItemEquipped?: boolean    // un Daemon (équipe ou PC) porte un objet tenu
     giftCts?: number              // ownedCts.length (CT-cadeaux/trophées de boss possédées)
     ctBought?: boolean            // a ACHETÉ au moins une CT à la boutique (boughtCts.length ≥ 1)
+    dexReceived?: boolean         // a reçu le DEX NEXUS de L'Archiviste (collectionneurDexGiven)
+    outfitCustomized?: boolean    // a personnalisé sa TENUE chez Fashion Victim (marqueur ach_fashion)
+    fishCaught?: boolean          // a réalisé sa 1ʳᵉ PRISE à la canne à pêche
+    calepinReceived?: boolean     // a reçu le CALEPIN (1ʳᵉ défaite contre ACE)
+    funDefisDone?: readonly string[] // types de DÉFIS FUN complétés (arene / sprint / cible)
+    starterKoLevel?: number       // niveau du STARTER à sa 1ʳᵉ chute (sinon niveau actuel s'il n'est jamais tombé) → points variables
     // MODE DE JEU : "fun" → barème 8 paliers (TIER_POINTS_FUN) au lieu du barème 5-tiers. Sinon inchangé.
     gameMode?: string
 }
@@ -245,6 +251,16 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "held_item", label: "Équiper un objet tenu à un Daemon", tier: "silver", secret: true, cat: "special", earned: (i) => i.heldItemEquipped === true, reveal: (i) => i.heldItemEquipped === true },
     { id: "gift_ct", label: "Obtenir une CT-cadeau (trophée de boss)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.giftCts ?? 0) >= 1, reveal: (i) => (i.giftCts ?? 0) >= 1 },
     { id: "buy_ct", label: "Acheter une CT à la boutique", tier: "bronze", secret: false, cat: "special", earned: (i) => i.ctBought === true },
+    { id: "get_dex", label: "Recevoir le Dex Nexus (L'Archiviste)", tier: "bronze", secret: false, cat: "special", earned: (i) => i.dexReceived === true },
+    { id: "get_calepin", label: "Recevoir le Calepin (ACE)", tier: "bronze", secret: false, cat: "special", earned: (i) => i.calepinReceived === true },
+    { id: "fashion", label: "Personnaliser ta tenue (Fashion Victim)", tier: "silver", secret: true, cat: "special", earned: (i) => i.outfitCustomized === true, reveal: (i) => i.outfitCustomized === true },
+    { id: "first_fish", label: "Ta 1ʳᵉ prise à la canne à pêche", tier: "silver", secret: true, cat: "special", earned: (i) => i.fishCaught === true, reveal: (i) => i.fishCaught === true },
+    { id: "defi_arene", label: "Réussir un Blitz d'arène (défi)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.funDefisDone ?? []).includes("arene"), reveal: (i) => (i.funDefisDone ?? []).length > 0 },
+    { id: "defi_sprint", label: "Réussir un Sprint de capture (défi)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.funDefisDone ?? []).includes("sprint"), reveal: (i) => (i.funDefisDone ?? []).length > 0 },
+    { id: "defi_cible", label: "Attraper le Pokémon du jour (défi)", tier: "silver", secret: true, cat: "special", earned: (i) => (i.funDefisDone ?? []).includes("cible"), reveal: (i) => (i.funDefisDone ?? []).length > 0 },
+    // KO DU STARTER — points VARIABLES = niveau du starter à sa 1ʳᵉ chute (ou son niveau actuel s'il n'est jamais tombé) :
+    //   plus tu le gardes en vie longtemps (haut niveau), plus il rapporte. Introduit par le Dieu Spaghetti en début de run.
+    { id: "starter_ko", label: "Ton starter au front (pts = son niveau à sa 1ʳᵉ chute)", tier: "gold", secret: false, cat: "progression", earned: (i) => (i.starterKoLevel ?? 0) >= 1, points: (i) => i.starterKoLevel ?? 0 },
 
     // ── ⑩ COLLECTIONS de lignées — réunir toute une famille (🔒 révélées dès qu'on croise la famille) ──
     { id: "catch_gecko", label: "Capturer un Gecko élémentaire", tier: "silver", secret: true, cat: "collection", earned: (i) => GECKO_IDS.some((id) => has(i, id)), reveal: (i) => sawAny(i, ...GECKO_IDS) },
@@ -258,13 +274,14 @@ export const BADGES: readonly BadgeDef[] = [
 //   NE COMPTENT PAS dans le score gelé du run 1 — ils iront au RUN FUSION (cf. RUN1_FUN_BADGE_IDS). Réf. artefact « Hauts Faits · Run 1 ».
 export const FUN_TIER: Record<string, TierFun> = {
     // — pré-Sylvebarbe (RUN 1) —
-    first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1",
+    first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1", get_dex: "s1", get_calepin: "s1",
     full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", beach: "s2",
     nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2",
+    fashion: "s2", first_fish: "s2", defi_arene: "s2", defi_sprint: "s2", defi_cible: "s2",
     beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3",
     types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4",
     pantheon_evo: "d1", // faire évoluer Panthéon → 100 pts (revalorisé)
-    ace7: "s5", tonytony: "s5", buy_ct: "s5", // achat CT = 60 pts (⚠️ à confirmer — valeur élevée pour un achat)
+    ace7: "s5", tonytony: "s5", buy_ct: "s5", starter_ko: "s5", // achat CT = 60 pts ; starter_ko = points VARIABLES (niveau)
     dex100: "d1", level100: "d1", shiny_trade: "d1", panthers_all: "d1",
     goshendofy: "d2", shiny6: "d2", all_arenas: "d2", // battre les 5 arènes → 160 pts
     champion: "d3", dex_run1: "d3", league_6shiny: "d3",
@@ -278,11 +295,12 @@ export const FUN_TIER: Record<string, TierFun> = {
 }
 /** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
-    "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct",
+    "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct", "get_dex", "get_calepin",
     "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
+    "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible",
     "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi",
     "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena",
-    "ace7", "tonytony",
+    "ace7", "tonytony", "starter_ko",
     "dex100", "level100", "shiny_trade",
     "goshendofy", "shiny6",
     "all_arenas", "champion", "dex_run1", "league_6shiny",
@@ -311,6 +329,7 @@ export const BADGE_REPS: Record<string, number> = {
     grotte_nexus: 100, nexus_guardian: 250, nexus_deep: 600, ice_cave: 600, beach: 250, aqua_arena: 600,
     // ⑨ Side-quests
     berries: 250, poker: 100, held_item: 250, gift_ct: 250, buy_ct: 50,
+    get_dex: 50, get_calepin: 50, first_fish: 100, defi_arene: 100, defi_sprint: 100, defi_cible: 100,
     // ⑩ Lignées
     geckos_all: 500, panthers_all: 500, catch_gecko: 100, catch_panther: 100,
     // ── 6 NOUVEAUX (détection Phase 2 : marqueurs dédiés / collectionneurDexGiven / berry_found:<id>) ──
@@ -357,7 +376,8 @@ export function evaluateBadges(i: BadgeInput): BadgeResult {
         const revealed = !b.secret || earned || (b.reveal ? b.reveal(i) : false)
         const funTier = funTierOf(b.id)
         const isRun1 = RUN1_FUN_BADGE_IDS.has(b.id)
-        const points = fun ? TIER_POINTS_FUN[funTier] : (b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS[b.tier])
+        // Points VARIABLES (b.points, ex. KO-starter) prioritaires dans les 2 modes ; sinon palier (fun 8-tiers / normal 5-tiers).
+        const points = b.points ? Math.max(0, Math.round(b.points(i))) : (fun ? TIER_POINTS_FUN[funTier] : TIER_POINTS[b.tier])
         if (earned && (!fun || isRun1)) { totalPoints += points; earnedCount++ }
         return { id: b.id, tier: b.tier, funTier, points, earned, revealed, isRun1 }
     })
@@ -415,6 +435,26 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         heldItemEquipped: mons.some((m) => !!m.heldItem),
         giftCts: (s.ownedCts ?? []).length,
         ctBought: (s.boughtCts ?? []).length >= 1, // a acheté ≥ 1 CT à la boutique (achat unique persisté)
+        dexReceived: s.collectionneurDexGiven === true, // Dex Nexus remis par L'Archiviste
+        outfitCustomized: (s.defeatedTrainers ?? []).includes("ach_fashion"), // tenue personnalisée (Fashion Victim)
+        fishCaught: (s.defeatedTrainers ?? []).includes("ach_fish_first"), // 1ʳᵉ prise à la canne (marqueur posé à la capture pêchée)
+        calepinReceived: (s.defeatedTrainers ?? []).includes("ach_calepin"), // Calepin reçu d'ACE (marqueur SAVE)
+        funDefisDone: (() => { // défis fun réussis : arène/cible via marqueurs, sprint dérivé de l'échelle (rétroactif)
+            const m = s.defeatedTrainers ?? []
+            const done: string[] = []
+            if (m.includes("ach_defi_arene")) done.push("arene")
+            if ((s.funDefis?.ladder ?? 3) > 3) done.push("sprint")
+            if (m.includes("ach_defi_cible")) done.push("cible")
+            return done
+        })(),
+        starterKoLevel: (() => { // niveau du starter à sa 1ʳᵉ chute (marqueur starter_ko:) ; sinon son niveau ACTUEL (survivant)
+            const m = s.defeatedTrainers ?? []
+            const ko = m.find((x) => x.startsWith("starter_ko:"))
+            if (ko) return parseInt(ko.slice("starter_ko:".length), 10) || 0
+            const uid = m.find((x) => x.startsWith("starter_uid:"))?.slice("starter_uid:".length)
+            const mon = uid ? mons.find((mm) => mm.uid === uid) : undefined
+            return mon?.level ?? 0
+        })(),
         gameMode, // "fun" → barème 8 paliers ; sinon barème 5-tiers historique
         // FUSIONS (dérivés DIRECTS via isFusionId : set canonique d'ids) → rétroactifs, aucun nouveau champ save
         caughtFusion: caughtIds.some(isFusionId),

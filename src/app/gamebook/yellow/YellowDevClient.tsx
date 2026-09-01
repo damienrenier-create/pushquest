@@ -1442,6 +1442,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     "« Première défaite contre moi, hein ? Tiens — un CALEPIN. VIERGE. Note-y ce que ce monde t'apprend, au fil de tes rencontres : panneaux, conseils de PNJ… tout s'y inscrira. »",
                     "« Il te suivra de A à Z. Tu le retrouveras dans ton SAC, ou au MENU (START). Maintenant relève-toi. »",
                 ])
+                markTrainerDefeated("ach_calepin"); persistYellowSave() // haut fait : Calepin reçu (marqueur SAVE, ≠ localStorage)
             }
             else if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
             else if (nemTaunt) showDialogue("y_nemesis_challenge", "LE NÉMÉSIS", [nemTaunt]) // défaite au défi némésis
@@ -2107,13 +2108,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
     // on marque l'intro vue et on persiste.
     const onIntroComplete = (starterId: string) => {
-        setTeam([createMonInstance(starterId, 5, { owned: true })])
+        const starter = createMonInstance(starterId, 5, { owned: true })
+        setTeam([starter])
+        markTrainerDefeated(`starter_uid:${starter.uid}`) // haut fait KO-starter : mémorise l'UID du starter run 1 (stable après évolution)
         markCaught(starterId); markCaughtThisRun(starterId) // le starter entre au Pokédex (global + « vu/capturé ce run »)
         addItem("poke_ball", 5)
         // Pas d'argent offert : le portefeuille = reps de la veille (crédité au chargement).
         markIntroSeen()
         setShowIntro(false)
         persistYellowSave()
+        // MODE FUN — le Dieu Spaghetti INTRODUIT les HAUTS FAITS (points + médailles de rapidité) et lance le défi du STARTER.
+        if (getGameMode() === "fun") {
+            showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
+                "« Une dernière chose, mortel ! Chaque exploit ici te vaudra un HAUT FAIT — un trophée qui rapporte des POINTS. Plus c'est dur, plus ça paie. »",
+                "« Et sois le PLUS RAPIDE de tes amis à décrocher un haut fait : tu rafles la MÉDAILLE D'OR — et encore plus de points ! »",
+                "« Un défi rien que pour ce petit-là : garde ton STARTER en vie le plus longtemps possible. Plus il est costaud quand il tombe pour la 1ʳᵉ fois, plus tu gagnes de points. »",
+                "« Tous tes trophées t'attendent au menu (START) → 🏆 PALMARÈS → 🎖️ TROPHÉES. File, l'aventure t'appelle ! »",
+            ])
+        }
     }
 
     // NG+ (2 mondes navigables) — lance un New Game+ avec un Daemon custom en starter (+6000⚡), en GELANT

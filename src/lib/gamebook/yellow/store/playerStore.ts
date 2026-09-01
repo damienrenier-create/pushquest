@@ -2456,6 +2456,7 @@ export function funOnBadge(): number {
     const added = grantReps(funArenaReward(st.badges.length)) // 100 (1re arène) → 300 (5e)
     st = { ...st, funDefis: { ...st.funDefis, active: null } }
     logEnergyIncome("🏆 Défi arène", added); emit()
+    markTrainerDefeated("ach_defi_arene") // haut fait : un Blitz d'arène réussi (permanent)
     return added
 }
 
@@ -2480,6 +2481,7 @@ export function funOnCapture(speciesId: string): { reward: number; kind: FunDefi
         const added = grantReps(st.funDefis.dailyReps)
         st = { ...st, funDefis: { ...st.funDefis, dailyDone: true, active: null } }
         logEnergyIncome("⭐ Pokémon du jour", added); emit()
+        markTrainerDefeated("ach_defi_cible") // haut fait : Pokémon du jour attrapé (permanent)
         return { reward: added, kind: "daily" }
     }
     return null
