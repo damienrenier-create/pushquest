@@ -5,7 +5,7 @@
 // de notre niveau), placés sur les cases libres de l'arène — uniquement si on a TOUS les badges.
 
 import { useEffect, useMemo, useState } from "react"
-import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, ROUTE_NORD_MAP_ID, ROUTE_NORD_SPOT_COUNT, roamingSpots, rankClosest, arenaActive, mirrorName, registerRegistryCustoms, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
+import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, ROUTE_NORD_MAP_ID, ROUTE_NORD_SPOT_COUNT, roamingSpots, rankClosest, arenaActive, mirrorName, registerRegistryCustoms, ARENA_LEVEL_GAP_CAP, ARENA_LEVEL_GAP_CAP_ENDGAME, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
 
 export interface ArenaOpponent {
     userId: string
@@ -17,10 +17,12 @@ export interface ArenaOpponent {
     player: RegistryPlayer
 }
 
-export function usePlayerArena(mapId: string, badges: readonly string[], myUserId: string, myLevel: number, myGameMode?: string): {
+export function usePlayerArena(mapId: string, badges: readonly string[], myUserId: string, myLevel: number, myGameMode?: string, endgameReached?: boolean): {
     mode: ArenaMode | null
     opponents: ArenaOpponent[]
 } {
+    // ENDGAME (grotte Fusion flaguée) → fourchette de niveau des reflets élargie (±25 au lieu de ±15) en Ville Jaune.
+    const levelGap = endgameReached ? ARENA_LEVEL_GAP_CAP_ENDGAME : ARENA_LEVEL_GAP_CAP
     const mode = ARENA_MAPS[mapId] ?? null
     const roaming = ROAMING_ARENA_MAPS.has(mapId)
     // ROUTE NORD (comptes FUN uniquement) : reflets d'AUTRES comptes fun dans les hautes herbes, DÈS le run 1
@@ -62,7 +64,7 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
     // ROUTE NORD fun : on ne montre QUE les reflets d'autres comptes fun (entre-soi des invités simplifiés).
     const pool = isFunRouteNord ? players.filter((p) => p.gameMode === "fun") : players
     // En mode MIROIR, le PSEUDO de l'adversaire s'affiche à l'envers (et NON le nom du Daemon).
-    const opponents = rankClosest(pool, myUserId, myLevel, positions.length).map((p, i) => ({
+    const opponents = rankClosest(pool, myUserId, myLevel, positions.length, levelGap).map((p, i) => ({
         userId: p.userId,
         nickname: mode === "mirror" ? mirrorName(p.nickname) : p.nickname,
         x: positions[i][0],

@@ -176,6 +176,9 @@ export function teamMaxLevel(team: RegistryMon[]): number {
  *  au 1er badge. Avec cette borne, il ne voit AUCUN reflet tant qu'aucun pair n'est à sa portée (feature dormante,
  *  pas frustrante ; se réveille en montant de niveau). Tunable. */
 export const ARENA_LEVEL_GAP_CAP = 15
+/** ENDGAME (grotte Fusion atteinte) : les niveaux montent + se dispersent → on élargit la fourchette des reflets
+ *  en Ville Jaune à ± 25 pour qu'un joueur de fin de partie trouve encore des adversaires. */
+export const ARENA_LEVEL_GAP_CAP_ENDGAME = 25
 
 /** Les N joueurs (hors soi, équipe non vide) dont le niveau est le PLUS PROCHE du nôtre, ET dans la borne d'écart. */
 export function rankClosest(players: RegistryPlayer[], myUserId: string, myLevel: number, n = ARENA_OPPONENTS, maxGap = ARENA_LEVEL_GAP_CAP): RegistryPlayer[] {
