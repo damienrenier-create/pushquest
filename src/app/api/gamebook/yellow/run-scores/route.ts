@@ -268,8 +268,9 @@ export async function GET() {
         [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
-    // RUN 1 : barème FUN (8 paliers) ≠ barème non-fun (5-tiers) → classements SÉPARÉS. Le spectateur ne voit QUE le sien.
-    const run1 = toList(run1Map).filter((e) => Boolean(e.fun) === viewerFun)
+    // RUN 1 : ASYMÉTRIQUE — un joueur FUN ne voit QUE les scores fun (barème 8 paliers) ; un NON-FUN voit TOUT (il
+    //   peut regarder les funs, mais pas l'inverse). Choix créateur.
+    const run1 = viewerFun ? toList(run1Map).filter((e) => Boolean(e.fun)) : toList(run1Map)
 
     return NextResponse.json({ ok: true, run1, run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
 }
