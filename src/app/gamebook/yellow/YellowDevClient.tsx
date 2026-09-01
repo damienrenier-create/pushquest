@@ -95,7 +95,7 @@ import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -1047,6 +1047,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     persistYellowSave()
                 }
             }
+            // MODE FUN — plafond d'EV (jusqu'à 561) débloqué dès le run 1, RÉTROACTIVEMENT sur les Daemons déjà capturés.
+            if (ensureFunEvCapBoost()) persistYellowSave()
             // CROSS-JOUEUR : enregistre les Daemons CUSTOM (+ leurs némésis) de TOUS les joueurs → ceux créés par
             //   d'autres joueurs se résolvent partout (reflets, Hall of Fame, sprites) au lieu de MISSINGNO/équipe
             //   amputée. « Des Pokémon comme les autres, créés par un autre joueur » (choix Sartay). Non bloquant.

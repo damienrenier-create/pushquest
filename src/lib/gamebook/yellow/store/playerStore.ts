@@ -1159,8 +1159,8 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
     const today = new Date().toISOString().slice(0, 10)
     // EV : plafond modulé débloqué DÈS qu'une Ligue a été battue (live post-Ligue OU run 2/3 en cours).
     //   isChampion est remis à false au début de chaque run → on OR avec ngplusUsed/run3Used (permanents).
-    //   Estampillé À LA CAPTURE → strictement NON rétroactif (les Daemons déjà en boîte restent à 510).
-    const leagueEverBeaten = st.isChampion || st.ngplusUsed || st.run3Used
+    //   MODE FUN : le boost s'applique DÈS LE RUN 1 (les funs découvrent, pas de gate post-Ligue). Cf. ensureFunEvCapBoost (rétroactif).
+    const leagueEverBeaten = st.isChampion || st.ngplusUsed || st.run3Used || gameMode === "fun"
     const owned: MonInstance = {
         ...mon, owned: true,
         capturedLevel: mon.capturedLevel ?? mon.level,
@@ -1183,6 +1183,21 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
     st = { ...st, pc: [...st.pc, healedForPc(owned)] } // capturé mais équipe pleine → arrive SOIGNÉ au PC
     emit()
     return "pc"
+}
+
+/** MODE FUN — RÉTROACTIF : marque `evCapBoost=true` sur TOUS les Daemons possédés (équipe + PC) qui ne l'ont pas
+ *  encore, pour que leur plafond d'EV soit recalculé (jusqu'à 561 selon gènes parfaits + niveau de capture bas).
+ *  On NE touche PAS `evCurveV2` → les anciens Daemons gardent l'absence de malus haut-niveau (plus généreux, « s'ils
+ *  le méritent »). No-op hors fun ou si rien à changer. Renvoie true si la save doit être persistée. */
+export function ensureFunEvCapBoost(): boolean {
+    if (gameMode !== "fun") return false
+    const boost = (m: MonInstance) => (m.evCapBoost ? m : { ...m, evCapBoost: true })
+    const team = st.team.map(boost)
+    const pc = st.pc.map(boost)
+    if (team.every((m, i) => m === st.team[i]) && pc.every((m, i) => m === st.pc[i])) return false
+    st = { ...st, team, pc }
+    emit()
+    return true
 }
 
 /**
