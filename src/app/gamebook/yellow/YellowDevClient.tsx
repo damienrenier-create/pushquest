@@ -84,7 +84,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
@@ -508,15 +508,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 showDialogue("archiviste", ARCHIVISTE_NAME, ARCHIVISTE_INTRO_LINES)
                 return
             }
-            // MAX 3 matchs/jour (gagnés OU perdus) → au-delà, il s'incline et propose de revenir demain.
+            // MAX 5 matchs/jour (gagnés OU perdus) → au-delà, il s'incline et propose de revenir demain.
             const played = archivisteMatchesToday()
             if (played >= ARCHIVISTE_MAX_MATCHES_PER_DAY) { showDialogue("archiviste", ARCHIVISTE_NAME, ARCHIVISTE_DAILY_LIMIT_LINES); return }
             const team = getPlayer().team
             if (!team.some((m) => m.currentHp > 0)) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Ton équipe est K.O. ! Soigne-toi avant de me montrer ta collection."]); return }
             const mean = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
             const seed = Math.floor(Math.random() * 1e9) >>> 0
-            // ESCALADE du jour : match 1 = base, match 2 = +3 niv/50 Saiyan, match 3 = +6 niv/95 Saiyan.
-            const { levelBonus, saiyanPoints } = archivisteEscalation(played)
+            // ESCALADE du jour sur les VICTOIRES uniquement (perdre laisse retenter à difficulté égale) :
+            //   0 victoire = base, puis +3 niv/Daemon et +45 pts Saiyan par victoire (1 → +3/50 · 4 → +12/185).
+            const { levelBonus, saiyanPoints } = archivisteEscalation(archivisteWinsToday())
             // DIFFICULTÉ par progression d'arène : facile avant l'arène 1, « notre niveau » à l'arène 3, un peu au-dessus après.
             const badgeOffset = archivisteBadgeLevelOffset(getPlayer().badges.length)
             const enemy = buildArchivisteTeam(getPokedex().seen, Math.max(1, mean + badgeOffset), seed, team.length, levelBonus, saiyanPoints)
@@ -5210,7 +5211,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     accent="#3fb6a8"
                     enemyTeam={archivisteFight.enemy}
                     onFight={() => {
-                        // On CONSOMME le match du jour ICI (vrai lancement) → scouter puis Annuler ne compte pas. Max 3/jour.
+                        // On CONSOMME le match du jour ICI (vrai lancement) → scouter puis Annuler ne compte pas. Max 5/jour.
                         recordArchivisteMatch(); persistYellowSave()
                         // Équipe déjà tirée au hasard (lead = draw[0]) → pas de randomizeLead. IA « hof ».
                         startTrainerBattle(getPlayer().team, archivisteFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: ARCHIVISTE_TRAINER_ID, reward: 0, aiLevel: "hof" })

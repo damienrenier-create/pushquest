@@ -38,7 +38,7 @@ export const VILLE_JAUNE_TIPS: readonly VilleJauneTip[] = [
     { id: "vj_reflet_ball", title: "💡 La ball des reflets grimpe",
         text: "La ball gagnée sur un reflet suit ta progression d'arène : Nexus-Ball avant l'arène 3, Super Nexus-Ball ensuite, puis HYPER une fois les 5 arènes tombées. Plus tu avances, mieux tu es récompensé." },
     { id: "vj_archiviste", title: "💡 Le Collectionneur qui erre",
-        text: "Un Collectionneur passionné arpente la ville et te défie 3 fois par jour avec les Daemons que TU as croisés. Facile avant ta 1re arène, à ton niveau vers la 3e, puis un cran au-dessus — et chaque match du jour est plus corsé." },
+        text: "Un Collectionneur passionné arpente la ville et te défie jusqu'à 5 fois par jour avec les Daemons que TU as croisés. Facile avant ta 1re arène, à ton niveau vers la 3e, puis un cran au-dessus. Perdre ne coûte rien : retente ! Mais chaque VICTOIRE du jour le rend plus coriace." },
     { id: "vj_fuite", title: "💡 Fuir n'est pas tricher",
         text: "Face à un sauvage trop coriace, fuir n'a rien de honteux. Mais un DRESSEUR, lui, ne te laisse pas filer : dès que son regard te croise, c'est vaincre ou tomber. Soigne-toi AVANT de t'engager." },
     { id: "vj_centre", title: "💡 Le Centre et son étage",

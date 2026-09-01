@@ -26,20 +26,23 @@ export const ARCHIVISTE_TRAINER_ID = "collectionneur:nexus"
 /** Il erre sur la Ville Jaune. */
 export const ARCHIVISTE_MAP = YELLOW_ENTRANCE_MAP_ID
 
-/** Max de matchs par jour (gagnés OU perdus) ; après quoi il s'incline et propose de revenir demain. */
-export const ARCHIVISTE_MAX_MATCHES_PER_DAY = 3
+/** Max de matchs par jour (gagnés OU perdus) ; après quoi il s'incline et propose de revenir demain.
+ *  5 essais : perdre ne doit pas priver du dex toute la journée (l'escalade, elle, ne suit que les VICTOIRES). */
+export const ARCHIVISTE_MAX_MATCHES_PER_DAY = 5
 
-/** ESCALADE selon le nb de matchs DÉJÀ disputés aujourd'hui (0 = 1er match) :
- *  match 1 = base (nature) · match 2 = +3 niv/Daemon + 50 pts Saiyan · match 3 = +6 niv/Daemon + 95 pts Saiyan. */
-export function archivisteEscalation(matchesToday: number): { levelBonus: number; saiyanPoints: number } {
-    if (matchesToday <= 0) return { levelBonus: 0, saiyanPoints: 0 }
-    if (matchesToday === 1) return { levelBonus: 3, saiyanPoints: 50 }
-    return { levelBonus: 6, saiyanPoints: 95 }
+/** ESCALADE selon le nb de VICTOIRES du jour contre lui (pas les matchs disputés : perdre ne durcit rien,
+ *  on peut retenter à difficulté égale). Chaque victoire du jour : +3 niv/Daemon et +45 pts Saiyan de plus —
+ *  0 victoire = base (nature) · 1 = +3/50 · 2 = +6/95 · 3 = +9/140 · 4 = +12/185. Anti-farm : le battre en
+ *  boucle devient vite un vrai défi, alors que l'XP reste celle d'un dresseur normal (jamais doublée). */
+export function archivisteEscalation(winsToday: number): { levelBonus: number; saiyanPoints: number } {
+    const w = Math.max(0, winsToday)
+    if (w === 0) return { levelBonus: 0, saiyanPoints: 0 }
+    return { levelBonus: 3 * w, saiyanPoints: 50 + 45 * (w - 1) }
 }
 
 /** Réplique quand la limite quotidienne est atteinte. */
 export const ARCHIVISTE_DAILY_LIMIT_LINES: string[] = [
-    "Ho là ! Trois duels dans la journée, tu m'as épuisé mon carnet de notes…",
+    "Ho là ! Cinq duels dans la journée, tu m'as épuisé mon carnet de notes…",
     "Je m'incline, dresseur — reviens demain, j'aurai de nouvelles fiches à jour pour toi !",
 ]
 
@@ -76,8 +79,8 @@ export function archivisteDefeatLines(monName: string, fact: string | null, matc
             : `Et prends bien soin de ton ${monName}, c'est une pièce de collection, ça !`,
     ]
     lines.push(remaining >= 1
-        ? `Il te reste ${remaining} duel${remaining > 1 ? "s" : ""} aujourd'hui — et je te préviens : à chaque manche je corse l'affaire (plus de niveaux, plus de points Saiyan) ! On remet ça quand tu veux, fripon.`
-        : "C'était notre troisième manche du jour, tu m'as lessivé ! Laisse-moi ramasser mes fiches… et reviens demain, j'aurai de quoi t'occuper.")
+        ? `Il te reste ${remaining} duel${remaining > 1 ? "s" : ""} aujourd'hui — et je te préviens : chaque VICTOIRE contre moi me pique au vif, je reviendrai plus fort (plus de niveaux, plus de points Saiyan) ! On remet ça quand tu veux, fripon.`
+        : "C'était notre cinquième manche du jour, tu m'as lessivé ! Laisse-moi ramasser mes fiches… et reviens demain, j'aurai de quoi t'occuper.")
     return lines
 }
 
@@ -179,7 +182,7 @@ export function buildArchivisteTeam(pool: readonly string[], playerMean: number,
     // Correction à somme nulle → la moyenne d'équipe retombe EXACTEMENT sur playerMean (+ levelBonus d'escalade).
     let residual = offs.reduce((a, b) => a + b, 0)
     for (let i = 0; residual !== 0; i = (i + 1) % offs.length) { const step = residual > 0 ? -1 : 1; offs[i] += step; residual += step }
-    // ESCALADE (matchs répétés du jour) : +levelBonus niveaux/Daemon + saiyanPoints répartis également sur les 5 stats.
+    // ESCALADE (victoires du jour contre lui) : +levelBonus niveaux/Daemon + saiyanPoints répartis également sur les 5 stats.
     const per = saiyanPoints > 0 ? Math.floor(saiyanPoints / 5) : 0
     const allocated = per > 0 ? { hp: per, atk: per, def: per, spe: per, spc: per } : undefined
     return draw.map((id, i) => {

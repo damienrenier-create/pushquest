@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation, archivisteDefeatLines, ARCHIVISTE_INTRO_LINES, archivisteBadgeLevelOffset } from "./collectionneurNpc"
+import { archivisteSlot, archivisteGreeting, buildArchivisteTeam, ARCHIVISTE_GREETINGS, archivisteEscalation, archivisteDefeatLines, ARCHIVISTE_INTRO_LINES, archivisteBadgeLevelOffset, ARCHIVISTE_MAX_MATCHES_PER_DAY } from "./collectionneurNpc"
 import { baseSpeciesOf } from "./ace"
 
 const POOL = ["feuillichot", "broutame", "piouflot", "tetardoc", "draclet", "cailloutchi", "sporbeo", "namicha"]
@@ -106,7 +106,7 @@ describe("buildArchivisteTeam — équipe du Collectionneur", () => {
         expect(team.some((m) => m.speciesId === "mottelave" || m.speciesId === "nouiflot")).toBe(false)
     })
 
-    it("ESCALADE : +niveaux + points Saiyan aux matchs répétés", () => {
+    it("ESCALADE : +niveaux + points Saiyan aux victoires répétées du jour", () => {
         const base = buildArchivisteTeam(POOL, 40, 1, 6, 0, 0)
         const m2 = buildArchivisteTeam(POOL, 40, 1, 6, 3, 50)   // 2e match
         const m3 = buildArchivisteTeam(POOL, 40, 1, 6, 6, 95)   // 3e match
@@ -134,20 +134,26 @@ describe("dialogues Archiviste — intro + défaite", () => {
         expect(l.join(" ")).toMatch(/dex/i)                        // dex mis à jour
         expect(l[2]).toContain("Toto")                             // fun fact sur le Daemon du joueur
         expect(l[2]).toContain("il ne dort que la tête en bas")
-        expect(l[3]).toMatch(/reste 2 duels/i)                     // revanche : 2 restants après le 1er match
+        expect(l[3]).toMatch(/reste 4 duels/i)                     // revanche : 4 restants après le 1er match (cap 5)
     })
 
-    it("défaite : sans fun fact fiché → repli, et 3e match = « reviens demain »", () => {
-        const l = archivisteDefeatLines("Toto", null, 3)
+    it("défaite : sans fun fact fiché → repli, et 5e match = « reviens demain »", () => {
+        const l = archivisteDefeatLines("Toto", null, 5)
         expect(l[2]).toContain("Toto")
         expect(l[3]).toMatch(/demain/i)                            // plus de duel aujourd'hui
     })
 })
 
-describe("archivisteEscalation — paliers du jour", () => {
-    it("match 1 = base, 2 = +3/50, 3 = +6/95", () => {
+describe("archivisteEscalation — paliers sur les VICTOIRES du jour", () => {
+    it("0 victoire = base, puis +3 niv et +45 Saiyan par victoire (1=+3/50 · 2=+6/95 · 3=+9/140 · 4=+12/185)", () => {
         expect(archivisteEscalation(0)).toEqual({ levelBonus: 0, saiyanPoints: 0 })
         expect(archivisteEscalation(1)).toEqual({ levelBonus: 3, saiyanPoints: 50 })
         expect(archivisteEscalation(2)).toEqual({ levelBonus: 6, saiyanPoints: 95 })
+        expect(archivisteEscalation(3)).toEqual({ levelBonus: 9, saiyanPoints: 140 })
+        expect(archivisteEscalation(4)).toEqual({ levelBonus: 12, saiyanPoints: 185 })
+    })
+
+    it("cap quotidien = 5 matchs (perdre ne prive pas du dex toute la journée)", () => {
+        expect(ARCHIVISTE_MAX_MATCHES_PER_DAY).toBe(5)
     })
 })

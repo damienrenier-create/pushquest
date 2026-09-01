@@ -99,8 +99,10 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
-    /** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (max 3, reset quotidien) → escalade la difficulté. */
+    /** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (max 5, reset quotidien) → cap du jour. */
     archivisteMatchesToday?: number
+    /** L'ARCHIVISTE — nb de VICTOIRES du jour contre lui (reset quotidien) → escalade la difficulté (perdre ne durcit rien). */
+    archivisteWinsToday?: number
     /** HAUTS FAITS — ids de trophées dont les reps sont déjà crédités (une fois). GLOBAL (union tous mondes). */
     badgeRepsClaimed?: string[]
     /** HAUTS FAITS — reps déjà distribués aujourd'hui par le drip (plafond quotidien, reset au tick). */
@@ -601,6 +603,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
         archivisteMatchesToday: p.archivisteMatchesToday ?? st.archivisteMatchesToday ?? 0,
+        archivisteWinsToday: p.archivisteWinsToday ?? st.archivisteWinsToday ?? 0,
         badgeRepsClaimed: p.badgeRepsClaimed ?? st.badgeRepsClaimed ?? [],
         badgeRepsToday: p.badgeRepsToday ?? st.badgeRepsToday ?? 0,
         comparisonConsultsToday: p.comparisonConsultsToday ?? st.comparisonConsultsToday ?? 0,
@@ -832,11 +835,19 @@ export function setCollectionneurDexGiven() {
 }
 export function isCollectionneurDexGiven(): boolean { return st.collectionneurDexGiven }
 
-/** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (0-3). Sert à l'escalade (niveau + points Saiyan) et au cap 3/jour. */
+/** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (0-5). Sert au cap 5/jour (perdre laisse retenter). */
 export function archivisteMatchesToday(): number { return st.archivisteMatchesToday ?? 0 }
 /** L'ARCHIVISTE — enregistre un match disputé (gagné OU perdu). Reset au tick quotidien (creditDailyReps). */
 export function recordArchivisteMatch() {
     st = { ...st, archivisteMatchesToday: (st.archivisteMatchesToday ?? 0) + 1 }
+    emit()
+}
+/** L'ARCHIVISTE — nb de VICTOIRES du jour contre lui. Sert à l'escalade (niveau + points Saiyan) : seules les
+ *  victoires durcissent le prochain match — perdre laisse la difficulté intacte (le dex doit rester accessible). */
+export function archivisteWinsToday(): number { return st.archivisteWinsToday ?? 0 }
+/** L'ARCHIVISTE — enregistre une victoire du joueur (appelé à SA défaite, battleStore). Reset au tick quotidien. */
+export function recordArchivisteWin() {
+    st = { ...st, archivisteWinsToday: (st.archivisteWinsToday ?? 0) + 1 }
     emit()
 }
 
@@ -1739,7 +1750,8 @@ export function creditDailyReps(today: string) {
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
-        archivisteMatchesToday: 0, // nouveau jour → L'Archiviste ré-affrontable (3 matchs, escalade remise à zéro)
+        archivisteMatchesToday: 0, // nouveau jour → L'Archiviste ré-affrontable (5 matchs)
+        archivisteWinsToday: 0, // nouveau jour → l'escalade (basée sur les victoires) repart de zéro
         badgeRepsToday: 0, // nouveau jour → le drip des reps de hauts faits redistribue jusqu'à 1000⚡
         comparisonConsultsToday: 0, // nouveau jour → le prix de la comparaison équipe vs Pokédex revient à la base
         sageSaiyanPointsToday: 0, // nouveau jour → le Vieux Sage Saiyan redonne 20 points redistribuables

@@ -59,8 +59,10 @@ export interface YellowSave {
     sbireDefeatsToday: number
     /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
-    /** L'ARCHIVISTE — nb de matchs disputés AUJOURD'HUI (gagné ou perdu ; max 3, reset quotidien). Escalade la team. */
+    /** L'ARCHIVISTE — nb de matchs disputés AUJOURD'HUI (gagné ou perdu ; max 5, reset quotidien). Cap du jour. */
     archivisteMatchesToday?: number
+    /** L'ARCHIVISTE — nb de VICTOIRES du jour contre lui (reset quotidien). Escalade la team (perdre ne durcit rien). */
+    archivisteWinsToday?: number
     /** HAUTS FAITS — ids des trophées dont les REPS ont déjà été crédités (une seule fois). GLOBAL (union tous mondes). */
     badgeRepsClaimed?: string[]
     /** HAUTS FAITS — reps distribués AUJOURD'HUI par le drip (plafond quotidien, reset via creditDailyReps). */
@@ -680,6 +682,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
         archivisteMatchesToday: typeof o.archivisteMatchesToday === "number" ? Math.max(0, Math.floor(o.archivisteMatchesToday)) : 0,
+        archivisteWinsToday: typeof o.archivisteWinsToday === "number" ? Math.max(0, Math.floor(o.archivisteWinsToday)) : 0,
         badgeRepsClaimed: Array.isArray(o.badgeRepsClaimed) ? (o.badgeRepsClaimed as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 300) : [],
         badgeRepsToday: typeof o.badgeRepsToday === "number" ? Math.max(0, Math.floor(o.badgeRepsToday)) : 0,
         comparisonConsultsToday: typeof o.comparisonConsultsToday === "number" ? Math.max(0, Math.floor(o.comparisonConsultsToday)) : 0,
