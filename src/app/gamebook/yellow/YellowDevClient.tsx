@@ -479,6 +479,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const archivistes = useArchiviste(mapPlayer.mapId)
     const [archivisteFight, setArchivisteFight] = useState<{ npc: ArchivisteNpc; enemy: MonInstance[]; blurb: string } | null>(null)
     const [highfiveTarget, setHighfiveTarget] = useState<{ userId: string; nickname: string } | null>(null) // FERVEUR DE CLAN : high-five à un allié
+    const [clanChoice, setClanChoice] = useState<{ userId: string; nickname: string } | null>(null) // reflet d'allié de clan : choix ⚔️ affronter / 🙏 high-five
     const [highfiveMsg, setHighfiveMsg] = useState("")
     const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
@@ -487,7 +488,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [keepSel, setKeepSel] = useState<Set<string>>(new Set())
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
-    const handleArenaClick = (uid: string) => {
+    const handleArenaClick = (uid: string, skipClanGuard = false) => {
         if (isFishing) return // PÊCHE en cours : on ignore les clics d'adversaire (sinon la session resterait bloquée en combat).
         // Un DIALOGUE (ou un combat) est ouvert → un clic sur un sprite d'adversaire ne doit RIEN relancer. Fix : les
         //   taps servant à FAIRE DÉFILER le dialogue post-combat de l'Archiviste retombaient sur son sprite errant et
@@ -540,10 +541,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
-        // 🛡️ FERVEUR DE CLAN : on N'AFFRONTE JAMAIS le reflet d'un ALLIÉ (même clan, run en cours). À la place → HIGH FIVE :
-        //   un message perso (≤50 car) + des reps (1 par caractère). Ouvre la modale d'envoi au lieu du combat.
+        // 🛡️ FERVEUR DE CLAN : le reflet d'un ALLIÉ (même clan, run en cours) laisse le CHOIX — ⚔️ l'affronter OU 🙏 lui
+        //   faire un high-five (message + reps). On ouvre la modale de choix ; « Affronter » rappelle handleArenaClick(skipClanGuard).
         const myClan = getClan()
-        if (myClan && opp.player.clan === myClan) { setHighfiveTarget({ userId: opp.userId, nickname: opp.nickname }); return }
+        if (!skipClanGuard && myClan && opp.player.clan === myClan) { setClanChoice({ userId: opp.userId, nickname: opp.nickname }); return }
         // RUN 3 — limite DURCIE anti-farm du double-XP : 1 SEUL match de REFLET par jour (défaite comprise), pour
         //   LES DEUX modes de reflet (hub Viridian « exacts » ET miroir eau « inversés » donnent tous deux le
         //   double-XP). effectiveRunWorld() couvre aussi le REJEU de run 3. Ailleurs (run 1/2) : 1 victoire par
@@ -2379,6 +2380,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const goBack = (): boolean => {
         if (movesOpen) { setMovesOpen(false); return true } // ⚔️ glossaire d'attaques (overlay lecture seule)
         if (quickRefOpen) { setQuickRefOpen(false); return true } // ⚡ accès rapide SELECT
+        if (clanChoice) { setClanChoice(null); return true } // choix affronter/high-five d'un allié de clan
         if (glandModal) { advanceGland(); return true } // l'événement du gland s'avance/se ferme au B
         if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (resetStep > 0) { setResetStep(0); return true }
@@ -5202,6 +5204,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* 🛡️ FERVEUR DE CLAN — HIGH FIVE à un allié (au lieu de l'affronter). Message ≤50 car → 1⚡/caractère. */}
+            {/* 🛡️ Reflet d'un ALLIÉ de clan : choix ⚔️ l'affronter / 🙏 high-five (ferveur de clan). */}
+            {clanChoice && !battle && (
+                <div style={menuOverlayStyle} onClick={() => setClanChoice(null)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🛡️ {clanChoice.nickname} — allié de clan</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
+                            C&apos;est un membre de TON clan. Tu veux l&apos;affronter, ou lui faire un high-five (ferveur de clan) ?
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => { const c = clanChoice; setClanChoice(null); handleArenaClick(c.userId, true) }}>⚔️ L&apos;affronter</button>
+                        <button style={{ ...menuBtnStyle, marginTop: 6, borderColor: "#c9a227", color: "#ffd76a" }} onClick={() => { const c = clanChoice; setClanChoice(null); setHighfiveTarget({ userId: c.userId, nickname: c.nickname }) }}>🙏 High-five</button>
+                        <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={() => setClanChoice(null)}>← Annuler</button>
+                    </div>
+                </div>
+            )}
             {highfiveTarget && !battle && (
                 <div style={menuOverlayStyle} onClick={() => { setHighfiveTarget(null); setHighfiveMsg("") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
