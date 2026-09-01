@@ -298,6 +298,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "🪧 « À l'ÉTAGE du Centre Daemon : gagne des CT pour pas très cher, de l'énergie… et même un DAEMON ! »",
         ],
     },
+    {
+        // PANNEAU D'ASTUCES (case 23,1, le « panneau standard » du décor Viridian, jusqu'ici muet). Lu depuis (23,2)↑
+        //   ou (22,1)→. Interception gameStore (id === "y_tips_board") → conseil du créneau 6 h + inscription au Calepin.
+        id: "y_tips_board",
+        name: "PANNEAU",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#b88a4a" }, // invisible : le panneau est déjà dans l'image
+        initialX: 23,
+        initialY: 1,
+        dialoguesAfter: ["*Tu lis le panneau.*"], // repli si non intercepté
+    },
     // MARCHAND DE JETONS DE COMBAT (hub de la Zone de Combat) : ouvre la boutique JC (intercepté gameStore).
     {
         id: "y_combat_merchant",

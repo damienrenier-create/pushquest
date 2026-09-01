@@ -3,12 +3,24 @@
 // LE CALEPIN — carnet d'astuces reçu d'ACE (1re défaite). Liste les conseils DÉJÀ LUS (panneaux du parc), dans
 //   l'ordre reçu (triable), avec des NOTES PERSO annotables. Contenu = mêmes fiches TOPICS que le Manuel.
 
-import { Fragment, useState } from "react"
+import { Fragment, useState, type ReactNode } from "react"
 import { TOPICS, topicCat } from "./ParkSignPanel"
 import { getCalepin, setCalepinNote } from "@/lib/gamebook/yellow/store/calepinStore"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { VILLE_JAUNE_TIPS } from "@/lib/gamebook/yellow/data/villeJauneTips"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
+
+// CATALOGUE UNIFIÉ des astuces consignables : panneaux du parc (TOPICS) + panneau d'astuces de la Ville Jaune.
+//   Clé = titre exact (comme l'enregistrement dans le Calepin). Les conseils de la ville rendent un simple paragraphe.
+const VJ_TOPICS: { t: string; body: ReactNode }[] = VILLE_JAUNE_TIPS.map((v) => ({
+    t: v.title,
+    body: <p style={{ fontSize: 12.5, lineHeight: 1.55, color: INK, margin: "0 0 9px" }}>{v.text}</p>,
+}))
+const CATALOG: { t: string; body: ReactNode }[] = [...TOPICS, ...VJ_TOPICS]
+const VJ_TITLES = new Set(VILLE_JAUNE_TIPS.map((v) => v.title))
+// Thème d'une astuce (regroupe les conseils de la ville sous leur propre rubrique).
+const catOf = (title: string): string => (VJ_TITLES.has(title) ? "Astuces de la ville" : topicCat(title))
 
 // Journal d'énergie : formatage court JJ/MM et HH:MM d'un timestamp.
 const fmtDay = (ts: number) => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}` }
@@ -23,11 +35,11 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
     const [draft, setDraft] = useState("")                  // brouillon de note du tip ouvert
 
     // Carnet VIERGE au départ : n'affiche QUE les astuces réellement CROISÉES en jeu (cal.tips), dans l'ordre reçu.
-    const received = cal.tips.map((t) => TOPICS.find((x) => x.t === t)).filter((x): x is (typeof TOPICS)[number] => !!x)
+    const received = cal.tips.map((t) => CATALOG.find((x) => x.t === t)).filter((x): x is (typeof CATALOG)[number] => !!x)
     const list = sort === "alpha" ? [...received].sort((a, b) => a.t.localeCompare(b.t))
-        : sort === "theme" ? [...received].sort((a, b) => topicCat(a.t).localeCompare(topicCat(b.t)) || a.t.localeCompare(b.t))
+        : sort === "theme" ? [...received].sort((a, b) => catOf(a.t).localeCompare(catOf(b.t)) || a.t.localeCompare(b.t))
             : received
-    const topic = open ? TOPICS.find((x) => x.t === open) : null
+    const topic = open ? CATALOG.find((x) => x.t === open) : null
 
     const openTip = (t: string) => { setOpen(t); setDraft(getCalepin(userId).notes[t] ?? "") }
     const saveNote = () => { if (!open) return; setCalepinNote(userId, open, draft); setCal(getCalepin(userId)) }
@@ -73,10 +85,10 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                             {list.map((t, i) => {
                                 const hasNote = !!(cal.notes[t.t] ?? "").trim()
-                                const showHeader = sort === "theme" && (i === 0 || topicCat(list[i - 1].t) !== topicCat(t.t))
+                                const showHeader = sort === "theme" && (i === 0 || catOf(list[i - 1].t) !== catOf(t.t))
                                 return (
                                     <Fragment key={t.t}>
-                                        {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{topicCat(t.t)}</div>}
+                                        {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{catOf(t.t)}</div>}
                                         <button onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
                                             📌 {t.t}{hasNote && <span title="Note perso"> ✍️</span>}
                                         </button>
