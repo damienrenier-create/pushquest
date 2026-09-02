@@ -12,7 +12,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import PlayerBadgesModal from "./PlayerBadgesModal"
 
-interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
+interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number; fun?: boolean; energySpent?: number }
 interface FusionChamp { userId: string; nickname: string; wonAt: string; tier: string }
 type TabId = "run1" | "run2" | "run3" | "run3energy" | "duels" | "run4"
 type Data = { run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
@@ -108,7 +108,9 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                         <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
                             style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢" : "⚪"}</span>
                     )}
-                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span></span>
+                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span>{isFunRun2 && r.energySpent !== undefined && (
+                        <span title="énergie dépensée sur tout le Remix — départage les égalités (moins = mieux)" style={{ fontSize: 9, opacity: 0.7, marginLeft: 4, whiteSpace: "nowrap" }}>(⚡{r.energySpent.toLocaleString("fr-FR")})</span>
+                    )}</span>
                     {canExpand && clickable && (
                         <button style={profBtn} title="Voir le profil" onClick={(e) => { e.stopPropagation(); openProfile(r) }}>👤</button>
                     )}
@@ -242,7 +244,8 @@ function Run2RulesBox() {
             <div style={sub}>Bonus RANG-À-FINIR (ordre d&apos;arrivée entre funs)</div>
             <div style={chipRow}>{finish.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
             <div style={{ marginTop: 7 }}>🏁 <b>Finir</b> = battre la Ligue puis <b>ton double</b> (Salle Dorée). Score <b>en direct</b> 🟢 tant que tu joues le Remix, <b>figé</b> ⚪ quand tu passes à la Ligue de Fusion.</div>
-            <div style={{ marginTop: 6, color: "#ffd54a" }}>⚡ En plus du classement, <b>chaque haut fait du Remix te verse de l&apos;énergie</b> (un Remix complet = 10 000⚡, versés au fil de tes connexions).</div>
+            <div style={{ marginTop: 6 }}>⚖️ <b>Égalité de score ?</b> On départage par l&apos;<b>énergie dépensée</b> sur tout le Remix (affichée entre parenthèses) : <b>moins tu en dépenses, mieux tu es classé</b>.</div>
+            <div style={{ marginTop: 6, color: "#ffd54a" }}>⚡ En plus du classement, <b>chaque haut fait du Remix te verse de l&apos;énergie</b> (un Remix complet = 15 320⚡, versés SANS plafond au fil de tes connexions).</div>
         </div>
     )
 }

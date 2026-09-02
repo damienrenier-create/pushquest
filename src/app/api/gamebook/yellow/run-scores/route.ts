@@ -100,17 +100,18 @@ const RUN2_FINISH_BONUS = [1.5, 1.4, 1.3, 1.2, 1.1] as const
 /** RUN 2 — MODE FUN : score = note de PERFORMANCE /1000 (Pokédex×500 + %victoire×300 + niveaux×200, comme les non-funs)
  *  × BONUS rang-à-finir (1er fun bouclé ×1,5 … 5e ×1,1 ; sinon ×1). Les HAUTS FAITS du Remix ne comptent PAS dans ce
  *  score — ils créditent de l'ÉNERGIE (reps), cf. dripBadgeReps. `finishRank` = index d'arrivée (−1 = pas fini → ×1).
- *  Renvoie null si le monde run 2 n'existe pas encore. */
-function run2FunScore(w: unknown, finishRank: number): { score: number; factors: ScoreFactor[] } | null {
+ *  `energySpent` = énergie TOTALE dépensée sur le run 2 (départage les ÉGALITÉS : moins = mieux). null si pas de monde run 2. */
+function run2FunScore(w: unknown, finishRank: number): { score: number; factors: ScoreFactor[]; energySpent: number } | null {
     if (!w || typeof w !== "object") return null
     const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; caughtThisRun?: unknown }
     const stats = world.stats ?? {}
     const team = Array.isArray(world.team) ? world.team : []
     const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
     const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
+    const energySpent = num(stats.energySpent)
     const { grade, factors } = computeGrade({
         wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels,
-        energyConsumed: num(stats.energySpent), steps: num(stats.steps),
+        energyConsumed: energySpent, steps: num(stats.steps),
     })
     const ranked = finishRank >= 0 && finishRank < RUN2_FINISH_BONUS.length
     const bonus = ranked ? RUN2_FINISH_BONUS[finishRank] : 1
@@ -118,7 +119,7 @@ function run2FunScore(w: unknown, finishRank: number): { score: number; factors:
         key: "info:finish_bonus", label: "🏁 Rang à finir", ratio: 0, max: 0, points: Math.round((bonus - 1) * 100),
         detail: ranked ? `${finishRank + 1}ᵉ fun à boucler le Remix → ×${bonus.toFixed(2).replace(".", ",")}` : "pas encore bouclé (×1)",
     }
-    return { score: Math.round(grade * bonus), factors: [...factors, bonusFactor] }
+    return { score: Math.round(grade * bonus), factors: [...factors, bonusFactor], energySpent }
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -150,7 +151,7 @@ function replayScoreFromBubble(w: unknown, run: string): { score: number; factor
     return run1BadgeScore(world, caught)
 }
 
-interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number; fun?: boolean }
+interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number; fun?: boolean; energySpent?: number }
 
 export const dynamic = "force-dynamic"
 
@@ -247,7 +248,7 @@ export async function GET() {
                 //   /1000 seule. Barèmes distincts → classement asymétrique (fun voit fun, non-fun voit non-fun).
                 if (isFun) {
                     const r2 = run2FunScore(f.ngplusWorld, run2FinishRank.get(s.userId) ?? -1)
-                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", fun: true })
+                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", fun: true, energySpent: r2.energySpent })
                 } else {
                     const r2 = run2FromWorld(f.ngplusWorld)
                     if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps, fun: false })
@@ -306,8 +307,12 @@ export async function GET() {
         }
     } catch { /* table pas encore créée → pull seul */ }
 
+    // Tri : score DÉCROISSANT, puis (RUN 2 fun) départage par ÉNERGIE DÉPENSÉE CROISSANTE — moins tu dépenses, mieux tu
+    //   es classé. Les entrées sans `energySpent` (autres runs) comparent égal (MAX_SAFE_INTEGER) → tri stable inchangé.
     const toList = (m: Map<string, LeaderEntry>) =>
-        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun }))
+        [...m.values()]
+            .sort((a, b) => b.score - a.score || (a.energySpent ?? Number.MAX_SAFE_INTEGER) - (b.energySpent ?? Number.MAX_SAFE_INTEGER))
+            .map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun, energySpent: e.energySpent }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
     // RUN 1 : ASYMÉTRIQUE — un joueur FUN ne voit QUE les scores fun (barème 8 paliers) ; un NON-FUN voit TOUT (il

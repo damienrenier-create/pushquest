@@ -77,17 +77,16 @@ describe("run2Badges — échelle & barème", () => {
         expect(new Set(run2EarnedBadgeIds(i)).has("r2_grotte_gelee")).toBe(false)
     })
 
-    it("barème REPS : un Remix COMPLET (les 54) vaut 10 000⚡ pile", () => {
-        expect(RUN2_TOTAL_REPS).toBe(10000)
+    it("barème REPS (02/09) : un Remix COMPLET (les 54) vaut 15 320⚡", () => {
+        expect(RUN2_TOTAL_REPS).toBe(15320)
+        // valeurs exactes du barème (Pinacle d3 inchangé ; Élite d2=1000 passe VOLONTAIREMENT au-dessus)
+        expect(RUN2_TIER_REPS).toEqual({ s1: 50, s2: 100, s3: 150, s4: 300, s5: 400, d1: 600, d2: 1000, d3: 740 })
         // chaque haut fait a un montant de reps = son palier
         for (const b of RUN2_BADGES) expect(RUN2_BADGE_REPS[b.id]).toBe(RUN2_TIER_REPS[b.funTier])
-        // rampe strictement croissante s1 < … < d3
-        const order = ["s1", "s2", "s3", "s4", "s5", "d1", "d2", "d3"] as const
-        for (let k = 1; k < order.length; k++) expect(RUN2_TIER_REPS[order[k]]).toBeGreaterThan(RUN2_TIER_REPS[order[k - 1]])
     })
 
-    it("reps des hauts faits JOUABLES aujourd'hui (hors 2 todo) = 9 100⚡", () => {
+    it("reps des hauts faits JOUABLES aujourd'hui (hors 2 todo) = 14 280⚡", () => {
         const playable = RUN2_BADGES.filter((b) => !b.todo).reduce((s, b) => s + RUN2_BADGE_REPS[b.id], 0)
-        expect(playable).toBe(9100)
+        expect(playable).toBe(14280)
     })
 })

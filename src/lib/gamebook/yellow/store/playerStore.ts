@@ -860,13 +860,14 @@ export function recordArchivisteWin() {
  *  chacun « payé » (jamais deux fois). Crédite EN BLOC (creditReps, sans troncature) + journal ⚡. Renvoie la liste
  *  {id, reps} effectivement payée CE tour → le client affiche l'intervention du Dieu Spaghetti (un message/trophée).
  *  `extra` : récompenses hors-BADGE_REPS (ex. berry_found:<id> → 50/100). Rien en run 3 (source d'énergie unique). */
-export function dripBadgeReps(earnedIds: readonly string[], extra: Record<string, number> = {}): { id: string; reps: number }[] {
+export function dripBadgeReps(earnedIds: readonly string[], extra: Record<string, number> = {}, opts: { uncapped?: boolean } = {}): { id: string; reps: number }[] {
     if (runMode() === "run3") return []
     const repsOf = (id: string): number => extra[id] ?? BADGE_REPS[id] ?? 0
     const claimed = new Set(st.badgeRepsClaimed ?? [])
     const pending = earnedIds.filter((id) => !claimed.has(id) && repsOf(id) > 0)
     if (!pending.length) return []
-    let budget = BADGE_REPS_DAILY_CAP - (st.badgeRepsToday ?? 0)
+    // `uncapped` (RUN 2 fun, choix Sartay) : AUCUN plafond/jour → tout ce qui est dû est versé d'un coup à la connexion.
+    let budget = opts.uncapped ? Number.POSITIVE_INFINITY : BADGE_REPS_DAILY_CAP - (st.badgeRepsToday ?? 0)
     if (budget <= 0) return []
     const granted: { id: string; reps: number }[] = []
     for (const id of pending) {

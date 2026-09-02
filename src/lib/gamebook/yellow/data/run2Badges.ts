@@ -1,8 +1,9 @@
 // src/lib/gamebook/yellow/data/run2Badges.ts
 //
-// RUN 2 (New Game+ « Le Remix du Nexus ») — HAUTS FAITS du mode FUN. Barème identique au run 1 (8 paliers ×
-// médailles de rapidité), score FIGÉ au RE-SACRE (Salle Dorée, contre ton double). Réutilise `BadgeInput` +
-// `badgeInputFromSave` (cf. run1Badges.ts) : la même photo de save alimente les conditions, scopée au monde RUN 2.
+// RUN 2 (New Game+ « Le Remix du Nexus ») — HAUTS FAITS du mode FUN. Contrairement au run 1 (score = Σ points de
+// hauts faits × médailles), le CLASSEMENT du run 2 fun = note de PERFORMANCE /1000 × bonus rang-à-finir (cf. route
+// run-scores) ; ICI, les hauts faits CRÉDITENT de l'ÉNERGIE (reps, `RUN2_BADGE_REPS`). Les paliers 8-tiers ne servent
+// donc qu'au montant de reps et au prestige. Réutilise `BadgeInput` + `badgeInputFromSave`, scopé au monde RUN 2.
 //
 // Réf. artefact « Hauts Faits · Run 2 » (54 hauts faits, 2580 pts ×1). Les badges `todo:true` attendent une
 // instrumentation dédiée (Phase 2) → posés dans l'échelle mais non gagnables (earned = false).
@@ -138,11 +139,6 @@ export function evaluateRun2Badges(i: BadgeInput): Run2BadgeResult {
     return { badges, totalPoints, earnedCount }
 }
 
-/** Score run 2 fun d'un joueur (base, sans médaille). */
-export function run2BadgeScore(i: BadgeInput): number {
-    return evaluateRun2Badges(i).totalPoints
-}
-
 /** Ids gagnés (hors `todo`) — sert au DRIP de reps (chaque haut fait du Remix crédite de l'énergie). */
 export function run2EarnedBadgeIds(i: BadgeInput): string[] {
     return RUN2_BADGES.filter((b) => !b.todo && b.earned(i)).map((b) => b.id)
@@ -151,14 +147,15 @@ export function run2EarnedBadgeIds(i: BadgeInput): string[] {
 /** Total maxi théorique de POINTS (×1) — indicatif de prestige (le classement run 2 = performance /1000, cf. route). */
 export const RUN2_MAX_POINTS = RUN2_BADGES.reduce((s, b) => s + TIER_POINTS_FUN[b.funTier], 0)
 
-// ════════════════ RÉCOMPENSES EN REPS (⚡) — les hauts faits du RUN 2 fun CRÉDITENT de l'énergie (drip 1000⚡/j) ════════════════
+// ════════════════ RÉCOMPENSES EN REPS (⚡) — les hauts faits du RUN 2 fun CRÉDITENT de l'énergie (SANS plafond/jour) ════════════════
 // Design Sartay : « en fun, le run 2 crédite des reps » (le run 1 donne des points de classement ; le run 3 = source
-//   d'énergie unique = arènes). Barème par PALIER, calibré pour qu'un Remix COMPLET (les 54 hauts faits) = 10 000⚡ pile.
+//   d'énergie unique = arènes). Barème par PALIER (valeurs 02/09 : Pinacle inchangé, autres revus à la hausse).
+//   NB : Élite (d2=1000) passe VOLONTAIREMENT au-dessus de Pinacle (d3=740) — choix Sartay. Remix complet (54) = 15 320⚡.
 /** Reps crédités par un haut fait selon son palier fun. */
-export const RUN2_TIER_REPS: Record<TierFun, number> = { s1: 30, s2: 60, s3: 100, s4: 160, s5: 250, d1: 400, d2: 550, d3: 740 }
+export const RUN2_TIER_REPS: Record<TierFun, number> = { s1: 50, s2: 100, s3: 150, s4: 300, s5: 400, d1: 600, d2: 1000, d3: 740 }
 /** Reps crédités par CHAQUE haut fait (id → reps), dérivés du palier. Alimente le drip (`extra` de dripBadgeReps). */
 export const RUN2_BADGE_REPS: Record<string, number> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, RUN2_TIER_REPS[b.funTier]]))
-/** Total des reps d'un Remix COMPLET (les 54) — doit valoir 10 000. */
+/** Total des reps d'un Remix COMPLET (les 54) — 15 320⚡ (barème 02/09). */
 export const RUN2_TOTAL_REPS = RUN2_BADGES.reduce((s, b) => s + RUN2_TIER_REPS[b.funTier], 0)
 
 /** Libellés des hauts faits run 2 (id → label), pour les toasts/affichages (drip Dieu Spaghetti, panneaux). */

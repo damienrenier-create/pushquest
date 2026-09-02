@@ -26,14 +26,15 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     const fun = getGameMode() === "fun" // barème 8 paliers + médailles au lieu du barème 5-tiers
     const isRun2 = getActiveWorld() === "ngplus" // Remix → échelle des hauts faits RUN 2
 
-    // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze (run 1 ET run 2 Remix).
+    // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze. RUN 1 UNIQUEMENT (le run 2 se
+    //   classe à la performance /1000 + reps, pas aux médailles) → on ne fetch même pas en Remix.
     const [medals, setMedals] = useState<Record<string, "or" | "argent" | "bronze">>({})
     useEffect(() => {
-        if (!fun) return
+        if (!fun || isRun2) return
         let cancelled = false
         fetch("/api/gamebook/yellow/fun-badges").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j?.ok) setMedals(j.medals ?? {}) }).catch(() => {})
         return () => { cancelled = true }
-    }, [fun])
+    }, [fun, isRun2])
 
     // ── Lignes normalisées (mêmes cartes pour run 1 « Découverte » et run 2 « Remix ») ──
     interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; earned: boolean; revealed: boolean; todo: boolean }
@@ -55,7 +56,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         maxPoints = earnable.reduce((s, b) => s + (fun ? (RUN2_BADGE_REPS[b.id] ?? 0) : TIER_POINTS_FUN[b.funTier]), 0)
         unit = fun ? "⚡" : "pts"
         footNote = fun
-            ? "🍝 Chaque haut fait du Remix te verse de l'énergie (⚡), au fil de tes connexions — un Remix complet = 10 000⚡. ⏳ = bientôt disponible."
+            ? "🍝 Chaque haut fait du Remix te verse de l'énergie (⚡), sans plafond, au fil de tes connexions — un Remix complet = 15 320⚡. ⏳ = bientôt disponible."
             : "Hauts faits du Remix (Run 2). ⏳ = bientôt disponible."
     } else {
         const input = badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], undefined, fun ? "fun" : undefined)
@@ -99,7 +100,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                 <div style={S.grid}>
                                     {visible.map((r) => {
                                         const earned = r.earned
-                                        const medal = fun && earned ? medals[r.id] : undefined // médaille de rapidité (fun)
+                                        const medal = fun && earned && !isRun2 ? medals[r.id] : undefined // médaille de rapidité (fun, run 1 only)
                                         return (
                                             <div key={r.id} style={{ ...S.badge, ...(earned ? { borderColor: r.color, background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={`${r.emoji} ${r.points} ${unit}${r.todo ? " · à venir" : ""}${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
                                                 <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>

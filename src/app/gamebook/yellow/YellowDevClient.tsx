@@ -1045,14 +1045,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     extraIds.push(rid); extraReps[rid] = berryId === "baie_phenix" ? 100 : 50 // Phénix = 100, autres = 50
                 }
                 // RUN 2 (Remix) — MODE FUN : les HAUTS FAITS du run 2 créditent de l'ÉNERGIE (barème par palier, run 2
-                //   complet = 10 000⚡). Drip idempotent (badgeRepsClaimed global : ids r2_* distincts, jamais re-payés).
-                if (getGameMode() === "fun" && getActiveWorld() === "ngplus") {
+                //   complet = 15 320⚡) SANS plafond/jour (uncapped). Drip idempotent (badgeRepsClaimed global : ids r2_* distincts).
+                const isFunRun2 = getGameMode() === "fun" && getActiveWorld() === "ngplus"
+                if (isFunRun2) {
                     for (const id of run2EarnedBadgeIds(badgeInputFromSave(p as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))) {
                         extraIds.push(id); extraReps[id] = RUN2_BADGE_REPS[id] ?? 0
                     }
                 }
                 const earned = earnedRepsBadgeIds(badgeInputFromSave({ ...p, pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0]))
-                const granted = dripBadgeReps([...earned, ...extraIds], extraReps)
+                const granted = dripBadgeReps([...earned, ...extraIds], extraReps, { uncapped: isFunRun2 })
                 if (granted.length) {
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",

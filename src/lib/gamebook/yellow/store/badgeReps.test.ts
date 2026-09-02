@@ -35,6 +35,22 @@ describe("dripBadgeReps — récompenses de hauts faits (une fois, drip 1000/jou
         expect(isBadgeRepsClaimed("champion")).toBe(false)
     })
 
+    it("uncapped (RUN 2 fun) : verse TOUT en un seul drip, sans plafond, badgeRepsToday reste FINI", () => {
+        // budget du jour quasi épuisé (950) MAIS uncapped → dex100 (1000) ET champion (250) versés d'un coup.
+        hydratePlayer({ badgeRepsClaimed: [], badgeRepsToday: 950, reps: 0, repsCap: 100000 })
+        const g = dripBadgeReps(["dex100", "champion"], {}, { uncapped: true })
+        expect(g).toEqual([{ id: "dex100", reps: 1000 }, { id: "champion", reps: 250 }])
+        expect(getPlayer().reps).toBe(1250)
+        expect(getPlayer().badgeRepsToday).toBe(2200)                  // 950 + 1250
+        expect(Number.isFinite(getPlayer().badgeRepsToday)).toBe(true) // jamais Infinity écrit en save
+    })
+
+    it("uncapped=false (défaut / run 1) : le plafond 1000/jour s'applique toujours", () => {
+        hydratePlayer({ badgeRepsClaimed: [], badgeRepsToday: 950, reps: 0, repsCap: 100000 })
+        const g = dripBadgeReps(["dex100", "champion"]) // capé : dex100 passe (budget 50>0), champion stoppé
+        expect(g).toEqual([{ id: "dex100", reps: 1000 }])
+    })
+
     it("ignore les ids sans reps + les trophées non gagnés (déjà filtrés en amont)", () => {
         const g = dripBadgeReps(["sylvebarbe", "inconnu"]) // sylvebarbe = endgame (0 reps), inconnu = pas dans BADGE_REPS
         expect(g).toEqual([])
