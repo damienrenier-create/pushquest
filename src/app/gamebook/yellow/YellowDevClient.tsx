@@ -146,6 +146,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { pateDeLuxeGodLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -4721,12 +4722,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     const nm = displayName(m)
                                     const r = useLuxePasta(m.uid)
                                     if (r.ok && r.outcome) {
-                                        setToast(
-                                            r.outcome === "shiny_perfect" ? `🌟 INCROYABLE ! ${nm} devient SHINY et PARFAIT !`
-                                                : r.outcome === "perfect" ? `✨ ${nm} atteint la PERFECTION ! (IV au maximum)`
-                                                    : `💀 Aïe… ${nm} retombe au rang D (IV minimum).`
-                                        )
-                                        if ((getPlayer().items[PATE_LUXE_ITEM_ID] ?? 0) <= 0) setLuxePick(false)
+                                        // Le DIEU SPAGHETTI commente le résultat de la bouchée (parfait / rang D / shiny+parfait).
+                                        setLuxePick(false)
+                                        showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random()))
                                     } else if (r.reason === "none") {
                                         setToast("Tu n'as plus de Pâte de Luxe.")
                                         setLuxePick(false)
