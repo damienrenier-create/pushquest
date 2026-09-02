@@ -51,6 +51,32 @@ describe("run2Badges — échelle & barème", () => {
         for (const b of RUN2_BADGES.filter((b) => b.todo)) expect(ids.has(b.id)).toBe(false)
     })
 
+    it("markers de récolte/zone/échange → hauts faits instrumentés (Phase 3)", () => {
+        const markers = [
+            "ach_berry:baie_soin", "ach_berry:baie_pure", "ach_berry:baie_fougue", "ach_berry:baie_eclat",
+            "ach_berry:baie_vive", "ach_berry:baie_roc", "ach_berry:baie_phenix", "ach_berry:baie_phenix_survive",
+            "ach_run2ghost_win", "ach_arena_revanche", "ach_trade_shiny",
+            "y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard", // 5 Frères Glaçon
+            "y_plage_pecheur", "y_plage_nageuse", "y_plage_marin", // 3 Spectres de la Plage
+        ]
+        const i = badgeInputFromSave({ defeatedTrainers: markers, pokedex: { seen: [], caught: [] }, team: [], pc: [], badges: [] }, undefined, "fun")
+        const ids = new Set(run2EarnedBadgeIds(i))
+        for (const id of ["r2_berry_soin", "r2_berry_pure", "r2_berry_fougue", "r2_berry_eclat", "r2_berry_vive", "r2_berry_roc", "r2_berry_phenix",
+            "r2_berry_phenix_survive", "r2_pnj_grotte", "r2_arena_revanche", "r2_trade_shiny", "r2_grotte_gelee", "r2_plage_hantee"]) {
+            expect(ids.has(id)).toBe(true)
+        }
+    })
+
+    it("il ne reste que 2 hauts faits `todo` (carillon CT + pokédex du Remix)", () => {
+        expect(RUN2_BADGES.filter((b) => b.todo).map((b) => b.id).sort()).toEqual(["r2_carillon", "r2_dex_complete"])
+    })
+
+    it("Grotte Gelée : 4 frères sur 5 ne suffisent pas (il faut BLIZZARD aussi)", () => {
+        const partial = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre"] // manque l'aîné
+        const i = badgeInputFromSave({ defeatedTrainers: partial, pokedex: { seen: [], caught: [] }, team: [], pc: [], badges: [] }, undefined, "fun")
+        expect(new Set(run2EarnedBadgeIds(i)).has("r2_grotte_gelee")).toBe(false)
+    })
+
     it("médaille OR ×1,6 : score pondéré par rang", () => {
         const i = badgeInputFromSave({ isChampion: true, badges: [], pokedex: { seen: [], caught: [] }, team: [], pc: [] }, undefined, "fun")
         // r2_double (250) gagné. OR sur ce badge → 250 × 1,6 = 400.

@@ -3399,7 +3399,9 @@ export function addTradedMonToPc(raw: unknown): boolean {
     const m = raw as MonInstance
     if (typeof m.speciesId !== "string" || !getSpecies(m.speciesId)) return false
     const mon: MonInstance = { ...m, uid: `trade-${m.speciesId}-${Date.now()}-${++tradeMonSeq}` }
-    st = { ...st, pc: [...st.pc, mon] }
+    // HAUT FAIT run 2 « échanger un shiny » : recevoir un shiny via un échange P2P (scopé au monde actif).
+    const dt = m.shiny && !st.defeatedTrainers.includes("ach_trade_shiny") ? [...st.defeatedTrainers, "ach_trade_shiny"] : st.defeatedTrainers
+    st = { ...st, pc: [...st.pc, mon], defeatedTrainers: dt }
     emit()
     return true
 }

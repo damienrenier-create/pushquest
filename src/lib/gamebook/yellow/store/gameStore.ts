@@ -1000,7 +1000,7 @@ function doHhTrade(giveUid: string): ActiveDialogue | null {
     const receiveId = ngplus ? HH_TRADE_RECEIVE : HH_TRADE_RECEIVE_RUN1 // run 2 = Morrow ; run 1 = Rochison (trade-évo)
     const received = createMonInstance(receiveId, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve l'investissement Saiyan (Rochison trade-évo ET Morrow)
-    if (owner.shiny) received.shiny = true      // NE JAMAIS détruire un shiny à l'échange (Rochison/Morrow héritent de la brillance)
+    if (owner.shiny) { received.shiny = true; markTrainerDefeated("ach_trade_shiny") } // NE JAMAIS détruire un shiny à l'échange (héritage brillance) + HAUT FAIT run 2
     executeTrade(giveUid, received)      // retire le Roctaur, ajoute le reçu (Morrow ou Rochison)
     applyTradeEvolution(received.uid)    // Morrow/Rochison ne trade-évoluent pas plus loin → no-op (défensif)
     persistYellowSave()
@@ -1035,7 +1035,7 @@ function doCaveTrade(giveUid: string): ActiveDialogue | null {
     const cfg = caveTradeConfig(getActiveWorld() === "run3") // run 3 = ruffiant→marmoterre ; sinon limaroche→belunode
     const received = createMonInstance(cfg.receive, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
-    if (owner.shiny) received.shiny = true       // NE JAMAIS détruire un shiny à l'échange (comme doHhTrade)
+    if (owner.shiny) { received.shiny = true; markTrainerDefeated("ach_trade_shiny") } // NE JAMAIS détruire un shiny à l'échange + HAUT FAIT run 2
     executeTrade(giveUid, received)             // retire le donné, ajoute le reçu
     markCaveTradeDone()                          // échange unique (per-monde) → ne se reproposera plus
     persistYellowSave()

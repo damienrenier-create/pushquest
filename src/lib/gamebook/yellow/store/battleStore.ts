@@ -686,6 +686,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             return (!!real.heldItem && berrySet.includes(real.heldItem) && !bm.heldItem) || (!!real.heldItem2 && berrySet.includes(real.heldItem2) && !bm.heldItem2)
         })
         if (usedBerry) markTrainerDefeated("ach_berry_used")
+        // HAUT FAIT (run 2) « survivre grâce à une Baie Phénix » : le moteur pose `__phoenixUsed` sur le mon réanimé.
+        if (b.player.team.some((bm) => (bm as { __phoenixUsed?: boolean }).__phoenixUsed === true)) markTrainerDefeated("ach_berry:baie_phenix_survive")
     }
 
     // ÉPREUVE DE FUSION (bac à sable) : ne compte PAS dans les stats/score (sinon les victoires gonfleraient le
@@ -921,6 +923,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // 2e CT de l'arène en run 2) + le ticket d'arène (30). Les gardes : juste l'honneur.
             const revBoost = getActiveWorld() === "ngplus" ? arenaRevancheBoost(id) : null
             if (revBoost != null) {
+                if (t?.badge) markTrainerDefeated("ach_arena_revanche") // HAUT FAIT (run 2) : 1re revanche d'arène (boss run-1 boosté) remportée
                 // CT « classique » de l'arène : soit un giftCt direct (Druide/Granit/Pyra/Ondine), soit — pour
                 // VOLTA (élec), dont la CT est dans son rematch — la 1re de rematch.giftCts (ct22).
                 const classicCt = t?.giftCt ?? t?.rematch?.giftCts?.[0]
@@ -1102,6 +1105,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // PNJ-JOUEUR RUN 2 (Grotte 1F, équipe run-2 GELÉE d'un autre joueur) : VICTOIRE unique → marque vaincu
             //   (le PNJ disparaît) + OFFRE un RAPPEL. XP doublée (cf. isDuel). Défaite → non marqué (retentable).
             markTrainerDefeated(storeState.trainer.trainerId)
+            markTrainerDefeated("ach_run2ghost_win") // HAUT FAIT (run 2) : 1re victoire vs un PNJ-joueur du Remix
             addItem("rappel", 1)
             rematchReward = { npcId: storeState.trainer.trainerId, npcName: "🔁 RAPPEL", lines: ["Beau combat ! Cet adversaire t'a laissé un RAPPEL.", "Il ranime un Daemon K.O. — dans le sac (→ Soins) ou en plein combat."] }
         } else if (storeState.trainer.trainerId === "y_rouquin_gelee") {

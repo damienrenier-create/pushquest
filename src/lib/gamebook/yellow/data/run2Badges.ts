@@ -17,6 +17,12 @@ const distinctTypes = (i: BadgeInput) => new Set(i.caught.flatMap((id) => getSpe
 const has = (i: BadgeInput, id: string) => i.caught.includes(id)
 const mk = (i: BadgeInput) => i.markers ?? []
 const hasMk = (i: BadgeInput, id: string) => mk(i).includes(id)
+const hasAllMk = (i: BadgeInput, ids: readonly string[]) => ids.every((id) => mk(i).includes(id))
+const hasAnyMk = (i: BadgeInput, ids: readonly string[]) => ids.some((id) => mk(i).includes(id))
+
+/** Dresseurs dont la VICTOIRE (markTrainerDefeated, scopé au monde) balise une zone franchie — pas de marker dédié. */
+const GELEE_FRERES = ["y_frere_frisquet", "y_frere_grelot", "y_frere_glagla", "y_frere_givre", "y_frere_blizzard"] as const // 5 Frères Glaçon
+const PLAGE_SPECTRES = ["y_plage_pecheur", "y_plage_nageuse", "y_plage_marin"] as const // dresseurs Spectre de la Plage hantée
 
 /** Les 6 panthères élémentaires (évolutions de Panthéon via la Pierre de Gékraise). */
 export const PANTHER_IDS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"] as const
@@ -55,7 +61,7 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     // ─────────── 💎 100 — Maîtrise ───────────
     { id: "r2_dex100", label: "100 Daemons différents (Remix)", funTier: "d1", cat: "collection", earned: (i) => i.caught.length >= 100 },
     { id: "r2_panthers6", label: "Réunir les 6 Panthères élémentaires", funTier: "d1", cat: "collection", earned: hasAllPanthers },
-    { id: "r2_trade_shiny", label: "Échanger un shiny", funTier: "d1", cat: "social", earned: (i) => hasMk(i, "ach_trade_shiny"), reveal: () => true, todo: true }, // marqueur d'échange shiny (Phase 2)
+    { id: "r2_trade_shiny", label: "Échanger un shiny", funTier: "d1", cat: "social", earned: (i) => hasMk(i, "ach_trade_shiny"), reveal: () => true }, // marqueur posé aux échanges (PNJ donné + P2P reçu)
     { id: "r2_pantheon_evo", label: "Faire évoluer Panthéon (Pierre de Gékraise)", funTier: "d1", cat: "rencontres", earned: hasAnyPanther },
 
     // ─────────── ⭐⭐⭐⭐⭐ 60 — Redoutable ───────────
@@ -68,13 +74,13 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_dex50", label: "50 Daemons différents (Remix)", funTier: "s4", cat: "collection", earned: (i) => i.caught.length >= 50 },
     { id: "r2_types10", label: "Daemons de 10 types (Remix)", funTier: "s4", cat: "collection", earned: (i) => distinctTypes(i) >= 10 },
     { id: "r2_mirror_higher", label: "Battre un reflet de niveau cumulé SUPÉRIEUR", funTier: "s4", cat: "social", earned: (i) => i.mirrorWinHigherLevel === true },
-    { id: "r2_pnj_grotte", label: "Battre un PNJ-JOUEUR du Remix (Grotte 1F)", funTier: "s4", cat: "social", earned: (i) => hasMk(i, "ach_run2ghost_win"), reveal: () => true, todo: true }, // marqueur de victoire vs run2-ghost (Phase 2)
+    { id: "r2_pnj_grotte", label: "Battre un PNJ-JOUEUR du Remix (Grotte 1F)", funTier: "s4", cat: "social", earned: (i) => hasMk(i, "ach_run2ghost_win"), reveal: () => true }, // marqueur posé par battleStore (branche run2ghost)
     { id: "r2_shiny1", label: "Capturer 1 shiny (Remix)", funTier: "s4", cat: "shiny", earned: (i) => shinyCount(i) >= 1 },
     { id: "r2_gekraise", label: "Choper GÉKRAISE (le gecko Roche/Feu)", funTier: "s4", cat: "rencontres", earned: (i) => has(i, "gekraise") },
     { id: "r2_carillon", label: "Gagner le CARILLON au blackjack (CT Fée/Métal inédite)", funTier: "s4", cat: "rencontres", earned: () => F, reveal: () => true, todo: true }, // CT Carillon à créer (Phase 2)
     { id: "r2_orcaline", label: "Capturer ORCALINE sauvage (Grotte Gelée, niv 35+)", funTier: "s4", cat: "rencontres", earned: (i) => has(i, "orcaline") },
     { id: "r2_master_ball", label: "Choper la Master Ball", funTier: "s4", cat: "rencontres", earned: (i) => i.hasMasterBall === true },
-    { id: "r2_grotte_gelee", label: "Franchir la Grotte Gelée (5 Frères Glaçon, Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasMk(i, "ach_grotte_gelee"), reveal: () => true, todo: true }, // marqueur de traversée (Phase 2)
+    { id: "r2_grotte_gelee", label: "Franchir la Grotte Gelée (5 Frères Glaçon, Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasAllMk(i, GELEE_FRERES), reveal: (i) => hasAnyMk(i, GELEE_FRERES) }, // les 5 Frères Glaçon vaincus (markers de dresseur)
     { id: "r2_aqua_arena", label: "Vaincre l'Aqua Arena re-thémée EAU (Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasMk(i, "aqua_arena") },
 
     // ─────────── ⭐⭐⭐ 20 — Aguerri ───────────
@@ -83,9 +89,9 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_pvp", label: "Gagner un combat PvP", funTier: "s3", cat: "social", earned: (i) => (i.pvpWins ?? 0) >= 1 },
     { id: "r2_morrow", label: "Échanger un Roctaur contre MORROW (le Brocanteur)", funTier: "s3", cat: "social", earned: (i) => has(i, "morrow") },
     { id: "r2_pantheon_catch", label: "Choper Panthéon (Route Nord giga-rare, Remix)", funTier: "s3", cat: "rencontres", earned: (i) => has(i, "pantheon") || hasAnyPanther(i) },
-    { id: "r2_arena_revanche", label: "Gagner une REVANCHE d'arène (équipe run-1 boostée)", funTier: "s3", cat: "rencontres", earned: (i) => hasMk(i, "ach_arena_revanche"), reveal: () => true, todo: true }, // marqueur de revanche (Phase 2)
-    { id: "r2_plage_hantee", label: "Dompter la Plage HANTÉE (Spectres, Remix)", funTier: "s3", cat: "exploration", earned: (i) => hasMk(i, "ach_plage_hantee"), reveal: () => true, todo: true }, // marqueur (Phase 2)
-    { id: "r2_berry_phenix_survive", label: "Un Daemon survit grâce à une Baie Phénix", funTier: "s3", cat: "rencontres", earned: () => F, reveal: () => true, todo: true }, // à créer (Phase 2)
+    { id: "r2_arena_revanche", label: "Gagner une REVANCHE d'arène (équipe run-1 boostée)", funTier: "s3", cat: "rencontres", earned: (i) => hasMk(i, "ach_arena_revanche"), reveal: () => true }, // marqueur posé par battleStore (revanche boss run 2)
+    { id: "r2_plage_hantee", label: "Dompter la Plage HANTÉE (Spectres, Remix)", funTier: "s3", cat: "exploration", earned: (i) => hasAllMk(i, PLAGE_SPECTRES), reveal: (i) => hasAnyMk(i, PLAGE_SPECTRES) }, // les 3 dresseurs Spectre vaincus (markers de dresseur)
+    { id: "r2_berry_phenix_survive", label: "Un Daemon survit grâce à une Baie Phénix", funTier: "s3", cat: "rencontres", earned: (i) => hasMk(i, "ach_berry:baie_phenix_survive"), reveal: () => true }, // marqueur posé par battleStore (__phoenixUsed)
     { id: "r2_lab_defi", label: "Compléter un défi du Labo (vrai workout)", funTier: "s3", cat: "rencontres", earned: (i) => i.labDefiDone === true },
 
     // ─────────── ⭐⭐ 10 — Facile ───────────
@@ -103,13 +109,14 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_capture1", label: "Capturer ton 1ᵉʳ Daemon du Remix", funTier: "s1", cat: "progression", earned: (i) => i.caught.length >= 1 },
     { id: "r2_evolve", label: "Faire évoluer un Daemon (Remix)", funTier: "s1", cat: "progression", earned: (i) => (i.evolutions ?? 0) >= 1 },
     { id: "r2_trainer1", label: "Battre un dresseur du Remix", funTier: "s1", cat: "progression", earned: (i) => (i.trainersBeaten ?? 0) >= 1 },
-    { id: "r2_berry_soin", label: "Récolter une Baie de Soin", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_soin"), reveal: () => true, todo: true },
-    { id: "r2_berry_pure", label: "Récolter une Baie Pure", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_pure"), reveal: () => true, todo: true },
-    { id: "r2_berry_fougue", label: "Récolter une Baie Fougue", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_fougue"), reveal: () => true, todo: true },
-    { id: "r2_berry_eclat", label: "Récolter une Baie Éclat", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_eclat"), reveal: () => true, todo: true },
-    { id: "r2_berry_vive", label: "Récolter une Baie Vive", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_vive"), reveal: () => true, todo: true },
-    { id: "r2_berry_roc", label: "Récolter une Baie Roc", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_roc"), reveal: () => true, todo: true },
-    { id: "r2_berry_phenix", label: "Récolter une Baie Phénix", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry_phenix"), reveal: () => true, todo: true },
+    // Récolte des baies : `harvestBerryTree` pose déjà `ach_berry:<itemId>` par type (idempotent, scopé au monde).
+    { id: "r2_berry_soin", label: "Récolter une Baie de Soin", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_soin"), reveal: () => true },
+    { id: "r2_berry_pure", label: "Récolter une Baie Pure", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_pure"), reveal: () => true },
+    { id: "r2_berry_fougue", label: "Récolter une Baie Fougue", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_fougue"), reveal: () => true },
+    { id: "r2_berry_eclat", label: "Récolter une Baie Éclat", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_eclat"), reveal: () => true },
+    { id: "r2_berry_vive", label: "Récolter une Baie Vive", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_vive"), reveal: () => true },
+    { id: "r2_berry_roc", label: "Récolter une Baie Roc", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_roc"), reveal: () => true },
+    { id: "r2_berry_phenix", label: "Récolter une Baie Phénix", funTier: "s1", cat: "exploration", earned: (i) => hasMk(i, "ach_berry:baie_phenix"), reveal: () => true },
     { id: "r2_calepin", label: "Recevoir le Calepin (ACE)", funTier: "s1", cat: "rencontres", earned: (i) => i.calepinReceived === true },
 ]
 
