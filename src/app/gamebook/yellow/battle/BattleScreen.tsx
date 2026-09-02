@@ -98,6 +98,20 @@ export default function BattleScreen() {
     // l'identité de `battle` → auto-réparant (un nouveau tour rend `battle` différent
     // et débloque l'action suivante). Empêche le freeze par double-tap rapide.
     const actedRef = useRef<typeof battle>(null)
+    // PIP POKÉDEX (combat sauvage) : on FIGE l'état « déjà capturé ? » au DÉBUT de la rencontre. Ainsi le pip ne
+    // bascule PAS sur « CAPTURÉ » pendant que la Nexus-Ball secoue encore (le store enregistre la capture avant la
+    // fin de l'anim). Il ne reflète la NOUVELLE capture qu'une fois le playback terminé = ball immobilisée.
+    const wildCaughtAtStart = useRef(false)
+    const inEncounter = useRef(false)
+    if (battle) {
+        if (!inEncounter.current) { // rencontre qui démarre → capture l'état AVANT toute capture de ce combat
+            inEncounter.current = true
+            const sp = battle.isWild ? battle.enemy.team[battle.enemy.activeIndex]?.speciesId : undefined
+            wildCaughtAtStart.current = !!sp && dex.caught.includes(sp)
+        }
+    } else if (inEncounter.current) {
+        inEncounter.current = false
+    }
 
     // Initialise les PV affichés au tout début du combat (ils sont ensuite
     // CONSERVÉS d'un tour à l'autre → pas de saut visuel entre les tours).
@@ -470,7 +484,7 @@ export default function BattleScreen() {
                 {/* Ennemi : fiche + pips/pokéball Pokédex, ancrés en haut-gauche. */}
                 <div style={S.enemySide}>
                     {battle.isWild
-                        ? <WildDexPip caught={dex.caught.includes(showEnemy.speciesId)} />
+                        ? <WildDexPip caught={wildCaughtAtStart.current || (playbackDone && dex.caught.includes(showEnemy.speciesId))} />
                         : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
                     {/* key sur l'uid : au switchIn, la barre se REMONTE nette (pas de flash 0→100%).
                         #4 : pendant la fenêtre d'envoi, on montre le PROCHAIN Daemon (showEnemy). */}
