@@ -47,6 +47,8 @@ C:\Users\Sartay\.claude\projects\C--Users-Sartay\memory\
 - `MEMORY.md` = index (une ligne par fait) ; ~60 fiches thématiques (systèmes, designs, sessions).
 - **Pour la transférer** sur la nouvelle machine : la **copier en privé** (USB / OneDrive) dans le dossier `.claude` équivalent — PAS dans ce repo public. Si le nom d'utilisateur Windows change, les fichiers restent lisibles (nouveau chat + mémoire copiée = je reprends tout).
 - Alternative cloud (sans copie) : `claude.ai/code` (sessions cloud liées au compte, repo GitHub connecté) — mais elles démarrent **sans** cette mémoire → ce HANDOFF sert alors d'amorçage.
+- 🧠 **SAUVEGARDE CLOUD de la mémoire (artefact privé)** : https://claude.ai/code/artifact/748557fc-f7ac-46df-abe4-9cf4b104f0b1
+  → **Pour restaurer** : lire cet artefact (Artifact `action:"read"`), extraire le tableau JS `const M = [...]` ; chaque fiche a un champ **`raw`** = contenu BRUT complet (frontmatter inclus) → écrire `raw` tel quel dans `<dossier mémoire>/<file>`. Régénérer `MEMORY.md` (fiche `file:"MEMORY.md"`). Restauration fidèle au bit près.
 
 ## État au 2026-09-01 (dernière session)
 Tout est commité + poussé sur `feat/nexus-yellow`. Derniers commits notables :
