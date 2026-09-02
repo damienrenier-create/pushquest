@@ -24,6 +24,7 @@ export const NEMESIS_CHALLENGES: readonly NemesisChallenge[] = [
     { nickname: "Jacanon", rewardSpecies: "caninombre" },
     { nickname: "Mools", rewardSpecies: "pyropanthe" },
     { nickname: "Rob", rewardSpecies: "voltapanthe" }, // vœu « un électrique qui TABASSE » → panthère élec (évo Panthéon)
+    { nickname: "Fraaans", rewardSpecies: "tenebrir" }, // vœu « un ténébrir » → Ténèbrir (Ténèbres/Spectre) parfait niv 5
 ]
 
 /** Récompense COMMUNE : niveau 5, IV parfaits (15), croissance LENTE (comme un légendaire). */
