@@ -7,7 +7,7 @@
 //     (GET) → le modal est une simple machine à états. Sprites lampe/génie fournis par Sartay (repli emoji).
 
 import { useEffect, useRef, useState } from "react"
-import { getPlayer, markTrainerDefeated, applyAcceptedGenieWishEffects } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, markTrainerDefeated, applyAcceptedGenieWishEffects, consumeGenieAnnouncements } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 
@@ -72,6 +72,7 @@ export default function RustyLampModal({ onClose }: { onClose: () => void }) {
             // AUTO-APPLICATION : si un vœu vient d'être accepté (respond → load), on applique son effet machine
             //   TOUT DE SUITE (énergie/verrou/objet…), sans aller-retour créateur ni redéploiement. Idempotent.
             if (applyAcceptedGenieWishEffects(w)) persistYellowSave()
+            consumeGenieAnnouncements() // le message du génie est DÉJÀ affiché dans ce modal → on vide la file (pas de re-annonce au prochain load)
         } catch { /* réseau → row reste undefined (chargement), pas de fausse 1re invocation */ }
     }
     // Charge TOUJOURS au montage (même avant frottage) → détecte un arc déjà entamé et évite un faux « 1re invocation ».

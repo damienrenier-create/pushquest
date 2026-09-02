@@ -96,7 +96,7 @@ import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuratio
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { nemesisRewardBlockedMarker } from "@/lib/gamebook/yellow/data/nemesisChallenge"
-import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -1277,6 +1277,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // SELF-HEAL : applique tout effet de vœu ACCEPTÉ mais pas encore appliqué (idempotent) — filet si
                     //   l'application à l'acceptation a été manquée (autre appareil, reload, etc.).
                     if (!cancelled && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave()
+                    // ANNONCES du génie : un vœu IMPOSÉ/accepté vient de s'appliquer → le génie informe le joueur à
+                    //   l'écran (« informé, pas le choix »). Cf. useTiramisu/level_drain imposé (ex. Tom).
+                    { const anns = consumeGenieAnnouncements(); if (!cancelled && anns.length) showDialogue(DUEL_DREAM_NPC, "🧞 LE GÉNIE", anns) }
                     if (!cancelled && j?.justReturned && j?.wish) {
                         showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
                             "*Ta lampe rougeoie soudain au fond de ton sac…*",

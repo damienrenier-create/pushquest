@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects, clearForcedEncounter } from "./playerStore"
+import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, clearForcedEncounter } from "./playerStore"
 import { buildForcedSpawn } from "../data/encounters"
 
 // VŒU DU GÉNIE — effet MACHINE (JSON en base) appliqué AUTOMATIQUEMENT à l'acceptation (plus d'aller-retour créateur
@@ -15,6 +15,24 @@ describe("Vœu du génie — application AUTO des effets", () => {
         expect(getPlayer().repsCap).toBe(6000)     // cap relevé de 1000
         expect(getPlayer().ballLockRemaining).toBe(1000)
         expect(getPlayer().defeatedTrainers).toContain("genie_fx1")
+    })
+
+    it("ANNONCE : un vœu accepté AVEC condition empile le message du génie (une seule fois)", () => {
+        setup()
+        consumeGenieAnnouncements() // vide toute annonce résiduelle
+        const row = { accepted1: true, effect1: JSON.stringify({ kind: "energy", amount: 1 }), condition1: "Ton Nouillon a recraché ses 7 pâtes !" }
+        applyAcceptedGenieWishEffects(row)
+        expect(consumeGenieAnnouncements()).toEqual(["Ton Nouillon a recraché ses 7 pâtes !"]) // informé
+        expect(consumeGenieAnnouncements()).toEqual([])                                          // file vidée
+        applyAcceptedGenieWishEffects(row)                                                       // 2e appel : déjà marqué
+        expect(consumeGenieAnnouncements()).toEqual([])                                          // pas de re-annonce
+    })
+
+    it("vœu accepté SANS condition → aucune annonce empilée", () => {
+        setup()
+        consumeGenieAnnouncements()
+        applyAcceptedGenieWishEffects({ accepted1: true, effect1: JSON.stringify({ kind: "energy", amount: 10 }) })
+        expect(consumeGenieAnnouncements()).toEqual([])
     })
 
     it("idempotent : un 2e appel ne recrédite pas", () => {

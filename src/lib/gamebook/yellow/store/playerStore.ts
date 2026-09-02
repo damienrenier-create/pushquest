@@ -1513,12 +1513,13 @@ export function clearFusionLeagueCarry() { if (st.fusionLeagueCarry) { st = { ..
 export function applyAcceptedGenieWishEffects(row: {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null
+    condition1?: string | null; condition2?: string | null; condition3?: string | null
 } | null | undefined): boolean {
     if (!row || getActiveWorld() === "run3") return false
     const wishes = [
-        { acc: row.accepted1, fx: row.effect1, mark: "genie_fx1" },
-        { acc: row.accepted2, fx: row.effect2, mark: "genie_fx2" },
-        { acc: row.accepted3, fx: row.effect3, mark: "genie_fx3" },
+        { acc: row.accepted1, fx: row.effect1, mark: "genie_fx1", cond: row.condition1 },
+        { acc: row.accepted2, fx: row.effect2, mark: "genie_fx2", cond: row.condition2 },
+        { acc: row.accepted3, fx: row.effect3, mark: "genie_fx3", cond: row.condition3 },
     ]
     let changed = false
     for (const w of wishes) {
@@ -1530,9 +1531,21 @@ export function applyAcceptedGenieWishEffects(row: {
         if (!handled) continue // aucun effet RECONNU (build antérieur à ce type) → NE PAS marquer → re-tenté après déploiement
         st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark] } // marker one-shot par vœu
         changed = true
+        // ANNONCE : quand un vœu ACCEPTÉ (ou IMPOSÉ) s'applique, on empile son message du génie → le client l'affiche
+        //   au chargement (« informé, pas le choix »). Le RustyLampModal, lui, jette la file (déjà montrée à l'accept).
+        if (w.cond && w.cond.trim()) pendingGenieAnnouncements.push(w.cond)
     }
     if (changed) emit()
     return changed
+}
+
+/** File des messages du génie à ANNONCER (vœux imposés/accepted appliqués). Consommée par le client. */
+let pendingGenieAnnouncements: string[] = []
+/** Récupère (et vide) les annonces du génie en attente → dialogues à l'écran. */
+export function consumeGenieAnnouncements(): string[] {
+    const a = pendingGenieAnnouncements
+    pendingGenieAnnouncements = []
+    return a
 }
 
 // ═══════ VŒU « ABONDANCE MAUDITE » (Jacanon) — helpers (gaté par ABUNDANCE_CURSE_MARKER, save-safe) ═══════
