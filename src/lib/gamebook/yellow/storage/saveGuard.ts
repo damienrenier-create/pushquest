@@ -54,6 +54,42 @@ export function classifyOverwrite(currentFlags: unknown, incomingFlags: unknown)
     return regressed ? "regression" : "ok"
 }
 
+// ═══════════════════════ GARDE ANTI-TRICHE ÉNERGIE (reps) ═══════════════════════
+// La save est CLIENTE-AUTORITAIRE → un joueur peut rejouer le POST avec un `reps` gonflé (exploit constaté).
+// Principe : PLAFONNER + TRACER, JAMAIS refuser (un 409 sur une save honnête = perte de session = règle d'or #1).
+//
+// INVARIANT UNIVERSEL (tous modes) : `reps ≤ repsCap × 2`. En jeu, l'énergie est TOUJOURS bornée au cap dur
+//   (grantReps/creditReps/bankReps/casino → Math.min(repsCap)), et le SEUL dépassement légitime vient du plafond
+//   SOUPLE `grantRepsSoftCap` (≤ 2× cap, éphémère). Les cadeaux « hors-plafond » (anniversaire) RELÈVENT le cap
+//   d'abord → reps reste ≤ cap. Donc plafonner reps à 2× le cap ne peut JAMAIS léser un joueur honnête.
+export const ENERGY_SOFT_MULT = 2
+/** Hausse de reps (sans relèvement de cap, au-dessus du cap dur) au-delà de laquelle on TRACE (sans plafonner) → visibilité créateur. */
+export const ENERGY_AUDIT_GAIN = 8000
+
+function repsOf(flags: unknown): { reps: number; repsCap: number } {
+    const f = (flags && typeof flags === "object" ? flags : {}) as { reps?: unknown; repsCap?: unknown }
+    return { reps: typeof f.reps === "number" ? f.reps : 0, repsCap: typeof f.repsCap === "number" ? f.repsCap : 0 }
+}
+
+/** Décide du sort de l'ÉNERGIE entrante. `clampedReps` != null → écrire cette valeur (plafonnée). `audit` != null →
+ *  graver une trace dans `history`. Ne refuse JAMAIS. `prevFlags` = save serveur actuelle (null au 1er enregistrement). */
+export function energyGuard(prevFlags: unknown, incFlags: unknown): { clampedReps: number | null; audit: string | null } {
+    const prev = repsOf(prevFlags)
+    const inc = repsOf(incFlags)
+    // 1) PLAFOND DUR : reps > 2× cap = injection (impossible légitimement). On plafonne + trace.
+    if (inc.repsCap > 0 && inc.reps > inc.repsCap * ENERGY_SOFT_MULT) {
+        const clamped = Math.floor(inc.repsCap * ENERGY_SOFT_MULT)
+        return { clampedReps: clamped, audit: `energy-clamp: reps ${inc.reps} > 2×cap(${inc.repsCap}) → plafonné à ${clamped}` }
+    }
+    // 2) TRACE (pas de plafond) : grosse hausse SANS relèvement du cap et AU-DESSUS du cap dur → suspect
+    //    (ex. reps injectés sous le plafond souple). On laisse passer mais on grave une trace pour revue manuelle.
+    const gain = inc.reps - prev.reps
+    if (gain > ENERGY_AUDIT_GAIN && inc.repsCap <= prev.repsCap && inc.reps > inc.repsCap) {
+        return { clampedReps: null, audit: `energy-audit: +${gain} reps (${prev.reps}→${inc.reps}) sans hausse de cap (cap ${inc.repsCap}) — à vérifier` }
+    }
+    return { clampedReps: null, audit: null }
+}
+
 export interface BackupEntry { at: string; reason: string; flags: unknown }
 /** Ajoute une copie de sécurité horodatée à l'historique (borné à MAX_HISTORY). */
 export function appendBackup(history: unknown, flags: unknown, reason: string, at: string): BackupEntry[] {

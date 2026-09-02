@@ -10,7 +10,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID, YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { parseSave, emptySave } from "@/lib/gamebook/yellow/storage/save"
-import { classifyOverwrite, appendBackup } from "@/lib/gamebook/yellow/storage/saveGuard"
+import { classifyOverwrite, appendBackup, energyGuard } from "@/lib/gamebook/yellow/storage/saveGuard"
 
 export const dynamic = "force-dynamic"
 
@@ -70,6 +70,17 @@ export async function POST(req: NextRequest) {
         where: { userId_chapterId: { userId: auth.userId, chapterId: YELLOW_CHAPTER_ID } },
         select: { flags: true, history: true },
     })
+
+    // GARDE ANTI-TRICHE ÉNERGIE : reps ne peut légitimement dépasser 2× le cap → on PLAFONNE (jamais de refus 409,
+    //   sinon perte de session) + on TRACE. Appliqué AVANT toutes les branches d'écriture et INDÉPENDAMMENT de
+    //   `intentionalReset` (un reset ne doit pas être un contournement). `save` est mutée → la valeur plafonnée
+    //   est persistée quel que soit le chemin (upsert normal, régression, daemon-parti).
+    const energy = energyGuard(existing?.flags ?? null, save)
+    if (energy.clampedReps !== null) save.reps = energy.clampedReps
+    const energyHistory = energy.audit
+        ? appendBackup(existing?.history, existing?.flags ?? null, energy.audit, new Date().toISOString())
+        : null
+
     if (existing?.flags && !body.intentionalReset) {
         const verdict = classifyOverwrite(existing.flags, save)
         if (verdict === "destructive") {
@@ -114,9 +125,12 @@ export async function POST(req: NextRequest) {
             mapId: YELLOW_ENTRANCE_MAP_ID,
             posX: 10, posY: 12, direction: "down",
             flags: save as unknown as object,
+            ...(energyHistory ? { history: energyHistory as unknown as object } : {}),
         },
-        update: { flags: save as unknown as object },
+        update: { flags: save as unknown as object, ...(energyHistory ? { history: energyHistory as unknown as object } : {}) },
     })
 
-    return NextResponse.json({ ok: true })
+    // Énergie plafonnée : la save EST écrite (avec reps corrigé) → 200 ok. On signale `clamped` (info, non bloquant :
+    //   le client ne resynchronise que sur 409 ; le solde en mémoire se corrige au prochain chargement).
+    return NextResponse.json({ ok: true, ...(energy.clampedReps !== null ? { clamped: true } : {}) })
 }
