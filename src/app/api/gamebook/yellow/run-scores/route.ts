@@ -21,6 +21,7 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES, medalForRank, medalMult } from "@/lib/gamebook/yellow/data/run1Badges"
+import { run2FunScoreWithMedals, run2EarnedBadgeIds } from "@/lib/gamebook/yellow/data/run2Badges"
 
 /** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
 function run1BadgeScore(f: Record<string, unknown>, caught?: readonly string[]): { score: number; factors: ScoreFactor[] } {
@@ -91,6 +92,21 @@ function run1FunScore(f: Record<string, unknown>, userId: string, rankMap: Map<s
     const rounded = Math.round(score)
     const factor: ScoreFactor = { key: "badges", label: "🎖️ Hauts faits (fun)", ratio: 0, max: 0, points: rounded, detail: `${earned} hauts faits · médailles de rapidité incluses` }
     return { score: rounded, factors: [factor] }
+}
+
+/** RUN 2 — MODE FUN : score = Σ (palier × médaille) sur les HAUTS FAITS du Remix GAGNÉS, calculé DEPUIS le monde
+ *  run 2 (`flags.ngplusWorld`, run-scopé via caughtThisRun). Barème 8 paliers ; médailles de rapidité via `rankMap`
+ *  (badgeId r2_* → userIds triés par date). Renvoie null si le monde run 2 n'existe pas encore. */
+function run2FunScore(w: unknown, userId: string, rankMap: Map<string, string[]>): { score: number; factors: ScoreFactor[] } | null {
+    if (!w || typeof w !== "object") return null
+    const world = w as Record<string, unknown>
+    const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
+    const input = badgeInputFromSave(world as Parameters<typeof badgeInputFromSave>[0], caught, "fun")
+    const rankOf = (id: string) => { const list = rankMap.get(id); return list ? list.indexOf(userId) : -1 }
+    const score = Math.round(run2FunScoreWithMedals(input, rankOf))
+    const earned = run2EarnedBadgeIds(input).length
+    const factor: ScoreFactor = { key: "badges", label: "🎖️ Hauts faits (Remix)", ratio: 0, max: 0, points: score, detail: `${earned} hauts faits · médailles de rapidité incluses` }
+    return { score, factors: [factor] }
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -208,8 +224,15 @@ export async function GET() {
             // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
             if (viewerDone) {
                 // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
-                const r2 = run2FromWorld(f.ngplusWorld)
-                if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps })
+                //   FUN → score HAUTS FAITS (barème 8 paliers × médailles) ; NON-FUN → note /1000 (grade). Barèmes
+                //   distincts → classement asymétrique (fun voit fun, non-fun voit non-fun), comme le run 1.
+                if (isFun) {
+                    const r2 = run2FunScore(f.ngplusWorld, s.userId, rankMap)
+                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", fun: true })
+                } else {
+                    const r2 = run2FromWorld(f.ngplusWorld)
+                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps, fun: false })
+                }
                 // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
                 const r3 = run3FromWorld(f.run3World)
                 if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
@@ -271,8 +294,10 @@ export async function GET() {
     // RUN 1 : ASYMÉTRIQUE — un joueur FUN ne voit QUE les scores fun (barème 8 paliers) ; un NON-FUN voit TOUT (il
     //   peut regarder les funs, mais pas l'inverse). Choix créateur.
     const run1 = viewerFun ? toList(run1Map).filter((e) => Boolean(e.fun)) : toList(run1Map)
+    // RUN 2 : barèmes fun (hauts faits) et non-fun (/1000) INCOMPARABLES → chacun voit SON classement (fun↔fun, pote↔pote).
+    const run2 = viewerFun ? toList(run2Map).filter((e) => Boolean(e.fun)) : toList(run2Map).filter((e) => !e.fun)
 
-    return NextResponse.json({ ok: true, run1, run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
+    return NextResponse.json({ ok: true, run1, run2, run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).

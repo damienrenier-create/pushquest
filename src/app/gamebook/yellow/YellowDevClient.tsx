@@ -86,6 +86,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
+import { evaluateRun2Badges, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -1625,14 +1626,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         let cancelled = false
         const r = evaluateBadges(badgeInputFromSave({ ...getPlayer(), pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0], undefined, "fun"))
         const earnedRun1 = r.badges.filter((b) => b.earned && b.isRun1).map((b) => b.id)
-        if (!earnedRun1.length) return
-        fetch("/api/gamebook/yellow/fun-badges", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ badges: earnedRun1 }) })
+        // RUN 2 (Remix) : si le joueur est en run 2, on enregistre AUSSI ses hauts faits run-2 gagnés (mêmes médailles
+        //   de rapidité). Évalué depuis le monde run-2 courant, run-scopé (caughtThisRun). Ids r2_* → distincts du run 1.
+        let earned = earnedRun1
+        if (getActiveWorld() === "ngplus") {
+            const r2 = evaluateRun2Badges(badgeInputFromSave(getPlayer() as Parameters<typeof badgeInputFromSave>[0], getPlayer().caughtThisRun, "fun"))
+            earned = [...earnedRun1, ...r2.badges.filter((b) => b.earned).map((b) => b.id)]
+        }
+        if (!earned.length) return
+        fetch("/api/gamebook/yellow/fun-badges", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ badges: earned }) })
             .then((rr) => (rr.ok ? rr.json() : null))
             .then((j) => {
                 if (cancelled || !j?.ok) return
                 const medals = (j.medals ?? {}) as Record<string, "or" | "argent" | "bronze">
                 const newly = (j.newlyEarned ?? []) as string[]
-                const wins = newly.filter((id) => medals[id]).map((id) => `${MEDAL_EMOJI[medals[id]]} ${medals[id].toUpperCase()} · ${BADGE_LABELS[id] ?? id}`)
+                const wins = newly.filter((id) => medals[id]).map((id) => `${MEDAL_EMOJI[medals[id]]} ${medals[id].toUpperCase()} · ${BADGE_LABELS[id] ?? RUN2_BADGE_LABELS[id] ?? id}`)
                 if (wins.length) setToast(`🏅 Médaille de rapidité décrochée ! ${wins.join(" · ")}`)
             }).catch(() => {})
         return () => { cancelled = true }

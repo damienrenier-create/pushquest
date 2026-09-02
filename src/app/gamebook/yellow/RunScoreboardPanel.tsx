@@ -72,6 +72,16 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const meta = RUN_META.find((m) => m.id === tab)!
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
+    // MODE FUN — le RUN 2 (« Remix ») se classe aux HAUTS FAITS (pts), pas à la note /1000 de performance.
+    const funMode = getGameMode() === "fun"
+    const isFunRun2 = tab === "run2" && funMode
+    const dispUnit = isFunRun2 ? "pts" : meta.unit
+    const dispHint = isFunRun2
+        ? "REMIX (Run 2) : Σ des points de HAUTS FAITS du run 2 — barème 8 paliers × médailles de rapidité. Score GELÉ à ton re-sacre à la Salle Dorée. Clique une ligne pour le profil d'un joueur."
+        : meta.hint
+    const rulesTab = (tab === "run1" || tab === "run2") && funMode // carrousel Classement ↔ Règles (fun)
+    const showingRules = rulesTab && showRules
+
     // Classement du run courant : TOP 10 + ta propre ligne toujours affichée (même hors top 10).
     const fullList: ScoreRow[] = tab === "run1" ? data.run1 : tab === "run2" ? data.run2 : tab === "run3" ? data.run3 : tab === "run3energy" ? data.run3energy : []
     const top = fullList.slice(0, 10)
@@ -97,7 +107,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                         <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
                             style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢" : "⚪"}</span>
                     )}
-                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
+                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span></span>
                     {canExpand && clickable && (
                         <button style={profBtn} title="Voir le profil" onClick={(e) => { e.stopPropagation(); openProfile(r) }}>👤</button>
                     )}
@@ -146,22 +156,22 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                     ))}
                 </div>
 
-                <div style={hintStyle}>{meta.hint}</div>
+                <div style={hintStyle}>{dispHint}</div>
 
-                {/* RUN 1 fun : carrousel Classement ↔ Règles → les règles n'alourdissent plus l'écran de scores. */}
-                {tab === "run1" && getGameMode() === "fun" && (
+                {/* RUN 1 & RUN 2 fun : carrousel Classement ↔ Règles → les règles n'alourdissent plus l'écran de scores. */}
+                {rulesTab && (
                     <div style={carouselRow}>
                         <button onClick={() => setShowRules(false)} style={{ ...segBtn, ...(showRules ? {} : segBtnOn) }}>🏅 Classement</button>
                         <button onClick={() => setShowRules(true)} style={{ ...segBtn, ...(showRules ? segBtnOn : {}) }}>📖 Règles & médailles</button>
                     </div>
                 )}
-                {tab === "run1" && getGameMode() === "fun" && showRules && <Run1RulesBox />}
+                {showingRules && (tab === "run1" ? <Run1RulesBox /> : <Run2RulesBox />)}
 
-                {state === "loading" && !(tab === "run1" && getGameMode() === "fun" && showRules) && <div style={muted}>Chargement…</div>}
+                {state === "loading" && !showingRules && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Classement indisponible (hors-ligne ?).</div>}
 
-                {/* Onglets de RUN : top 10 + ta ligne (masqué quand on affiche les règles du run 1 fun) */}
-                {state === "ok" && tab !== "duels" && tab !== "run4" && !(tab === "run1" && getGameMode() === "fun" && showRules) && (
+                {/* Onglets de RUN : top 10 + ta ligne (masqué quand on affiche les règles fun) */}
+                {state === "ok" && tab !== "duels" && tab !== "run4" && !showingRules && (
                     fullList.length === 0
                         ? <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à briller ! {tab === "run1" ? "🥇" : tab === "run3" ? "🏆" : tab === "run3energy" ? "🔋" : "🏅"}</div>
                         : <div style={scroll}>
@@ -205,6 +215,26 @@ function Run1RulesBox() {
             <div style={sub}>Médaille — RAPIDITÉ (course entre funs)</div>
             <div style={chipRow}>{medals.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
             <div style={{ marginTop: 7 }}>⚡ Le <b>1ᵉʳ</b> fun à débloquer un badge décroche l&apos;<b>OR</b> — plus tu es rapide, plus tu marques. Classement <b>perso</b> + <b>par clan</b> (somme des points des membres).</div>
+        </div>
+    )
+}
+
+/** RUN 2 (REMIX, mode fun) — encart Règles : hauts faits du Remix, score gelé au re-sacre. Même barème que le run 1. */
+function Run2RulesBox() {
+    const tiers: [string, number][] = [["⭐", 5], ["⭐⭐", 10], ["⭐⭐⭐", 20], ["⭐⭐⭐⭐", 35], ["⭐⭐⭐⭐⭐", 60], ["💎", 100], ["💎💎", 160], ["💎💎💎", 250]]
+    const medals: [string, string][] = [["🥇 OR", "×1,6"], ["🥈 ARGENT", "×1,4"], ["🥉 BRONZE", "×1,2"], ["▫️ normal", "×1"]]
+    const sub = { fontSize: 10.5, textTransform: "uppercase" as const, letterSpacing: 0.5, opacity: 0.6, margin: "7px 0 3px" }
+    const chipRow = { display: "flex", flexWrap: "wrap" as const, gap: 5 }
+    const chip = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 7px", fontVariantNumeric: "tabular-nums" as const }
+    return (
+        <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,214,208,0.35)", borderRadius: 10, padding: "10px 12px", margin: "0 0 10px", fontSize: 12, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 800, color: "#7be3dc", marginBottom: 5 }}>🧬 RUN 2 — REMIX · comment se calcule ton score</div>
+            <div>Score <b>GELÉ</b> à ton <b>re-sacre</b> (Salle Dorée, contre ton double) = somme des points de tes <b>hauts faits du Remix</b>. Points d&apos;un badge = <b>palier × médaille</b>.</div>
+            <div style={sub}>Palier — difficulté</div>
+            <div style={chipRow}>{tiers.map(([e, p]) => <span key={e} style={chip}>{e} <b>{p}</b></span>)}</div>
+            <div style={sub}>Médaille — RAPIDITÉ (course entre funs)</div>
+            <div style={chipRow}>{medals.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
+            <div style={{ marginTop: 7 }}>🏅 Tant que tu n&apos;as pas re-vaincu ton double, ton score reste <b>en direct</b> 🟢 puis se <b>fige</b> ⚪ au sacre. Le <b>1ᵉʳ</b> fun sur chaque haut fait décroche l&apos;<b>OR</b>.</div>
         </div>
     )
 }

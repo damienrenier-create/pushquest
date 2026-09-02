@@ -5,33 +5,28 @@
 // Accessible dès le run 1 (contrairement au leaderboard, gaté post-run-1).
 
 import { useEffect, useState } from "react"
-import { getPlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, getGameMode, getActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { BADGES, TIER_EMOJI, TIER_POINTS, TIER_EMOJI_FUN, TIER_POINTS_FUN, MEDAL_EMOJI, evaluateBadges, badgeInputFromSave, funTierOf, type BadgeTier, type TierFun } from "@/lib/gamebook/yellow/data/run1Badges"
+import { evaluateRun2Badges } from "@/lib/gamebook/yellow/data/run2Badges"
 
 const CAT_LABEL: Record<string, string> = {
     progression: "⚔️ Progression", collection: "📖 Collection", exploration: "🗺️ Exploration", fusion: "🧬 Fusion",
-    social: "🤝 Social & échanges", special: "✨ Rencontres & secrets", shiny: "🌟 Shiny", dome: "🏛️ Dôme",
+    social: "🤝 Social & échanges", special: "✨ Rencontres & secrets", rencontres: "✨ Rencontres", shiny: "🌟 Shiny", dome: "🏛️ Dôme",
 }
 const TIER_COLOR: Record<BadgeTier, string> = { bronze: "#cd8a4a", silver: "#c3cbdc", gold: "#ffd24a", diamond: "#4fd6d0", legend: "#b78bff" }
 const TIER_COLOR_FUN: Record<TierFun, string> = { s1: "#a8862f", s2: "#c39a34", s3: "#dcae3c", s4: "#efc247", s5: "#ffd54a", d1: "#57c9d6", d2: "#7bb0ff", d3: "#c9a0ff" }
 const MEDAL_LABEL: Record<"or" | "argent" | "bronze", string> = { or: "1ᵉʳ fun · ×1,6", argent: "2ᵉ · ×1,4", bronze: "3ᵉ · ×1,2" }
-const CAT_ORDER = ["progression", "collection", "exploration", "fusion", "social", "special", "shiny", "dome"]
+const CAT_ORDER = ["progression", "collection", "exploration", "fusion", "social", "special", "rencontres", "shiny", "dome"]
 
 export default function RunBadgesPanel({ close }: { close: () => void }) {
     // Assemble le BadgeInput depuis les stores client (pokédex GLOBAL = captures cumulées).
     const p = getPlayer()
     const dex = getPokedex()
     const fun = getGameMode() === "fun" // barème 8 paliers + médailles au lieu du barème 5-tiers
-    const input = badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], undefined, fun ? "fun" : undefined)
-    const result = evaluateBadges(input)
-    const byId = new Map(result.badges.map((b) => [b.id, b]))
-    // En fun, le total ne compte QUE les hauts faits run 1 (pré-Sylvebarbe) ; sinon le barème 5-tiers complet.
-    const maxPoints = fun
-        ? BADGES.reduce((s, b) => s + (byId.get(b.id)?.isRun1 ? TIER_POINTS_FUN[funTierOf(b.id)] : 0), 0)
-        : BADGES.reduce((s, b) => s + TIER_POINTS[b.tier], 0)
-    const totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
-    // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze.
+    const isRun2 = getActiveWorld() === "ngplus" // Remix → échelle des hauts faits RUN 2
+
+    // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze (run 1 ET run 2 Remix).
     const [medals, setMedals] = useState<Record<string, "or" | "argent" | "bronze">>({})
     useEffect(() => {
         if (!fun) return
@@ -39,41 +34,72 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         fetch("/api/gamebook/yellow/fun-badges").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j?.ok) setMedals(j.medals ?? {}) }).catch(() => {})
         return () => { cancelled = true }
     }, [fun])
-    const emojiOf = (id: string, tier: BadgeTier) => (fun ? TIER_EMOJI_FUN[funTierOf(id)] : TIER_EMOJI[tier])
-    const colorOf = (id: string, tier: BadgeTier) => (fun ? TIER_COLOR_FUN[funTierOf(id)] : TIER_COLOR[tier])
+
+    // ── Lignes normalisées (mêmes cartes pour run 1 « Découverte » et run 2 « Remix ») ──
+    interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; earned: boolean; revealed: boolean; todo: boolean }
+    let title: string, footNote: string
+    let earnedCount: number, totalCount: number, totalPoints: number, maxPoints: number
+    let rows: Row[]
+
+    if (isRun2) {
+        // RUN 2 : barème fun 8 paliers (aucun équivalent 5-tiers), photo de save scopée au monde Remix.
+        const r2 = evaluateRun2Badges(badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))
+        rows = r2.badges.map((st) => ({ id: st.id, label: st.label, cat: st.cat, emoji: st.emoji, color: TIER_COLOR_FUN[st.funTier], points: st.points, earned: st.earned, revealed: st.revealed, todo: st.todo }))
+        const earnable = r2.badges.filter((b) => !b.todo) // les `todo` (Phase 2) n'entrent pas dans le dénominateur
+        title = "🎖️ Trophées — Remix (Run 2)"
+        earnedCount = r2.earnedCount
+        totalCount = earnable.length
+        totalPoints = r2.totalPoints
+        maxPoints = earnable.reduce((s, b) => s + TIER_POINTS_FUN[b.funTier], 0)
+        footNote = "Hauts faits du Remix (Run 2) — score FIGÉ à ton re-sacre à la Salle Dorée. ⏳ = bientôt disponible."
+    } else {
+        const input = badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], undefined, fun ? "fun" : undefined)
+        const result = evaluateBadges(input)
+        const byId = new Map(result.badges.map((b) => [b.id, b]))
+        rows = BADGES.map((b) => {
+            const st = byId.get(b.id)!
+            return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, earned: st.earned, revealed: st.revealed, todo: false }
+        })
+        title = "🎖️ Trophées — Découverte"
+        earnedCount = result.earnedCount
+        totalPoints = result.totalPoints
+        // En fun, le total ne compte QUE les hauts faits run 1 (pré-Sylvebarbe) ; sinon le barème 5-tiers complet.
+        maxPoints = fun
+            ? BADGES.reduce((s, b) => s + (byId.get(b.id)?.isRun1 ? TIER_POINTS_FUN[funTierOf(b.id)] : 0), 0)
+            : BADGES.reduce((s, b) => s + TIER_POINTS[b.tier], 0)
+        totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
+        footNote = "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
+    }
 
     return (
         <div style={S.overlay} onClick={close}>
             <div style={S.panel} onClick={(e) => e.stopPropagation()}>
                 <div style={S.header}>
                     <div>
-                        <div style={S.title}>🎖️ Trophées — Découverte</div>
-                        <div style={S.sub}>{result.earnedCount} / {totalCount} badges · <b style={{ color: "#ffd24a" }}>{result.totalPoints}</b> / {maxPoints} pts{fun ? " (fun)" : ""}</div>
+                        <div style={S.title}>{title}</div>
+                        <div style={S.sub}>{earnedCount} / {totalCount} badges · <b style={{ color: "#ffd24a" }}>{totalPoints}</b> / {maxPoints} pts{fun ? " (fun)" : ""}</div>
                     </div>
                     <button style={S.close} onClick={close}>✕</button>
                 </div>
 
                 <div style={S.scroll}>
                     {CAT_ORDER.map((cat) => {
-                        const defs = BADGES.filter((b) => b.cat === cat)
                         // n'affiche la catégorie que si au moins 1 badge est révélé (secrets non découverts → catégorie cachée)
-                        const visible = defs.filter((d) => byId.get(d.id)?.revealed)
+                        const visible = rows.filter((r) => r.cat === cat && r.revealed)
                         if (visible.length === 0) return null
                         return (
                             <div key={cat} style={{ marginBottom: 18 }}>
                                 <div style={S.catTitle}>{CAT_LABEL[cat] ?? cat}</div>
                                 <div style={S.grid}>
-                                    {defs.map((d) => {
-                                        const st = byId.get(d.id)!
-                                        if (!st.revealed) return null // secret non découvert → invisible
-                                        const earned = st.earned
-                                        const medal = fun && earned ? medals[d.id] : undefined // médaille de rapidité (fun)
+                                    {visible.map((r) => {
+                                        const earned = r.earned
+                                        const medal = fun && earned ? medals[r.id] : undefined // médaille de rapidité (fun)
                                         return (
-                                            <div key={d.id} style={{ ...S.badge, ...(earned ? { borderColor: colorOf(d.id, d.tier), background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={`${emojiOf(d.id, d.tier)} ${st.points} pts${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
-                                                <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{emojiOf(d.id, d.tier)}</div>
-                                                <div style={{ ...S.badgeLabel, color: earned ? "#e8ecf6" : "#6b7690" }}>{d.label}</div>
+                                            <div key={r.id} style={{ ...S.badge, ...(earned ? { borderColor: r.color, background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={`${r.emoji} ${r.points} pts${r.todo ? " · à venir" : ""}${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
+                                                <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>
+                                                <div style={{ ...S.badgeLabel, color: earned ? "#e8ecf6" : "#6b7690" }}>{r.label}</div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: "auto" }}>
-                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? colorOf(d.id, d.tier) : "#4a5470" }}>{earned ? `+${st.points}` : `${st.points}`}</span>
+                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{earned ? `+${r.points}` : (r.todo ? "⏳" : `${r.points}`)}</span>
                                                     {medal && <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>}
                                                 </div>
                                             </div>
@@ -83,7 +109,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                             </div>
                         )
                     })}
-                    <div style={S.foot}>Les badges <b>secrets</b> 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus.</div>
+                    <div style={S.foot}>{footNote}</div>
                 </div>
             </div>
         </div>

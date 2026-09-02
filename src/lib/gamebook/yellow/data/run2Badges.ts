@@ -153,3 +153,10 @@ export function run2FunScoreWithMedals(i: BadgeInput, rankOf: (badgeId: string) 
 
 /** Total maxi théorique (×1, hors `todo` non instrumentés) — pour l'affichage « X / Y pts ». */
 export const RUN2_MAX_POINTS = RUN2_BADGES.reduce((s, b) => s + TIER_POINTS_FUN[b.funTier], 0)
+
+/** Ids des hauts faits RUN 2 fun VALIDES (hors `todo` non instrumentés) — sert au serveur pour valider les
+ *  enregistrements de médailles (anti-triche : le POST vient du client) et distinguer run 1 / run 2. */
+export const RUN2_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>(RUN2_BADGES.filter((b) => !b.todo).map((b) => b.id))
+
+/** Libellés des hauts faits run 2 (id → label), pour les toasts/affichages. */
+export const RUN2_BADGE_LABELS: Record<string, string> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, b.label]))
