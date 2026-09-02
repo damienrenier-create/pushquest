@@ -34,3 +34,16 @@ export function pateDeLuxeGodLines(outcome: PateLuxeOutcome, monName: string, ra
     const i = Math.min(arr.length - 1, Math.max(0, Math.floor(Math.max(0, Math.min(0.999999, rand)) * arr.length)))
     return [arr[i](monName)]
 }
+
+// Réplique quand un TIRAMISU restaure les IV d'origine d'un Daemon.
+const RESTORE_LINES: readonly ((n: string) => string)[] = [
+    (n) => `Un coup de mascarpone et… voilà ! ${n} retrouve EXACTEMENT ses IV d'origine. La marmite pardonne… cette fois.`,
+    (n) => `Retour aux sources : ${n} redevient ce qu'il était avant la pâte. Comme si rien ne s'était passé, coquin.`,
+    (n) => `Tiramisu du remords accepté. ${n} recouvre son patrimoine d'origine — ni pire, ni meilleur. On efface l'ardoise.`,
+]
+
+/** Réplique du Dieu Spaghetti quand un Tiramisu RESTAURE l'état d'origine. `rand`∈[0,1) → variante. */
+export function pateDeLuxeRestoreLines(monName: string, rand: number): string[] {
+    const i = Math.min(RESTORE_LINES.length - 1, Math.max(0, Math.floor(Math.max(0, Math.min(0.999999, rand)) * RESTORE_LINES.length)))
+    return [RESTORE_LINES[i](monName)]
+}

@@ -22,7 +22,7 @@ import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID } from "../data/items"
 import { IV_MAX } from "../data/ivConfig"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
@@ -2438,7 +2438,7 @@ const PERFECT_IVS = { hp: IV_MAX, atk: IV_MAX, def: IV_MAX, spe: IV_MAX, spc: IV
 const MIN_IVS = { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
 
 /** Applique une issue à un Daemon : re-tire ses IV (parfait/min) et, pour shiny_perfect, le rend shiny. PV re-clampés
- *  au nouveau max (soin de courtoisie : les IV parfaits augmentent les PV → on remplit). Clone immuable. */
+ *  au nouveau max. Clone immuable. NE touche PAS luxeUsed/luxeIvsBackup (gérés par les appelants). */
 function applyLuxeOutcome(mon: MonInstance, outcome: LuxeOutcome): MonInstance {
     const ivs = outcome === "min" ? { ...MIN_IVS } : { ...PERFECT_IVS }
     const next: MonInstance = { ...mon, ivs, shiny: outcome === "shiny_perfect" ? true : mon.shiny }
@@ -2447,21 +2447,25 @@ function applyLuxeOutcome(mon: MonInstance, outcome: LuxeOutcome): MonInstance {
     return next
 }
 
-/** Utilise UNE Pâte de Luxe sur le Daemon `uid` (équipe OU PC). L'issue vient de la file pré-tirée (cadeau Task1)
- *  si présente, sinon d'un tirage GÉNÉRIQUE 50/50 (perfect/min). Consomme 1 objet. Renvoie l'issue pour la révélation UI. */
-export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "introuvable"; outcome?: LuxeOutcome } {
+/** Utilise UNE Pâte de Luxe sur `uid` (équipe OU PC). VERROUILLÉ : 1×/Daemon (reason "locked" ensuite → passer par un
+ *  Tiramisu). L'issue vient de la file pré-tirée (cadeau) sinon 50/50 générique. STOCKE les IV d'ORIGINE (luxeIvsBackup)
+ *  avant de re-tirer (jamais de hard-delete → restauration possible). Consomme 1 objet. Renvoie l'issue. */
+export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "introuvable" | "locked"; outcome?: LuxeOutcome } {
     if ((st.items[PATE_LUXE_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
     let inTeam = true
     let idx = st.team.findIndex((m) => m.uid === uid)
     if (idx < 0) { idx = st.pc.findIndex((m) => m.uid === uid); inTeam = false }
     if (idx < 0) return { ok: false, reason: "introuvable" }
-    // Issue : tête de la file pré-tirée (cadeau garanti), sinon 50/50 générique.
+    const orig = (inTeam ? st.team : st.pc)[idx]
+    if (orig.luxeUsed) return { ok: false, reason: "locked" } // déjà pâté → verrou définitif (rattrapage via Tiramisu)
     const queue = st.luxeOutcomeQueue ?? []
     const outcome: LuxeOutcome = queue.length > 0 ? (queue[0] as LuxeOutcome) : (Math.random() < 0.5 ? "perfect" : "min")
     const nextQueue = queue.length > 0 ? queue.slice(1) : queue
     const arr = (inTeam ? st.team : st.pc).slice()
-    arr[idx] = applyLuxeOutcome(arr[idx], outcome)
-    // Consomme 1 Pâte de Luxe (rebuild sans « ×0 » résiduel).
+    const rolled = applyLuxeOutcome(orig, outcome)
+    rolled.luxeUsed = true // verrou 1×/Daemon
+    rolled.luxeIvsBackup = orig.luxeIvsBackup ?? { ivs: { ...orig.ivs }, shiny: orig.shiny } // IV d'ORIGINE, figés (restauration)
+    arr[idx] = rolled
     const items: Record<string, number> = {}
     for (const [k, v] of Object.entries(st.items)) {
         if (k === PATE_LUXE_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
@@ -2469,6 +2473,40 @@ export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "int
     st = inTeam ? { ...st, team: arr, items, luxeOutcomeQueue: nextQueue } : { ...st, pc: arr, items, luxeOutcomeQueue: nextQueue }
     emit()
     return { ok: true, outcome }
+}
+
+/** TIRAMISU — seconde chance sur un Daemon DÉJÀ pâté (luxeUsed). `mode="restore"` : remet ses IV d'ORIGINE
+ *  (luxeIvsBackup). `mode="reroll"` : re-tente la loterie 50/50 (perfect/min). Consomme 1 Tiramisu. Le verrou + le
+ *  backup restent en place (restauration future possible : re-Tiramisu, PNJ chef cuistot). */
+export function useTiramisu(uid: string, mode: "restore" | "reroll"): { ok: boolean; reason?: "none" | "introuvable" | "not_pate" | "no_backup"; outcome?: LuxeOutcome; restored?: boolean } {
+    if ((st.items[TIRAMISU_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
+    let inTeam = true
+    let idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) { idx = st.pc.findIndex((m) => m.uid === uid); inTeam = false }
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const orig = (inTeam ? st.team : st.pc)[idx]
+    if (!orig.luxeUsed) return { ok: false, reason: "not_pate" } // rattrapage POST-Pâte uniquement
+    let next: MonInstance
+    let outcome: LuxeOutcome | undefined
+    if (mode === "restore") {
+        const bk = orig.luxeIvsBackup
+        if (!bk) return { ok: false, reason: "no_backup" }
+        next = { ...orig, ivs: { ...bk.ivs }, shiny: bk.shiny }
+        const sp = getSpecies(orig.speciesId)
+        if (sp) next.currentHp = orig.currentHp <= 0 ? 0 : fullStats(next, sp).hp
+    } else {
+        outcome = Math.random() < 0.5 ? "perfect" : "min"
+        next = applyLuxeOutcome(orig, outcome) // conserve luxeUsed + luxeIvsBackup (spread)
+    }
+    const arr = (inTeam ? st.team : st.pc).slice()
+    arr[idx] = next
+    const items: Record<string, number> = {}
+    for (const [k, v] of Object.entries(st.items)) {
+        if (k === TIRAMISU_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
+    }
+    st = inTeam ? { ...st, team: arr, items } : { ...st, pc: arr, items }
+    emit()
+    return mode === "restore" ? { ok: true, restored: true } : { ok: true, outcome }
 }
 
 /** Cadeau (ex. vœu de Task1) : N Pâtes de Luxe + une file d'issues PRÉ-TIRÉE et MÉLANGÉE, garantissant (pour N≥3)

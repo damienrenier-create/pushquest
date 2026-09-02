@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { pateDeLuxeGodLines } from "./pateDeLuxeGod"
+import { pateDeLuxeGodLines, pateDeLuxeRestoreLines } from "./pateDeLuxeGod"
 
 describe("pateDeLuxeGodLines — commentaire du Dieu Spaghetti", () => {
     it("mentionne le nom du Daemon + colle à l'issue", () => {
@@ -17,5 +17,10 @@ describe("pateDeLuxeGodLines — commentaire du Dieu Spaghetti", () => {
             expect(pateDeLuxeGodLines(o, "X", 0)[0].length).toBeGreaterThan(0)
             expect(pateDeLuxeGodLines(o, "X", 1)[0].length).toBeGreaterThan(0)
         }
+    })
+    it("restauration : mentionne le Daemon + l'idée de retour à l'origine", () => {
+        expect(pateDeLuxeRestoreLines("Toto", 0).join(" ")).toContain("Toto")
+        expect(pateDeLuxeRestoreLines("Toto", 0).join(" ")).toMatch(/origine|sources|d'origine|efface/i)
+        expect(pateDeLuxeRestoreLines("X", 0)[0]).not.toBe(pateDeLuxeRestoreLines("X", 0.99)[0])
     })
 })

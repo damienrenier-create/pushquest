@@ -339,6 +339,17 @@ const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
 const MAJOR: MajorStatus[] = ["NONE", "BURN", "POISON", "TOXIC", "PARALYSIS", "SLEEP", "FREEZE"]
 
 /** Parse défensif d'une instance (tolère les vieux/mauvais formats). */
+/** PÂTE DE LUXE — sauvegarde des IV (+shiny) d'origine. Valide {ivs, shiny}. Renvoie undefined si absent/illisible. */
+function parseLuxeBackup(raw: unknown): { ivs: Record<StatKey, number>; shiny?: boolean } | undefined {
+    if (!raw || typeof raw !== "object") return undefined
+    const o = raw as Record<string, unknown>
+    const ivsRaw = (o.ivs ?? null) as Record<string, unknown> | null
+    if (!ivsRaw || typeof ivsRaw !== "object") return undefined
+    const ivs = {} as Record<StatKey, number>
+    for (const k of STAT_KEYS) ivs[k] = typeof ivsRaw[k] === "number" ? (ivsRaw[k] as number) : 0
+    return { ivs, shiny: o.shiny === true ? true : undefined }
+}
+
 function parseMon(raw: unknown): MonInstance | null {
     if (!raw || typeof raw !== "object") return null
     const o = raw as Record<string, unknown>
@@ -378,6 +389,8 @@ function parseMon(raw: unknown): MonInstance | null {
         ev: parseAllocated(o.ev),
         evCapBoost: o.evCapBoost === true ? true : undefined,
         evCurveV2: o.evCurveV2 === true ? true : undefined,
+        luxeUsed: o.luxeUsed === true ? true : undefined,
+        luxeIvsBackup: parseLuxeBackup(o.luxeIvsBackup),
         pendingSaiyanLevels: typeof o.pendingSaiyanLevels === "number" ? Math.max(0, Math.floor(o.pendingSaiyanLevels)) : undefined,
         lastLevelUpAt: typeof o.lastLevelUpAt === "string" ? o.lastLevelUpAt : undefined,
         capturedLevel: typeof o.capturedLevel === "number" ? Math.floor(o.capturedLevel) : undefined,

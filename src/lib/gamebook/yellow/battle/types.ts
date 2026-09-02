@@ -286,6 +286,11 @@ export interface MonInstance {
     /** EV — courbe V2 : capturé sous le barème avec MALUS de plafond à HAUT niveau de capture (−2 % >40 … −20 % >80).
      *  Estampillé à la capture, strictement NON rétroactif : absent sur les Daemons capturés avant → AUCUN malus. */
     evCurveV2?: boolean
+    /** PÂTE DE LUXE — ce Daemon a déjà consommé une Pâte de Luxe (verrou : 1×/Daemon ; résultat définitif sauf Tiramisu). */
+    luxeUsed?: boolean
+    /** PÂTE DE LUXE — IV (+ shiny) d'ORIGINE, avant la 1re Pâte de Luxe. JAMAIS écrasé → permet la RESTAURATION
+     *  (Tiramisu « restaurer », futur PNJ chef cuistot). Pas de hard-delete : on remplace, on garde l'original. */
+    luxeIvsBackup?: { ivs: Record<StatKey, number>; shiny?: boolean }
     /** ENTRAÎNEMENT SAIYAN — points de stats non encore dépensés (gagnés au level-up). */
     statPoints?: number
     /** ENTRAÎNEMENT SAIYAN — bonus à plat alloués par le joueur, par stat (additif). */

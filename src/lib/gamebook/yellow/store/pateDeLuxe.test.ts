@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { resetForIntro, getPlayer, addCaught, addItem, useLuxePasta, grantLuxePastaBatch, type LuxeOutcome } from "./playerStore"
+import { resetForIntro, getPlayer, addCaught, addItem, useLuxePasta, useTiramisu, grantLuxePastaBatch, type LuxeOutcome } from "./playerStore"
 import { createMonInstance } from "../battle/factory"
-import { PATE_LUXE_ITEM_ID } from "../data/items"
+import { PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID } from "../data/items"
 
 const ivTotal = (m: { ivs: Record<string, number> }) => Object.values(m.ivs).reduce((a, b) => a + b, 0)
 
@@ -53,11 +53,11 @@ describe("Pâte de Luxe — loterie génétique", () => {
         expect(useLuxePasta(uid)).toEqual({ ok: false, reason: "none" })
     })
 
-    it("file vide : tirage GÉNÉRIQUE 50/50 (perfect|min uniquement, jamais shiny), les deux sortent", () => {
-        const uid = addMon("feuillichot")
-        addItem(PATE_LUXE_ITEM_ID, 60)
+    it("file vide : tirage GÉNÉRIQUE 50/50 (perfect|min uniquement, jamais shiny) sur des Daemons distincts", () => {
+        // Verrou 1×/Daemon → on teste la distribution sur 40 Daemons différents (1 Pâte chacun).
+        addItem(PATE_LUXE_ITEM_ID, 40)
         const outcomes = new Set<LuxeOutcome>()
-        for (let i = 0; i < 60; i++) { const r = useLuxePasta(uid); if (r.outcome) outcomes.add(r.outcome) }
+        for (let i = 0; i < 40; i++) { const uid = addMon("feuillichot"); const r = useLuxePasta(uid); if (r.outcome) outcomes.add(r.outcome) }
         expect(outcomes.has("shiny_perfect")).toBe(false) // générique ne rend jamais shiny
         expect(outcomes.has("perfect")).toBe(true)
         expect(outcomes.has("min")).toBe(true)
@@ -69,5 +69,59 @@ describe("Pâte de Luxe — loterie génétique", () => {
         const r = useLuxePasta("uid-inexistant")
         expect(r).toEqual({ ok: false, reason: "introuvable" })
         expect(getPlayer().items[PATE_LUXE_ITEM_ID]).toBe(2) // pas consommé
+    })
+})
+
+const monOf = (uid: string) => [...getPlayer().team, ...getPlayer().pc].find((m) => m.uid === uid)!
+
+describe("Pâte de Luxe — verrou (1×/Daemon) + backup + Tiramisu", () => {
+    beforeEach(() => resetForIntro())
+
+    it("VERROU : une 2e Pâte sur le même Daemon est refusée (locked)", () => {
+        const uid = addMon("feuillichot")
+        addItem(PATE_LUXE_ITEM_ID, 2)
+        expect(useLuxePasta(uid).ok).toBe(true)
+        expect(useLuxePasta(uid)).toEqual({ ok: false, reason: "locked" })
+        expect(getPlayer().items[PATE_LUXE_ITEM_ID]).toBe(1) // 2e non consommée
+        expect(monOf(uid).luxeUsed).toBe(true)
+    })
+
+    it("BACKUP : la Pâte stocke les IV d'origine (jamais écrasés) → Tiramisu RESTAURE à l'identique", () => {
+        const uid = addMon("feuillichot")
+        const before = { ...monOf(uid).ivs }
+        addItem(PATE_LUXE_ITEM_ID, 1)
+        useLuxePasta(uid) // re-tire (perfect/min)
+        expect(monOf(uid).luxeIvsBackup?.ivs).toEqual(before) // original figé
+        const iv = monOf(uid).ivs
+        const allAt = (v: number) => Object.values(iv).every((x) => x === v)
+        expect(allAt(0) || allAt(15)).toBe(true)              // IV re-tirés en loterie : 0 partout OU 15 partout
+        addItem(TIRAMISU_ITEM_ID, 1)
+        expect(useTiramisu(uid, "restore")).toEqual({ ok: true, restored: true })
+        expect(monOf(uid).ivs).toEqual(before)                 // restauré à l'identique
+    })
+
+    it("TIRAMISU re-tenter : re-tire (perfect|min), consomme 1, garde le backup d'origine", () => {
+        const uid = addMon("feuillichot")
+        const before = { ...monOf(uid).ivs }
+        addItem(PATE_LUXE_ITEM_ID, 1); useLuxePasta(uid)
+        addItem(TIRAMISU_ITEM_ID, 1)
+        const r = useTiramisu(uid, "reroll")
+        expect(r.ok).toBe(true)
+        expect(["perfect", "min"]).toContain(r.outcome)
+        expect(getPlayer().items[TIRAMISU_ITEM_ID] ?? 0).toBe(0)
+        expect(monOf(uid).luxeIvsBackup?.ivs).toEqual(before) // backup = ORIGINAL, pas le résultat intermédiaire
+    })
+
+    it("Tiramisu sur un Daemon JAMAIS pâté → refus (not_pate)", () => {
+        const uid = addMon("feuillichot")
+        addItem(TIRAMISU_ITEM_ID, 1)
+        expect(useTiramisu(uid, "restore")).toEqual({ ok: false, reason: "not_pate" })
+        expect(getPlayer().items[TIRAMISU_ITEM_ID]).toBe(1) // pas consommé
+    })
+
+    it("sans Tiramisu en stock → refus (none)", () => {
+        const uid = addMon("feuillichot")
+        addItem(PATE_LUXE_ITEM_ID, 1); useLuxePasta(uid)
+        expect(useTiramisu(uid, "restore")).toEqual({ ok: false, reason: "none" })
     })
 })

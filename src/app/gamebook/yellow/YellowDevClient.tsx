@@ -82,7 +82,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -145,8 +145,8 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
-import { pateDeLuxeGodLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { pateDeLuxeGodLines, pateDeLuxeRestoreLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -586,6 +586,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pastaPick, setPastaPick] = useState(false)
     const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
     const [luxePick, setLuxePick] = useState(false) // sélecteur Pâte de Luxe (loterie IV) ouvert
+    const [tiramisuPick, setTiramisuPick] = useState(false) // sélecteur Tiramisu (restaurer / re-tenter) ouvert
     const [toast, setToast] = useState<string | null>(null)
     // PARRAINAGE (modes easy/debutant) — feedback quand le pool d'énergie se recharge à sec (spendReps).
     useEffect(() => {
@@ -2418,6 +2419,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
         if (luxePick) { setLuxePick(false); return true }
+        if (tiramisuPick) { setTiramisuPick(false); return true }
         if (buyConfirm) { setBuyConfirm(null); return true }
         if (sellMode) { setSellMode(false); return true }
         if (ctShop) { setCtShop(false); setCtPick(null); return true }
@@ -3027,10 +3029,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🍮 Poche Tiramisu (seconde chance) : un clic ouvre le sélecteur → restaurer OU re-tenter. */}
+                                    {(player.items[TIRAMISU_ITEM_ID] ?? 0) > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🍮 Tiramisu</div>
+                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#c8a0d8", color: "#eecdf5" }}
+                                                onClick={() => { setMenu("none"); setBagItem(null); setTiramisuPick(true) }}>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>Tiramisu 🍮</span><span>×{player.items[TIRAMISU_ITEM_ID]}</span>
+                                                </span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Seconde chance pour un Daemon déjà pâté : RESTAURER ses IV d'origine, ou RE-TENTER la loterie.</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && !it.luxePasta && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && !it.luxePasta && !it.tiramisu && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -4717,7 +4732,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {[...player.team, ...player.pc].map((m) => (
                             <button
                                 key={m.uid}
-                                style={menuBtnStyle}
+                                style={m.luxeUsed ? menuBtnDimStyle : menuBtnStyle}
+                                disabled={!!m.luxeUsed}
+                                title={m.luxeUsed ? "Ce Daemon a déjà mangé une Pâte de Luxe (verrouillé). Utilise un Tiramisu." : undefined}
                                 onClick={() => {
                                     const nm = displayName(m)
                                     const r = useLuxePasta(m.uid)
@@ -4725,6 +4742,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         // Le DIEU SPAGHETTI commente le résultat de la bouchée (parfait / rang D / shiny+parfait).
                                         setLuxePick(false)
                                         showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random()))
+                                    } else if (r.reason === "locked") {
+                                        setToast(`${nm} a déjà mangé une Pâte de Luxe — passe par un Tiramisu.`)
                                     } else if (r.reason === "none") {
                                         setToast("Tu n'as plus de Pâte de Luxe.")
                                         setLuxePick(false)
@@ -4732,11 +4751,54 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 }}
                             >
                                 <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <span>{displayName(m)}{m.shiny ? " ✨" : ""}</span><span>N.{m.level}</span>
+                                    <span>{displayName(m)}{m.shiny ? " ✨" : ""}{m.luxeUsed ? " 🔒" : ""}</span><span>N.{m.level}</span>
                                 </span>
                             </button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => setLuxePick(false)}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Tiramisu : seconde chance sur un Daemon DÉJÀ pâté → restaurer les IV d'origine, ou re-tenter la loterie. */}
+            {!battle && tiramisuPick && (
+                <div style={menuOverlayStyle} onClick={() => setTiramisuPick(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>🍮 TIRAMISU</span><span>×{player.items[TIRAMISU_ITEM_ID] ?? 0}</span>
+                        </div>
+                        <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
+                            Seconde chance pour un Daemon qui a goûté une Pâte de Luxe : <b>↩️ Restaurer</b> ses IV d'origine, ou <b>🎲 Re-tenter</b> la loterie.
+                        </div>
+                        {(() => {
+                            const eligibles = [...player.team, ...player.pc].filter((m) => m.luxeUsed)
+                            if (eligibles.length === 0) return <div style={{ fontSize: 11, opacity: 0.65, padding: 10, whiteSpace: "normal", lineHeight: 1.3 }}>Aucun Daemon n'a encore goûté de Pâte de Luxe. Le Tiramisu ne sert qu'à les rattraper.</div>
+                            return eligibles.map((m) => (
+                                <div key={m.uid} style={{ border: "1px solid #4a4a55", borderRadius: 8, padding: "6px 8px", marginBottom: 6 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 12, marginBottom: 5 }}>
+                                        <span>{displayName(m)}{m.shiny ? " ✨" : ""}</span><span>N.{m.level}</span>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        <button style={{ ...menuBtnStyle, flex: 1, height: "auto", padding: "7px 4px", fontSize: 11 }}
+                                            onClick={() => {
+                                                const nm = displayName(m)
+                                                const r = useTiramisu(m.uid, "restore")
+                                                if (r.ok) { setTiramisuPick(false); showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeRestoreLines(nm, Math.random())) }
+                                                else if (r.reason === "none") { setToast("Tu n'as plus de Tiramisu."); setTiramisuPick(false) }
+                                                else if (r.reason === "no_backup") { setToast("Aucun état d'origine à restaurer pour ce Daemon.") }
+                                            }}>↩️ Restaurer</button>
+                                        <button style={{ ...menuBtnStyle, flex: 1, height: "auto", padding: "7px 4px", fontSize: 11, borderColor: "#e0c060", color: "#ffe9a8" }}
+                                            onClick={() => {
+                                                const nm = displayName(m)
+                                                const r = useTiramisu(m.uid, "reroll")
+                                                if (r.ok && r.outcome) { setTiramisuPick(false); showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random())) }
+                                                else if (r.reason === "none") { setToast("Tu n'as plus de Tiramisu."); setTiramisuPick(false) }
+                                            }}>🎲 Re-tenter</button>
+                                    </div>
+                                </div>
+                            ))
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setTiramisuPick(false)}>← ANNULER</button>
                     </div>
                 </div>
             )}

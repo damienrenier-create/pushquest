@@ -42,6 +42,9 @@ export interface ItemData {
     /** PÂTE DE LUXE (MISC, s'utilise HORS combat) : RE-TIRE les IV d'un Daemon → PARFAIT ou rang D (loterie).
      *  Un clic dans le sac ouvre le sélecteur ; l'effet est révélé à l'usage (cf. useLuxePasta). */
     luxePasta?: boolean
+    /** TIRAMISU (MISC, s'utilise HORS combat) : « seconde chance » sur un Daemon DÉJÀ pâté (Pâte de Luxe) → au choix
+     *  RESTAURER ses IV d'origine, ou RE-TENTER la loterie. Un clic dans le sac ouvre le sélecteur (cf. useTiramisu). */
+    tiramisu?: boolean
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -209,7 +212,11 @@ export const ITEMS: Record<string, ItemData> = {
     },
     pate_de_luxe: {
         id: "pate_de_luxe", name: "Pâte de Luxe", category: "MISC",
-        description: "Un plat gastronomique au génome instable. Donné à un Daemon, il RE-TIRE tout son potentiel génétique : PARFAIT… ou catastrophique (rang D). À tes risques — c'est un pari !", price: 0, luxePasta: true,
+        description: "Un plat gastronomique au génome instable. Donné à un Daemon, il RE-TIRE tout son potentiel génétique : PARFAIT… ou catastrophique (rang D). Un seul essai par Daemon — à tes risques !", price: 0, luxePasta: true,
+    },
+    tiramisu: {
+        id: "tiramisu", name: "Tiramisu", category: "MISC",
+        description: "Dessert du remords. Sur un Daemon qui a déjà goûté une Pâte de Luxe : au choix, RESTAURER ses IV d'origine… ou RE-TENTER la loterie (PARFAIT/rang D). La seconde chance des cuisiniers repentis.", price: 0, tiramisu: true,
     },
 }
 
@@ -218,6 +225,9 @@ export const SUPER_PASTA_ITEM_ID = "super_pasta"
 
 /** Id de l'objet Pâte de Luxe (loterie génétique : IV re-tirés → PARFAIT ou rang D). */
 export const PATE_LUXE_ITEM_ID = "pate_de_luxe"
+
+/** Id de l'objet Tiramisu (seconde chance : restaurer les IV d'origine OU re-tenter la loterie). */
+export const TIRAMISU_ITEM_ID = "tiramisu"
 
 /** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
 export const MAGNETOR_EVO_ITEM = "noyau_metal"
