@@ -8,7 +8,7 @@
 // instrumentation dédiée (Phase 2) → posés dans l'échelle mais non gagnables (earned = false).
 
 import type { BadgeInput } from "./run1Badges"
-import { type TierFun, TIER_POINTS_FUN, TIER_EMOJI_FUN, type FunMedal, medalForRank, medalMult } from "./run1Badges"
+import { type TierFun, TIER_POINTS_FUN, TIER_EMOJI_FUN } from "./run1Badges"
 import { getSpecies } from "./species"
 
 // ── Helpers locaux (mêmes que run1Badges, ré-écrits pour ne pas exposer les internes) ──
@@ -143,27 +143,23 @@ export function run2BadgeScore(i: BadgeInput): number {
     return evaluateRun2Badges(i).totalPoints
 }
 
-/** Ids gagnés qui rapportent une MÉDAILLE (pour le tableau des rangs). Exclut les `todo`. */
+/** Ids gagnés (hors `todo`) — sert au DRIP de reps (chaque haut fait du Remix crédite de l'énergie). */
 export function run2EarnedBadgeIds(i: BadgeInput): string[] {
     return RUN2_BADGES.filter((b) => !b.todo && b.earned(i)).map((b) => b.id)
 }
 
-/** Score AVEC médaille pour un rang donné (0=or/1=argent/2=bronze/≥3=normal) : Σ palier × médaille. */
-export function run2FunScoreWithMedals(i: BadgeInput, rankOf: (badgeId: string) => number): number {
-    return RUN2_BADGES.reduce((sum, b) => {
-        if (b.todo || !b.earned(i)) return sum
-        const pts = b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS_FUN[b.funTier]
-        const medal: FunMedal = medalForRank(rankOf(b.id))
-        return sum + pts * medalMult(medal)
-    }, 0)
-}
-
-/** Total maxi théorique (×1, hors `todo` non instrumentés) — pour l'affichage « X / Y pts ». */
+/** Total maxi théorique de POINTS (×1) — indicatif de prestige (le classement run 2 = performance /1000, cf. route). */
 export const RUN2_MAX_POINTS = RUN2_BADGES.reduce((s, b) => s + TIER_POINTS_FUN[b.funTier], 0)
 
-/** Ids des hauts faits RUN 2 fun VALIDES (hors `todo` non instrumentés) — sert au serveur pour valider les
- *  enregistrements de médailles (anti-triche : le POST vient du client) et distinguer run 1 / run 2. */
-export const RUN2_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>(RUN2_BADGES.filter((b) => !b.todo).map((b) => b.id))
+// ════════════════ RÉCOMPENSES EN REPS (⚡) — les hauts faits du RUN 2 fun CRÉDITENT de l'énergie (drip 1000⚡/j) ════════════════
+// Design Sartay : « en fun, le run 2 crédite des reps » (le run 1 donne des points de classement ; le run 3 = source
+//   d'énergie unique = arènes). Barème par PALIER, calibré pour qu'un Remix COMPLET (les 54 hauts faits) = 10 000⚡ pile.
+/** Reps crédités par un haut fait selon son palier fun. */
+export const RUN2_TIER_REPS: Record<TierFun, number> = { s1: 30, s2: 60, s3: 100, s4: 160, s5: 250, d1: 400, d2: 550, d3: 740 }
+/** Reps crédités par CHAQUE haut fait (id → reps), dérivés du palier. Alimente le drip (`extra` de dripBadgeReps). */
+export const RUN2_BADGE_REPS: Record<string, number> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, RUN2_TIER_REPS[b.funTier]]))
+/** Total des reps d'un Remix COMPLET (les 54) — doit valoir 10 000. */
+export const RUN2_TOTAL_REPS = RUN2_BADGES.reduce((s, b) => s + RUN2_TIER_REPS[b.funTier], 0)
 
-/** Libellés des hauts faits run 2 (id → label), pour les toasts/affichages. */
+/** Libellés des hauts faits run 2 (id → label), pour les toasts/affichages (drip Dieu Spaghetti, panneaux). */
 export const RUN2_BADGE_LABELS: Record<string, string> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, b.label]))

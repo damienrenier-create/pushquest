@@ -86,7 +86,7 @@ import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiv
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
-import { evaluateRun2Badges, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
+import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -1044,12 +1044,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const rid = `berry_found:${berryId}`
                     extraIds.push(rid); extraReps[rid] = berryId === "baie_phenix" ? 100 : 50 // Phénix = 100, autres = 50
                 }
+                // RUN 2 (Remix) — MODE FUN : les HAUTS FAITS du run 2 créditent de l'ÉNERGIE (barème par palier, run 2
+                //   complet = 10 000⚡). Drip idempotent (badgeRepsClaimed global : ids r2_* distincts, jamais re-payés).
+                if (getGameMode() === "fun" && getActiveWorld() === "ngplus") {
+                    for (const id of run2EarnedBadgeIds(badgeInputFromSave(p as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))) {
+                        extraIds.push(id); extraReps[id] = RUN2_BADGE_REPS[id] ?? 0
+                    }
+                }
                 const earned = earnedRepsBadgeIds(badgeInputFromSave({ ...p, pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0]))
                 const granted = dripBadgeReps([...earned, ...extraIds], extraReps)
                 if (granted.length) {
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",
-                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${rewardLabel(g.id)} » !`),
+                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${RUN2_BADGE_LABELS[g.id] ?? rewardLabel(g.id)} » !`),
                         "« Retrouve TOUS tes trophées dans le menu (Pause) → 🏆 PALMARÈS → 🎖️ TROPHÉES & HAUTS FAITS. »",
                     ])
                     persistYellowSave()
@@ -1625,14 +1632,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (getGameMode() !== "fun") return
         let cancelled = false
         const r = evaluateBadges(badgeInputFromSave({ ...getPlayer(), pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0], undefined, "fun"))
-        const earnedRun1 = r.badges.filter((b) => b.earned && b.isRun1).map((b) => b.id)
-        // RUN 2 (Remix) : si le joueur est en run 2, on enregistre AUSSI ses hauts faits run-2 gagnés (mêmes médailles
-        //   de rapidité). Évalué depuis le monde run-2 courant, run-scopé (caughtThisRun). Ids r2_* → distincts du run 1.
-        let earned = earnedRun1
-        if (getActiveWorld() === "ngplus") {
-            const r2 = evaluateRun2Badges(badgeInputFromSave(getPlayer() as Parameters<typeof badgeInputFromSave>[0], getPlayer().caughtThisRun, "fun"))
-            earned = [...earnedRun1, ...r2.badges.filter((b) => b.earned).map((b) => b.id)]
-        }
+        // Médailles de rapidité = RUN 1 uniquement (le run 2 se classe à la performance /1000 × bonus rang-à-finir ;
+        //   ses hauts faits, eux, créditent des reps). Ids run-1 pré-Sylvebarbe gagnés.
+        const earned = r.badges.filter((b) => b.earned && b.isRun1).map((b) => b.id)
         if (!earned.length) return
         fetch("/api/gamebook/yellow/fun-badges", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ badges: earned }) })
             .then((rr) => (rr.ok ? rr.json() : null))
@@ -1640,11 +1642,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 if (cancelled || !j?.ok) return
                 const medals = (j.medals ?? {}) as Record<string, "or" | "argent" | "bronze">
                 const newly = (j.newlyEarned ?? []) as string[]
-                const wins = newly.filter((id) => medals[id]).map((id) => `${MEDAL_EMOJI[medals[id]]} ${medals[id].toUpperCase()} · ${BADGE_LABELS[id] ?? RUN2_BADGE_LABELS[id] ?? id}`)
+                const wins = newly.filter((id) => medals[id]).map((id) => `${MEDAL_EMOJI[medals[id]]} ${medals[id].toUpperCase()} · ${BADGE_LABELS[id] ?? id}`)
                 if (wins.length) setToast(`🏅 Médaille de rapidité décrochée ! ${wins.join(" · ")}`)
             }).catch(() => {})
         return () => { cancelled = true }
     }, [player.badges.length])
+
+    // RUN 2 (Remix) — MODE FUN : dès que le joueur a BOUCLÉ le Remix (re-sacre à la Salle Dorée = isChampion en run 2),
+    //   on enregistre son RANG D'ARRIVÉE côté serveur → bonus de score (1er fun ×1,5 … 5e ×1,1). Idempotent, best-effort.
+    const run2FinishReportedRef = useRef(false)
+    useEffect(() => {
+        if (run2FinishReportedRef.current) return
+        if (getGameMode() !== "fun" || getActiveWorld() !== "ngplus" || !player.isChampion) return
+        run2FinishReportedRef.current = true
+        fetch("/api/gamebook/yellow/run2-finish", { method: "POST" }).catch(() => {})
+    }, [player.isChampion, activeWorld])
 
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule

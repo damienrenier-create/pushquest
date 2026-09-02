@@ -556,6 +556,18 @@ model YellowFunBadgeEarn {
   @@index([badgeId, at])
 }
 
+// 🏁 RANG À FINIR (mode fun) — grave la 1re fois qu'un joueur FUN boucle le RUN 2 « Remix » (bat la Ligue + son double
+// à la Salle Dorée). L'ORDRE d'arrivée (trié par `at` croissant) donne le bonus de score : 1er ×1,5 … 5e ×1,1, puis ×1.
+// UNE ligne par joueur (userId @unique). Additif (db:push), gated côté code (cf. /api/gamebook/yellow/run2-finish).
+model YellowRun2Finish {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  nickname String
+  at       DateTime @default(now())
+
+  @@index([at])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.

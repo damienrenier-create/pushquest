@@ -21,7 +21,6 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES, medalForRank, medalMult } from "@/lib/gamebook/yellow/data/run1Badges"
-import { run2FunScoreWithMedals, run2EarnedBadgeIds } from "@/lib/gamebook/yellow/data/run2Badges"
 
 /** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
 function run1BadgeScore(f: Record<string, unknown>, caught?: readonly string[]): { score: number; factors: ScoreFactor[] } {
@@ -94,19 +93,32 @@ function run1FunScore(f: Record<string, unknown>, userId: string, rankMap: Map<s
     return { score: rounded, factors: [factor] }
 }
 
-/** RUN 2 — MODE FUN : score = Σ (palier × médaille) sur les HAUTS FAITS du Remix GAGNÉS, calculé DEPUIS le monde
- *  run 2 (`flags.ngplusWorld`, run-scopé via caughtThisRun). Barème 8 paliers ; médailles de rapidité via `rankMap`
- *  (badgeId r2_* → userIds triés par date). Renvoie null si le monde run 2 n'existe pas encore. */
-function run2FunScore(w: unknown, userId: string, rankMap: Map<string, string[]>): { score: number; factors: ScoreFactor[] } | null {
+/** Bonus « rang-à-finir » (mode fun) : ordre d'arrivée au bout du Remix (battre la Ligue + son double). Le 1er fun à
+ *  boucler décroche ×1,5, puis dégressif ; 6e et plus (ou pas encore fini) = ×1. Index 0 = 1er. */
+const RUN2_FINISH_BONUS = [1.5, 1.4, 1.3, 1.2, 1.1] as const
+
+/** RUN 2 — MODE FUN : score = note de PERFORMANCE /1000 (Pokédex×500 + %victoire×300 + niveaux×200, comme les non-funs)
+ *  × BONUS rang-à-finir (1er fun bouclé ×1,5 … 5e ×1,1 ; sinon ×1). Les HAUTS FAITS du Remix ne comptent PAS dans ce
+ *  score — ils créditent de l'ÉNERGIE (reps), cf. dripBadgeReps. `finishRank` = index d'arrivée (−1 = pas fini → ×1).
+ *  Renvoie null si le monde run 2 n'existe pas encore. */
+function run2FunScore(w: unknown, finishRank: number): { score: number; factors: ScoreFactor[] } | null {
     if (!w || typeof w !== "object") return null
-    const world = w as Record<string, unknown>
+    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; caughtThisRun?: unknown }
+    const stats = world.stats ?? {}
+    const team = Array.isArray(world.team) ? world.team : []
     const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
-    const input = badgeInputFromSave(world as Parameters<typeof badgeInputFromSave>[0], caught, "fun")
-    const rankOf = (id: string) => { const list = rankMap.get(id); return list ? list.indexOf(userId) : -1 }
-    const score = Math.round(run2FunScoreWithMedals(input, rankOf))
-    const earned = run2EarnedBadgeIds(input).length
-    const factor: ScoreFactor = { key: "badges", label: "🎖️ Hauts faits (Remix)", ratio: 0, max: 0, points: score, detail: `${earned} hauts faits · médailles de rapidité incluses` }
-    return { score, factors: [factor] }
+    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
+    const { grade, factors } = computeGrade({
+        wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels,
+        energyConsumed: num(stats.energySpent), steps: num(stats.steps),
+    })
+    const ranked = finishRank >= 0 && finishRank < RUN2_FINISH_BONUS.length
+    const bonus = ranked ? RUN2_FINISH_BONUS[finishRank] : 1
+    const bonusFactor: ScoreFactor = {
+        key: "info:finish_bonus", label: "🏁 Rang à finir", ratio: 0, max: 0, points: Math.round((bonus - 1) * 100),
+        detail: ranked ? `${finishRank + 1}ᵉ fun à boucler le Remix → ×${bonus.toFixed(2).replace(".", ",")}` : "pas encore bouclé (×1)",
+    }
+    return { score: Math.round(grade * bonus), factors: [...factors, bonusFactor] }
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -211,6 +223,13 @@ export async function GET() {
             const rows = (await (prisma as any).yellowFunBadgeEarn.findMany({ select: { userId: true, badgeId: true }, orderBy: [{ badgeId: "asc" }, { at: "asc" }, { id: "asc" }] })) as { userId: string; badgeId: string }[]
             for (const row of rows) { const a = rankMap.get(row.badgeId) ?? []; a.push(row.userId); rankMap.set(row.badgeId, a) }
         } catch { /* table pas encore créée → médailles neutres */ }
+        // BONUS RANG-À-FINIR (mode fun, run 2) : ordre d'arrivée au bout du Remix (table gated). userId → rang (index).
+        //   Le 1er fun à boucler = index 0 (×1,5). Table absente → tout le monde à −1 (×1).
+        const run2FinishRank = new Map<string, number>()
+        try {
+            const fins = (await (prisma as any).yellowRun2Finish.findMany({ select: { userId: true }, orderBy: [{ at: "asc" }, { id: "asc" }] })) as { userId: string }[]
+            fins.forEach((row, i) => { if (!run2FinishRank.has(row.userId)) run2FinishRank.set(row.userId, i) })
+        } catch { /* table pas encore créée → aucun bonus (×1) */ }
         for (const s of saves) {
             const f = (s.flags ?? {}) as Record<string, unknown>
             const nickname = s.user?.nickname ?? "?"
@@ -224,10 +243,10 @@ export async function GET() {
             // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
             if (viewerDone) {
                 // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
-                //   FUN → score HAUTS FAITS (barème 8 paliers × médailles) ; NON-FUN → note /1000 (grade). Barèmes
-                //   distincts → classement asymétrique (fun voit fun, non-fun voit non-fun), comme le run 1.
+                //   FUN → note /1000 × BONUS rang-à-finir (les hauts faits, eux, créditent des reps) ; NON-FUN → note
+                //   /1000 seule. Barèmes distincts → classement asymétrique (fun voit fun, non-fun voit non-fun).
                 if (isFun) {
-                    const r2 = run2FunScore(f.ngplusWorld, s.userId, rankMap)
+                    const r2 = run2FunScore(f.ngplusWorld, run2FinishRank.get(s.userId) ?? -1)
                     if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", fun: true })
                 } else {
                     const r2 = run2FromWorld(f.ngplusWorld)

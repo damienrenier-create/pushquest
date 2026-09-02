@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { RUN2_BADGES, evaluateRun2Badges, run2FunScoreWithMedals, run2EarnedBadgeIds, RUN2_MAX_POINTS, PANTHER_IDS } from "./run2Badges"
+import { RUN2_BADGES, evaluateRun2Badges, run2EarnedBadgeIds, RUN2_MAX_POINTS, RUN2_TOTAL_REPS, RUN2_TIER_REPS, RUN2_BADGE_REPS, PANTHER_IDS } from "./run2Badges"
 import { badgeInputFromSave } from "./run1Badges"
 
 const mon = (speciesId: string, level = 40, shiny = false) => ({ uid: `${speciesId}-${level}`, speciesId, level, shiny, ivs: { hp: 15, atk: 15, def: 15, spe: 15, spc: 15 }, currentHp: 1, status: "NONE" as const, statusCounter: 0, exp: 0, moves: [], owned: true })
@@ -77,12 +77,17 @@ describe("run2Badges — échelle & barème", () => {
         expect(new Set(run2EarnedBadgeIds(i)).has("r2_grotte_gelee")).toBe(false)
     })
 
-    it("médaille OR ×1,6 : score pondéré par rang", () => {
-        const i = badgeInputFromSave({ isChampion: true, badges: [], pokedex: { seen: [], caught: [] }, team: [], pc: [] }, undefined, "fun")
-        // r2_double (250) gagné. OR sur ce badge → 250 × 1,6 = 400.
-        const orAll = run2FunScoreWithMedals(i, () => 0)     // rang 0 = OR partout
-        const normalAll = run2FunScoreWithMedals(i, () => 9) // rang ≥3 = ×1
-        expect(normalAll).toBe(250)
-        expect(orAll).toBe(400)
+    it("barème REPS : un Remix COMPLET (les 54) vaut 10 000⚡ pile", () => {
+        expect(RUN2_TOTAL_REPS).toBe(10000)
+        // chaque haut fait a un montant de reps = son palier
+        for (const b of RUN2_BADGES) expect(RUN2_BADGE_REPS[b.id]).toBe(RUN2_TIER_REPS[b.funTier])
+        // rampe strictement croissante s1 < … < d3
+        const order = ["s1", "s2", "s3", "s4", "s5", "d1", "d2", "d3"] as const
+        for (let k = 1; k < order.length; k++) expect(RUN2_TIER_REPS[order[k]]).toBeGreaterThan(RUN2_TIER_REPS[order[k - 1]])
+    })
+
+    it("reps des hauts faits JOUABLES aujourd'hui (hors 2 todo) = 9 100⚡", () => {
+        const playable = RUN2_BADGES.filter((b) => !b.todo).reduce((s, b) => s + RUN2_BADGE_REPS[b.id], 0)
+        expect(playable).toBe(9100)
     })
 })

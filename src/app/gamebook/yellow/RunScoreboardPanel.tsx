@@ -72,12 +72,13 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const meta = RUN_META.find((m) => m.id === tab)!
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
-    // MODE FUN — le RUN 2 (« Remix ») se classe aux HAUTS FAITS (pts), pas à la note /1000 de performance.
+    // MODE FUN — le RUN 2 (« Remix ») se classe à la PERFORMANCE /1000 (comme les non-funs) × un bonus « rang-à-finir » ;
+    //   ses HAUTS FAITS, eux, rapportent de l'ÉNERGIE (reps), pas des points de classement.
     const funMode = getGameMode() === "fun"
     const isFunRun2 = tab === "run2" && funMode
-    const dispUnit = isFunRun2 ? "pts" : meta.unit
+    const dispUnit = meta.unit // run 2 = note /1000 (fun ET non-fun)
     const dispHint = isFunRun2
-        ? "REMIX (Run 2) : Σ des points de HAUTS FAITS du run 2 — barème 8 paliers × médailles de rapidité. Score GELÉ à ton re-sacre à la Salle Dorée. Clique une ligne pour le profil d'un joueur."
+        ? "REMIX (Run 2) — PERFORMANCE /1000 : Pokédex ×500 + % de victoire ×300 + niveaux d'équipe ×200, MULTIPLIÉE par ton bonus « rang-à-finir » (1ᵉʳ fun à boucler le Remix ×1,5 … 5ᵉ ×1,1). En prime, tes hauts faits du Remix te versent de l'énergie ⚡. Clique une ligne pour le détail des axes."
         : meta.hint
     const rulesTab = (tab === "run1" || tab === "run2") && funMode // carrousel Classement ↔ Règles (fun)
     const showingRules = rulesTab && showRules
@@ -118,7 +119,13 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                     <div style={factorsBox}>
                         <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>Critères pondérés (poids après « / »), additionnés → note /1000.</div>
                         {r.factors!.filter((f) => f.key !== "frugality" && f.key !== "steps").map((f) => (
-                            f.max <= 0 ? (
+                            f.key === "info:finish_bonus" ? (
+                                // MODE FUN — bonus « rang-à-finir » (multiplicateur, pas une note) : on montre son libellé + détail.
+                                <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
+                                    <span>{f.label}</span>
+                                    <span style={{ opacity: 0.85, fontSize: 9.5 }}>{f.detail}</span>
+                                </div>
+                            ) : f.max <= 0 ? (
                                 <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
                                     <span>{f.label}</span>
                                     <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>reps</span></span>
@@ -219,22 +226,23 @@ function Run1RulesBox() {
     )
 }
 
-/** RUN 2 (REMIX, mode fun) — encart Règles : hauts faits du Remix, score gelé au re-sacre. Même barème que le run 1. */
+/** RUN 2 (REMIX, mode fun) — encart Règles : PERFORMANCE /1000 × bonus rang-à-finir ; les hauts faits versent des reps. */
 function Run2RulesBox() {
-    const tiers: [string, number][] = [["⭐", 5], ["⭐⭐", 10], ["⭐⭐⭐", 20], ["⭐⭐⭐⭐", 35], ["⭐⭐⭐⭐⭐", 60], ["💎", 100], ["💎💎", 160], ["💎💎💎", 250]]
-    const medals: [string, string][] = [["🥇 OR", "×1,6"], ["🥈 ARGENT", "×1,4"], ["🥉 BRONZE", "×1,2"], ["▫️ normal", "×1"]]
+    const axes: [string, string][] = [["📖 Pokédex du Remix", "×500"], ["⚔️ % de victoire", "×300"], ["📈 niveaux d'équipe", "×200"]]
+    const finish: [string, string][] = [["🥇 1ᵉʳ à finir", "×1,5"], ["🥈 2ᵉ", "×1,4"], ["🥉 3ᵉ", "×1,3"], ["4ᵉ", "×1,2"], ["5ᵉ", "×1,1"], ["6ᵉ+", "×1"]]
     const sub = { fontSize: 10.5, textTransform: "uppercase" as const, letterSpacing: 0.5, opacity: 0.6, margin: "7px 0 3px" }
     const chipRow = { display: "flex", flexWrap: "wrap" as const, gap: 5 }
     const chip = { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "2px 7px", fontVariantNumeric: "tabular-nums" as const }
     return (
         <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,214,208,0.35)", borderRadius: 10, padding: "10px 12px", margin: "0 0 10px", fontSize: 12, lineHeight: 1.5 }}>
             <div style={{ fontWeight: 800, color: "#7be3dc", marginBottom: 5 }}>🧬 RUN 2 — REMIX · comment se calcule ton score</div>
-            <div>Score <b>GELÉ</b> à ton <b>re-sacre</b> (Salle Dorée, contre ton double) = somme des points de tes <b>hauts faits du Remix</b>. Points d&apos;un badge = <b>palier × médaille</b>.</div>
-            <div style={sub}>Palier — difficulté</div>
-            <div style={chipRow}>{tiers.map(([e, p]) => <span key={e} style={chip}>{e} <b>{p}</b></span>)}</div>
-            <div style={sub}>Médaille — RAPIDITÉ (course entre funs)</div>
-            <div style={chipRow}>{medals.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
-            <div style={{ marginTop: 7 }}>🏅 Tant que tu n&apos;as pas re-vaincu ton double, ton score reste <b>en direct</b> 🟢 puis se <b>fige</b> ⚪ au sacre. Le <b>1ᵉʳ</b> fun sur chaque haut fait décroche l&apos;<b>OR</b>.</div>
+            <div>Score = <b>note de performance /1000</b> (3 axes ci-dessous) <b>× ton bonus « rang-à-finir »</b>.</div>
+            <div style={sub}>Les 3 axes (poids)</div>
+            <div style={chipRow}>{axes.map(([e, p]) => <span key={e} style={chip}>{e} <b>{p}</b></span>)}</div>
+            <div style={sub}>Bonus RANG-À-FINIR (ordre d&apos;arrivée entre funs)</div>
+            <div style={chipRow}>{finish.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
+            <div style={{ marginTop: 7 }}>🏁 <b>Finir</b> = battre la Ligue puis <b>ton double</b> (Salle Dorée). Score <b>en direct</b> 🟢 tant que tu joues le Remix, <b>figé</b> ⚪ quand tu passes à la Ligue de Fusion.</div>
+            <div style={{ marginTop: 6, color: "#ffd54a" }}>⚡ En plus du classement, <b>chaque haut fait du Remix te verse de l&apos;énergie</b> (un Remix complet = 10 000⚡, versés au fil de tes connexions).</div>
         </div>
     )
 }

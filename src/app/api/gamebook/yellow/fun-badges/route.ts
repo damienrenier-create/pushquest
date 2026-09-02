@@ -15,7 +15,6 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { RUN1_FUN_BADGE_IDS, medalForRank, type FunMedal } from "@/lib/gamebook/yellow/data/run1Badges"
-import { RUN2_FUN_BADGE_IDS } from "@/lib/gamebook/yellow/data/run2Badges"
 
 export const dynamic = "force-dynamic"
 
@@ -71,8 +70,9 @@ export async function POST(req: NextRequest) {
     let body: { badges?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const raw = Array.isArray(body.badges) ? body.badges : []
-    // On ne garde que des badges fun VALIDES (run 1 OU run 2 « Remix », anti-triche : POST client), dédupliqués, capés.
-    const badges = [...new Set(raw.filter((b): b is string => typeof b === "string" && (RUN1_FUN_BADGE_IDS.has(b) || RUN2_FUN_BADGE_IDS.has(b))))].slice(0, 150)
+    // On ne garde que des badges fun VALIDES du RUN 1 (les médailles de rapidité = run 1 uniquement ; le run 2 se
+    //   classe à la performance /1000 et récompense les hauts faits en REPS, pas en médailles). Anti-triche : POST client.
+    const badges = [...new Set(raw.filter((b): b is string => typeof b === "string" && RUN1_FUN_BADGE_IDS.has(b)))].slice(0, 100)
     if (badges.length === 0) return NextResponse.json({ ok: true, medals: {}, newlyEarned: [] })
 
     try {
