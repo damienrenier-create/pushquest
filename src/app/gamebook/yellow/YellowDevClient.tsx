@@ -82,7 +82,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -145,7 +145,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem, SUPER_PASTA_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -584,6 +584,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
     const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
+    const [luxePick, setLuxePick] = useState(false) // sélecteur Pâte de Luxe (loterie IV) ouvert
     const [toast, setToast] = useState<string | null>(null)
     // PARRAINAGE (modes easy/debutant) — feedback quand le pool d'énergie se recharge à sec (spendReps).
     useEffect(() => {
@@ -2415,6 +2416,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
         if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
+        if (luxePick) { setLuxePick(false); return true }
         if (buyConfirm) { setBuyConfirm(null); return true }
         if (sellMode) { setSellMode(false); return true }
         if (ctShop) { setCtShop(false); setCtPick(null); return true }
@@ -3011,10 +3013,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🍝✨ Poche Pâte de Luxe (loterie génétique) : un clic ouvre le sélecteur → re-tire les IV (PARFAIT ou rang D). */}
+                                    {(player.items[PATE_LUXE_ITEM_ID] ?? 0) > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🍝✨ Pâtes de Luxe</div>
+                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#e0c060", color: "#ffe9a8" }}
+                                                onClick={() => { setMenu("none"); setBagItem(null); setLuxePick(true) }}>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>Pâte de Luxe 🎲</span><span>×{player.items[PATE_LUXE_ITEM_ID]}</span>
+                                                </span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Re-tire les IV d'un Daemon : PARFAIT… ou rang D. Un pari irréversible !</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && !it.luxePasta && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -4684,6 +4699,46 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => { setPastaPick(false); setPastaFree(false) }}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Pâte de Luxe : choix du Daemon → RE-TIRE ses IV (loterie PARFAIT / rang D). Cible équipe OU PC. */}
+            {!battle && luxePick && (
+                <div style={menuOverlayStyle} onClick={() => setLuxePick(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>🍝✨ QUEL DAEMON ?</span><span>🎲 ×{player.items[PATE_LUXE_ITEM_ID] ?? 0}</span>
+                        </div>
+                        <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
+                            Re-tire tout le potentiel génétique : PARFAIT… ou rang D. Irréversible, c'est un pari !
+                        </div>
+                        {[...player.team, ...player.pc].map((m) => (
+                            <button
+                                key={m.uid}
+                                style={menuBtnStyle}
+                                onClick={() => {
+                                    const nm = displayName(m)
+                                    const r = useLuxePasta(m.uid)
+                                    if (r.ok && r.outcome) {
+                                        setToast(
+                                            r.outcome === "shiny_perfect" ? `🌟 INCROYABLE ! ${nm} devient SHINY et PARFAIT !`
+                                                : r.outcome === "perfect" ? `✨ ${nm} atteint la PERFECTION ! (IV au maximum)`
+                                                    : `💀 Aïe… ${nm} retombe au rang D (IV minimum).`
+                                        )
+                                        if ((getPlayer().items[PATE_LUXE_ITEM_ID] ?? 0) <= 0) setLuxePick(false)
+                                    } else if (r.reason === "none") {
+                                        setToast("Tu n'as plus de Pâte de Luxe.")
+                                        setLuxePick(false)
+                                    }
+                                }}
+                            >
+                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{displayName(m)}{m.shiny ? " ✨" : ""}</span><span>N.{m.level}</span>
+                                </span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setLuxePick(false)}>← ANNULER</button>
                     </div>
                 </div>
             )}

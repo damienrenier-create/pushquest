@@ -39,6 +39,9 @@ export interface ItemData {
     /** SUPER PASTA (MISC, s'utilise HORS combat) : +1 niveau à un Daemon au choix. Offerte par la ferveur de clan
      *  (badge d'un allié). Un clic dans le sac ouvre le sélecteur de Super Pasta (application GRATUITE, consomme 1). */
     superPasta?: boolean
+    /** PÂTE DE LUXE (MISC, s'utilise HORS combat) : RE-TIRE les IV d'un Daemon → PARFAIT ou rang D (loterie).
+     *  Un clic dans le sac ouvre le sélecteur ; l'effet est révélé à l'usage (cf. useLuxePasta). */
+    luxePasta?: boolean
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -204,10 +207,17 @@ export const ITEMS: Record<string, ItemData> = {
         id: "super_pasta", name: "Super Pasta", category: "MISC",
         description: "Un plat de pâtes légendaire offert par ta guilde. Donne +1 niveau au Daemon de ton choix. Cadeau de la ferveur de clan !", price: 0, superPasta: true,
     },
+    pate_de_luxe: {
+        id: "pate_de_luxe", name: "Pâte de Luxe", category: "MISC",
+        description: "Un plat gastronomique au génome instable. Donné à un Daemon, il RE-TIRE tout son potentiel génétique : PARFAIT… ou catastrophique (rang D). À tes risques — c'est un pari !", price: 0, luxePasta: true,
+    },
 }
 
 /** Id de l'objet Super Pasta (cadeau de ferveur de clan). */
 export const SUPER_PASTA_ITEM_ID = "super_pasta"
+
+/** Id de l'objet Pâte de Luxe (loterie génétique : IV re-tirés → PARFAIT ou rang D). */
+export const PATE_LUXE_ITEM_ID = "pate_de_luxe"
 
 /** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
 export const MAGNETOR_EVO_ITEM = "noyau_metal"
