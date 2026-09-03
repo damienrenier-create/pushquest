@@ -12,6 +12,22 @@ import { isHeldItem } from "../data/heldItems"
 import { CRAFT_STATS, type CraftStat, type CraftedItem } from "../data/artisane"
 import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
 
+/** Compteurs de séries pour les hauts faits « consolation » (poisse). */
+export interface AchTrack {
+    ballMiss: number   // captures ratées d'affilée
+    foeId: string      // dernier PNJ perdu (pour la série de défaites)
+    foeLoss: number    // défaites d'affilée vs ce PNJ
+    lossDate: string   // jour (YYYY-MM-DD) du compteur de défaites
+    lossCount: number  // défaites ce jour
+    noKoWins: number   // victoires dresseur d'affilée SANS aucun KO subi
+}
+export function emptyAchTrack(): AchTrack { return { ballMiss: 0, foeId: "", foeLoss: 0, lossDate: "", lossCount: 0, noKoWins: 0 } }
+function parseAchTrack(o: unknown): AchTrack {
+    const s = (o && typeof o === "object" ? o : {}) as Record<string, unknown>
+    const n = (v: unknown) => (typeof v === "number" && v >= 0 ? Math.floor(v) : 0)
+    return { ballMiss: n(s.ballMiss), foeId: typeof s.foeId === "string" ? s.foeId : "", foeLoss: n(s.foeLoss), lossDate: typeof s.lossDate === "string" ? s.lossDate : "", lossCount: n(s.lossCount), noKoWins: n(s.noKoWins) }
+}
+
 export interface YellowSave {
     version: number
     team: MonInstance[]
@@ -141,6 +157,8 @@ export interface YellowSave {
     ngplusBattles: number
     /** MAÎTRE DES CAPACITÉS (étage du Centre) : nb de réapprentissages payés → prix des reps croissant. */
     moveReminderUses: number
+    /** HAUTS FAITS « consolation » — compteurs de séries (poisse). Optionnel/additif (save-safe). */
+    achTrack?: AchTrack
     /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
     labDefi: LabDefiState
     /** DÉFIS FUN (mode fun) : arène/sprint/cible du jour — échelle de captures, cible du jour, défi chrono actif. */
@@ -335,7 +353,7 @@ export const ENERGY_LOG_MAX = 80
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -754,6 +772,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         orcalineDate: typeof o.orcalineDate === "string" ? o.orcalineDate : "",
         ngplusBattles: typeof o.ngplusBattles === "number" ? Math.max(0, Math.floor(o.ngplusBattles)) : 0,
         moveReminderUses: typeof o.moveReminderUses === "number" ? Math.max(0, Math.floor(o.moveReminderUses)) : 0,
+        achTrack: parseAchTrack(o.achTrack),
         labDefi: parseLabDefi(o.labDefi),
         funDefis: parseFunDefis(o.funDefis),
         // Défensif : on ne garde que les entrées custom PLAUSIBLES (une entrée cassée ne bloque pas le chargement).

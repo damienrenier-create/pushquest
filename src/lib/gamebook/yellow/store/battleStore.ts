@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -640,6 +640,8 @@ export function submitPlayerAction(action: PlayerAction) {
         grantReps(paidMoveCost, true) // force : on rend au joueur SA propre énergie (attaque non partie) — même en run 3
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
     }
+    // CONSOLATION « 10 balls ratées d'affilée » : chaque Ball lancée compte (succès → reset la série).
+    if (action.kind === "ball") recordCaptureResult(next.outcome === "caught")
     // PREMIÈRE capture de cette espèce ? On le détecte AVANT que syncPokedex ne la marque
     // « capturée » → sinon on ne saurait plus distinguer une nouvelle entrée d'un doublon.
     let newEntry: BattleStoreState["newDexEntry"] = null
@@ -1155,6 +1157,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             recordTeamCompoAchievements(getPlayer().team) // HAUTS FAITS mono-stade + mono-type (victoire dresseur)
+            recordTrainerWinNoKo(b.player.team.filter((m) => m.currentHp <= 0).length) // série « 10 victoires sans KO subi »
             const t = getTrainer(storeState.trainer.trainerId)
             const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
@@ -1388,6 +1391,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on
     //       signale un "whiteout" → la carte renverra le joueur au Centre.
     const isLose = b.outcome === "lose"
+    // CONSOLATIONS de défaite (3 défaites d'affilée vs le même dresseur + 10 défaites/jour) — dresseurs RÉELS seulement.
+    if (isLose && storeState.trainer) {
+        const lostTid = storeState.trainer.trainerId
+        const realFoe = !!lostTid && !["hof:", "fusion:", "frontier:", "duel:", "champ:", "run2ghost:", "y_nemesis"].some((p) => lostTid.startsWith(p))
+        if (realFoe) recordBattleLoss(lostTid, new Date().toISOString().slice(0, 10))
+    }
     // ÉPREUVE DE FUSION : une défaite ne soigne PAS la vraie équipe (elle n'a pas combattu) — sinon soin gratuit
     //   exploitable — et ne provoque pas de whiteout (on reste dans la salle). La vraie équipe est intacte.
     if (isLose && !isFusionTrial) healAllTeam()
