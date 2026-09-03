@@ -69,7 +69,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
             badges: p.badges ?? [],
             isChampion: p.isChampion === true,
             ownedCts: p.ownedCts ?? [],
-            domeChampionships: p.domeChampionships ?? 0,
+            markers: p.defeatedTrainers ?? [],
         })
         rows = r3.feats.map((f) => ({ id: f.id, label: f.label, cat: f.cat, emoji: f.emoji, color: "#7bb0ff", points: 0, earned: f.earned, revealed: true, todo: false }))
         title = "🧭 Guide du Concours (Run 3)"

@@ -7,14 +7,16 @@
 //    (gris = pas encore atteint, coché = atteint), jamais secrets.
 //
 // Évaluation depuis l'état ACTIF (getPlayer() reflète run3World quand activeWorld==="run3"), pas depuis la
-// save brute : caughtThisRun / badges / isChampion / ownedCts / domeChampionships sont tous per-monde run 3.
+// save brute : caughtThisRun / badges / isChampion / ownedCts / markers sont tous per-monde run 3.
+
+import { NEMESIS_DONE_MARKER } from "./nemesisChallenge"
 
 export interface Run3FeatInput {
     caughtThisRun: readonly string[]   // espèces capturées CE run (overlay dex run 3)
     badges: readonly string[]          // badges d'arène du run 3 (plante/roche/feu/elec/eau)
     isChampion: boolean                // sacre du concours (Ligue/Dieu Spaghetti battus)
     ownedCts: readonly string[]        // CT possédées (ct58 = récompense Maison du Combat)
-    domeChampionships: number          // couronnes de la Zone de Combat (Dôme)
+    markers: readonly string[]         // defeatedTrainers (marqueurs d'événement — dont némésis)
 }
 
 export interface Run3Feat {
@@ -44,15 +46,13 @@ export const RUN3_FEATS: readonly Run3Feat[] = [
 
     // ── Rencontres (légendaires & némésis) ──
     { id: "r3_flamarokto", cat: "rencontres", emoji: "❄️", label: "Capturer Flamarokto (le légendaire)", done: (i) => caught(i, "flamarokto") },
-    { id: "r3_onirail", cat: "rencontres", emoji: "🎣", label: "Pêcher Onirail à Cendreville", done: (i) => caught(i, "onirail") },
-    { id: "r3_nemesis", cat: "rencontres", emoji: "😈", label: "Vaincre ta némésis (Condombre ou Karatame)", done: (i) => caught(i, "condombre") || caught(i, "karatame") },
+    { id: "r3_onirail", cat: "rencontres", emoji: "🎣", label: "Pêcher Onirail", done: (i) => caught(i, "onirail") },
+    // Némésis = défi du génie (espèce-récompense VARIABLE selon le vœu) : victoire = essai consommé SANS scellé de défaite.
+    { id: "r3_nemesis", cat: "rencontres", emoji: "😈", label: "Vaincre ta némésis", done: (i) => i.markers.includes(NEMESIS_DONE_MARKER) && !i.markers.some((m) => m.endsWith("_blocked")) },
 
     // ── Collection du concours ──
     { id: "r3_dex10", cat: "collection", emoji: "📘", label: "Capturer 10 espèces du concours", done: (i) => i.caughtThisRun.length >= 10 },
     { id: "r3_dex30", cat: "collection", emoji: "📗", label: "Capturer 30 espèces du concours", done: (i) => i.caughtThisRun.length >= 30 },
-
-    // ── Zone de Combat ──
-    { id: "r3_dome", cat: "dome", emoji: "🏛️", label: "Décrocher une couronne à la Zone de Combat", done: (i) => i.domeChampionships >= 1 },
 ]
 
 export interface Run3FeatState extends Run3Feat { earned: boolean }
