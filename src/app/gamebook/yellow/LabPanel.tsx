@@ -17,7 +17,7 @@ import {
     physWinCount, recordPhysWin, casinoPillar, useActiveWorld,
     getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
-import { funSprintReward } from "@/lib/gamebook/yellow/data/funDefis"
+import { funSprintReward, funArenaRewardScaled, funLevelMultiplier } from "@/lib/gamebook/yellow/data/funDefis"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
@@ -52,6 +52,7 @@ export default function LabPanel() {
     const close = useGameStore((s) => s.closeLab)
     const player = usePlayer()
     const world = useActiveWorld()
+    const funAvgLvl = player.team.length ? player.team.reduce((s, m) => s + m.level, 0) / player.team.length : 1 // bonus de niveau du Blitz d'arène
     const ngplus = world === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
     const run3 = world === "run3"     // run 3 (concours) : casino/roulette FERMÉS
     const pv = pushupDefiVariant(ngplus)         // { exercise, word: "pompes"|"squats", growth }
@@ -190,8 +191,8 @@ export default function LabPanel() {
                                     <div style={{ display: "flex", flexDirection: "column" }}>
                                         <div style={{ fontSize: 12, color: INK, opacity: 0.85, lineHeight: 1.5, marginBottom: 8 }}>🎉 En mode fun, ton énergie vient de ces <b>défis chronométrés</b> (fini les pompes à encoder !). Un seul à la fois — la récompense est créditée dès que tu réussis.</div>
                                         <div style={cardStyle}>
-                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+100 → +300⚡</span></div>
-                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (les 4 gardes + le boss) dans l'<b>heure</b>.</div>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+{funArenaRewardScaled(1, funAvgLvl)} → +{funArenaRewardScaled(5, funAvgLvl)}⚡</span></div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (les 4 gardes + le boss) dans l'<b>heure</b>.{funLevelMultiplier(funAvgLvl) > 1 ? <> Récompense <b>boostée ×{funLevelMultiplier(funAvgLvl).toFixed(2)}</b> par le niveau de ton équipe.</> : <> La récompense grimpe avec le niveau de ton équipe (jusqu'à ×2).</>}</div>
                                             <button onClick={() => { startFunDefi("arena"); persistYellowSave() }} style={primary}>Lancer (1 h)</button>
                                         </div>
                                         <div style={cardStyle}>

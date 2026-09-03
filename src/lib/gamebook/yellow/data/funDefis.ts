@@ -70,6 +70,23 @@ export const FUN_DAILY_WINDOW_MS = 60 * 60 * 1000    // 1 h
 // ── Récompenses (chiffres Sartay) ─────────────────────────────────────────────────────────────────────────────
 /** ARÈNE : 100 (1re) → 300 (5e). `badgeCount` = nb de badges APRÈS la victoire (1..5). */
 export function funArenaReward(badgeCount: number): number { return 50 + 50 * Math.max(1, Math.min(5, badgeCount)) }
+
+// ── Bonus de niveau MODÉRÉ (récompense ARÈNE uniquement) ──────────────────────────────────────────────────────
+// L'arène est un défi de COMBAT : plus l'équipe monte, plus chaque attaque coûte cher → à niv 50 un Blitz pouvait
+// coûter presque autant qu'il ne rapportait. On indexe donc SA récompense sur le niveau moyen de l'équipe :
+// ×1 jusqu'à niv 20, montée linéaire jusqu'à ×2 à niv 50, PLAFONNÉ à ×2. Volontairement modéré (jamais un robinet).
+// Le Sprint (déjà 50×N croissant) et la Cible du jour restent inchangés.
+export const FUN_LVL_BONUS_FLOOR = 20
+export const FUN_LVL_BONUS_CEIL = 50
+export const FUN_LVL_BONUS_MAX = 2
+export function funLevelMultiplier(avgLevel: number): number {
+    const t = (avgLevel - FUN_LVL_BONUS_FLOOR) / (FUN_LVL_BONUS_CEIL - FUN_LVL_BONUS_FLOOR)
+    return Math.max(1, Math.min(FUN_LVL_BONUS_MAX, 1 + t * (FUN_LVL_BONUS_MAX - 1)))
+}
+/** Récompense ARÈNE effective = base (par n° d'arène) × bonus de niveau moyen d'équipe (arrondi). */
+export function funArenaRewardScaled(badgeCount: number, avgLevel: number): number {
+    return Math.round(funArenaReward(badgeCount) * funLevelMultiplier(avgLevel))
+}
 /** SPRINT : 50 × N (N = objectif de la manche). */
 export function funSprintReward(n: number): number { return 50 * Math.max(1, n) }
 // CIBLE DU JOUR : la récompense (20-100 selon rareté) est figée dans dailyReps au tirage (cf. encounters.funDailyTarget).
