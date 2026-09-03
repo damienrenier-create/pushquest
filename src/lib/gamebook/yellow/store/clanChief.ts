@@ -5,7 +5,7 @@
 // se fait à la fermeture du dialogue via executeClanJoin(). Cf. data/clans.ts + project chapelle.
 
 import {
-    CLANS, clanOfChief, clanRelation, clanTrainDailyMarker, CLAN_JOIN_MIN_BADGES, CLAN_CT_LEVEL,
+    CLANS, clanOfChief, clanOfSpecies, clanRelation, clanTrainDailyMarker, CLAN_JOIN_MIN_BADGES, CLAN_CT_LEVEL,
     CLAN_TRANSCENDANCE_LEVEL, TRANSCENDANCE_CT_ID, type ClanKey,
 } from "../data/clans"
 import { getSpecies } from "../data/species"
@@ -107,6 +107,22 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
             `${c.emoji} Un fauve du ${CLANS[rival].name} rôde dans ta meute ?! Tant qu'il y sera, tu n'auras RIEN de moi.`,
             "Range ce traître au PC, puis reviens la tête haute.",
         ] }
+        // RÉCUPÉRATION du Daemon-clan : un membre dont le « Daemon-clan » n'est PAS de la lignée signature du clan
+        //   (ex. inscrit via un « meme » comme Couperin qui avait été adopté par erreur, ou disciple relâché) reçoit
+        //   ICI son VRAI disciple (starterId, niv 5), une fois. Après quoi clanDaemonUid pointe la lignée → plus de re-don.
+        if (clanOfSpecies(clanDaemonSpeciesId()) !== clan) {
+            const disciple = createMonInstance(c.starterId, CLAN_STARTER_LEVEL, { owned: true })
+            addCaught(disciple)
+            markCaught(c.starterId); markCaughtThisRun(c.starterId)
+            joinClan(clan, disciple.uid) // clan déjà scellé → ne fait que re-pointer clanDaemonUid vers le VRAI disciple
+            persistYellowSave()
+            if (getActiveWorld() !== "replay") postClanHallEntry({ clan, level: CLAN_STARTER_LEVEL, speciesId: c.starterId, transcended: false })
+            const nm = getSpecies(c.starterId)?.name ?? "ton disciple"
+            return { lines: [
+                `${c.emoji} Attends… tu n'as jamais reçu ton véritable disciple du ${c.name} ?! Impardonnable de ma part.`,
+                `Voici ${nm}, niveau ${CLAN_STARTER_LEVEL} — LE Daemon de notre clan. Fais-en un champion : niv 50 → ma CT, niv 80 → la Transcendance.`,
+            ] }
+        }
         const lvl = clanDaemonLevel()
         const lines: string[] = []
         // Transcendance (niv 80) — priorité (1× par run).
