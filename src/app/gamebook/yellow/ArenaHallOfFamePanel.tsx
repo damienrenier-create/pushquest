@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
-import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { useActiveWorld, usePlayer, champBattlesLeft, MAX_CHAMP_BATTLES_PER_DAY } from "@/lib/gamebook/yellow/store/playerStore"
 import { arenaGate, type ArenaGate } from "@/lib/gamebook/yellow/data/arenaInfos"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
@@ -59,6 +59,8 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
 
     // Affronter l'équipe figée d'un champion (combat amical, sans sac, IA maligne). expMult : 2 (prochain objectif) ou 1.
     const fight = (label: string, team: ChampionMon[], expMult: number) => {
+        // CAP anti-cadeau : 3 combats de champions (×1,5 XP) par jour maximum.
+        if (champBattlesLeft() <= 0) { setNotice(`Tu as déjà affronté ${MAX_CHAMP_BATTLES_PER_DAY} équipes de champions aujourd'hui — reviens demain ! (le ×1,5 XP est un coup de pouce, pas une rente 😉)`); return }
         if (startHofBattle(label, team, expMult, true)) (onFight ?? close)() // championReward: team JOUEUR du palmarès → Super Ball + baie run2+
         else setNotice("Soigne ton équipe (au moins 1 Daemon debout) avant d'affronter un champion !")
     }

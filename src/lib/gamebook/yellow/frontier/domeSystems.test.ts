@@ -89,6 +89,19 @@ describe("Dôme — économie poker (faucet-safe)", () => {
         expect(domeJcReward(100, "MAITRE", 1)).toBeGreaterThan(domeJcReward(100, "BRONZE", 1))
     })
 
+    it("MALUS anti-farm (tier déjà vaincu) : remboursement −30 %/défaite, JC −5 %/reprise", () => {
+        // remboursement : base 2e = 350 ; −30 % par défaite passée (incluse), plancher 0
+        expect(domeEnergyRefund(500, 2, 0)).toBe(350)  // pas de malus (défaut) = inchangé
+        expect(domeEnergyRefund(500, 2, 1)).toBe(245)  // 1re défaite → ×0,70
+        expect(domeEnergyRefund(500, 2, 3)).toBe(35)   // 3e défaite → ×0,10 (perd 90 %, cf. Sartay)
+        expect(domeEnergyRefund(500, 2, 4)).toBe(0)    // 4e+ → 0
+        // JC : base Maître 1er = 500 ; −5 % par reprise, plancher 0
+        expect(domeJcReward(500, "MAITRE", 1, 0)).toBe(500) // pas de malus (défaut) = inchangé
+        expect(domeJcReward(500, "MAITRE", 1, 1)).toBe(475) // 1re reprise → ×0,95
+        expect(domeJcReward(500, "MAITRE", 1, 10)).toBe(250) // 10e reprise → ×0,50
+        expect(domeJcReward(500, "MAITRE", 1, 20)).toBe(0)   // 20e+ → 0 (pari totalement pipé)
+    })
+
     it("domeFinalPlacement : victoire→1er, sinon quart(0)→4e / demi(1)→3e / finale(2)→2e ; + faucet-safe de bout en bout", () => {
         expect(domeFinalPlacement(true, 2)).toBe(1)  // champion
         expect(domeFinalPlacement(false, 2)).toBe(2) // perd la finale

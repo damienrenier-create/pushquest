@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { hydratePlayer, getPlayer, dripBadgeReps, isBadgeRepsClaimed } from "./playerStore"
+import { hydratePlayer, getPlayer, dripBadgeReps, isBadgeRepsClaimed, champBattlesLeft, recordChampBattle, MAX_CHAMP_BATTLES_PER_DAY } from "./playerStore"
 import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 
 beforeEach(() => {
@@ -63,6 +63,16 @@ describe("dripBadgeReps — récompenses de hauts faits (une fois, drip 1000/jou
         expect(g2).toEqual([{ id: "berry_found:baie_pure", reps: 50 }, { id: "berry_found:baie_phenix", reps: 100 }])
         expect(isBadgeRepsClaimed("berry_found:baie_phenix")).toBe(true) // payé une fois
         expect(dripBadgeReps(["berry_found:baie_phenix"], { "berry_found:baie_phenix": 100 })).toEqual([]) // pas deux fois
+    })
+
+    it("cap combats champions (×1,5 XP) : 3/jour, reset au tick quotidien", () => {
+        hydratePlayer({ champBattlesToday: 0 })
+        expect(champBattlesLeft()).toBe(MAX_CHAMP_BATTLES_PER_DAY)
+        expect(MAX_CHAMP_BATTLES_PER_DAY).toBe(3)
+        recordChampBattle(); recordChampBattle(); recordChampBattle()
+        expect(champBattlesLeft()).toBe(0) // plafond atteint → startHofBattle refusera les champ:
+        recordChampBattle() // même au-delà, champBattlesLeft reste borné à 0
+        expect(champBattlesLeft()).toBe(0)
     })
 
     it("barème conforme (échantillon)", () => {

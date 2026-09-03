@@ -98,6 +98,8 @@ interface PlayerState {
     introSeen: boolean
     /** Victoires sur le sbire AUJOURD'HUI (reset au tick quotidien ; plafond 2). */
     sbireDefeatsToday: number
+    /** Combats vs équipes de JOUEURS du palmarès (champ:, ×1,5 XP) LANCÉS aujourd'hui (reset quotidien ; plafond 3). Optionnel (défaut 0). */
+    champBattlesToday?: number
     /** Daemomaniaque : consultations du jour (reset au tick ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
     /** L'ARCHIVISTE — nb de matchs disputés aujourd'hui (max 5, reset quotidien) → cap du jour. */
@@ -125,6 +127,9 @@ interface PlayerState {
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
     pvpStats: PvpStats
     domeStats?: DomeStats // stats DÔME UNIQUEMENT (fétiches + bilan tournois) — optionnel, défaut vide
+    /** Bilan PAR TIER du Dôme (tierId → {wins, losses}) : pilote les malus anti-farm (remboursement −30 %/défaite +
+     *  JC −5 %/reprise sur un tier DÉJÀ vaincu). Optionnel, défaut {}. */
+    domeTierRecord?: Record<string, { wins: number; losses: number }>
     stats: YellowStats
     /** ACE (rival) — pic de niveau mémorisé (ratchet, ne régresse jamais). */
     acePeakLevel: number
@@ -334,6 +339,9 @@ export function getPlayer(): PlayerState { return st }
 export type WorldId = "live" | "ngplus" | "run3" | "replay"
 let activeWorld: WorldId = "live"
 export function getActiveWorld(): WorldId { return activeWorld }
+/** RUN FUSION = run 1 POST-Sylvebarbe (endgame « fusion de tout ») : monde live + Sylvebarbe vaincu. Sert p.ex. à
+ *  facturer le PvP 50 JC en run fusion (le run 3 paie en reps, les autres runs = PvP gratuit). */
+export function isRunFusion(): boolean { return activeWorld === "live" && !!st.sylvebarbeAwake }
 export function setActiveWorld(w: WorldId) { if (w === activeWorld) return; activeWorld = w; emit() }
 /** Hook React : monde actif (re-render à la bascule). */
 export function useActiveWorld(): WorldId {
@@ -604,6 +612,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         defeatedTrainers: p.defeatedTrainers ?? [], rematchedTrainers: p.rematchedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
+        champBattlesToday: p.champBattlesToday ?? st.champBattlesToday ?? 0,
         consultsToday: p.consultsToday ?? st.consultsToday ?? 0,
         archivisteMatchesToday: p.archivisteMatchesToday ?? st.archivisteMatchesToday ?? 0,
         archivisteWinsToday: p.archivisteWinsToday ?? st.archivisteWinsToday ?? 0,
@@ -618,6 +627,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
         domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(),
+        domeTierRecord: p.domeTierRecord ?? st.domeTierRecord ?? {},
         stats: p.stats ?? st.stats ?? emptyYellowStats(),
         acePeakLevel: p.acePeakLevel ?? st.acePeakLevel ?? 0,
         aceBox: p.aceBox ?? st.aceBox ?? {},
@@ -1771,6 +1781,7 @@ export function creditDailyReps(today: string) {
         casinoSpentToday: 0, // VŒU DU GÉNIE (cap casino) : la mise dépensée du jour repart à zéro (plafond FLAT 250/jour désormais)
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
+        champBattlesToday: 0, // nouveau jour → 3 combats vs équipes du palmarès (×1,5 XP) de nouveau dispo
         consultsToday: 0, // nouveau jour → 5 consultations gratuites du Daemomaniaque de nouveau
         archivisteMatchesToday: 0, // nouveau jour → L'Archiviste ré-affrontable (5 matchs)
         archivisteWinsToday: 0, // nouveau jour → l'escalade (basée sur les victoires) repart de zéro
@@ -2148,6 +2159,12 @@ export function recordSbireWin(): number {
     return winsTotal
 }
 
+/** COMBATS vs équipes de JOUEURS du palmarès (champ:, ×1,5 XP) — cap 3/jour (anti-cadeau). On compte les LANCEMENTS
+ *  (pas les victoires) → un joueur qui perd ne peut pas relancer à l'infini. */
+export const MAX_CHAMP_BATTLES_PER_DAY = 3
+export function champBattlesLeft(): number { return Math.max(0, MAX_CHAMP_BATTLES_PER_DAY - (st.champBattlesToday ?? 0)) }
+export function recordChampBattle(): void { st = { ...st, champBattlesToday: (st.champBattlesToday ?? 0) + 1 }; emit() }
+
 // ── DAEMOMANIAQUE (guide de capture post-run-3) : 5 consultations GRATUITES/jour, puis payant en énergie. ──
 export const FREE_CONSULTS_PER_DAY = 5
 export const CONSULT_COST = 50 // énergie par consultation au-delà des 5 gratuites du jour
@@ -2237,6 +2254,16 @@ export function recordDomeUse(speciesId: string, moveId?: string) {
 export function recordDomeResult(won: boolean) {
     const s = st.domeStats ?? emptyDomeStats()
     st = { ...st, domeStats: { ...s, daemonUse: { ...s.daemonUse }, moveUse: { ...s.moveUse }, wins: s.wins + (won ? 1 : 0), losses: s.losses + (won ? 0 : 1) } }
+    emit()
+}
+/** DÔME — bilan par tier (wins/losses AVANT l'attempt courant), pour les malus anti-farm. Défaut {0,0}. */
+export function getDomeTierRecord(tier: string): { wins: number; losses: number } {
+    return st.domeTierRecord?.[tier] ?? { wins: 0, losses: 0 }
+}
+/** DÔME — enregistre l'issue d'un tournoi POUR CE TIER (win → wins++, loss → losses++). Alimente les malus. */
+export function recordDomeTierResult(tier: string, won: boolean) {
+    const cur = st.domeTierRecord?.[tier] ?? { wins: 0, losses: 0 }
+    st = { ...st, domeTierRecord: { ...(st.domeTierRecord ?? {}), [tier]: { wins: cur.wins + (won ? 1 : 0), losses: cur.losses + (won ? 0 : 1) } } }
     emit()
 }
 

@@ -66,7 +66,7 @@ import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from ".
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
-import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER, PNJ5_REARM_STEPS } from "../data/pnj5"
+import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
@@ -1164,11 +1164,10 @@ function tryLaunchAnanas(): ActiveDialogue | null {
 
 // GARDIEN DE LA GROTTE DU NEXUS (PNJ 5). « Vaincu cette visite » = marqueur PERSISTANT PNJ5_CLEARED_MARKER
 // (defeatedTrainers, per-monde) posé à la victoire (battleStore) → SURVIT au refresh : les échelles restent
-// franchissables après un reload (fini le blocage relou). Le gardien ne se RÉ-ARME (marqueur levé) qu'une fois
-// le joueur SORTI de la grotte et ayant marché ≥PNJ5_REARM_STEPS pas au-dehors (cf. compteur ci-dessous) → on
-// peut quitter/rentrer sans se refaire happer, et on ne le ré-affronte qu'après 10 pas minimum dehors.
+// franchissables après un reload TANT QU'ON RESTE dans la grotte (fini le blocage relou). Choix Sartay 03/09 : le
+// gardien se RÉ-ARME à chaque NOUVELLE ENTRÉE dans la grotte (marqueur levé dans setMap, l'entrée passant par le
+// passeur → setMap(PNJ5_MAP_ID)) → il faut le rebattre pour re-descendre, mais on navigue/refresh librement dans une visite.
 const pnj5ClearedThisVisit = (): boolean => isTrainerDefeated(PNJ5_CLEARED_MARKER)
-let pnj5StepsOutside = 0 // pas effectués HORS grotte depuis la dernière victoire (runtime ; reset au reload = plus permissif)
 // LATENCE anti-ré-affrontement : après un déclenchement du gardien, N pas de GRÂCE avant qu'un piège (18/19,33)
 // puisse relancer le combat → le joueur peut s'éloigner / se diriger vers la sortie sans se refaire happer aussitôt.
 let pnj5GraceSteps = 0
@@ -1512,14 +1511,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // LATENCE gardien : chaque pas EFFECTIF dans la Grotte 1F consomme 1 de grâce (le piège reste inerte tant que > 0).
         if ((next.posX !== player.posX || next.posY !== player.posY) && player.mapId === PNJ5_MAP_ID && pnj5GraceSteps > 0) pnj5GraceSteps--
-        // RÉ-ARM du gardien : tant qu'il est « vaincu cette visite », chaque pas HORS grotte compte ; à PNJ5_REARM_STEPS
-        //   pas au-dehors, on lève le marqueur → il faudra le rebattre à la prochaine descente. Dans la grotte : le
-        //   compteur ne bouge pas (on reste crédité). → « pouvoir quitter la grotte, ré-affronté après 10 pas minimum ».
-        if ((next.posX !== player.posX || next.posY !== player.posY) && !player.mapId.startsWith("yellow_grotte_nexus")) {
-            if (isTrainerDefeated(PNJ5_CLEARED_MARKER)) {
-                if (++pnj5StepsOutside >= PNJ5_REARM_STEPS) { clearTrainerMarker(PNJ5_CLEARED_MARKER); pnj5StepsOutside = 0 }
-            } else pnj5StepsOutside = 0
-        }
+        // GARDIEN DE LA GROTTE DU NEXUS (PNJ 5) : le RÉ-ARM se fait à la NOUVELLE ENTRÉE dans la grotte (dans setMap,
+        //   via le passeur), plus par un compteur de pas dehors. Dans une même visite, le marqueur persiste (refresh
+        //   inclus) → les échelles restent franchissables ; une sortie + nouvelle entrée le ré-arme.
         // SENTINELLE (PNJ 10) — INTERCEPTION : marcher sur le couloir (17-19,18) LANCE le combat tant qu'elle n'est
         // pas vaincue CETTE visite (bloqueur pur, sans gate). On ne bouge pas, on tourne face à elle et on enchaîne.
         if ((next.posX !== player.posX || next.posY !== player.posY)
@@ -1848,6 +1842,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
                 // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.
                 if (getActiveWorld() === "run3" && targetMapId === "yellow_centrale") run3CentralePity = { count: 0, hSeen: false, kSeen: false }
+                // (Le RÉ-ARM du gardien de la Grotte du Nexus se fait dans setMap — l'entrée de la grotte passe par le
+                //   passeur → setMap(PNJ5_MAP_ID), jamais par ce bloc move()/newMap. Cf. setMap.)
                 // Mémorise l'origine en ENTRANT dans un intérieur partagé (→ retour dynamique +
                 // posters de Cendreville) ; on l'efface en SORTANT d'un partagé.
                 const enteringShared = targetMapId === "yellow_shop" || targetMapId === "yellow_infirmary"
@@ -3142,12 +3138,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             console.warn(`[gameStore] Map inconnue : ${mapId}`)
             return
         }
-        // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
-        // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        // Entrée grotte (par le passeur → setMap) : le gardien N'est PLUS ré-armé ici (le marqueur PERSISTANT gère
-        //   le « vaincu cette visite » + le ré-arm après 10 pas dehors → refresh-safe). On reset juste pop fusions +
-        //   démo PNJ 7 + barrage PNJ 10 + marqueur anti-spoiler fusions.
-        if (mapId === PNJ5_MAP_ID) { grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); markTrainerDefeated(GROTTE_ENTERED_MARKER); artisaneSpotIdx = -1 } // + L'ARTISANE re-tirée à un NOUVEAU spot à chaque descente dans la Grotte
+        // GARDIEN DE LA GROTTE (PNJ 5) : entrer dans la grotte se fait EXCLUSIVEMENT par le passeur → setMap(PNJ5_MAP_ID).
+        //   C'est ICI qu'on RÉ-ARME le gardien (on lève le marqueur PERSISTANT) → il faut le rebattre à CHAQUE NOUVELLE
+        //   ENTRÉE. Les échelles intra-grotte (findExitAt, transition inline) et le RELOAD (hydrate, set direct) ne
+        //   passent PAS par setMap → le marqueur PERSISTE dans une même visite ET au refresh (échelles OK). Choix Sartay.
+        if (mapId === PNJ5_MAP_ID) { clearTrainerMarker(PNJ5_CLEARED_MARKER); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); markTrainerDefeated(GROTTE_ENTERED_MARKER); artisaneSpotIdx = -1 } // + L'ARTISANE re-tirée à un NOUVEAU spot à chaque descente dans la Grotte
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false

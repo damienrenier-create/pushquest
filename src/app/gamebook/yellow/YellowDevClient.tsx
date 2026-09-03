@@ -84,7 +84,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
@@ -115,7 +115,7 @@ import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/game
 import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
-import { postRecordRun, postReplaySpend, fetchFrontierProfile, type FrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { postRecordRun, postReplaySpend, postSpend, fetchFrontierProfile, type FrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
@@ -807,7 +807,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         myUserId: userId,
         busy: !!battle || !!pvpSession || tradeBusyRef.current || ctTradeBusyRef.current,
         // La session hérite du contexte de la salle : dans l'Autel → combat de FUSION.
-        onStart: (s) => setPvpSession({ ...s, fusion: inAutel }),
+        //   RUN FUSION : un duel casino (hors Autel-sandbox) coûte 50 JETONS DE COMBAT (choix Sartay : le PvP doit avoir
+        //   un enjeu en endgame). Débité au démarrage, côté LOCAL ; si le solde est insuffisant, on n'entre pas.
+        //   (Run 3 : le PvP coûte des reps par attaque, cf. battleStore. Autres runs / Autel : PvP gratuit.)
+        onStart: async (s) => {
+            // RUN FUSION (hors Autel) : débit de 50 JC, en BEST-EFFORT — le combat a TOUJOURS lieu (on n'annule PAS
+            //   côté local si le solde manque), sinon l'ADVERSAIRE pourrait être débité pour un duel qui ne démarre pas.
+            //   Un joueur endgame a quasi toujours 50 JC ; s'il est à sec, le duel passe sans débit (toast transparent).
+            if (isRunFusion() && !inAutel) {
+                const r = await postSpend(50)
+                setToast(r.ok ? "⚔️ −50 Jetons de Combat : duel de Run Fusion engagé !" : "⚔️ Duel de Run Fusion (solde de Jetons insuffisant — pas de débit cette fois).")
+            }
+            setPvpSession({ ...s, fusion: inAutel })
+        },
     })
     const { forfeit: pvpForfeitNow } = useCasinoBattle(
         pvpSession, userId,
@@ -1940,8 +1952,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             } else {
                 // Classement final dans le bracket de 8 (helper pur testé) : 1er (titre) / 2e (finale) / demi / quart.
                 const placement = domeFinalPlacement(next.status === "won", dome.state.round)
-                const refund = domeEnergyRefund(dome.bet, placement) // ≤ mise (faucet-safe)
-                const jc = domeJcReward(dome.bet, dome.tier, placement) // Jetons ∝ mise
+                // MALUS ANTI-FARM sur un tier DÉJÀ VAINCU (domeChampionships > index du tier) : le pari reste STRESSANT.
+                //   Défaite → remboursement de la mise −30 % par défaite passée (incluse) ; re-victoire → JC −5 %/reprise.
+                const wonT = next.status === "won"
+                const beatenTier = getPlayer().domeChampionships > DOME_TIERS.indexOf(dome.tier)
+                const tierRec = getDomeTierRecord(dome.tier)
+                const refund = domeEnergyRefund(dome.bet, placement, beatenTier && !wonT ? tierRec.losses + 1 : 0) // ≤ mise (faucet-safe)
+                const jc = domeJcReward(dome.bet, dome.tier, placement, beatenTier && wonT ? tierRec.wins : 0) // Jetons ∝ mise
                 // `force` : rembourse AUSSI en run3 (symétrique au débit spendReps qui, lui, n'a pas de garde run3).
                 // Faucet-safe garanti (refund ≤ mise déjà débitée). On affiche le montant RÉELLEMENT crédité.
                 const credited = refund > 0 ? grantReps(refund, true) : 0
@@ -1966,6 +1983,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 }
                 recordDomeResult(won) // bilan DÔME (tournoi remporté / perdu) — stats Dôme dédiées
+                recordDomeTierResult(dome.tier, wonT) // bilan PAR TIER (alimente les malus anti-farm de reprise/défaite)
                 void persistYellowSaveNow() // IMMÉDIAT (non débouncé) : le titre/JC/⚡ atteint le serveur AVANT que le joueur puisse quitter l'app (fini la perte de palier)
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
@@ -3478,9 +3496,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <input type="range" min={bl.min} max={sliderMax} value={Math.min(domeSetup.bet, sliderMax)} onChange={(e) => setDomeSetup({ tier: domeSetup.tier, bet: Number(e.target.value) })} style={{ width: "90%", accentColor: "#f1c40f", margin: "4px 0" }} />
                             <div style={{ fontSize: 9.5, opacity: 0.82, margin: "2px 0 8px", lineHeight: 1.55 }}>
                                 Bourse {avail} ⚡ · blinds {bl.min}–{bl.max} · <span style={{ opacity: 0.7 }}>gains 🪙/⚡ rendus</span><br />
-                                {([["🥇 1er", 1], ["🥈 2e", 2], ["demi", 3], ["quart", 4]] as [string, 1 | 2 | 3 | 4][]).map(([lbl, p]) => (
-                                    <span key={p} style={{ display: "inline-block", marginRight: 9 }}>{lbl} <b style={{ color: "#ffe36b" }}>{domeJcReward(staked, domeSetup.tier, p)}🪙</b>/<span style={{ color: "#8fd8ff" }}>{domeEnergyRefund(staked, p)}⚡</span></span>
-                                ))}
+                                {([["🥇 1er", 1], ["🥈 2e", 2], ["demi", 3], ["quart", 4]] as [string, 1 | 2 | 3 | 4][]).map(([lbl, p]) => {
+                                    // Aperçu MALUS anti-farm : sur un tier déjà vaincu, 1er → JC −5 %/reprise ; défaites → remboursement −30 %/défaite.
+                                    const bt = getPlayer().domeChampionships > DOME_TIERS.indexOf(domeSetup.tier)
+                                    const rc = getDomeTierRecord(domeSetup.tier)
+                                    const jcP = domeJcReward(staked, domeSetup.tier, p, bt && p === 1 ? rc.wins : 0)
+                                    const rfP = domeEnergyRefund(staked, p, bt && p !== 1 ? rc.losses + 1 : 0)
+                                    return (<span key={p} style={{ display: "inline-block", marginRight: 9 }}>{lbl} <b style={{ color: "#ffe36b" }}>{jcP}🪙</b>/<span style={{ color: "#8fd8ff" }}>{rfP}⚡</span></span>)
+                                })}
                             </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                                 <button onClick={() => setDomeSetup(null)} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 11 }}>← retour</button>
@@ -3908,12 +3931,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button onClick={() => setDomePause(false)} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "7px 16px", cursor: "pointer" }}>⚔️ Affronter</button>
                             <button onClick={() => {
                                 if (!window.confirm("Abandonner le tournoi ? Tu récupères ta mise selon ta place ACTUELLE (pas de titre).")) return
-                                const p = domeFinalPlacement(false, dome.state.round) // forfait = éliminé à ce round
-                                const refundF = domeEnergyRefund(dome.bet, p)
+                                const p = domeFinalPlacement(false, dome.state.round) // forfait = éliminé à ce round (défaite)
+                                // MALUS ANTI-FARM : abandon = défaite → sur un tier DÉJÀ vaincu, remboursement de la mise −30 %/défaite passée.
+                                const beatenTierF = getPlayer().domeChampionships > DOME_TIERS.indexOf(dome.tier)
+                                const tierRecF = getDomeTierRecord(dome.tier)
+                                const refundF = domeEnergyRefund(dome.bet, p, beatenTierF ? tierRecF.losses + 1 : 0)
                                 const credited = refundF > 0 ? grantReps(refundF, true) : 0
                                 // Énergie d'attaque cumulée sur les matchs DÉJÀ gagnés : rendue AUSSI à l'abandon (déjà méritée).
                                 const energyBackF = dome.energyAccrued > 0 ? grantReps(dome.energyAccrued, true) : 0
-                                const jcF = domeJcReward(dome.bet, dome.tier, p)
+                                const jcF = domeJcReward(dome.bet, dome.tier, p) // forfait = défaite (pas de reprise gagnante → pas de malus JC)
+                                recordDomeTierResult(dome.tier, false) // défaite pour ce tier (escalade le malus de remboursement)
                                 void persistYellowSaveNow() // immédiat (fini la perte de mise/énergie si on quitte vite)
                                 postRecordRun({ mode: "DOME", streak: dome.state.round, jcEarned: jcF })
                                 setToast(`🏳️ Dôme abandonné (${["quart", "demi", "finale"][dome.state.round] ?? "manche"}) : +${jcF} 🪙 · ${credited + energyBackF} ⚡ rendus.`)

@@ -57,6 +57,8 @@ export interface YellowSave {
     introSeen: boolean
     /** Nb de victoires sur le sbire AUJOURD'HUI (reset quotidien ; plafond 2/jour). */
     sbireDefeatsToday: number
+    /** Combats vs équipes du palmarès (champ:, ×1,5 XP) LANCÉS aujourd'hui (reset quotidien ; plafond 3/jour). Optionnel. */
+    champBattlesToday?: number
     /** Daemomaniaque : nb de consultations AUJOURD'HUI (reset quotidien ; 5 gratuites puis payant). Optionnel (défaut 0). */
     consultsToday?: number
     /** L'ARCHIVISTE — nb de matchs disputés AUJOURD'HUI (gagné ou perdu ; max 5, reset quotidien). Cap du jour. */
@@ -81,6 +83,7 @@ export interface YellowSave {
     /** Réputation PvP : matchs + usages (Daemon fétiche / attaque favorite) + dégâts infligés par Daemon (top-5 duels). */
     pvpStats: { wins: number; losses: number; forfeits: number; daemonUse: Record<string, number>; moveUse: Record<string, number>; dmgByDaemon: Record<string, number> }
     domeStats?: { wins: number; losses: number; daemonUse: Record<string, number>; moveUse: Record<string, number> } // DÔME UNIQUEMENT
+    domeTierRecord?: Record<string, { wins: number; losses: number }> // DÔME — bilan par tier (malus anti-farm : remboursement −30 %/défaite + JC −5 %/reprise sur un tier déjà vaincu)
     /** Statistiques de la PARTIE (per-world → un jeu de stats par run, dont le NG+). */
     stats: YellowStats
     /** ACE (rival) : pic de niveau (ratchet) + box des contres + défaites + jour. */
@@ -332,7 +335,7 @@ export const ENERGY_LOG_MAX = 80
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -464,6 +467,16 @@ function parseDomeStats(raw: unknown): NonNullable<YellowSave["domeStats"]> {
     const o = (raw ?? {}) as Record<string, unknown>
     const n = (v: unknown) => (typeof v === "number" ? Math.max(0, Math.floor(v)) : 0)
     return { wins: n(o.wins), losses: n(o.losses), daemonUse: numRec(o.daemonUse), moveUse: numRec(o.moveUse) }
+}
+function parseDomeTierRecord(raw: unknown): Record<string, { wins: number; losses: number }> {
+    if (!raw || typeof raw !== "object") return {}
+    const n = (v: unknown) => (typeof v === "number" ? Math.max(0, Math.floor(v)) : 0)
+    const out: Record<string, { wins: number; losses: number }> = {}
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        const o = (v ?? {}) as Record<string, unknown>
+        out[k] = { wins: n(o.wins), losses: n(o.losses) }
+    }
+    return out
 }
 
 /** Statistiques de partie (per-world). Compteurs cumulés, affichés dans le menu. */
@@ -696,6 +709,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         badges: strArr(o.badges),
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
+        champBattlesToday: typeof o.champBattlesToday === "number" ? Math.max(0, Math.floor(o.champBattlesToday)) : 0,
         consultsToday: typeof o.consultsToday === "number" ? Math.max(0, Math.floor(o.consultsToday)) : 0,
         archivisteMatchesToday: typeof o.archivisteMatchesToday === "number" ? Math.max(0, Math.floor(o.archivisteMatchesToday)) : 0,
         archivisteWinsToday: typeof o.archivisteWinsToday === "number" ? Math.max(0, Math.floor(o.archivisteWinsToday)) : 0,
@@ -710,6 +724,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),
         domeStats: parseDomeStats(o.domeStats),
+        domeTierRecord: parseDomeTierRecord(o.domeTierRecord),
         stats: parseStats(o.stats),
         // NERF ACE (migration v2) : cliquet remis à zéro pour les vieilles saves → recalibrage.
         acePeakLevel: aceRatchetReset ? 0 : (typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0),

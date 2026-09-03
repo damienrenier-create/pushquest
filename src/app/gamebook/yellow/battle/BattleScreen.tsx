@@ -27,7 +27,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import { useFusionSprite } from "../useFusionSprite"
-import { usePlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, getGameMode, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
 import { attackCost, effectiveQuota, playerAttackQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -368,15 +368,17 @@ export default function BattleScreen() {
             // Coût AFFICHÉ = miroir EXACT de la déduction du store (inclut ×3 entraînement rival, ×10 vœu maudit,
             //   quota run3/fun, coût ∝ PV manquants) → source de vérité unique, plus de désync affichage/débit.
             const costs = player.moves.map((_s, i) => moveCostForDisplay(i))
-            // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
-            // (la déduction de reps est déjà sautée côté store pour le PvP).
-            const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)
+            // PvP = énergie ILLIMITÉE… SAUF en RUN 3 (concours) où le PvP coûte les reps NORMAUX par attaque (cf. store).
+            //   En run 3 PvP on grise donc les attaques inabordables ET on propose la Lutte (sinon soft-lock à court de reps).
+            const isRun3Pvp = battle.pvp && effectiveRunWorld() === "run3"
+            const freePvp = battle.pvp && !isRun3Pvp
+            const canUse = (c: number) => freePvp || (c <= reps && c <= remainingEnergy)
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
             if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 options.push({
-                    label: `${mv?.name ?? slot.moveId}${battle.pvp ? "" : `  ⚡${costs[i]}`}`,
+                    label: `${mv?.name ?? slot.moveId}${freePvp ? "" : `  ⚡${costs[i]}`}`,
                     onSelect: () => doMove(i), disabled: !canUse(costs[i]), moveSlot: i,
                 })
             })

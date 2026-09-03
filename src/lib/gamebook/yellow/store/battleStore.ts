@@ -69,6 +69,7 @@ import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
 import { funOnBadge, funOnCapture } from "./playerStore"
+import { champBattlesLeft, recordChampBattle } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, fusionTierHasReflet, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -420,6 +421,9 @@ export function startHofBattle(label: string, champTeam: ChampionMon[], expMult 
     const playerTeam = getPlayer().team
     if (playerTeam.length === 0 || champTeam.length === 0) return false
     if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
+    // CAP anti-cadeau : les combats vs équipes de JOUEURS du palmarès (champ:, ×1,5 XP) sont limités à 3/jour. On compte
+    //   les LANCEMENTS (pas les victoires) → perdre ne permet pas de relancer à l'infini. Les combats hof: (Ligue) = libres.
+    if (championReward && champBattlesLeft() <= 0) return false
     const enemyTeam = champTeam.map((m, i) => championToInstance(m, i))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
     // expMult : 0 = Ligue/HoF (challenge pur, défaut) ; 2 = arène du prochain objectif (Panthéon) ; 1 = 1 cran au-dessus.
@@ -427,6 +431,7 @@ export function startHofBattle(label: string, champTeam: ChampionMon[], expMult 
     syncPokedex(battle)
     // champ: = rematch d'une team JOUEUR du palmarès (récompense Super Ball + baie run2+) ; hof: = Ligue/HoF (pas de cadeau).
     setStore({ battle, evolutions: [], trainer: { trainerId: `${championReward ? "champ" : "hof"}:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    if (championReward) recordChampBattle() // compte le lancement (cap 3/jour)
     persistBattleSnapshot()
     return true
 }
@@ -550,9 +555,10 @@ export function getBattleEnergy(): { spent: number; cap: number } {
     return { spent: storeState.energySpent, cap: battleEnergyCap(getPlayer().badges.length) }
 }
 
-/** Coût en reps de l'attaque du Daemon actif (0 si introuvable). */
-function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
-    const me = b.player.team[b.player.activeIndex]
+/** Coût en reps de l'attaque du Daemon actif (0 si introuvable). `mon` : override le Daemon dont on calcule le coût
+ *  (PvP : le mon LOCAL peut être côté "enemy" si on est le joueur B ; sinon défaut = b.player). */
+function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInstance): number {
+    const me = mon ?? b.player.team[b.player.activeIndex]
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
     const hpFrac = me.currentHp / Math.max(1, maxHpOf(me)) // Patience : coût ∝ puissance réelle (PV bas → plus cher)
@@ -573,7 +579,9 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
 /** Coût AFFICHÉ (UI) de l'attaque du slot `moveIndex` du Daemon actif — MIROIR EXACT de la déduction réelle
  *  (inclut costMult ×3 entraînement rival, vœu maudit ×10, quota run3/fun). Source de vérité unique pour BattleScreen. */
 export function moveCostForDisplay(moveIndex: number): number {
-    const b = storeState.battle
+    // getDisplayBattle() = vue LOCALE (swappée pour le joueur B en PvP) → le coût affiché correspond au mon du JOUEUR,
+    //   cohérent avec la déduction réelle (submitPvpAction lit battle[mySide]). En solo, identique à storeState.battle.
+    const b = getDisplayBattle()
     return b ? moveCostRepsForAction(b, moveIndex) : 0
 }
 
@@ -1722,8 +1730,21 @@ function submitPvpAction(action: PlayerAction) {
     // Changement forcé de l'ADVERSAIRE : je dois attendre (je ne joue pas ce tour).
     if (battle.forcedSwitch && battle.forcedSwitch !== mySide(ctx)) return
 
-    // ÉNERGIE ILLIMITÉE en PvP (combat amical entre joueurs) : aucune déduction de reps ni
-    // plafond — toutes les attaques sont jouables sans coût (cohérent avec l'UI canUse=true).
+    // COÛT EN REPS — RUN 3 uniquement (concours) : le PvP coûte les REPS NORMAUX par attaque (comme le solo), pour que
+    //   les duels du concours aient un vrai enjeu d'énergie. Hors run 3 : PvP GRATUIT (inchangé) ; le run FUSION paie
+    //   50 JC au LANCEMENT (cf. useCasinoBattle). Fusion PvP (équipe éphémère) exclu. Déduction LOCALE (n'affecte pas
+    //   le battleChecksum → pas de désync). Struggle (index sentinelle) reste gratuit.
+    if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX && effectiveRunWorld() === "run3" && !ctx.ephemeralTeam) {
+        const meT = battle[mySide(ctx)]
+        const meMon = meT.team[meT.activeIndex]
+        const cost = meMon ? moveCostRepsForAction(battle, action.moveIndex, meMon) : 0
+        if (cost > 0) {
+            const cap = battleEnergyCap(getPlayer().badges.length)
+            if (storeState.energySpent + cost > cap) return // plafond du combat atteint (l'UI grise déjà)
+            if (!spendReps(cost)) return                    // solde global insuffisant → choisir un move moins cher / Lutte
+            storeState = { ...storeState, energySpent: storeState.energySpent + cost }
+        }
+    }
 
     // Stats PvP : Daemon fétiche + attaque favorite (sur les attaques).
     // FUSION : on N'enregistre RIEN — le speciesId est éphémère ("fusion_uidA_uidB", disposé après le

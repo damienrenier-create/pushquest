@@ -42,11 +42,14 @@ export function sizePct(bet: number): number {
 
 const RANK_REFUND: Record<DomePlacement, number> = { 1: 1.0, 2: 0.7, 3: 0.5, 4: 0.25 }
 
-/** Énergie remboursée (FAUCET-SAFE : ≤100 % de la mise, jamais de profit). 0 si éliminé/forfait. */
-export function domeEnergyRefund(bet: number, placement: DomePlacement | 0): number {
+/** Énergie remboursée (FAUCET-SAFE : ≤100 % de la mise, jamais de profit). 0 si éliminé/forfait.
+ *  `lossSteps` (défaut 0) : sur un tier DÉJÀ VAINCU, chaque DÉFAITE ampute le remboursement de 30 % cumulés (1 → −30 %,
+ *  2 → −60 %, 3 → −90 %, 4+ → 0) — le pari doit rester STRESSANT même sur un tournoi qu'on a déjà gagné (choix Sartay). */
+export function domeEnergyRefund(bet: number, placement: DomePlacement | 0, lossSteps = 0): number {
     if (!placement) return 0
     const pct = Math.min(100, sizePct(bet) * RANK_REFUND[placement])
-    return Math.min(bet, Math.floor((bet * pct) / 100))
+    const penalty = Math.max(0, 1 - 0.30 * Math.max(0, lossSteps))
+    return Math.min(bet, Math.floor((bet * pct * penalty) / 100))
 }
 
 // Taux de JC back-loadé : les petits tournois rapportent PEU (anti-farm), la vraie récolte est en haut de tableau.
@@ -55,8 +58,11 @@ const JC_RATE: Record<DomeTier, number> = { BRONZE: 0.05, ARGENT: 0.15, OR: 0.3,
 // pas de « jeton de VICTOIRE » quand on perd son match d'entrée (l'énergie de mise est rendue à part, elle).
 const RANK_JC: Record<DomePlacement, number> = { 1: 1.0, 2: 0.4, 3: 0.2, 4: 0 }
 
-/** Jetons de Combat gagnés = mise × taux du tier × classement (le VRAI profit — plus tu mises, plus tu gagnes). */
-export function domeJcReward(bet: number, tier: DomeTier, placement: DomePlacement | 0): number {
+/** Jetons de Combat gagnés = mise × taux du tier × classement (le VRAI profit — plus tu mises, plus tu gagnes).
+ *  `redoSteps` (défaut 0) : re-gagner un tier DÉJÀ VAINCU rapporte −5 % de JC par reprise (le pari est « pipé » vu
+ *  qu'on l'a déjà battu → gain décroissant, plancher 0 à la 20ᵉ reprise). Choix Sartay. */
+export function domeJcReward(bet: number, tier: DomeTier, placement: DomePlacement | 0, redoSteps = 0): number {
     if (!placement) return 0
-    return Math.floor(bet * JC_RATE[tier] * RANK_JC[placement])
+    const penalty = Math.max(0, 1 - 0.05 * Math.max(0, redoSteps))
+    return Math.floor(bet * JC_RATE[tier] * RANK_JC[placement] * penalty)
 }
