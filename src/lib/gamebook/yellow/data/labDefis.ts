@@ -254,12 +254,17 @@ const CT_DEFI_EXCLUDED = new Set([
     ...CLAN_CT_IDS,                      // CT des clans (Chapelle de Nouillon) → octroyées SEULEMENT par le chef de clan
 ])
 
+/** Multiplicateur du SEUIL DE DÉGÂTS pour gagner une CT au terminal du Prof. CHEN (« PC »).
+ *  Seuil = puissance × ce facteur. Monté de 100 → 1000 : les CT (attaques) coûtent bien plus cher à mériter
+ *  (l'économie de reps a gonflé — un seuil ×100 était devenu trivial). */
+export const CT_DEFI_POWER_MULT = 1000
+
 export interface CtDefiOption {
     ctId: string
     type: PokeType
     moveId: string
     power: number
-    /** Seuil de base = puissance × 100. */
+    /** Seuil de base = puissance × CT_DEFI_POWER_MULT. */
     baseThreshold: number
 }
 
@@ -271,14 +276,14 @@ export function ctDefiOptions(): CtDefiOption[] {
         if (ct.gift) continue // CADEAUX (arène/PNJ/clan/Maître/trophée) : JAMAIS regagnables au défi labo — comme la boutique (purchasableCts filtre gift). Couvre ct17/19/21/22/26/27/60 + ct62-65 Maître.
         const mv = getMove(ct.moveId)
         if (!mv || !mv.power || mv.power <= 0) continue
-        out.push({ ctId: ct.id, type: mv.type, moveId: ct.moveId, power: mv.power, baseThreshold: mv.power * 100 })
+        out.push({ ctId: ct.id, type: mv.type, moveId: ct.moveId, power: mv.power, baseThreshold: mv.power * CT_DEFI_POWER_MULT })
     }
     return out
 }
 
 /** Seuil de dégâts pour gagner une CT, selon le nb DÉJÀ gagnées du MÊME type (0 → base, ≥1 → ×2). */
 export function ctDefiThreshold(power: number, earnedOfType: number): number {
-    return power * 100 * (earnedOfType >= 1 ? 2 : 1)
+    return power * CT_DEFI_POWER_MULT * (earnedOfType >= 1 ? 2 : 1)
 }
 
 /** Plafond de CT gagnables PAR TYPE au défi (1re au prix de base, 2e ×2, pas de 3e). */

@@ -47,7 +47,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         //   non-funs). Barème fun 8 paliers, photo de save scopée au monde Remix (caughtThisRun).
         const r2 = evaluateRun2Badges(badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))
         const valOf = (id: string, pts: number) => (fun ? (RUN2_BADGE_REPS[id] ?? 0) : pts) // fun → reps ; non-fun → points
-        rows = r2.badges.map((st) => ({ id: st.id, label: st.label, cat: st.cat, emoji: st.emoji, color: TIER_COLOR_FUN[st.funTier], points: valOf(st.id, st.points), earned: st.earned, revealed: st.revealed, todo: st.todo }))
+        rows = r2.badges.map((st) => ({ id: st.id, label: st.label, cat: st.cat, emoji: st.emoji, color: TIER_COLOR_FUN[st.funTier], points: valOf(st.id, st.points), earned: st.earned, revealed: fun ? true : st.revealed, todo: st.todo }))
         const earnable = r2.badges.filter((b) => !b.todo) // les `todo` (Phase 2) n'entrent pas dans le dénominateur
         title = "🎖️ Trophées — Remix (Run 2)"
         earnedCount = r2.earnedCount
@@ -64,7 +64,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         const byId = new Map(result.badges.map((b) => [b.id, b]))
         rows = BADGES.map((b) => {
             const st = byId.get(b.id)!
-            return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, earned: st.earned, revealed: st.revealed, todo: false }
+            return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, earned: st.earned, revealed: fun ? true : st.revealed, todo: false }
         })
         title = "🎖️ Trophées — Découverte"
         earnedCount = result.earnedCount
@@ -75,7 +75,9 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
             : BADGES.reduce((s, b) => s + TIER_POINTS[b.tier], 0)
         totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
         unit = "pts"
-        footNote = "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
+        footNote = fun
+            ? "Tous les hauts faits sont affichés : ils te servent de guide. En gris = pas encore obtenus, colorés = décrochés."
+            : "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
     }
 
     return (

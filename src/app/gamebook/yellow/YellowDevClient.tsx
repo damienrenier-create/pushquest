@@ -4426,8 +4426,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(() => {
                             const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
                             const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
-                            // BOURSE (endgame run 3) : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Avant run 3 = prix de base.
-                            const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used }
+                            // BOURSE : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Active dès le run 3
+                            //   (endgame), ET dès le DÉBUT en mode FUN (le marché évolue aussi en fun run 1 & 2). Sinon = prix de base.
+                            const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
                             const priceOf = (it: { price: number; category: string }) => shopPrice(it.price, it.category, bourseCtx)
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
