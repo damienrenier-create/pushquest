@@ -9,6 +9,7 @@ import { getPlayer, getGameMode, getActiveWorld } from "@/lib/gamebook/yellow/st
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { BADGES, TIER_EMOJI, TIER_POINTS, TIER_EMOJI_FUN, TIER_POINTS_FUN, MEDAL_EMOJI, evaluateBadges, badgeInputFromSave, funTierOf, type BadgeTier, type TierFun } from "@/lib/gamebook/yellow/data/run1Badges"
 import { evaluateRun2Badges, RUN2_BADGE_REPS } from "@/lib/gamebook/yellow/data/run2Badges"
+import { evaluateRun3Feats } from "@/lib/gamebook/yellow/data/run3Feats"
 
 const CAT_LABEL: Record<string, string> = {
     progression: "⚔️ Progression", collection: "📖 Collection", exploration: "🗺️ Exploration", fusion: "🧬 Fusion",
@@ -25,16 +26,17 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     const dex = getPokedex()
     const fun = getGameMode() === "fun" // barème 8 paliers + médailles au lieu du barème 5-tiers
     const isRun2 = getActiveWorld() === "ngplus" // Remix → échelle des hauts faits RUN 2
+    const isRun3 = getActiveWorld() === "run3"   // Concours → hauts faits « GUIDE » (ni énergie ni points)
 
     // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze. RUN 1 UNIQUEMENT (le run 2 se
     //   classe à la performance /1000 + reps, pas aux médailles) → on ne fetch même pas en Remix.
     const [medals, setMedals] = useState<Record<string, "or" | "argent" | "bronze">>({})
     useEffect(() => {
-        if (!fun || isRun2) return
+        if (!fun || isRun2 || isRun3) return
         let cancelled = false
         fetch("/api/gamebook/yellow/fun-badges").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j?.ok) setMedals(j.medals ?? {}) }).catch(() => {})
         return () => { cancelled = true }
-    }, [fun, isRun2])
+    }, [fun, isRun2, isRun3])
 
     // ── Lignes normalisées (mêmes cartes pour run 1 « Découverte » et run 2 « Remix ») ──
     interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; earned: boolean; revealed: boolean; todo: boolean }
@@ -58,6 +60,25 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         footNote = fun
             ? "🍝 Chaque haut fait du Remix te verse de l'énergie (⚡), sans plafond, au fil de tes connexions — un Remix complet = 15 320⚡. ⏳ = bientôt disponible."
             : "Hauts faits du Remix (Run 2). ⏳ = bientôt disponible."
+    } else if (isRun3) {
+        // RUN 3 « Concours » : hauts faits GUIDE — ni énergie ni points (le run 3 se classe au SCORE, énergie
+        //   unique = arènes). Toujours affichés (revealed), pas de médailles, pas de barème. getPlayer() reflète
+        //   déjà run3World quand activeWorld==="run3" → on lit l'état actif directement.
+        const r3 = evaluateRun3Feats({
+            caughtThisRun: p.caughtThisRun ?? [],
+            badges: p.badges ?? [],
+            isChampion: p.isChampion === true,
+            ownedCts: p.ownedCts ?? [],
+            domeChampionships: p.domeChampionships ?? 0,
+        })
+        rows = r3.feats.map((f) => ({ id: f.id, label: f.label, cat: f.cat, emoji: f.emoji, color: "#7bb0ff", points: 0, earned: f.earned, revealed: true, todo: false }))
+        title = "🧭 Guide du Concours (Run 3)"
+        earnedCount = r3.earnedCount
+        totalCount = rows.length
+        totalPoints = 0
+        maxPoints = 0
+        unit = ""
+        footNote = "Ces objectifs ne rapportent NI énergie NI points — ils te servent de GUIDE pour le concours. Gris = à faire, coché = accompli. Le classement se joue au SCORE (arènes + survie)."
     } else {
         const input = badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], undefined, fun ? "fun" : undefined)
         const result = evaluateBadges(input)
@@ -86,7 +107,9 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                 <div style={S.header}>
                     <div>
                         <div style={S.title}>{title}</div>
-                        <div style={S.sub}>{earnedCount} / {totalCount} badges · <b style={{ color: "#ffd24a" }}>{totalPoints.toLocaleString("fr-FR")}</b> / {maxPoints.toLocaleString("fr-FR")} {unit}{fun && !isRun2 ? " (fun)" : ""}</div>
+                        <div style={S.sub}>{isRun3
+                            ? `${earnedCount} / ${totalCount} objectifs accomplis`
+                            : <>{earnedCount} / {totalCount} badges · <b style={{ color: "#ffd24a" }}>{totalPoints.toLocaleString("fr-FR")}</b> / {maxPoints.toLocaleString("fr-FR")} {unit}{fun && !isRun2 ? " (fun)" : ""}</>}</div>
                     </div>
                     <button style={S.close} onClick={close}>✕</button>
                 </div>
@@ -104,11 +127,11 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                         const earned = r.earned
                                         const medal = fun && earned && !isRun2 ? medals[r.id] : undefined // médaille de rapidité (fun, run 1 only)
                                         return (
-                                            <div key={r.id} style={{ ...S.badge, ...(earned ? { borderColor: r.color, background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={`${r.emoji} ${r.points} ${unit}${r.todo ? " · à venir" : ""}${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
+                                            <div key={r.id} style={{ ...S.badge, ...(earned ? { borderColor: r.color, background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={isRun3 ? `${r.emoji} ${r.label} — ${earned ? "accompli ✓" : "à faire"}` : `${r.emoji} ${r.points} ${unit}${r.todo ? " · à venir" : ""}${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
                                                 <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>
                                                 <div style={{ ...S.badgeLabel, color: earned ? "#e8ecf6" : "#6b7690" }}>{r.label}</div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: "auto" }}>
-                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{r.todo ? "⏳" : `${earned ? "+" : ""}${r.points}${isRun2 ? unit : ""}`}</span>
+                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{isRun3 ? (earned ? "✓ fait" : "à faire") : r.todo ? "⏳" : `${earned ? "+" : ""}${r.points}${isRun2 ? unit : ""}`}</span>
                                                     {medal && <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>}
                                                 </div>
                                             </div>

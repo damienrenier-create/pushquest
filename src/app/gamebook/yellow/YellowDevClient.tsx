@@ -2758,7 +2758,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 )
                             })()}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "2px 0 6px" }}>
-                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{run1Done ? " — RUN 1" : ""}</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{activeWorld === "run3" ? " — RUN 3 (guide)" : activeWorld === "ngplus" ? " — RUN 2" : run1Done ? " — RUN 1" : ""}</button>
                                 {hasArenaHof && <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>🏟️ HALL OF FAME (ARÈNES)</button>}
                                 {hasLeagueHof && <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>}
                                 {/* Classement visible DÈS le run 1 (onglet RUN 1 + Duels) ; les onglets run 2/3 sont masqués côté panneau tant qu'ils ne sont pas atteints. */}
