@@ -1249,16 +1249,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const r = await fetch("/api/gamebook/yellow/chen-gift")
                     const j = r.ok ? await r.json() : null
                     const energy = (j?.energy ?? 0) as number
-                    const events = (j?.events ?? []) as { fromNickname: string; tier: number }[]
+                    const chenEnergy = (j?.chenEnergy ?? 0) as number
+                    const clanEnergy = (j?.clanEnergy ?? 0) as number
+                    const chenFrom = ((j?.chenFrom ?? []) as string[]).join(", ")
+                    const clanFrom = ((j?.clanFrom ?? []) as string[]).join(", ")
                     if (!cancelled && energy > 0) {
                         grantRepsSoftCap(energy)
                         persistYellowSave()
-                        const who = [...new Set(events.map((e) => e.fromNickname).filter(Boolean))].join(", ")
-                        showDialogue(DUEL_DREAM_NPC, "🎁 Cadeau de Chen", [
+                        const lines: string[] = []
+                        if (chenEnergy > 0) lines.push(
                             "*Le Dieu Spaghetti surgit dans une bouffée de vapeur al dente…*",
-                            `« ${who || "Un pote"} est allé voir le Prof. CHEN — et régale toute la bande FUN : +${energy}⚡ (hors plafond) pour toi ! »`,
-                            "« Plus tes amis passent le voir, plus vous gagnez tous. À toi de les motiver ! »",
-                        ])
+                            `« ${chenFrom || "Un pote"} est allé voir le Prof. CHEN — et régale toute la bande FUN : +${chenEnergy}⚡ (hors plafond) ! Plus tes amis y passent, plus vous gagnez tous. »`,
+                        )
+                        if (clanEnergy > 0) lines.push(
+                            `🔥 LARGESSE DE CLAN : ${clanFrom || "un frère de clan"} a mené son disciple au-delà du niveau 20 — le chef fait ruisseler +${clanEnergy}⚡ sur tout le clan ! On s'élève ENSEMBLE.`,
+                        )
+                        showDialogue(DUEL_DREAM_NPC, "🎁 Cadeaux d'énergie", lines)
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }

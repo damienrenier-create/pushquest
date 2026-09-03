@@ -12,9 +12,9 @@ import { getSpecies } from "../data/species"
 import type { PokeType } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import {
-    getPlayer, getClan, joinClan, clanDaemonLevel, clanDaemonSpeciesId, isClanCtGiven, markClanCtGiven,
+    getPlayer, getClan, joinClan, clanDaemonLevel, clanDaemonSpeciesId, isClanCtGiven, markClanCtGiven, grantBonusEnergyUncapped,
     isClanTransGiven, markClanTransGiven, rivalClanSignatureInTeam, claimClanVisitToday,
-    grantReps, addItem, grantCt, logEnergyIncome, addCaught, markCaughtThisRun, TEAM_MAX, isTrainerDefeated, getActiveWorld,
+    grantReps, addItem, grantCt, logEnergyIncome, addCaught, markCaughtThisRun, TEAM_MAX, isTrainerDefeated, markTrainerDefeated, getActiveWorld,
 } from "./playerStore"
 import { markCaught } from "./pokedexStore"
 import { persistYellowSave } from "./saveManager"
@@ -22,7 +22,7 @@ import { postClanHallEntry } from "./clanHof"
 
 /** Résultat d'un press-A sur un chef : lignes de dialogue + intention en attente (scellée/annulée à la fermeture).
  *  showRoster = ouvrir le PANTHÉON du clan (membres + niveau du Daemon-clan confié) quand on visite SON chef. */
-export interface ClanChiefResult { lines: string[]; pendingJoin?: ClanKey; pendingTrain?: ClanKey; showRoster?: ClanKey }
+export interface ClanChiefResult { lines: string[]; pendingJoin?: ClanKey; pendingTrain?: ClanKey; showRoster?: ClanKey; clanGiftBroadcast?: ClanKey }
 
 /** Libellé FR du type d'un clan (seuls VOL/COMBAT/ROCHE servent ici). */
 const CLAN_TYPE_FR: Partial<Record<PokeType, string>> = { VOL: "Vol", COMBAT: "Combat", ROCHE: "Roche" }
@@ -91,6 +91,10 @@ function clanOfferPitch(clan: ClanKey): string[] {
 }
 
 const CLAN_STARTER_LEVEL = 5
+/** Cadeau d'énergie du chef (disciple > niv 20) — marqueur one-shot PAR MONDE (defeatedTrainers). */
+const CLAN_ENERGY_GIFT_MARKER = "clan_energy_gift_done"
+/** Niveau du Daemon-clan à partir duquel le chef offre le cadeau d'énergie communautaire. */
+const CLAN_ENERGY_GIFT_LEVEL = 20
 const CLAN_VISIT_BALL_ID = "poke_ball" // Nexus Ball (récompense visite quand le niveau = dizaine)
 
 /** Réaction du chef `npcId` quand le joueur lui parle (null = pas un chef de clan). */
@@ -135,6 +139,15 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
             markClanCtGiven()
             lines.push(`Niveau 50 franchi ! Reçois la CT secrète du ${c.name} — elle comble ce qui manquait à ton type.`)
         }
+        // CADEAU D'ÉNERGIE DE CLAN (one-time/monde, JAMAIS run 3) : disciple > niv 20 → +1000⚡ au membre (hors-plafond)
+        //   + 500⚡ ruisselés sur les AUTRES membres fun du MÊME clan, MÊME run (broadcast serveur : gameStore → /clan-gift).
+        let clanGiftBroadcast: ClanKey | undefined
+        if (getActiveWorld() !== "run3" && lvl > CLAN_ENERGY_GIFT_LEVEL && !isTrainerDefeated(CLAN_ENERGY_GIFT_MARKER)) {
+            grantBonusEnergyUncapped(1000, `${c.emoji} ${c.name} — largesse du chef`)
+            markTrainerDefeated(CLAN_ENERGY_GIFT_MARKER)
+            clanGiftBroadcast = clan
+            lines.push(`Ton disciple a passé le niveau 20 — le ${c.name} exulte ! Prends ces 1000⚡… et je fais ruisseler 500⚡ sur CHAQUE frère de clan de ton run. On s'élève ENSEMBLE. 🔥`)
+        }
         // Visite quotidienne : énergie = niveau du Daemon-clan (+ Nexus Ball si niveau = dizaine).
         if (claimClanVisitToday(today) && lvl > 0) {
             const added = grantReps(lvl)
@@ -159,7 +172,7 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
             postClanHallEntry({ clan, level: clanDaemonLevel(), speciesId: clanDaemonSpeciesId(), transcended: isClanTransGiven() })
         }
         persistYellowSave()
-        return { lines, pendingTrain, showRoster: clan } // + ouvre le Panthéon du clan (membres + niveaux)
+        return { lines, pendingTrain, showRoster: clan, clanGiftBroadcast } // + ouvre le Panthéon du clan (membres + niveaux)
     }
 
     // (b) MEMBRE d'un AUTRE clan → ENTRAÎNEMENT RIVAL (×3 coût / ×3 XP, 1×/jour), gate par le TRIANGLE.

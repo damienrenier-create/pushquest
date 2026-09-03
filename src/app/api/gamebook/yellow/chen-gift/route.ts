@@ -70,11 +70,18 @@ export async function GET() {
             where: { toUserId: auth.userId, claimed: false },
             select: { id: true, energy: true, tier: true, fromNickname: true }, take: 200,
         })) as { id: string; energy: number; tier: number; fromNickname: string }[]
-        if (pending.length === 0) return NextResponse.json({ ok: true, energy: 0, count: 0, events: [] })
+        if (pending.length === 0) return NextResponse.json({ ok: true, energy: 0, count: 0, events: [], chenEnergy: 0, clanEnergy: 0, chenFrom: [], clanFrom: [] })
         await fg.updateMany({ where: { id: { in: pending.map((g) => g.id) } }, data: { claimed: true } })
         const energy = pending.reduce((a, g) => a + (g.energy ?? 200), 0)
         const events = pending.slice(0, 6).map((g) => ({ fromNickname: g.fromNickname, tier: g.tier }))
-        return NextResponse.json({ ok: true, energy, count: pending.length, events })
+        // tier 9 = don du CHEF DE CLAN (≠ 1/2 = Prof Chen) → énergie + expéditeurs ventilés pour un message dédié.
+        const isClan = (t: number) => t === 9
+        const chenEnergy = pending.filter((g) => !isClan(g.tier)).reduce((a, g) => a + (g.energy ?? 200), 0)
+        const clanEnergy = pending.filter((g) => isClan(g.tier)).reduce((a, g) => a + (g.energy ?? 500), 0)
+        const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))]
+        const chenFrom = uniq(pending.filter((g) => !isClan(g.tier)).map((g) => g.fromNickname))
+        const clanFrom = uniq(pending.filter((g) => isClan(g.tier)).map((g) => g.fromNickname))
+        return NextResponse.json({ ok: true, energy, count: pending.length, events, chenEnergy, clanEnergy, chenFrom, clanFrom })
     } catch {
         return NextResponse.json({ ok: true, energy: 0, count: 0, events: [] })
     }

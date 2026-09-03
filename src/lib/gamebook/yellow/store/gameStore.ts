@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { currentVilleJauneTip } from "../data/villeJauneTips"
 import { recordCalepinTip } from "./calepinStore"
@@ -2518,7 +2518,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
             //   ici. Offert UNIQUEMENT si le joueur est réellement à court (< 1000⚡).
             if (getGameMode() === "fun" && getActiveWorld() !== "run3") {
                 if (chenGiftsRemaining() <= 0) {
-                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_DONE_LINES } })
+                    // Mes 2 cadeaux sont donnés → j'aiguille vers le CHEF DE CLAN (cadeau d'énergie communautaire si Daemon-clan > niv 20).
+                    const clanTip = getClan() ? ["« Une dernière chose : va voir le CHEF DE TON CLAN ! Si ton disciple a passé le niveau 20, il récompense TOUT le clan en énergie. La force du nombre, champion ! »"] : []
+                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: [...CHEN_FUN_GIFT_DONE_LINES, ...clanTip] } })
                     return
                 }
                 if (getPlayerSave().reps >= 1000) {
@@ -2715,6 +2717,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 pendingClanTrain: clanRes.pendingTrain ?? null,
                 clanRosterOpen: clanRes.showRoster ?? null,
             })
+            // CADEAU D'ÉNERGIE DE CLAN : broadcast serveur (500⚡) aux AUTRES membres fun du MÊME clan/run. Best-effort,
+            //   non bloquant ; le +1000⚡ du joueur a déjà été crédité côté clanChief.
+            if (clanRes.clanGiftBroadcast) fetch("/api/gamebook/yellow/clan-gift", { method: "POST" }).catch(() => {})
             return
         }
 
