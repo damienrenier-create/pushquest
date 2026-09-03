@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildNemesisChallengeTeam, buildNemesisReward, isNemesisChallengePlayer, nemesisChallengeFor, nemesisBattleTrainerId, nemesisRewardSpeciesFromTrainerId, nemesisRewardBlockedMarker } from "./nemesisChallenge"
+import { buildNemesisChallengeTeam, buildNemesisReward, isNemesisChallengePlayer, nemesisChallengeFor, nemesisBattleTrainerId, nemesisRewardSpeciesFromTrainerId, nemesisRewardBlockedMarker, nemesisRewardOptionsFor, nemesisAcompteMarker } from "./nemesisChallenge"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -76,12 +76,26 @@ describe("Défi némésis — récompense + registre par joueur", () => {
         expect(isNemesisChallengePlayer("PersonneDInconnu")).toBe(false)
     })
 
-    it("récompense de Rob : Voltapanthe (panthère ÉLEC, évo Panthéon) parfaite niv 5", () => {
-        const r = buildNemesisReward("voltapanthe")
+    it("DEAL REVANCHE de Rob : Voltapanthe (ÉLEC) niv 25 SHINY + énergie lancement/victoire", () => {
+        const opts = nemesisRewardOptionsFor("voltapanthe")
+        expect(opts.level).toBe(25)
+        expect(opts.shiny).toBe(true)
+        expect(opts.winEnergy).toBe(3000)
+        expect(nemesisChallengeFor("Rob")?.launchEnergy).toBe(2000)
+        // la récompense construite avec ces options = niv 25, shiny, ÉLEC, génétique parfaite
+        const r = buildNemesisReward("voltapanthe", opts)
         expect(getSpecies(r.speciesId)?.types).toContain("ELEC")
-        expect(r.level).toBe(5)
-        expect(r.growthMult).toBe(1.25)
+        expect(r.level).toBe(25)
+        expect(r.shiny).toBe(true)
         expect(Object.values(r.ivs).every((v) => v === 15)).toBe(true)
+    })
+
+    it("acompte marker par espèce + options vides pour un défi standard", () => {
+        expect(nemesisAcompteMarker("voltapanthe")).toBe("nemesis_acompte_voltapanthe")
+        const std = nemesisRewardOptionsFor("caninombre") // pas de deal custom → défauts
+        expect(std.level).toBeUndefined()
+        expect(std.shiny).toBeUndefined()
+        expect(std.winEnergy).toBeUndefined()
     })
 
     it("trainerId de combat porte l'espèce (round-trip) + marqueur de blocage par espèce", () => {

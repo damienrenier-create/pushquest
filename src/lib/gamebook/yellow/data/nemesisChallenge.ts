@@ -13,17 +13,24 @@ import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { bestCounter, baseSpeciesOf, speciesAtLevel } from "./ace"
 
-/** Un défi némésis = un pseudo + le Daemon qu'il gagne s'il l'emporte. */
+/** Un défi némésis = un pseudo + le Daemon qu'il gagne s'il l'emporte. Les champs optionnels permettent des
+ *  DEALS sur-mesure (revanche du génie) : récompense niveau/shiny custom + énergie créditée au lancement/à la victoire. */
 export interface NemesisChallenge {
-    nickname: string       // pseudo autorisé (insensible casse/forme Unicode)
-    rewardSpecies: string  // espèce offerte en cas de victoire (et scellée en cas de défaite)
+    nickname: string        // pseudo autorisé (insensible casse/forme Unicode)
+    rewardSpecies: string   // espèce offerte en cas de victoire (et scellée en cas de défaite)
+    rewardLevel?: number    // niveau de la récompense (défaut NEMESIS_REWARD_LEVEL = 5)
+    rewardShiny?: boolean   // récompense CHROMATIQUE (shiny)
+    launchEnergy?: number   // ⚡ crédités AU LANCEMENT du combat (une fois par tentative) — de quoi se battre
+    winEnergy?: number      // ⚡ crédités EN PLUS à la VICTOIRE
 }
 
 /** REGISTRE des défis actifs. Ajouter une ligne = ouvrir le défi à un nouveau joueur. */
 export const NEMESIS_CHALLENGES: readonly NemesisChallenge[] = [
     { nickname: "Jacanon", rewardSpecies: "caninombre" },
     { nickname: "Mools", rewardSpecies: "pyropanthe" },
-    { nickname: "Rob", rewardSpecies: "voltapanthe" }, // vœu « un électrique qui TABASSE » → panthère élec (évo Panthéon)
+    // Rob : REVANCHE (vœu 2) — après une 1re défaite, le génie rouvre le duel avec un deal généreux :
+    //   Voltapanthe niv 25 SHINY + 2000⚡ au lancement (pour avoir de quoi combattre) + 3000⚡ de plus à la victoire.
+    { nickname: "Rob", rewardSpecies: "voltapanthe", rewardLevel: 25, rewardShiny: true, launchEnergy: 2000, winEnergy: 3000 },
     { nickname: "Fraaans", rewardSpecies: "tenebrir" }, // vœu « un ténébrir » → Ténèbrir (Ténèbres/Spectre) parfait niv 5
 ]
 
@@ -38,6 +45,14 @@ export const NEMESIS_CHALLENGE_TRAINER_ID = "y_nemesis_challenge"
 export const NEMESIS_ARMED_MARKER = "nemesis_challenge_armed"   // vœu accepté → le défi est disponible
 export const NEMESIS_DONE_MARKER = "nemesis_challenge_done"     // l'unique essai est consommé (win OU lose)
 export function nemesisRewardBlockedMarker(species: string): string { return `${species}_blocked` } // défaite → l'espèce ne pope plus jamais + la Pierre Gékroc refuse d'y évoluer un Panthéon (sceau total)
+/** Acompte d'énergie DÉJÀ versé pour ce défi (une fois par tentative). Effacé lors d'une revanche. */
+export function nemesisAcompteMarker(species: string): string { return `nemesis_acompte_${species}` }
+
+/** Options de récompense d'un défi, résolues par ESPÈCE (le combat ne connaît pas le pseudo). */
+export function nemesisRewardOptionsFor(species: string): { level?: number; shiny?: boolean; winEnergy?: number } {
+    const c = NEMESIS_CHALLENGES.find((x) => x.rewardSpecies === species)
+    return { level: c?.rewardLevel, shiny: c?.rewardShiny, winEnergy: c?.winEnergy }
+}
 
 /** Emplacement du PNJ : Centre Pokémon de la Ville Jaune, case (1,7), regard vers la DROITE. */
 export const NEMESIS_CHALLENGE_MAP_ID = "yellow_infirmary"
@@ -81,10 +96,11 @@ export function buildNemesisChallengeTeam(playerTeam: readonly MonInstance[]): M
     return out
 }
 
-/** L'instance-récompense (PARFAITE, niv 5, croissance lente) prête à ajouter à l'équipe/PC. */
-export function buildNemesisReward(species: string): MonInstance {
-    return createMonInstance(species, NEMESIS_REWARD_LEVEL, {
-        ivs: 15, owned: true, growthMult: NEMESIS_REWARD_GROWTH_MULT,
+/** L'instance-récompense (IV parfaits, croissance lente) prête à ajouter à l'équipe/PC.
+ *  `opts` (deals sur-mesure) : niveau custom (défaut 5) + shiny. */
+export function buildNemesisReward(species: string, opts?: { level?: number; shiny?: boolean }): MonInstance {
+    return createMonInstance(species, opts?.level ?? NEMESIS_REWARD_LEVEL, {
+        ivs: 15, owned: true, growthMult: NEMESIS_REWARD_GROWTH_MULT, shiny: opts?.shiny || undefined,
     })
 }
 

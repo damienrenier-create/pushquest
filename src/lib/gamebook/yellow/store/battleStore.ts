@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -43,7 +43,7 @@ import { CLANS, clanTrainDailyMarker, type ClanKey } from "../data/clans"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_WIN_NO_OUTFIT_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
 import { isSurfOutfit } from "../data/avatars"
-import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward } from "../data/nemesisChallenge"
+import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, NEMESIS_REWARD_LEVEL, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward, nemesisRewardOptionsFor } from "../data/nemesisChallenge"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
 import { BERRY_IDS } from "../data/heldItems"
@@ -1141,11 +1141,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const rewardSp = nemesisRewardSpeciesFromTrainerId(storeState.trainer.trainerId)
             if (rewardSp) {
                 markTrainerDefeated(NEMESIS_DONE_MARKER)
-                addCaught(buildNemesisReward(rewardSp))
+                const opts = nemesisRewardOptionsFor(rewardSp) // deals sur-mesure : niveau/shiny + énergie de victoire
+                addCaught(buildNemesisReward(rewardSp, opts))
                 markCaught(rewardSp); markCaughtThisRun(rewardSp)
+                let bonusLine = ""
+                if (opts.winEnergy) { grantBonusEnergyUncapped(opts.winEnergy); logEnergyIncome("😈 Victoire némésis", opts.winEnergy); bonusLine = ` Et le miroir crache ${opts.winEnergy}⚡ de plus !` }
+                const lvl = opts.level ?? NEMESIS_REWARD_LEVEL
                 rematchReward = { npcId: NEMESIS_CHALLENGE_TRAINER_ID, npcName: NEMESIS_CHALLENGE_NPC_NAME, lines: [
                     ...nemesisWonLines(),
-                    `✨ Tu obtiens un ${nemesisRewardName(rewardSp)} au potentiel PARFAIT (niv 5) ! Il grandira LENTEMENT — comme les légendaires.`,
+                    `✨ Tu obtiens un ${nemesisRewardName(rewardSp)}${opts.shiny ? " ✨CHROMATIQUE✨" : ""} au potentiel PARFAIT (niv ${lvl}) ! Il grandira LENTEMENT — comme les légendaires.${bonusLine}`,
                 ] }
             }
         } else {

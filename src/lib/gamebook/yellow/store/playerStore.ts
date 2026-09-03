@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
-import { NEMESIS_ARMED_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
+import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
@@ -1505,7 +1505,13 @@ function runGenieEffect(e: GenieEffect): boolean {
             const clobbersGalijah = st.forcedEncounter?.includes('"galijah"') && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)
             st = { ...st, forcedEncounter: JSON.stringify({ speciesId: e.id, level: Math.max(1, Math.min(100, Math.floor(e.level ?? 50))), hard: !!e.hard }), defeatedTrainers: clobbersGalijah ? [...st.defeatedTrainers, GALIJAH_ARMED_MARKER] : st.defeatedTrainers }
         }; return true // rencontre imposée
-        case "nemesis_challenge": if (!st.defeatedTrainers.includes(NEMESIS_ARMED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, NEMESIS_ARMED_MARKER] }; return true // arme le défi némésis (PNJ apparaît)
+        case "nemesis_challenge": {
+            // (RE-)ARME le défi némésis. REVANCHE : on efface l'essai précédent (DONE), les scellés (_blocked, EXCLUSIFS
+            //   à la némésis) et l'acompte déjà versé → le PNJ réapparaît et le combat se rejoue À NEUF. 1er arme = simple ajout.
+            const kept = st.defeatedTrainers.filter((m) => m !== NEMESIS_DONE_MARKER && !m.endsWith("_blocked") && !m.startsWith("nemesis_acompte_"))
+            st = { ...st, defeatedTrainers: kept.includes(NEMESIS_ARMED_MARKER) ? kept : [...kept, NEMESIS_ARMED_MARKER] }
+            return true
+        }
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants

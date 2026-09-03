@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { currentVilleJauneTip } from "../data/villeJauneTips"
 import { recordCalepinTip } from "./calepinStore"
@@ -77,7 +77,7 @@ import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate, GENIE_MIN_BADGES } from "../data/genieLamp"
 import { antiNemesisFor } from "../data/genieAmbush"
-import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_NO_TEAM_LINES, nemesisIntroLines, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisChallengeFor, nemesisBattleTrainerId, buildNemesisChallengeTeam } from "../data/nemesisChallenge"
+import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_MAP_ID, NEMESIS_CHALLENGE_POS, NEMESIS_CHALLENGE_NPC_NAME, NEMESIS_NO_TEAM_LINES, nemesisIntroLines, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisChallengeFor, nemesisBattleTrainerId, buildNemesisChallengeTeam, nemesisAcompteMarker } from "../data/nemesisChallenge"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 // RUN 3 — arènes re-thémées : la carte PARTAGÉE (yellow_arena/roche/feu) est résolue en sa VARIANTE run-3 (grille
@@ -1237,6 +1237,13 @@ function tryLaunchNemesisChallenge(): ActiveDialogue | null {
     const team = getPlayerSave().team
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: NEMESIS_CHALLENGE_TRAINER_ID, npcName: NEMESIS_CHALLENGE_NPC_NAME, lineIndex: 0, lines: NEMESIS_NO_TEAM_LINES }
+    }
+    // ACOMPTE (deal génie sur-mesure, ex. Rob) : ⚡ crédités AU LANCEMENT (hors-plafond), UNE fois par tentative
+    //   → le joueur a de quoi mener le combat. Effacé lors d'une revanche (cf. re-arm), donc re-versé à chaque essai.
+    if (cfg.launchEnergy && !isTrainerDefeated(nemesisAcompteMarker(cfg.rewardSpecies))) {
+        grantBonusEnergyUncapped(cfg.launchEnergy)
+        logEnergyIncome("😈 Acompte némésis", cfg.launchEnergy)
+        markTrainerDefeated(nemesisAcompteMarker(cfg.rewardSpecies))
     }
     const enemyTeam = buildNemesisChallengeTeam(team)
     const seed = Math.floor(Math.random() * 1e9) >>> 0
