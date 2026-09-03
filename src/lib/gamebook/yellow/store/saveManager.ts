@@ -341,9 +341,16 @@ export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: Cham
     startNgPlusWorld(starter)
     // POKÉDEX conservé (cumulatif) : les captures du run 1 restent — on ne réinitialise PLUS le pokédex au NG+.
     setActiveWorld("ngplus")
-    // 4) 10000⚡ de départ + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
-    raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 10000
-    grantReps(NGPLUS_START_ENERGY)           // reps → 10000
+    // 4) DON de départ du run 2. MODE FUN (choix Sartay) : 1000⚡ (plafond de base 1000) + 10 FUSIO-BALLS pour lancer
+    //    les fusions — l'énergie vient ensuite des vrais reps + des hauts faits du Remix. NON-FUN : NGPLUS_START_ENERGY
+    //    (10000⚡) + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
+    if (getGameMode() === "fun") {
+        grantReps(1000)           // reps → 1000 (repsCap de base = 1000, pas de raise)
+        addItem("fusio_ball", 10) // 10 Fusio-Balls de départ
+    } else {
+        raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 10000
+        grantReps(NGPLUS_START_ENERGY)           // reps → 10000
+    }
     // NB : la DAEMONFLÛTE n'est PLUS donnée au départ du run 2. Elle se MÉRITE : le Prof. CHEN la remet quand on
     //   redevient Champion (Ligue run 2 finie, isChampion=true) → Sylvebarbe / Zone de Combat gagnés, pas offerts.
     // 5) Flush immédiat (top-level = monde LIVE inchangé → garde-fou OK).
@@ -618,7 +625,7 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     setActiveWorld("replay")
     reregisterCustomDaemons() // rend les Daemons custom résolvables en combat dans la bulle de rejeu (aligne les 6 chemins d'hydratation)
     // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
-    if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // REJEU run 2 = 10000⚡ (comme le NG+ initial — choix Sartay)
+    if (run === "run2") { if (getGameMode() === "fun") { grantReps(1000); addItem("fusio_ball", 10) } else { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) } } // REJEU run 2 = même don que le NG+ initial : fun 1000⚡+10 fusio-balls, non-fun 10000⚡
     else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
     else { // run1 : reporte l'énergie réelle (relève le cap au besoin) + cadeaux de bienvenue → jouable dès le départ (sinon 0⚡).
         if (carryReps > 1000) raiseRepsCap(carryReps - 1000)

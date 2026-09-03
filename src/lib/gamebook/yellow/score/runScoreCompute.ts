@@ -16,7 +16,7 @@
 import { visibleDexSpecies, SPECIES } from "../data/species"
 
 // Références de normalisation (les « max » de chaque jauge) — tunables en un chiffre.
-export const ENERGY_BUDGET = 10000  // énergie offerte au départ du run 2 (NGPLUS_START_ENERGY)
+export const ENERGY_BUDGET = 10000  // réf. de normalisation (non-fun : NGPLUS_START_ENERGY 10000 ; fun : 1000⚡ + 10 fusio-balls). Constante indicative, non utilisée par le score fun (perf /1000).
 export const LEVEL_MAX = 600        // Σ niveaux « plein » = 6 × 100
 export const STEP_MAX = 30000       // au-delà → 0 pt sur le facteur « peu de pas »
 

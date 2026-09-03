@@ -2241,7 +2241,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique le NG+ ET la fenêtre d'abandon.
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
-            "« Voici ta seconde vie : ta création pour seul allié, 6000 énergies bénies, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »",
+            getGameMode() === "fun"
+                ? "« Voici ta seconde vie : ta création pour seul allié, 1000 énergies + 10 FUSIO-BALLS pour tes fusions, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »"
+                : "« Voici ta seconde vie : ta création pour seul allié, 10000 énergies bénies, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »",
             "« Des Daemons jamais vus rôdent sur les routes, les types ont basculé, et des CT INÉDITES t'attendent. Rien ne sera comme avant, Maître. »",
             ...(getGameMode() === "fun" ? [
                 "« Ton SCORE du Remix = ta PERFORMANCE, notée sur 1000 : ton Pokédex du Remix, ton taux de victoire et les niveaux de ton équipe. »",
@@ -2249,7 +2251,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             ] : [
                 "« Ton défi de gloire : rallier la Ligue et la vaincre. Ton SCORE = ta PERFORMANCE — Pokédex, taux de victoire et niveaux d'équipe, notée sur 1000. La trace que tu graves dans le Nexus. »",
             ]),
-            "« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création ET les 6000⚡ à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »",
+            `« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création${getGameMode() === "fun" ? ", les 1000⚡ ET les Fusio-Balls" : " ET les 10000⚡"} à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »`,
             "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
             "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",
         ])
