@@ -1170,17 +1170,17 @@ function hhMulberry32(seed: number): () => number {
 function hashStr(s: string): number { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
 
 // ── DÉFI FUN « Pokémon du jour » ────────────────────────────────────────────────────────────────────────────────
-/** Rareté (poids de spawn de base) → reps (plus rare = plus payé), bornée 20-100. Paliers alignés sur COMMON/UNCOMMON/RARE/VERY_RARE. */
+/** Rareté (poids de spawn de base) → reps (plus rare = plus payé), bornée 40-160. Paliers alignés sur COMMON/UNCOMMON/RARE/VERY_RARE. */
 export function rarityRepsTarget(base: number): number {
-    if (base >= COMMON) return 20
-    if (base >= UNCOMMON) return 40
-    if (base >= RARE) return 60
-    if (base >= VERY_RARE) return 80
-    return 100 // giga-rare / extrêmement rare
+    if (base >= COMMON) return 40
+    if (base >= UNCOMMON) return 70
+    if (base >= RARE) return 100
+    if (base >= VERY_RARE) return 130
+    return 160 // giga-rare / extrêmement rare
 }
 /** CIBLE DU JOUR (défi fun) : tirage DÉTERMINISTE (même seed pour tous) dans l'UNION des pools des zones ACCESSIBLES
  *  (`mapIds`). Inclut les bases stade 1/2 ET les mono (base sans évolution) ; EXCLUT uniquement les LÉGENDAIRES.
- *  Renvoie l'espèce + les reps (20-100 selon rareté). null si aucune candidate. */
+ *  Renvoie l'espèce + les reps (40-160 selon rareté). null si aucune candidate. */
 export function funDailyTarget(mapIds: readonly string[], dayKey: string): { speciesId: string; base: number; reps: number } | null {
     const seen = new Set<string>()
     const cand: { speciesId: string; base: number }[] = []

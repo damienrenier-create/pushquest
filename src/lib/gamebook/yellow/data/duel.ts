@@ -40,9 +40,10 @@ const WIN_LINES: readonly string[] = [
     "Par tous les coudes de macaronis ! Le reflet de %O n'a pas tenu une louche face à toi.",
 ]
 /** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. */
-export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string }): string[] {
+export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string; chips?: number }): string[] {
     const gifts = ["✨ XP DOUBLÉE", `🎁 ${r.ballLabel}`]
     if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (tu as sué pour cette victoire !)`)
+    if (r.chips && r.chips > 0) gifts.push(`🎰 +${r.chips} jetons casino (tente ta chance à la roulette !)`)
     if (r.ctDropped) gifts.push("🌑 la CT60 « Reflet Fatal » — une relique INÉDITE des ténèbres !")
     return [
         fill(pick(WIN_LINES), oppNick),

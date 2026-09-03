@@ -10,16 +10,16 @@ describe("défis fun — récompenses (fonctions pures)", () => {
         expect(funArenaReward(3)).toBe(200)
         expect(funArenaReward(5)).toBe(300)
     })
-    it("sprint : 50 × N", () => {
-        expect(funSprintReward(3)).toBe(150)
-        expect(funSprintReward(6)).toBe(300)
+    it("sprint : 75 × N", () => {
+        expect(funSprintReward(3)).toBe(225)
+        expect(funSprintReward(6)).toBe(450)
     })
-    it("rareté → reps, bornée 20-100", () => {
-        expect(rarityRepsTarget(100)).toBe(20)  // COMMON
-        expect(rarityRepsTarget(45)).toBe(40)   // UNCOMMON
-        expect(rarityRepsTarget(14)).toBe(60)   // RARE
-        expect(rarityRepsTarget(5)).toBe(80)    // VERY_RARE
-        expect(rarityRepsTarget(2)).toBe(100)   // giga-rare
+    it("rareté → reps, bornée 40-160", () => {
+        expect(rarityRepsTarget(100)).toBe(40)   // COMMON
+        expect(rarityRepsTarget(45)).toBe(70)    // UNCOMMON
+        expect(rarityRepsTarget(14)).toBe(100)   // RARE
+        expect(rarityRepsTarget(5)).toBe(130)    // VERY_RARE
+        expect(rarityRepsTarget(2)).toBe(160)    // giga-rare
     })
     it("zones accessibles du « Pokémon du jour » (union, + Centrale/Manoir)", () => {
         expect(funDailyZones([], [])).toEqual(["yellow_route_nord"])

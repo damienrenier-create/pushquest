@@ -3066,7 +3066,7 @@ export function ensureDailyChips(today: string, quotaReached: boolean): boolean 
     if (!today) return false
     const d = st.labDefi
     if (d.chipDay === today) return false
-    let n = CHIP_MIN + Math.floor(Math.random() * (CHIP_MAX - CHIP_MIN + 1)) // 1..4 cases gagnantes
+    let n = CHIP_MIN + Math.floor(Math.random() * (CHIP_MAX - CHIP_MIN + 1)) // 2..6 cases gagnantes
     if (quotaReached) n += 1
     const pool = casinoFloorTiles()
     const chips: Array<{ x: number; y: number; count: number }> = []

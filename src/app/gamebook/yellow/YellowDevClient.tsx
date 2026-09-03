@@ -1504,6 +1504,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // Récompense graduée par progression d'arène : Nexus-Ball (arènes 1-2) → Super (3-5) → HYPER (post-arène 5).
             const rewardBall = duelRewardBall(getPlayer().badges.length)
             addItem(rewardBall.id, 1)
+            // JETONS CASINO : petit bonus « chance » en plus de la ball + reps (3 → 8 selon progression d'arène).
+            const duelChips = 3 + getPlayer().badges.length
+            grantRouletteTicket(duelChips)
             // Remboursement au KO : plus le vainqueur a perdu de Daemons (galère), plus il récupère d'énergie dépensée.
             const refund = Math.round(duelResult.energySpent * Math.min(6, duelResult.faints) / 6)
             if (refund > 0) grantReps(refund)
@@ -1517,7 +1520,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
             }).catch(() => {})
-            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label }))
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label, chips: duelChips }))
         } else {
             logEnergyIncome("⚔️ Consolation de duel", grantReps(DUEL_LOSS_CONSOLE_REPS))
             persistYellowSave()

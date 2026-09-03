@@ -2,8 +2,8 @@
 //
 // DÉFIS FUN (mode "fun", run 1) — REMPLACENT l'encodage muscu. 3 défis chronométrés qui créditent de l'énergie :
 //   • ARÈNE : battre une arène (de A à Z) dans l'heure → 100/150/200/250/300⚡ (par n° d'arène).
-//   • SPRINT : capturer N espèces DIFFÉRENTES en 10 min → 50×N⚡. Échelle N qui NE se réinitialise JAMAIS (3,4,5…).
-//   • CIBLE DU JOUR : capturer LE Pokémon du jour (zone = dernière arène battue) dans l'heure → 20-100⚡ selon sa rareté.
+//   • SPRINT : capturer N espèces DIFFÉRENTES en 10 min → 75×N⚡. Échelle N qui NE se réinitialise JAMAIS (3,4,5…).
+//   • CIBLE DU JOUR : capturer LE Pokémon du jour (zone = dernière arène battue) dans l'heure → 40-160⚡ selon sa rareté.
 // Complétion AUTOMATIQUE (hooks combat : badge / capture) tant que le défi est actif et dans sa fenêtre. Un seul défi
 // actif à la fois. État groupé dans player.funDefis (save yellow JSON, aucune migration). Cf. la cible du jour :
 // funDailyTarget() dans data/encounters.ts (accès aux pools + seed déterministe).
@@ -87,8 +87,8 @@ export function funLevelMultiplier(avgLevel: number): number {
 export function funArenaRewardScaled(badgeCount: number, avgLevel: number): number {
     return Math.round(funArenaReward(badgeCount) * funLevelMultiplier(avgLevel))
 }
-/** SPRINT : 50 × N (N = objectif de la manche). */
-export function funSprintReward(n: number): number { return 50 * Math.max(1, n) }
+/** SPRINT : 75 × N (N = objectif de la manche). */
+export function funSprintReward(n: number): number { return 75 * Math.max(1, n) }
 // CIBLE DU JOUR : la récompense (20-100 selon rareté) est figée dans dailyReps au tirage (cf. encounters.funDailyTarget).
 
 /** ZONES ACCESSIBLES pour la « cible du jour » (union) : plus le joueur progresse, plus le pool s'élargit.

@@ -133,9 +133,9 @@ export function casinoFloorTiles(): { x: number; y: number }[] {
     for (let y = 1; y <= 10; y++) for (let x = 1; x <= 20; x++) if (isCasinoFloorTile(x, y)) out.push({ x, y })
     return out
 }
-/** Nb de jetons (tickets casino) dans une case gagnante. */
-export const CHIP_MIN = 1
-export const CHIP_MAX = 4
+/** Nb de jetons (tickets casino) dans une case gagnante — ET nb de cases gagnantes/jour (mêmes bornes). */
+export const CHIP_MIN = 2
+export const CHIP_MAX = 6
 /** Valeur de mise d'un jeton trouvé (= ticket casino de base). */
 export const CHIP_TICKET_VALUE = 10
 /** SÉQUENCE SECRÈTE (nb cumulé de potions achetées → la prochaine fouille est gagnante). NE JAMAIS

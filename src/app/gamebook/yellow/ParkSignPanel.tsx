@@ -117,7 +117,7 @@ function EnergyPage() {
         return (
             <>
                 <P>🎉 En <b>mode fun</b>, pas de pompes à encoder : ton énergie de combat vient des <b>DÉFIS</b> (onglet <b>« 🎉 Défis »</b> du labo, à l'étage).</P>
-                <P><b>Démarrage offert</b> : 10 000⚡ + 10 Nexus-Ball — un gros pécule pour t'élancer. Ensuite tu recharges via <b>Blitz d'arène</b> (100→300⚡), <b>Sprint de capture</b> (50×N⚡) et le <b>Pokémon du jour</b> (20-100⚡). Le <b>Prof. Chen</b> à l'étage offre aussi 2 cadeaux.</P>
+                <P><b>Démarrage offert</b> : 10 000⚡ + 10 Nexus-Ball — un gros pécule pour t'élancer. Ensuite tu recharges via <b>Blitz d'arène</b> (100→300⚡, boosté par le niveau de ton équipe), <b>Sprint de capture</b> (75×N⚡) et le <b>Pokémon du jour</b> (40-160⚡). Le casino (jetons au sol, roulette, blackjack), les <b>duels de reflets</b> et tes <b>hauts faits</b> rechargent aussi. Le <b>Prof. Chen</b> à l'étage offre 2 cadeaux.</P>
                 <P>Chaque combat t'ouvre une <b>réserve</b> d'énergie qui <b>grandit avec tes badges</b> (200 +150 par badge) ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             </>
         )
