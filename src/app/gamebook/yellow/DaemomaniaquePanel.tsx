@@ -42,6 +42,7 @@ export default function DaemomaniaquePanel() {
     const [err, setErr] = useState<string | null>(null)
     const [selectedRun, setSelectedRun] = useState<number | null>(null) // mode POST : run choisi
     const [tab, setTab] = useState<"guide" | "compare">("guide")
+    const [spendFx, setSpendFx] = useState(0) // ⚡ : incrémenté à CHAQUE consultation PAYANTE → rejoue l'animation « −50⚡ »
 
     useEffect(() => { if (open) { void loadYellowSave(); setSel(null); setSelectedRun(null); setErr(null); setQ(""); setTab("guide") } }, [open])
 
@@ -90,6 +91,7 @@ export default function DaemomaniaquePanel() {
         if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
+        if (r.paid) setSpendFx((n) => n + 1) // consultation PAYANTE → on montre l'énergie qui part
         setRevealed((s) => new Set(s).add(sp.id))
         setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) })
     }
@@ -103,11 +105,18 @@ export default function DaemomaniaquePanel() {
     return (
         <div style={S.overlay} onClick={close}>
             <div style={S.panel} onClick={(e) => e.stopPropagation()}>
+                <style>{`
+                    .daemo-spend { position: absolute; left: 50%; top: -3px; transform: translate(-50%, 4px);
+                        color: #ff6b6b; font-weight: 700; font-size: 13px; white-space: nowrap; pointer-events: none;
+                        text-shadow: 0 1px 3px rgba(0,0,0,.5); animation: daemoSpend 1s ease-out forwards; }
+                    @keyframes daemoSpend { 0%{opacity:0; transform:translate(-50%,4px)} 15%{opacity:1} 100%{opacity:0; transform:translate(-50%,-24px)} }
+                    @media (prefers-reduced-motion: reduce) { .daemo-spend { animation: daemoFade .9s ease-out forwards; } @keyframes daemoFade { 0%{opacity:1} 100%{opacity:0} } }
+                `}</style>
                 <div style={S.header}>
                     <img src="/yellow/sprites/npc/daemomaniaque.png" alt="" style={S.portrait} onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
                     <div style={{ flex: 1 }}>
                         <div style={S.title}>👒 Le Daemomaniaque</div>
-                        <div style={S.sub}>{modeSub} · {left > 0 ? `${left} gratuite${left > 1 ? "s" : ""}` : `${CONSULT_COST}⚡/consult`} · ⚡ {player.reps}</div>
+                        <div style={S.sub}>{modeSub} · {left > 0 ? `${left} gratuite${left > 1 ? "s" : ""}` : `${CONSULT_COST}⚡/consult`} · <span style={{ position: "relative", display: "inline-block" }}>⚡ {player.reps}{spendFx > 0 && <span key={spendFx} className="daemo-spend">−{CONSULT_COST}⚡</span>}</span></div>
                     </div>
                     <button style={S.close} onClick={close}>✕</button>
                 </div>
