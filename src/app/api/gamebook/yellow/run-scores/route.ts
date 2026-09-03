@@ -231,6 +231,12 @@ export async function GET() {
             const fins = (await (prisma as any).yellowRun2Finish.findMany({ select: { userId: true }, orderBy: [{ at: "asc" }, { id: "asc" }] })) as { userId: string }[]
             fins.forEach((row, i) => { if (!run2FinishRank.has(row.userId)) run2FinishRank.set(row.userId, i) })
         } catch { /* table pas encore créée → aucun bonus (×1) */ }
+        // ÉNERGIE DÉPENSÉE (affichée entre parenthèses à côté du score, tous runs) : stats.energySpent du monde. Sert
+        //   aussi de TIE-BREAK (à score égal, moins d'énergie = mieux, cf. toList). undefined si le monde n'a pas de stats.
+        const esOf = (w: unknown): number | undefined => {
+            const st = (w as { stats?: Record<string, unknown> } | null | undefined)?.stats
+            return st ? num(st.energySpent) : undefined
+        }
         for (const s of saves) {
             const f = (s.flags ?? {}) as Record<string, unknown>
             const nickname = s.user?.nickname ?? "?"
@@ -240,7 +246,7 @@ export async function GET() {
             // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
             //   MODE FUN : barème 8 paliers × médailles de rapidité ; sinon barème 5-tiers historique (potes intacts).
             const r1 = isFun ? run1FunScore(f, s.userId, rankMap) : run1FromWorld(f)
-            if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined, fun: isFun })
+            if (r1) run1Map.set(s.userId, { userId: s.userId, nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined, fun: isFun, energySpent: esOf(f) })
             // Onglets RUN 2/3/Survie/Duels + rejeux « bis » : peuplés SEULEMENT pour un spectateur ayant fini le run 1.
             if (viewerDone) {
                 // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
@@ -251,11 +257,11 @@ export async function GET() {
                     if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", fun: true, energySpent: r2.energySpent })
                 } else {
                     const r2 = run2FromWorld(f.ngplusWorld)
-                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps, fun: false })
+                    if (r2) run2Map.set(s.userId, { userId: s.userId, nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps, fun: false, energySpent: esOf(f.ngplusWorld) })
                 }
                 // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
                 const r3 = run3FromWorld(f.run3World)
-                if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
+                if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3", energySpent: esOf(f.run3World) })
                 const r3e = run3EnergyFromWorld(f.run3World) // score « Survivant » (énergie conservée)
                 if (r3e !== null) run3EnergyMap.set(s.userId, { userId: s.userId, nickname, score: r3e, wonAt: null, factors: null, live: world === "run3" })
                 // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une

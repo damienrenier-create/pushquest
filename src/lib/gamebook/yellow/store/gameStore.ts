@@ -56,14 +56,14 @@ import type { MonInstance } from "../battle/types"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_PASS_MARKER_PREFIX, ACE_PASS_MAX_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
-import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
+import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, HH_KID_DAY_LINES_RUN3, HH_KID_NOON_LINES, isHhKidNight, isHhKidDawn, isHhKidNoon } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, SURFER_GALIJAH_HINT, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
-import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
+import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER, PNJ5_REARM_STEPS } from "../data/pnj5"
@@ -1364,7 +1364,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const shiny = Math.random() < fishingShinyChance(biteAt)
         let speciesId: string, level: number, hard: boolean
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
-        else if (tier === "rare") { speciesId = fishingRareOfHour(new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true }
+        else if (tier === "rare") { speciesId = fishingRareOfMap(get().map.id, run, new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true } // Onirail à Cendreville run 3, sinon Osquille/Rô horaire
         else { const postSylve = run !== "run1" || getPlayerSave().sylvebarbeAwake; speciesId = fishingCommon(get().map.id, run, Math.random(), postSylve); level = fishingLevel(avg, Math.random()); speciesId = speciesAtLevel(speciesId, level); hard = false } // stade NATUREL du niveau ; TÉNÈBRES (Obscurène/Cendreville) hors run 1 pré-Sylvebarbe
         // IV « PRÉVUS » (priorité au TEMPS D'ATTENTE, cf. fishingBaseIvs) ; le FERRAGE au mashing les remonte. Shiny → parfait (factory).
         set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs: fishingBaseIvs(biteAt, Math.random) } } })
@@ -2039,8 +2039,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                     hour: new Date().getHours(), // gate horaire des pops (ex. Plage : Karmaki 0-12h, Hypnoppo 12-24h, sépulcru jour, obscurène nuit)
                     // GAMIN : ×2 le légendaire de la plaine dans SA fenêtre — RUN 1 Goshendofy la NUIT (21h+),
-                    // RUN 2 (NG+) Ukognos à l'AUBE (5h-11h). Gate : confidence entendue (goshHintHeard, par monde).
-                    goshBoost: (effectiveRunWorld() === "ngplus" ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())) && getPlayerSave().goshHintHeard,
+                    // RUN 2 (NG+) Ukognos à l'AUBE (5h-11h), RUN 3 Flamarokto au ZÉNITH (11h-15h). Gate : confidence entendue.
+                    goshBoost: (effectiveRunWorld() === "run3" ? isHhKidNoon(new Date().getHours()) : effectiveRunWorld() === "ngplus" ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())) && getPlayerSave().goshHintHeard,
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
                     caughtSpecies: getPokedex().caught, // gate les entrées catchOnce (ex. Pyropanthe : 1 seule capture)
                     // REJEU : effectiveRunWorld() → un rejeu run 2/3 rencontre bien les espèces EXCLUSIVES du run rejoué (but = compléter le Pokédex).
@@ -2873,15 +2873,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         // GAMIN (plaine d'entraînement) : révèle le légendaire de la plaine dans SA fenêtre → DOUBLE ses chances
-        // (flag goshHintHeard, par monde). RUN 1 = Goshendofy la NUIT (21h+) ; RUN 2 (NG+) = Ukognos à l'AUBE (5h-11h).
+        // (flag goshHintHeard, par monde). RUN 1 = Goshendofy la NUIT (21h+) ; RUN 2 (NG+) = Ukognos à l'AUBE (5h-11h) ;
+        // RUN 3 = Flamarokto au PLEIN MIDI / ZÉNITH (11h-15h).
         if (npc.id === HH_KID_ID) {
-            const ng = effectiveRunWorld() === "ngplus" // effectiveRunWorld (pas getActiveWorld) → un REJEU run 2 parle bien d'UKOGNOS (pas Goshendofy) et vise l'AUBE, cohérent avec le boost de spawn
-            const inWindow = ng ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())
+            const world = effectiveRunWorld() // pas getActiveWorld → un REJEU parle du bon légendaire + vise la bonne fenêtre
+            const r3 = world === "run3", ng = world === "ngplus"
+            const inWindow = r3 ? isHhKidNoon(new Date().getHours()) : ng ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())
             if (inWindow) {
                 markGoshHintHeard()
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ng ? HH_KID_DAWN_LINES : HH_KID_NIGHT_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: r3 ? HH_KID_NOON_LINES : ng ? HH_KID_DAWN_LINES : HH_KID_NIGHT_LINES } })
             } else {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ng ? HH_KID_DAY_LINES_NGPLUS : HH_KID_DAY_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: r3 ? HH_KID_DAY_LINES_RUN3 : ng ? HH_KID_DAY_LINES_NGPLUS : HH_KID_DAY_LINES } })
             }
             return
         }

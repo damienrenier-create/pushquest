@@ -2243,7 +2243,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
             "« Voici ta seconde vie : ta création pour seul allié, 6000 énergies bénies, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »",
             "« Des Daemons jamais vus rôdent sur les routes, les types ont basculé, et des CT INÉDITES t'attendent. Rien ne sera comme avant, Maître. »",
-            "« Ton défi de gloire : rallier la Ligue et la vaincre avec le PLUS d'énergie possible. Ce chiffre sera TON score — la trace que tu graves dans le Nexus. »",
+            ...(getGameMode() === "fun" ? [
+                "« Ton SCORE du Remix = ta PERFORMANCE, notée sur 1000 : ton Pokédex du Remix, ton taux de victoire et les niveaux de ton équipe. »",
+                "« Et cette fois, chaque HAUT FAIT du Remix te verse de l'ÉNERGIE — SANS plafond, au fil de tes connexions ! Sois le PLUS RAPIDE de tes amis à BOUCLER le Remix (Ligue + ton double) : gros bonus de score. »",
+            ] : [
+                "« Ton défi de gloire : rallier la Ligue et la vaincre. Ton SCORE = ta PERFORMANCE — Pokédex, taux de victoire et niveaux d'équipe, notée sur 1000. La trace que tu graves dans le Nexus. »",
+            ]),
             "« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création ET les 6000⚡ à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »",
             "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
             "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",

@@ -1570,7 +1570,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     // l'affaiblir. La Master Ball shunte. Placé AVANT tryCapture (le tour est consommé, aucune capture).
     if (wild.captureRequiresDamage && wild.currentHp >= maxHpOf(wild) && !isGuaranteedBall(itemId)) {
         events.push({ kind: "ball", action: "miss" })
-        events.push({ kind: "message", text: `${displayName(wild)} est bien trop FRAIS ! Dans cette grotte, aucun Daemon ne se laisse capturer à pleins PV — affaiblis-le d'abord.` })
+        events.push({ kind: "message", text: `${displayName(wild)} est bien trop FRAIS ! Il ne se laisse pas capturer à pleins PV — affaiblis-le d'abord.` })
         return
     }
     const res = isGuaranteedBall(itemId) || goshGuaranteed

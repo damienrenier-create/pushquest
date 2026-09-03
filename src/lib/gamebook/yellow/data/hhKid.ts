@@ -46,3 +46,20 @@ export const HH_KID_DAWN_LINES = [
     "Mon grand frère jure avoir vu un lutin de flammes violettes danser dans la rosée, juste là, dans les herbes…",
     "Du coup, à cette heure-ci, tes chances de croiser UKOGNOS sont DOUBLÉES ! Ça reste rarissime… mais un peu moins. Ouvre l'œil ! 🌅",
 ]
+
+// Fenêtre "PLEIN MIDI / ZÉNITH" (RUN 3 — Flamarokto, la comète glace-feu) : heures locales 11h → 14h59.
+export const HH_KID_NOON_START = 11
+export const HH_KID_NOON_END = 15 // exclusif
+export function isHhKidNoon(hour: number): boolean {
+    return hour >= HH_KID_NOON_START && hour < HH_KID_NOON_END
+}
+// RUN 3 (concours) — le GAMIN renvoie au PLEIN MIDI, puis révèle FLAMAROKTO (la comète de glace et de feu).
+export const HH_KID_DAY_LINES_RUN3 = [
+    "Tiens, un concurrent du grand concours ! La plaine cache LE plus rapide de tous les Daemons… mais pas à n'importe quelle heure.",
+    "Reviens en PLEIN MIDI — entre 11h et 15h. On dit qu'il fend l'herbe comme une comète quand le soleil est au zénith. Ni le dragon, ni la fée… quelque chose de brûlant ET de glacé.",
+]
+export const HH_KID_NOON_LINES = [
+    "Pssst… pile à l'heure du zénith ! Écoute bien…",
+    "Mon grand frère jure avoir vu une traînée de glace ET de flammes filer dans les herbes — si vite que le sol gelait et fumait à la fois…",
+    "Du coup, à cette heure-ci, tes chances de croiser FLAMAROKTO sont DOUBLÉES ! Ça reste rarissime… mais un peu moins. Ouvre l'œil ! ☄️",
+]

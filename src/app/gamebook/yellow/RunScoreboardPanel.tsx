@@ -108,8 +108,8 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                         <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
                             style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢" : "⚪"}</span>
                     )}
-                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span>{isFunRun2 && r.energySpent !== undefined && (
-                        <span title="énergie dépensée sur tout le Remix — départage les égalités (moins = mieux)" style={{ fontSize: 9, opacity: 0.7, marginLeft: 4, whiteSpace: "nowrap" }}>(⚡{r.energySpent.toLocaleString("fr-FR")})</span>
+                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span>{r.energySpent !== undefined && (
+                        <span title="énergie totale dépensée sur ce run — départage les égalités (moins = mieux)" style={{ fontSize: 9, opacity: 0.7, marginLeft: 4, whiteSpace: "nowrap" }}>(⚡{r.energySpent.toLocaleString("fr-FR")})</span>
                     )}</span>
                     {canExpand && clickable && (
                         <button style={profBtn} title="Voir le profil" onClick={(e) => { e.stopPropagation(); openProfile(r) }}>👤</button>

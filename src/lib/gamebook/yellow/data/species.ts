@@ -3163,6 +3163,108 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Le monolithe vivant : un panda-montagne imperturbable qui ressent chaque séisme dans ses os. Rien ne le fait plier — et ce qui le touche, il le change en force.",
         sprite: "/yellow/sprites/dex/pandapurna.png",
     },
+    // ── VAROVENTAL (création Sartay, POISON/PSY — RUN 2 UNIQUEMENT) : varan spectral aux volutes toxiques. Glass
+    //    cannon MIXTE frêle et rapide (BST 410) : POISON = physique (atk) + PSY = spéciale (spc) → les DEUX voies STAB
+    //    tapent. POISON en type PRIMAIRE → une fusion issue de lui hérite TOUJOURS de POISON (Poison ET Psy repent la
+    //    Spéciale dans la table de fusion → l'égalité se tranche sur types[0]). Très rare Hautes Herbes Cendreville (PSY), run 2. ──
+    varovental: {
+        id: "varovental", dexNo: 222, name: "Varovental", types: ["POISON", "PSY"],
+        baseStats: { hp: 60, atk: 90, def: 60, spe: 110, spc: 90 }, // BST 410 — glass cannon MIXTE (Poison physique + Psy spécial), frêle (60/60), rapide (110)
+        learnset: [
+            { level: 1, moveId: "dard_venin" },      // Poison (phys) : chip + poison 30%
+            { level: 1, moveId: "choc_mental" },     // petit STAB Psy (spé)
+            { level: 1, moveId: "onde_folie" },      // confusion (disrupt)
+            { level: 10, moveId: "vampigraine" },    // Plante : draine des PV chaque tour (sustain glass cannon)
+            { level: 14, moveId: "crachat_acide" },  // Poison 40, Déf −1
+            { level: 22, moveId: "focalisation" },   // Spé +1 (set-up côté spécial)
+            { level: 28, moveId: "toxik" },          // empoisonnement GRAVE (statut)
+            { level: 30, moveId: "hypnose" },        // sommeil (fiable car rapide)
+            { level: 38, moveId: "miasme_corrosif" },// STAB Poison 85 (phys)
+            { level: 46, moveId: "vague_mentale" },  // STAB Psy 90 (spé)
+            { level: 54, moveId: "bombe_beurk" },    // STAB Poison 90 (phys)
+            { level: 62, moveId: "eveil_divin" },    // STAB Psy 90 + Spé à chaque coup (snowball)
+            { level: 80, moveId: "patience" },       // capstone karmique (jusqu'à 150 à bas PV)
+            { level: 85, moveId: "mega_sangsue" },   // Plante : drain 50% (soutient le sustain avec Vampigraine)
+        ],
+        catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", runTwoOnly: true,
+        role: "Poison/Psy — glass cannon MIXTE rapide + sustain (rare Hautes Herbes, run 2 ; fusion → Poison)",
+        description: "Un varan spectral dont la queue exhale des volutes toxiques teintées de psi. Frêle mais foudroyant : il frappe l'esprit ET le corps avant qu'on l'ait vu bouger, draine ce qu'il peut, puis s'effondre au moindre contre.",
+        sprite: "/yellow/sprites/dex/varovental.png",
+    },
+    // ── CÉRÉBIUM (création Sartay, MÉTAL/PSY — RUN FUSION = run 1 post-Sylvebarbe) : « prodige de fer », cristal
+    //    psychique enchâssé dans une carcasse d'acier juvénile. MIXTE équilibré (BST 450) : Métal physique (atk) +
+    //    Psy spécial (spc). Très rare, hautes herbes Route Nord, JAMAIS au-dessus du niveau 20, capture IMPOSSIBLE
+    //    tant qu'il n'a pas pris de dégât (captureRequiresDamage). Courbe 'fast' (monte vite jeune puis plafonne).
+    //    Fusion → MÉTAL (def 95 ≥ spc 92 ; un build qui dump la Déf peut basculer en Psy — propriété émergente). ──
+    cerebium: {
+        id: "cerebium", dexNo: 223, name: "Cérébium", types: ["METAL", "PSY"],
+        baseStats: { hp: 88, atk: 92, def: 95, spe: 83, spc: 92 }, // BST 450 — prodige MIXTE équilibré (Métal phys + Psy spé)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "griffe_acier" },    // STAB Métal (phys)
+            { level: 7, moveId: "choc_mental" },     // STAB Psy (spé)
+            { level: 13, moveId: "onde_folie" },     // confusion
+            { level: 18, moveId: "tete_de_fer" },    // STAB Métal 80 (phys)
+            { level: 24, moveId: "focalisation" },   // Spé +1
+            { level: 32, moveId: "vague_mentale" },  // STAB Psy 90 (spé)
+            { level: 40, moveId: "repos" },          // soin 50%
+            { level: 48, moveId: "poing_meteore" },  // STAB Métal 90 (phys, +Atq)
+            { level: 58, moveId: "eveil_divin" },    // STAB Psy 90 + Spé (snowball)
+        ],
+        catchRate: 25, baseExp: 170, rarity: "RARE", growthRate: "fast", hiddenUntilCaught: true, postLeague: true, // run Fusion (post-Sylvebarbe) → hors du dex run-1 « 150 », comme Sylvebarbe/Géckèbre
+        role: "Métal/Psy — prodige mixte (run Fusion, très rare Route Nord, plafonné niv 20, capture si blessé)",
+        description: "Un noyau de cristal psychique enchâssé dans une carcasse de fer juvénile. Il pense plus vite qu'il ne grandit — puis son alliage se fige, et sa croissance avec.",
+        sprite: "/yellow/sprites/dex/cerebium.png",
+    },
+    // ── ONIRAIL (création Sartay, EAU/FÉE — RUN 3 UNIQUEMENT) : créature-train onirique des eaux dormantes.
+    //    Attaquant 100 % SPÉCIAL tanky (Eau ET Fée = spéciales dans le moteur), ATK dumpée. NE se pêche QU'À
+    //    CENDREVILLE en run 3 (tier rare de la pêche, cf. fishing.ts). Fusion → FÉE (spc 120 > spe → Fée rep=spe). ──
+    onirail: {
+        id: "onirail", dexNo: 224, name: "Onirail", types: ["EAU", "FEE"],
+        baseStats: { hp: 84, atk: 45, def: 80, spe: 95, spc: 120 }, // BST 424 — attaquant SPÉCIAL tanky (Eau + Fée spé), ATK dumpée
+        learnset: [
+            { level: 1, moveId: "pistolet_a_o" },        // STAB Eau
+            { level: 1, moveId: "bourrasque_feerique" }, // STAB Fée
+            { level: 1, moveId: "charge" },
+            { level: 8, moveId: "onde_folie" },          // confusion
+            { level: 14, moveId: "lame_eau" },           // STAB Eau 65
+            { level: 20, moveId: "voile_feerique" },     // STAB Fée 60
+            { level: 26, moveId: "osmose" },             // soin
+            { level: 32, moveId: "charme_feerique" },    // STATUT Fée : Atq de la cible −2
+            { level: 40, moveId: "coup_d_givre" },       // couverture Glace
+            { level: 46, moveId: "eclat_lunaire" },      // STAB Fée 85 (+Spé)
+            { level: 52, moveId: "repos" },              // soin 50%
+            { level: 60, moveId: "hydrocanon" },         // STAB Eau 110 (capstone)
+        ],
+        catchRate: 30, baseExp: 190, rarity: "RARE", growthRate: "medium_fast", runThreeOnly: true,
+        role: "Eau/Fée — attaquant spécial tanky (rare, run 3, pêche à Cendreville uniquement)",
+        description: "Une créature-train onirique qui glisse sur les eaux dormantes. On ne la ferre qu'à Cendreville, quand le brouillard confond le rêve et le reflet.",
+        sprite: "/yellow/sprites/dex/onirail.png",
+    },
+    // ── FLAMAROKTO (création Sartay, GLACE/FEU — LÉGENDAIRE du RUN 3) : comète vivante de glace et de flammes,
+    //    3e légendaire des Hautes Herbes (run 1 = Goshendofy, run 2 = Ukognos, run 3 = Flamarokto). Glass cannon
+    //    SPÉCIAL : le + RAPIDE du jeu (spe 140) + Spé au max (150). Même condition d'apparition/capture que ses
+    //    aînés (pop statique HH, Hyper Nexus Ball + statut) — héritée par le swap tg.legendary. ──
+    flamarokto: {
+        id: "flamarokto", dexNo: 225, name: "Flamarokto", types: ["GLACE", "FEU"],
+        baseStats: { hp: 125, atk: 50, def: 85, spe: 140, spc: 150 }, // BST 550 — légendaire glass cannon spécial : le + rapide (140), Spé max (150)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "coup_d_givre" },     // STAB Glace d'entrée (65, 10% gel)
+            { level: 20, moveId: "tison" },           // STAB Feu 45, 30% brûlure (meilleure chance offensive)
+            { level: 26, moveId: "focalisation" },    // set-up Spé +1
+            { level: 32, moveId: "souffle_polaire" }, // STAB Glace 90
+            { level: 38, moveId: "fournaise" },       // STATUT Feu : brûlure GARANTIE
+            { level: 44, moveId: "lance_flammes" },   // STAB Feu 95
+            { level: 50, moveId: "repos" },           // soin 50% (dans le set de CAPTURE, niv 50)
+            { level: 92, moveId: "blizzard" },        // capstone Glace 110, 30% gel (ultra-tardif, post-capture)
+        ],
+        catchRate: 8, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true, runThreeOnly: true,
+        role: "Légendaire GLACE/FEU — apex des Hautes Herbes en run 3 (le + rapide + Spé max, capture Ball+statut)",
+        description: "Une comète vivante de glace et de flammes qui hante les hautes herbes du concours. Nul n'est plus rapide ; son souffle gèle et embrase dans le même éclat.",
+        sprite: "/yellow/sprites/dex/flamarokto.png",
+        hiddenUntilCaught: true,
+    },
     // ── NÉMÉSIS de Bidouzen (création d'Embi, PSY/COMBAT) : les VAUTOURS DES TÉNÈBRES (TÉNÈBRES/VOL). Sweepers
     //    PHYSIQUES immunisés à l'arme n°1 de Karatame (PSY ×0) et qui le brisent en STAB VOL physique ×2 sur sa DÉF 70.
     //    Ténèbres = spéciale dans le moteur → sert la DÉFENSE (immunité psy) + le statut ; l'offense passe par VOL. ──

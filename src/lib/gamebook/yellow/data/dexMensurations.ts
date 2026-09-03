@@ -392,6 +392,10 @@ export const DEX_SIZE: Record<string, DexSize> = {
     fujipanda: { size: [0.5, 0.8], weight: [16, 34], quip: "Une enclume duveteuse. Ne roule jamais dans une pente vers un Fujipanda." },
     kilipanda: { size: [1.1, 1.6], weight: [90, 160], quip: "Il mâche du bambou pétrifié. Ça t'informe sur ses dents… et ta mâchoire." },
     pandapurna: { size: [2.0, 2.8], weight: [300, 520], quip: "On l'a longtemps pris pour un sommet. Puis le sommet a bâillé." },
+    varovental: { size: [1.5, 2.1], weight: [26, 52], quip: "Long, sec et beaucoup trop rapide : le temps de sentir l'odeur de venin, il t'a déjà lu les pensées et détalé." },
+    cerebium: { size: [1.1, 1.5], weight: [95, 190], quip: "Petit pour son poids : c'est le noyau de cristal, dense comme une enclume, qui plombe la balance — pas la carcasse." },
+    onirail: { size: [3.6, 6.2], weight: [120, 340], weightMode: "special", quip: "On ne le mesure pas, on le regarde passer : un convoi de rêve qui s'étire sur l'eau dormante avant de s'évaporer." },
+    flamarokto: { size: [1.9, 2.7], weight: [58, 128], quip: "Léger comme une comète et deux fois plus pressé : quand tu l'as vu, il est déjà de l'autre côté du champ." },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: { size: [0.4, 0.62], weight: [2.5, 5.5], weightMode: "special", quip: "Un vieux vautour drapé dans un imper trop grand, si léger qu'on le prendrait pour un tas de plumes oublié sur une branche." },
     // 175 · Macabour (TENEBRES/VOL)

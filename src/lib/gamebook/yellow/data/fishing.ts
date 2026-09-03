@@ -43,6 +43,12 @@ export function fishingRareOfHour(hour: number): string {
     const h = ((Math.floor(hour) % 24) + 24) % 24
     return h >= 8 && h < 20 ? "osquille" : "ro"
 }
+/** RARE pêché selon le PLAN D'EAU + le RUN : ONIRAIL (Eau/Fée) à CENDREVILLE en RUN 3 uniquement (exclusif),
+ *  sinon le rare horaire habituel (Osquille jour / Rô nuit). */
+export function fishingRareOfMap(mapId: string, run: string, hour: number): string {
+    if (mapId === "yellow_cendreville" && run === "run3") return "onirail"
+    return fishingRareOfHour(hour)
+}
 
 // ── TIRAGE DU TIER (par prise) ───────────────────────────────────────────────────────────────────────────────
 export const FISHING_NOCATCH = 0.40    // le plus souvent, ça ne mord pas

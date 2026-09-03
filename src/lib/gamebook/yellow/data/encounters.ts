@@ -41,6 +41,7 @@ interface WildEntry {
     captureMult?: number          // ×<1 → capture PLUS DURE (ex. Thundah, Bélunode)
     captureTaunt?: string         // message de RAILLERIE au 1er lancer (créations finales niv 75 de la Grotte du Nexus)
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
+    captureRequiresDamage?: boolean // capture IMPOSSIBLE tant que la cible est à PLEINS PV — affaiblis-la d'abord (ex. Cérébium)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
     minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
     hourRange?: [number, number]  // ne pop QUE dans cette fenêtre horaire [début, fin[ (0-23). fin<=début = enjambe minuit (ex. [20,8]). Sinon poids 0
@@ -206,9 +207,13 @@ const guideTable = (run: number): Record<string, Zone> =>
 // goshendofy devient UKOGNOS, et « mottoche » est RETIRÉ des pools de type (exclusif à la Grotte en run 2).
 // (run 1 et run 3 : grille inchangée — goshendofy + mottoche présents.)
 const guideGridLegendary = (tg: TrainingGrid, run: number): WildEntry | undefined =>
-    !tg.legendary ? undefined : run === 2 ? { ...tg.legendary, speciesId: "ukognos" } : tg.legendary
+    !tg.legendary ? undefined
+        : run === 3 ? { ...tg.legendary, speciesId: "flamarokto" } // run 3 : Flamarokto (Glace/Feu) remplace Goshendofy
+        : run === 2 ? { ...tg.legendary, speciesId: "ukognos" }    // run 2 : Ukognos (Fée)
+        : tg.legendary                                              // run 1 : Goshendofy (Dragon)
 const guideGridTypePool = (pool: WildEntry[], run: number): WildEntry[] =>
-    run === 2 ? pool.filter((e) => e.speciesId !== "mottoche") : pool
+    // RUN 2 : mottoche RETIRÉE (exclusive à la Grotte) ; Varovental n'apparaît QU'EN run 2 → retirée hors run 2.
+    run === 2 ? pool.filter((e) => e.speciesId !== "mottoche") : pool.filter((e) => e.speciesId !== "varovental")
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
 function entryYields(e: WildEntry, target: string): boolean {
     if (e.speciesId === target) return true
@@ -307,6 +312,7 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         where.push(parts.join(" · "))
         if ((m.mapId === "yellow_route_nord" || m.mapId === "yellow_grotte") || (m.e as { player?: unknown }).player) modulated = true
         if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
+        if (m.e.captureRequiresDamage) how.add("Capture IMPOSSIBLE à pleins PV : inflige-lui au moins un coup avant de lancer une Ball.")
         if (m.e.captureMinBallBonus) how.add(`Exige une Ball puissante (ballBonus ≥ ${m.e.captureMinBallBonus}).`)
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
         if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
@@ -397,7 +403,9 @@ const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
     POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
     GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
     INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
-    PSY: [{ speciesId: "nouillon", base: 100 }], // jour PSY : lignée Nouillon→Vermisaint→Divinpâte (selon la bande)
+    // jour PSY : lignée Nouillon→Vermisaint→Divinpâte. + VAROVENTAL (Poison/Psy) TRÈS RARE, EXCLUSIF RUN 2 (filtré
+    //   hors run 2 par guideGridTypePool/rollTrainingGrid, cf. mottoche en miroir).
+    PSY: [{ speciesId: "nouillon", base: 100 }, { speciesId: "varovental", base: 2, rare: true, noEvolve: true }],
 }
 
 // RATTRAPAGE run 3 en LIVE (post-Ligue) — inédits run-3 SAUVAGES rendus attrapables au champ d'entraînement,
@@ -485,6 +493,10 @@ const ZONES: Record<string, Zone> = {
             // TIME-GATED : 2 visiteurs spéciaux selon l'heure locale (fenêtres disjointes → 1 seul actif à la fois).
             { speciesId: "colibraise", base: RARE, rare: true, hourRange: [5, 12] },  // MATIN (5h→12h) : le colibri de l'aube (Vol/Feu)
             { speciesId: "carlinou", base: RARE, rare: true, hourRange: [12, 20] },   // APRÈS-MIDI (12h→20h) : le carlin qui lézarde au soleil (Feu/Dragon)
+            // CÉRÉBIUM (Métal/Psy) — RUN FUSION uniquement (postSylvebarbe → poids 0 en run 1 pré-Sylvebarbe ; run 2/3
+            //   utilisent leurs propres pools NGPLUS/RUN3 → absent). Très rare, niveau plafonné ≤20 (JAMAIS plus haut),
+            //   capture IMPOSSIBLE tant qu'il n'a pas pris de dégât (captureRequiresDamage), et coriace (×0.5).
+            { speciesId: "cerebium", base: VERY_RARE, rare: true, noEvolve: true, postSylvebarbe: true, captureRequiresDamage: true, levelRange: [10, 20], captureMult: 0.5 },
         ],
     },
     // GROTTE ROCHEUSE : habitat des Daemons Roche (+ une rareté spectrale).
@@ -1235,12 +1247,13 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const tier = sq.tier
     // LÉGENDAIRE : gradient bande × tier → + fréquent au bas de la rangée du bas (tier 0).
     // GAMIN : la nuit (après sa confidence), le dénominateur est divisé par 2 → chances DOUBLÉES.
-    // MIROIR RUN 2 : en NG+, le créneau devient UKOGNOS (Fée, alter-ego de Goshendofy), gaté par le Pokédex
-    // NG+ ; en run 1, Goshendofy, gaté par goshCaught (jamais 2× sur le compte). Même gating de capture dans
-    // les deux cas (Hyper Nexus Ball + statut, ×0.5) : le swap ne touche QUE l'espèce.
+    // MIROIR PAR RUN : run 3 → FLAMAROKTO (Glace/Feu), run 2 → UKOGNOS (Fée), run 1 → Goshendofy (Dragon). Gating de
+    // capture IDENTIQUE dans les 3 cas (Hyper Nexus Ball + statut, ×0.8) : le swap ne touche QUE l'espèce. Anti-doublon :
+    // run 3 via caughtSpecies(flamarokto), run 2 via caughtSpecies(ukognos), run 1 via goshCaught.
     if (tg.legendary && tg.legendaryDenomByBand) {
-        const leg = ctx.ngplus ? { ...tg.legendary, speciesId: "ukognos" } : tg.legendary
-        const alreadyCaught = ctx.ngplus ? !!ctx.caughtSpecies?.includes("ukognos") : !!ctx.goshCaught
+        const legId = ctx.run3 ? "flamarokto" : ctx.ngplus ? "ukognos" : null
+        const leg = legId ? { ...tg.legendary, speciesId: legId } : tg.legendary
+        const alreadyCaught = legId ? !!ctx.caughtSpecies?.includes(legId) : !!ctx.goshCaught
         if (!alreadyCaught) {
             const boost = ctx.goshBoost ? 0.5 : 1
             const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
@@ -1260,8 +1273,11 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     }
     // TYPE DU JOUR pour ce carré (slot = index) → pioche pondérée dans son pool ; NIVEAU déterministe par la bande.
     const type = dailyTypes(ctx.dayKey ?? "", tg.types, tg.highOnlyTypes ?? [])[sqIdx] ?? tg.types[0]
-    // Mottoche (+ sa lignée) : au champ d'entraînement UNIQUEMENT en run 1 → filtrée en RUN 2 (exclusive à la Grotte).
-    const pool = (ctx.ngplus ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche") : tg.typePools[type]) ?? []
+    // Mottoche : champ d'entraînement UNIQUEMENT en run 1 (exclusive à la Grotte en run 2). Varovental : EXCLUSIF run 2
+    //   → retiré hors run 2 (ctx.ngplus faux = run 1 ou run 3). Filtres en miroir.
+    const pool = (ctx.ngplus
+        ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche")
+        : (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "varovental"))
     if (pool.length === 0) return null
     const weights = pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
     const total = weights.reduce((a, w) => a + w, 0)
@@ -1324,6 +1340,7 @@ function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: 
     if (entry.captureMult != null) battleCfg.captureMult = entry.captureMult
     if (entry.captureTaunt) battleCfg.captureTaunt = entry.captureTaunt
     if (entry.captureRequiresStatus) battleCfg.captureRequiresStatus = true
+    if (entry.captureRequiresDamage) battleCfg.captureRequiresDamage = true
     if (entry.captureStatusBypassesBall) battleCfg.captureStatusBypassesBall = true
     Object.assign(mon, battleCfg)
     return mon

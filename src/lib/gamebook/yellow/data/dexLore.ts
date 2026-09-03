@@ -1148,6 +1148,26 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "Les tempêtes passent. Pandapurna reste.",
         note: "Je l'ai vu absorber une déferlante d'énergie et en ressortir… plus dispos qu'avant. La montagne se nourrit de l'orage.",
     },
+    varovental: {
+        ecology: "Varan spectral au cuir sombre veiné de mauve, dont la queue exhale des volutes toxiques irisées de psi. Frêle et nerveux, il tapisse les hautes herbes de spores empoisonnées puis lit l'esprit de ses proies pour esquiver avant même leur geste. Il frappe le corps ET la pensée en une fraction de seconde — et s'effondre au premier contre encaissé.",
+        dicton: "Frappe l'esprit avant le corps, et disparais avant la riposte.",
+        note: "J'ai à peine vu une ombre et senti une odeur d'amande amère. Mon carnet manquait une page — arrachée, pas volée. Il lit avant de mordre, ce bougre.",
+    },
+    cerebium: {
+        ecology: "Un jeune noyau de cristal psychique enchâssé dans une carcasse de fer encore tendre. Son esprit court plus vite que son corps ne grandit : il maîtrise des dons mentaux dès l'éclosion, mais son alliage se fige tôt — passé un cap, il ne grandit plus. On ne le trouve que là où la terre a été retournée par de grands combats, dans les hautes herbes qui repoussent après Sylvebarbe.",
+        dicton: "L'esprit forge le métal, jamais l'inverse.",
+        note: "Impossible à cueillir intact : il faut l'égratigner pour qu'il daigne se laisser approcher — un prodige orgueilleux qui ne respecte que ce qui l'a touché.",
+    },
+    onirail: {
+        ecology: "Créature-train onirique aux wagons d'écume et de nacre féerique, qui glisse sans bruit sur les eaux dormantes. On ne la ferre qu'à Cendreville, quand le brouillard du concours confond le rêve et le reflet : elle mord l'hameçon comme on entre dans un songe, puis tire vers le fond ceux qui s'accrochent trop fort.",
+        dicton: "Monte à bord, mais ne t'endors pas : le terminus est au fond de l'eau.",
+        note: "Je l'ai vue une seule fois, à l'aube, filant sur la brume. Ma canne a plié, mon carnet s'est ouvert tout seul à une page blanche — et j'ai rêvé de rails toute la nuit.",
+    },
+    flamarokto: {
+        ecology: "Comète vivante de glace et de flammes, troisième et plus insaisissable gardien des Hautes Herbes. Là où Goshendofy sommeille et Ukognos hante, Flamarokto FILE : nul n'est plus rapide, et son souffle gèle et embrase dans le même éclat contradictoire. On ne le croise qu'au concours, camouflé dans l'herbe la plus humble, et il faut l'affaiblir ET l'entraver d'un statut pour espérer le retenir.",
+        dicton: "Le gel et le feu ne s'opposent que pour ceux qui sont trop lents pour voir qu'ils dansent.",
+        note: "Une traînée bleue et rouge, un courant d'air brûlant-glacé, et plus rien. Le sol fumait et gelait à la fois. J'ai compris pourquoi le gamin en parlait à voix basse.",
+    },
     // 174 · Sépulcru (TENEBRES/VOL)
     sepulcru: {
         ecology: "Petit urubu voûté drapé dans un plumage gris-brun ébouriffé qui pend comme une cape élimée. Sa tête chauve, d'un rose violacé, porte deux yeux luisant d'un violet spectral. Charognard patient, il se perche immobile des heures durant, guettant ce qui ne bouge plus, et ne bat des ailes qu'à contrecœur pour gagner le prochain festin.",
