@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { getPlayer, getGameMode, getActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { BADGES, TIER_EMOJI, TIER_POINTS, TIER_EMOJI_FUN, TIER_POINTS_FUN, MEDAL_EMOJI, evaluateBadges, badgeInputFromSave, funTierOf, type BadgeTier, type TierFun } from "@/lib/gamebook/yellow/data/run1Badges"
+import { BADGES, TIER_EMOJI, TIER_POINTS, TIER_EMOJI_FUN, TIER_POINTS_FUN, MEDAL_EMOJI, BADGE_REPS, evaluateBadges, badgeInputFromSave, funTierOf, type BadgeTier, type TierFun } from "@/lib/gamebook/yellow/data/run1Badges"
 import { evaluateRun2Badges, RUN2_BADGE_REPS } from "@/lib/gamebook/yellow/data/run2Badges"
 import { evaluateRun3Feats } from "@/lib/gamebook/yellow/data/run3Feats"
 
@@ -39,7 +39,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     }, [fun, isRun2, isRun3])
 
     // ── Lignes normalisées (mêmes cartes pour run 1 « Découverte » et run 2 « Remix ») ──
-    interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; earned: boolean; revealed: boolean; todo: boolean }
+    interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; energy?: number; earned: boolean; revealed: boolean; todo: boolean }
     let title: string, footNote: string, unit: string
     let earnedCount: number, totalCount: number, totalPoints: number, maxPoints: number
     let rows: Row[]
@@ -87,7 +87,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         //   Run Fusion (MégamonarX, Galijah, Ukognofy, Sylvebarbe, Dôme…). Hors fun : tout (dévoilement secret classique).
         rows = BADGES.filter((b) => !fun || byId.get(b.id)?.isRun1).map((b) => {
             const st = byId.get(b.id)!
-            return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, earned: st.earned, revealed: fun ? true : st.revealed, todo: false }
+            return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, energy: BADGE_REPS[b.id] ?? 0, earned: st.earned, revealed: fun ? true : st.revealed, todo: false }
         })
         title = "🎖️ Trophées — Découverte"
         earnedCount = fun ? rows.filter((r) => r.earned).length : result.earnedCount
@@ -99,7 +99,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
         unit = "pts"
         footNote = fun
-            ? "Les « +X pts » sont ton SCORE au classement (par palier). L'énergie que chaque trophée te rapporte est CRÉDITÉE À PART, au compte-gouttes à la connexion (🍝 Dieu Spaghetti). Gris = pas encore obtenu."
+            ? "Chaque trophée affiche « X pts · Y⚡ » : les PTS font ton SCORE au classement (par palier) ; les ⚡ sont l'ÉNERGIE qu'il rapporte, créditée à part au compte-gouttes à la connexion (🍝 Dieu Spaghetti). 🥇🥈🥉 = médaille de rapidité (1ᵉʳ/2ᵉ/3ᵉ à décrocher le trophée). Gris = pas encore obtenu."
             : "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
     }
 
@@ -133,7 +133,13 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                                 <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>
                                                 <div style={{ ...S.badgeLabel, color: earned ? "#e8ecf6" : "#6b7690" }}>{r.label}</div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: "auto" }}>
-                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{isRun3 ? (earned ? "✓ fait" : "à faire") : r.todo ? "⏳" : `${earned ? "+" : ""}${r.points}${isRun2 ? unit : fun ? " pts" : ""}`}</span>
+                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{
+                                                        isRun3 ? (earned ? "✓ fait" : "à faire")
+                                                            : r.todo ? "⏳"
+                                                            : isRun2 ? `${earned ? "+" : ""}${r.points}${unit}`
+                                                            : fun ? `${earned ? "+" : ""}${r.points} pts · ${r.energy ?? 0}⚡`
+                                                            : `${earned ? "+" : ""}${r.points}`
+                                                    }</span>
                                                     {medal && <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>}
                                                 </div>
                                             </div>

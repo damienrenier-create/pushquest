@@ -317,9 +317,10 @@ export const FUN_TIER: Record<string, TierFun> = {
 /** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct", "get_dex", "get_calepin",
-    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "held_item", "gift_ct", "bet_win", "casino_win", "ace1",
+    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "gift_ct", "bet_win", "casino_win", "ace1",
     "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible", "clan_pact",
-    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "lab_defi", "find_lamp",
+    "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "find_lamp",
+    // RETIRÉS du run 1 FUN (ingagnables en fun) : held_item (objets tenus = marchand Jetons/endgame), lab_defi (vrai workout muscu, pas d'encodage en fun).
     "types10", "dex50", "beat_mirror_higher", "gekroc", "pantheon_evo", "masterball", "shiny1", "ice_cave", "aqua_arena", "clan_daemon_50",
     "ace7", "tonytony", "starter_ko",
     "dex100", "level100", "shiny_trade",
