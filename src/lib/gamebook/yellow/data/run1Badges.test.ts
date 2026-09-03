@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, TIER_POINTS_FUN, RUN1_FUN_BADGE_IDS, FUN_TIER, medalForRank, medalMult, type BadgeInput } from "./run1Badges"
+import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, TIER_POINTS_FUN, RUN1_FUN_BADGE_IDS, FUN_TIER, BADGE_REPS, medalForRank, medalMult, type BadgeInput } from "./run1Badges"
 import { SPECIES } from "./species"
 
 const empty: BadgeInput = {
@@ -9,6 +9,34 @@ const empty: BadgeInput = {
     hhCollectorWins: 0, sbireWins: 0, hasMasterBall: false, labDefiDone: false, berrySecretKnown: false,
 }
 const state = (r: ReturnType<typeof evaluateBadges>, id: string) => r.badges.find((b) => b.id === id)!
+
+describe("Badges run 1 — défis de maîtrise + consolations (marqueurs ach_*)", () => {
+    const NEW9 = ["evo3_six", "monostage_win", "monotype_six", "release_iv", "release_ev", "noko_win10", "ball_miss10", "samefoe_loss3", "losses10_day"]
+    it("evo3_six : 5 lignées finales = non, 6 = oui", () => {
+        const mk5 = ["a", "b", "c", "d", "e"].map((x) => `ach_evo3:${x}`)
+        expect(state(evaluateBadges({ ...empty, markers: mk5 }), "evo3_six").earned).toBe(false)
+        expect(state(evaluateBadges({ ...empty, markers: [...mk5, "ach_evo3:f"] }), "evo3_six").earned).toBe(true)
+    })
+    it("monotype_six : 5 types = non, 6 = oui", () => {
+        const mk5 = ["FEU", "EAU", "PLANTE", "ELEC", "GLACE"].map((t) => `ach_monotype:${t}`)
+        expect(state(evaluateBadges({ ...empty, markers: mk5 }), "monotype_six").earned).toBe(false)
+        expect(state(evaluateBadges({ ...empty, markers: [...mk5, "ach_monotype:VOL"] }), "monotype_six").earned).toBe(true)
+    })
+    it("marqueurs one-shot : monostage / relâche / consolations", () => {
+        const pairs: [string, string][] = [["ach_monostage_win", "monostage_win"], ["ach_release_iv", "release_iv"], ["ach_release_ev", "release_ev"], ["ach_ball_miss10", "ball_miss10"], ["ach_samefoe_loss3", "samefoe_loss3"], ["ach_losses10_day", "losses10_day"], ["ach_noko_win10", "noko_win10"]]
+        for (const [marker, id] of pairs) {
+            expect(state(evaluateBadges(empty), id).earned).toBe(false)
+            expect(state(evaluateBadges({ ...empty, markers: [marker] }), id).earned).toBe(true)
+        }
+    })
+    it("les 9 comptent au run 1 fun (set + funTier + reps)", () => {
+        for (const id of NEW9) {
+            expect(RUN1_FUN_BADGE_IDS.has(id), id).toBe(true)
+            expect(FUN_TIER[id], id).toBeTruthy()
+            expect(BADGE_REPS[id], id).toBeGreaterThan(0)
+        }
+    })
+})
 
 describe("Badges run 1 — socle", () => {
     it("barème : 5 tiers 5/15/30/75/150", () => {

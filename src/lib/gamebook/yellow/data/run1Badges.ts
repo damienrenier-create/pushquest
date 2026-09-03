@@ -273,6 +273,18 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "catch_panther", label: "Capturer une Panthère élémentaire", tier: "silver", secret: true, cat: "collection", earned: (i) => has(i, "pantheon") || PANTHEON_EVOS.some((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
     { id: "geckos_all", label: "Réunir les 5 Geckos élémentaires", tier: "gold", secret: true, cat: "collection", earned: (i) => GECKO_IDS.every((id) => has(i, id)), reveal: (i) => sawAny(i, ...GECKO_IDS) },
     { id: "panthers_all", label: "Réunir les 6 Panthères élémentaires", tier: "diamond", secret: true, cat: "collection", earned: (i) => PANTHEON_EVOS.every((id) => has(i, id)), reveal: (i) => sawAny(i, "pantheon", ...PANTHEON_EVOS) },
+
+    // ── ⑪ DÉFIS DE MAÎTRISE (marqueurs ach_*, posés par les hooks combat/évolution/relâche) ──
+    { id: "evo3_six", label: "Mener 6 Daemons jusqu'à leur stade final", tier: "gold", secret: false, cat: "progression", earned: (i) => mk(i).filter((m) => m.startsWith("ach_evo3:")).length >= 6, reveal: (i) => mk(i).some((m) => m.startsWith("ach_evo3:")) },
+    { id: "monostage_win", label: "Vaincre avec une équipe 100 % mono-stade (Daemons sans évolution)", tier: "silver", secret: false, cat: "progression", earned: (i) => hasMk(i, "ach_monostage_win") },
+    { id: "monotype_six", label: "Vaincre en mono-type — 6 types différents", tier: "gold", secret: false, cat: "progression", earned: (i) => mk(i).filter((m) => m.startsWith("ach_monotype:")).length >= 6, reveal: (i) => mk(i).some((m) => m.startsWith("ach_monotype:")) },
+    { id: "release_iv", label: "Relâcher un Daemon au génome quasi-parfait (IV ≥ 75)", tier: "silver", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_release_iv"), reveal: (i) => hasMk(i, "ach_release_iv") },
+    { id: "release_ev", label: "Relâcher un Daemon surentraîné (EV > 100)", tier: "silver", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_release_ev"), reveal: (i) => hasMk(i, "ach_release_ev") },
+    // ── ⑫ CONSOLATIONS (poisse) — marqueurs ach_*, posés par les hooks combat/capture ──
+    { id: "ball_miss10", label: "Rater 10 captures d'affilée (la poisse !)", tier: "bronze", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_ball_miss10"), reveal: (i) => hasMk(i, "ach_ball_miss10") },
+    { id: "samefoe_loss3", label: "Perdre 3 fois de suite contre le même dresseur", tier: "bronze", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_samefoe_loss3"), reveal: (i) => hasMk(i, "ach_samefoe_loss3") },
+    { id: "losses10_day", label: "Encaisser 10 défaites dans la même journée (aïe !)", tier: "bronze", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_losses10_day"), reveal: (i) => hasMk(i, "ach_losses10_day") },
+    { id: "noko_win10", label: "Gagner 10 combats de dresseur sans perdre un seul Daemon", tier: "gold", secret: false, cat: "progression", earned: (i) => hasMk(i, "ach_noko_win10") },
 ]
 
 // ════════ MODE FUN — palier (TierFun) de CHAQUE badge (affichage) + quels badges comptent au RUN 1 (pré-Sylvebarbe). ════════
@@ -291,6 +303,9 @@ export const FUN_TIER: Record<string, TierFun> = {
     dex100: "d1", level100: "d1", shiny_trade: "d1", panthers_all: "d1",
     goshendofy: "d2", shiny6: "d2", all_arenas: "d2", // battre les 5 arènes → 160 pts
     champion: "d3", dex_run1: "d3", league_6shiny: "d3",
+    // — défis de maîtrise + consolations (run 1) —
+    evo3_six: "s5", monostage_win: "s4", monotype_six: "d1", release_iv: "s3", release_ev: "s3", noko_win10: "s5",
+    ball_miss10: "s1", samefoe_loss3: "s1", losses10_day: "s2",
     // — post-Sylvebarbe (RUN FUSION) : affichage seul, hors score run 1 —
     nexus_deep: "s4", // fond de la Grotte (B2F) = Grotte Fusion → run fusion
     geckos_all: "s5", catch_gecko: "s2", catch_panther: "s2", // lignées geckos/panthères → run fusion
@@ -310,6 +325,8 @@ export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "dex100", "level100", "shiny_trade",
     "goshendofy", "shiny6",
     "all_arenas", "champion", "dex_run1", "league_6shiny",
+    // défis de maîtrise + consolations (nouveaux)
+    "evo3_six", "monostage_win", "monotype_six", "release_iv", "release_ev", "noko_win10", "ball_miss10", "samefoe_loss3", "losses10_day",
     // RETIRÉS du run 1 (→ run FUSION / run 2) : geckos_all, catch_gecko, catch_panther, nexus_deep (B2F=Grotte Fusion),
     //   panthers_all (cross-run), berries (→ run 2, cf. baie Phénix).
 ])
@@ -340,6 +357,9 @@ export const BADGE_REPS: Record<string, number> = {
     geckos_all: 500, panthers_all: 500, catch_gecko: 100, catch_panther: 100,
     // ── 6 NOUVEAUX (détection Phase 2 : marqueurs dédiés / collectionneurDexGiven / berry_found:<id>) ──
     fashion_outfit: 100, archiviste_dexupdate: 100, sage_saiyan: 100, daemon_uses_berry: 100, blackjack_win: 100,
+    // ── défis de maîtrise + consolations ──
+    evo3_six: 300, monostage_win: 200, monotype_six: 400, release_iv: 150, release_ev: 150, noko_win10: 300,
+    ball_miss10: 100, samefoe_loss3: 100, losses10_day: 100,
     // berry_found:<id> = 50 (phoenix 100) → géré dynamiquement (cf. BERRY_FOUND_REPS).
 }
 

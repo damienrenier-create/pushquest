@@ -37,7 +37,7 @@ import type { StatKey } from "../battle/types"
 import type { AnanasVariant } from "../data/ananas"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
-import { aceTargetLevel, bestCounter, ACE_EASY_START } from "../data/ace"
+import { aceTargetLevel, bestCounter, ACE_EASY_START, baseSpeciesOf } from "../data/ace"
 import { GEKROC_STONE_ITEM, PANTHEON_BASE_ID, PANTHEON_STONE_EVOS } from "../data/gekroc"
 import { markCaught, getPokedex } from "./pokedexStore"
 import type { PokeType } from "../battle/types"
@@ -3374,14 +3374,55 @@ export function swapTeamPc(pcUid: string, teamUid?: string): { ok: boolean; reas
 /** RELÂCHE définitivement un Daemon de la RÉSERVE (PC) — retiré du jeu, ne revient pas. On ne relâche QUE depuis
  *  le PC (l'équipe n'est jamais concernée) → aucun risque de se retrouver sans Daemon. Refuse si posé sur l'étal. */
 /** Relâche un Daemon (ÉQUIPE ou PC) par uid — sert à retirer un meme de clan « illégal » (mode fun). No-op si listé pour échange. */
+/** HAUTS FAITS à la RELÂCHE : génome quasi-parfait (IV total ≥ 75/90) ou surentraîné (EV total > 100). Marqueurs one-shot. */
+function checkReleaseAchievements(mon: MonInstance): void {
+    const add: string[] = []
+    const ivTotal = Object.values(mon.ivs ?? {}).reduce((s, v) => s + (v ?? 0), 0)
+    const evTotal = Object.values(mon.ev ?? {}).reduce((s, v) => s + (v ?? 0), 0)
+    if (ivTotal >= 75 && !st.defeatedTrainers.includes("ach_release_iv")) add.push("ach_release_iv")
+    if (evTotal > 100 && !st.defeatedTrainers.includes("ach_release_ev")) add.push("ach_release_ev")
+    if (add.length) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ...add] }
+}
+/** Profondeur d'évolution d'une espèce depuis sa racine (1=base, 2=stade 2, 3=stade final d'une lignée à 3). */
+function evoStage(id: string): number {
+    let cur = baseSpeciesOf(id), stage = 1, guard = 0
+    while (cur !== id && guard < 6) { const next = getSpecies(cur)?.evolution?.toId; if (!next) break; cur = next; stage++; guard++ }
+    return stage
+}
+/** HAUT FAIT « 6 Daemons au stade final » : marque `ach_evo3:<racine>` quand une espèce STADE 3 (finale, lignée à 3) est atteinte. */
+export function recordEvo3IfFinal(speciesId: string): void {
+    const sp = getSpecies(speciesId)
+    if (!sp || sp.evolution) return          // peut encore évoluer → pas un stade final
+    if (evoStage(speciesId) < 3) return       // lignée < 3 stades (mono/2-stades) → ne compte pas
+    const marker = `ach_evo3:${baseSpeciesOf(speciesId)}`
+    if (!st.defeatedTrainers.includes(marker)) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, marker] }; emit() }
+}
+/** HAUTS FAITS de COMPOSITION (victoire dresseur/miroir) : équipe 100 % mono-stade + mono-type (par type commun). Idempotent. */
+export function recordTeamCompoAchievements(team: readonly MonInstance[]): void {
+    if (!team.length) return
+    const add: string[] = []
+    // mono-stade : CHAQUE membre est une espèce RACINE qui n'évolue pas (« base unique »)
+    const allMono = team.every((m) => { const sp = getSpecies(m.speciesId); return !!sp && !sp.evolution && baseSpeciesOf(m.speciesId) === m.speciesId })
+    if (allMono && !st.defeatedTrainers.includes("ach_monostage_win")) add.push("ach_monostage_win")
+    // mono-type : intersection des types de TOUS les membres → un marqueur par type commun
+    let common: string[] | null = null
+    for (const m of team) {
+        const t = (getSpecies(m.speciesId)?.types ?? []) as string[]
+        common = common === null ? [...t] : common.filter((x) => t.includes(x))
+    }
+    for (const t of common ?? []) { const mkid = `ach_monotype:${t}`; if (!st.defeatedTrainers.includes(mkid) && !add.includes(mkid)) add.push(mkid) }
+    if (add.length) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ...add] }; emit() }
+}
 export function releaseAnyMon(uid: string): boolean {
-    if (st.team.some((m) => m.uid === uid)) { st = { ...st, team: st.team.filter((m) => m.uid !== uid) }; emit(); return true }
+    const teamMon = st.team.find((m) => m.uid === uid)
+    if (teamMon) { checkReleaseAchievements(teamMon); st = { ...st, team: st.team.filter((m) => m.uid !== uid) }; emit(); return true }
     return releaseFromPc(uid).ok
 }
 export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "listed" } {
     const idx = st.pc.findIndex((m) => m.uid === uid)
     if (idx < 0) return { ok: false, reason: "introuvable" }
     if (st.pc[idx].tradeState === "listed") return { ok: false, reason: "listed" }
+    checkReleaseAchievements(st.pc[idx])
     st = { ...st, pc: st.pc.filter((_, i) => i !== idx) }
     emit()
     return { ok: true }
