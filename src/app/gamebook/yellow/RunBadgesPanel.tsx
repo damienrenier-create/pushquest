@@ -83,13 +83,15 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         const input = badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], undefined, fun ? "fun" : undefined)
         const result = evaluateBadges(input)
         const byId = new Map(result.badges.map((b) => [b.id, b]))
-        rows = BADGES.map((b) => {
+        // FUN : le panneau run 1 ne montre QUE les hauts faits du RUN 1 fun (RUN1_FUN_BADGE_IDS) — pas l'endgame /
+        //   Run Fusion (MégamonarX, Galijah, Ukognofy, Sylvebarbe, Dôme…). Hors fun : tout (dévoilement secret classique).
+        rows = BADGES.filter((b) => !fun || byId.get(b.id)?.isRun1).map((b) => {
             const st = byId.get(b.id)!
             return { id: b.id, label: b.label, cat: b.cat, emoji: fun ? TIER_EMOJI_FUN[funTierOf(b.id)] : TIER_EMOJI[b.tier], color: fun ? TIER_COLOR_FUN[funTierOf(b.id)] : TIER_COLOR[b.tier], points: st.points, earned: st.earned, revealed: fun ? true : st.revealed, todo: false }
         })
         title = "🎖️ Trophées — Découverte"
-        earnedCount = result.earnedCount
-        totalPoints = result.totalPoints
+        earnedCount = fun ? rows.filter((r) => r.earned).length : result.earnedCount
+        totalPoints = fun ? rows.filter((r) => r.earned).reduce((s, r) => s + r.points, 0) : result.totalPoints
         // En fun, le total ne compte QUE les hauts faits run 1 (pré-Sylvebarbe) ; sinon le barème 5-tiers complet.
         maxPoints = fun
             ? BADGES.reduce((s, b) => s + (byId.get(b.id)?.isRun1 ? TIER_POINTS_FUN[funTierOf(b.id)] : 0), 0)
@@ -97,7 +99,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
         unit = "pts"
         footNote = fun
-            ? "Tous les hauts faits sont affichés : ils te servent de guide. En gris = pas encore obtenus, colorés = décrochés."
+            ? "Les « +X pts » sont ton SCORE au classement (par palier). L'énergie que chaque trophée te rapporte est CRÉDITÉE À PART, au compte-gouttes à la connexion (🍝 Dieu Spaghetti). Gris = pas encore obtenu."
             : "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
     }
 
@@ -131,7 +133,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                                 <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>
                                                 <div style={{ ...S.badgeLabel, color: earned ? "#e8ecf6" : "#6b7690" }}>{r.label}</div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: "auto" }}>
-                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{isRun3 ? (earned ? "✓ fait" : "à faire") : r.todo ? "⏳" : `${earned ? "+" : ""}${r.points}${isRun2 ? unit : ""}`}</span>
+                                                    <span style={{ ...S.badgePts, marginTop: 0, color: earned ? r.color : "#4a5470" }}>{isRun3 ? (earned ? "✓ fait" : "à faire") : r.todo ? "⏳" : `${earned ? "+" : ""}${r.points}${isRun2 ? unit : fun ? " pts" : ""}`}</span>
                                                     {medal && <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>}
                                                 </div>
                                             </div>
