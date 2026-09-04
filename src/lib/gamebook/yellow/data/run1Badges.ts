@@ -219,7 +219,7 @@ export const BADGES: readonly BadgeDef[] = [
     // ── ⑤ Shiny — le prestige ──
     { id: "shiny1", label: "Capturer 1 shiny", tier: "gold", secret: false, cat: "shiny", earned: (i) => shinyCount(i) >= 1 },
     { id: "shiny6", label: "Capturer 6 shiny", tier: "legend", secret: false, cat: "shiny", earned: (i) => shinyCount(i) >= 6 },
-    { id: "shiny_trade", label: "Échanger un shiny", tier: "diamond", secret: false, cat: "shiny", earned: (i) => (i.shinyTraded ?? 0) >= 1 },
+    { id: "shiny_trade", label: "Échanger un shiny", tier: "diamond", secret: false, cat: "shiny", earned: (i) => hasMk(i, "ach_trade_shiny"), reveal: (i) => hasMk(i, "ach_trade_shiny") }, // lit le MARQUEUR (posé au Brocanteur/Dénicheur/P2P), comme r2_trade_shiny — le champ `shinyTraded` n'était jamais rempli (badge mort)
     { id: "league_6shiny", label: "Battre la Ligue avec 6 shiny", tier: "legend", secret: false, cat: "shiny", earned: (i) => i.leagueSixShiny === true },
 
     // ── ⑥ DÔME (🔒 se greffe à la découverte du Dôme) ──
