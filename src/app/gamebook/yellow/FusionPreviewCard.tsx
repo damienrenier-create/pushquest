@@ -5,7 +5,7 @@
 // à l'Autel de la Chimère ET à l'Atelier de Fusion pour VOIR ce que donnera la fusion AVANT de la créer.
 
 import { useState } from "react"
-import { fusionWeights, type FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { fusionWeights, fusionSynergy, type FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 import { useFusionSprite } from "./useFusionSprite"
@@ -50,6 +50,10 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
     const bst = STAT_LABELS.reduce((s, [k]) => s + (stats[k] ?? 0), 0)
     const ring = types[0] ? typeColor(types[0]) : "#6a5a8a"
     const CAP = 180
+    // BONUS DE SYNERGIE (clan / paire / inédite / mimimoy) → génétique boostée (0,7/0,5 au lieu de 0,6/0,45).
+    //   null sinon. Sert au badge ET à afficher les BONS poids de contribution des parents ci-dessous.
+    const synergy = aId && bId ? fusionSynergy(aId, bId) : null
+    const domW = synergy ? 0.7 : 0.6 // seuil de poids « dominant » selon le tier (boosté vs normal)
     // Sprite généré (cache serveur) — LECTURE SEULE : on affiche s'il existe déjà, sans jamais lancer de génération
     //   (celle-ci se fait à l'entrée de la Ligue de Fusion). Sinon → placeholder Chimère.
     const { url: genUrl } = useFusionSprite(aId, bId)
@@ -72,6 +76,11 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
                     <div style={{ fontSize: 11.5, opacity: 0.9, marginTop: 5 }}>N.{level} · <b style={{ color: bst >= 500 ? "#f0c840" : "#d9b8ff" }}>BST {bst}</b></div>
                 </div>
             </div>
+            {synergy && (
+                <div style={{ textAlign: "center", fontSize: 10.5, fontWeight: 800, padding: "5px 9px", borderRadius: 8, color: "#3a2a06", background: "linear-gradient(180deg,#ffe08a,#f0c033)", boxShadow: "0 0 12px #f0c84055", letterSpacing: 0.3 }}>
+                    ✨ BONUS DE SYNERGIE — génétique boostée (stats renforcées) : {synergy.label}
+                </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 14px" }}>
                 {STAT_LABELS.map(([k, lbl]) => {
                     const v = stats[k] ?? 0
@@ -88,15 +97,15 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
             </div>
             {parents && parents.length === 2 && (
                 <div style={{ borderTop: "1px solid rgba(124,79,192,0.3)", paddingTop: 7, fontSize: 9.5 }}>
-                    <div style={{ opacity: 0.7, marginBottom: 4 }}>Contribution des parents — <b style={{ color: "#f0c840" }}>★ = dominante ×0,6</b>, sinon ×0,45 :</div>
+                    <div style={{ opacity: 0.7, marginBottom: 4 }}>Contribution des parents — <b style={{ color: "#f0c840" }}>★ = dominante ×{synergy ? "0,7" : "0,6"}</b>, sinon ×{synergy ? "0,5" : "0,45"}{synergy ? " (boosté)" : ""} :</div>
                     {parents.map((p, idx) => {
-                        const w = fusionWeights(p.stats as Parameters<typeof fusionWeights>[0])
+                        const w = fusionWeights(p.stats as Parameters<typeof fusionWeights>[0], synergy ? "boosted" : "normal")
                         return (
                             <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
                                 <span style={{ width: 76, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: 0.9 }}>{p.name}</span>
                                 <span style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                                     {STAT_LABELS.map(([k, lbl]) => {
-                                        const dom = w[k] === 0.6
+                                        const dom = w[k] === domW
                                         return <span key={k} style={{ color: dom ? "#f0c840" : "#8a7fa8", fontWeight: dom ? 800 : 400 }}>{lbl}{dom ? "★" : ""}</span>
                                     })}
                                 </span>

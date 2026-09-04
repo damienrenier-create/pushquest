@@ -950,6 +950,18 @@ export function recordFusionCreated(a: string, b: string) {
     emit()
 }
 
+/** 🔮 SECRET DE SYNERGIE — marque le secret `key` comme DÉJÀ PERCÉ par ce joueur (one-shot par clé de synergie,
+ *  pas par paire → 2 panthères différentes = même secret « clan:panthere »). Renvoie true si c'est NOUVEAU (→ le
+ *  caller annonce la découverte + déclenche la fête communautaire). Persisté via defeatedTrainers. */
+export function markSynergyDiscovered(key: string): boolean {
+    if (!key) return false
+    const marker = `synergy_found_${key}`
+    if (st.defeatedTrainers.includes(marker)) return false
+    st = { ...st, defeatedTrainers: [...st.defeatedTrainers, marker] }
+    emit()
+    return true
+}
+
 /** RUN 3 — teaser Dieu Spag Lavapetit : marque la RENCONTRE vue (one-time). Idempotent. */
 export function markRun3LavapetitSeen() {
     if (st.run3LavapetitSeen) return

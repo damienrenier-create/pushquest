@@ -144,6 +144,17 @@ export default function FusiodexClient() {
         for (const m of box) { const sp = getSpecies(m.speciesId); if (sp && sp.dexNo >= 500 && sp.dexNo < 900 && !seen.has(sp.id)) seen.set(sp.id, sp) }
         return [...seen.values()].filter((sp): sp is NonNullable<typeof sp> => !!sp).sort((a, b) => a.dexNo - b.dexNo)
     }, [player.team, player.pc])
+    // ✨ SHINY : espèces-fusion dont le joueur possède AU MOINS une instance chromatique (équipe/PC). Le Fusiodex
+    //   raisonne en espèces (pas en instances) → on marque l'espèce shiny si UNE de ses instances l'est.
+    const shinyFusionIds = useMemo(() => {
+        const s = new Set<string>()
+        for (const m of [...player.team, ...player.pc]) {
+            if (!m.shiny) continue
+            const sp = getSpecies(m.speciesId)
+            if (sp && sp.dexNo >= 500 && sp.dexNo < 900) s.add(sp.id)
+        }
+        return s
+    }, [player.team, player.pc])
     const [fiche, setFiche] = useState<string | null>(null) // fiche d'espèce-fusion possédée (plein écran)
 
     // TRI de « Mes fusions » (défaut : plus récentes d'abord). Clic sur le tri actif = inverse le sens.
@@ -265,14 +276,15 @@ export default function FusiodexClient() {
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                                     {ownedFusions.map((sp) => {
                                         const bst = STAT_KEYS.reduce((s, k) => s + (sp.baseStats[k] ?? 0), 0)
-                                        const ring = sp.types[0] ? typeColor(sp.types[0]) : "#6a5a8a"
+                                        const isShiny = shinyFusionIds.has(sp.id)
+                                        const ring = isShiny ? "#ffd76a" : sp.types[0] ? typeColor(sp.types[0]) : "#6a5a8a" // anneau doré si shiny possédé
                                         // Convention : sprite déclaré, sinon /dex/<id>.png (onError → 🧬). Déposer <id>.png suffit.
                                         const spriteSrc = sp.sprite && !sp.sprite.includes("missingno") ? sp.sprite : `/yellow/sprites/dex/${sp.id}.png`
                                         return (
-                                            <button key={sp.id} onClick={() => setFiche(sp.id)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(36,29,56,0.9)", border: `1px solid ${ring}`, borderRadius: 10, padding: "6px 10px 6px 6px", cursor: "pointer", color: "#f3ecff" }}>
+                                            <button key={sp.id} onClick={() => setFiche(sp.id)} style={{ display: "flex", alignItems: "center", gap: 8, background: isShiny ? "rgba(255,215,106,0.12)" : "rgba(36,29,56,0.9)", border: `1px solid ${ring}`, borderRadius: 10, padding: "6px 10px 6px 6px", cursor: "pointer", color: "#f3ecff" }}>
                                                 <FusionSprite src={spriteSrc} ring={ring} size={40} />
                                                 <span style={{ textAlign: "left" }}>
-                                                    <span style={{ display: "block", fontSize: 12, fontWeight: 900 }}>{sp.name}</span>
+                                                    <span style={{ display: "block", fontSize: 12, fontWeight: 900 }}>{isShiny ? "✨ " : ""}{sp.name}</span>
                                                     <span style={{ display: "block", fontSize: 9.5, opacity: 0.7 }}>{sp.types.join(" / ")} · BST {bst}</span>
                                                 </span>
                                             </button>
@@ -324,7 +336,7 @@ export default function FusiodexClient() {
                 )}
             </div>
             {detail && <FusionDetailView aId={detail.aId} bId={detail.bId} onClose={() => setDetail(null)} />}
-            {fiche && <FusionSpeciesFiche speciesId={fiche} onClose={() => setFiche(null)} />}
+            {fiche && <FusionSpeciesFiche speciesId={fiche} shiny={shinyFusionIds.has(fiche)} onClose={() => setFiche(null)} />}
         </div>
     )
 }

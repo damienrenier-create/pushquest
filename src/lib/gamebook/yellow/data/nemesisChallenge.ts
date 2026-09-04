@@ -32,6 +32,9 @@ export const NEMESIS_CHALLENGES: readonly NemesisChallenge[] = [
     //   Voltapanthe niv 25 SHINY + 2000⚡ au lancement (pour avoir de quoi combattre) + 3000⚡ de plus à la victoire.
     { nickname: "Rob", rewardSpecies: "voltapanthe", rewardLevel: 25, rewardShiny: true, launchEnergy: 2000, winEnergy: 3000 },
     { nickname: "Fraaans", rewardSpecies: "tenebrir" }, // vœu « un ténébrir » → Ténèbrir (Ténèbres/Spectre) parfait niv 5
+    // DaKumba : vœu 1 « un Blaziper shiny 🥰 » → Blaziper CHROMATIQUE, IV parfaits, croissance lente (niv 5 par défaut,
+    //   à élever vers la forme finale de l'ACE serpent). Il est riche (⚡9049) → PAS d'acompte. 1 essai, contre exact de son équipe.
+    { nickname: "DaKumba", rewardSpecies: "blaziper", rewardShiny: true },
 ]
 
 /** Récompense COMMUNE : niveau 5, IV parfaits (15), croissance LENTE (comme un légendaire). */

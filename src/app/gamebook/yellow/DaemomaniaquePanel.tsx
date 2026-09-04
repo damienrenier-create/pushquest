@@ -3,6 +3,8 @@
 // DAEMOMANIAQUE — guide de capture (PNJ Cendreville, dès le RUN 1). Comportement PAR RUN (anti-spoiler) :
 //  • RUN 1  : n'affiche/informe QUE les Daemons DÉJÀ VUS (+ Goshendofy) ; localisations run 1, zones endgame masquées
 //             tant que pas Champion (pas de Grotte du Nexus/plaine).
+//  • RUN FUSION (run 4) : live POST-Champion — même liste « déjà vus » mais zones endgame RÉVÉLÉES (plaine, Grotte du
+//             Nexus, rattrapage inédits run 3). Étiqueté « Run Fusion » pour le distinguer clairement du run 1.
 //  • RUN 2  : affiche TOUS les Daemons run 1+2 ; info UNIQUEMENT sur les vus (+ Ukognos) ; localisations run 2.
 //  • RUN 3  : affiche/informe TOUS les Daemons du run 3 (sans filtre « vu »).
 //  • POST-3 : demande d'abord DE QUEL RUN parler (1/2/3), puis tout révèle.
@@ -25,7 +27,7 @@ const TYPE_COLOR: Record<string, string> = {
     ROCHE: "#c7b78b", SPECTRE: "#6f7bc5", DRAGON: "#3b7fd0", FEE: "#ec8fe6", METAL: "#79a0b2", TENEBRES: "#6a6376",
 }
 const tc = (t: string) => TYPE_COLOR[t] ?? "#8a7fb0"
-type Mode = "run1" | "run2" | "run3" | "post"
+type Mode = "run1" | "run2" | "run3" | "run4" | "post"
 
 export default function DaemomaniaquePanel() {
     const open = useGameStore((s) => s.daemomaniaqueOpen)
@@ -46,9 +48,13 @@ export default function DaemomaniaquePanel() {
 
     useEffect(() => { if (open) { void loadYellowSave(); setSel(null); setSelectedRun(null); setErr(null); setQ(""); setTab("guide") } }, [open])
 
-    const mode: Mode = aw === "ngplus" ? "run2" : aw === "run3" ? "run3" : player.run3Used ? "post" : "run1"
+    // RUN FUSION (run 4) = live POST-Champion (avant run 3). Distinct du run 1 (pré-Champion) : mêmes cartes live mais
+    //   la plaine + la Grotte du Nexus + le rattrapage inédits run 3 s'ouvrent → « pas tout à fait les mêmes Daemons ».
+    const mode: Mode = aw === "ngplus" ? "run2" : aw === "run3" ? "run3" : player.run3Used ? "post" : player.isChampion ? "run4" : "run1"
     // POST : la comparaison veut un catalogue même sans run choisi → on prend le run 3 (dex complet) par défaut pour l'onglet Comparer.
-    const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "post" ? (selectedRun ?? (tab === "compare" ? 3 : 1)) : 1
+    //   queryRun = run des DONNÉES passé à captureGuide (run 4 lit les pools run 1 + champion) ; displayRun = étiquette affichée.
+    const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "run4" ? 1 : mode === "post" ? (selectedRun ?? (tab === "compare" ? 3 : 1)) : 1
+    const displayRun = mode === "run4" ? 4 : mode === "post" ? (selectedRun ?? queryRun) : queryRun
     const hideEndgame = queryRun === 1 && !player.isChampion
     const seenSet = useMemo(() => new Set([...dex.seen, ...dex.caught]), [dex.seen, dex.caught])
     const infoAllowed = (id: string) => mode !== "run2" || seenSet.has(id) || id === "ukognos"
@@ -58,8 +64,9 @@ export default function DaemomaniaquePanel() {
         const real = (id: string) => { const sp = getSpecies(id); return sp && sp.dexNo < 500 ? sp : null } // exclut fusions (dexNo ≥ 500) et customs
         const caught = [...dex.caught], seen = [...dex.seen]
         let list: SpeciesData[]
-        if (mode === "run1") {
-            // Run 1 : uniquement les Daemons DÉJÀ CROISÉS (anti-spoiler strict) + Goshendofy en teaser légendaire.
+        if (mode === "run1" || mode === "run4") {
+            // Run 1 / Run Fusion : uniquement les Daemons DÉJÀ CROISÉS (anti-spoiler strict) + Goshendofy en teaser
+            //   légendaire. En run 4 (Champion), captureGuide révèle en plus les zones endgame (hideEndgame=false).
             const ids = new Set<string>([...seenSet].filter((id) => real(id)))
             if (real("goshendofy")) ids.add("goshendofy")
             list = [...ids].map((id) => getSpecies(id)!).filter(Boolean)
@@ -98,9 +105,10 @@ export default function DaemomaniaquePanel() {
 
     const left = freeConsultsLeft()
     const allTypes = Object.keys(TYPE_COLOR)
-    const runLabel = (r: number) => (r === 1 ? "Run 1" : r === 2 ? "Run 2" : "Run 3")
+    const runLabel = (r: number) => (r === 1 ? "Run 1" : r === 2 ? "Run 2" : r === 3 ? "Run 3" : "Run Fusion")
     const modeSub = mode === "post" ? (selectedRun ? `Infos ${runLabel(selectedRun)}` : "De quel run veux-tu parler ?")
-        : mode === "run1" ? "Run 1 — Daemons déjà croisés" : mode === "run2" ? "Run 2 — run 1 + 2" : "Run 3"
+        : mode === "run1" ? "Run 1 — Daemons déjà croisés" : mode === "run2" ? "Run 2 — run 1 + 2"
+        : mode === "run4" ? "Run Fusion — ère post-Ligue (plaine, Grotte du Nexus…)" : "Run 3"
 
     return (
         <div style={S.overlay} onClick={close}>
@@ -148,7 +156,7 @@ export default function DaemomaniaquePanel() {
                             </div>
                         </div>
                         {sel.guide.where.length > 0 && (<>
-                            <div style={S.section}>📍 OÙ &amp; QUAND ({runLabel(queryRun)})</div>
+                            <div style={S.section}>📍 OÙ &amp; QUAND ({runLabel(displayRun)})</div>
                             {sel.guide.where.map((w, i) => <div key={i} style={S.line}>{w}</div>)}
                         </>)}
                         {sel.guide.how.length > 0 && (<>
@@ -178,7 +186,7 @@ export default function DaemomaniaquePanel() {
                                     </button>
                                 )
                             })}
-                            {rows.length === 0 && <div style={S.muted}>Aucun Daemon à afficher{mode === "run1" ? " — croise-en d'abord dans les hautes herbes !" : "."}</div>}
+                            {rows.length === 0 && <div style={S.muted}>Aucun Daemon à afficher{mode === "run1" || mode === "run4" ? " — croise-en d'abord dans les hautes herbes !" : "."}</div>}
                         </div>
                     </div>
                 )}

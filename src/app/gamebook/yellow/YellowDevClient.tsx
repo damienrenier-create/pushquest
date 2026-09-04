@@ -84,7 +84,7 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
-import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
@@ -101,7 +101,8 @@ import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, 
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { computeFusion, reorderToStored } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, reorderToStored, fusionSynergy } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { reportSynergyDiscovery } from "@/lib/gamebook/yellow/synergyGift"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
@@ -3737,7 +3738,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     if (!roster.some((p) => p.a === add.a && p.b === add.b)) {
                         setFusionRoster([...roster, { a: add.a, b: add.b }])
                         const ma = byUid(add.a), mb = byUid(add.b) // uid → instance → speciesId (stable) pour le journal Fusiodex
-                        if (ma && mb) recordFusionCreated(ma.speciesId, mb.speciesId)
+                        if (ma && mb) {
+                            recordFusionCreated(ma.speciesId, mb.speciesId)
+                            // 🔮 SECRET DE SYNERGIE : fusion « spéciale » (clan/paire/inédite/mimimoy) ⇒ à la 1re fois que CE
+                            //   joueur perce CE secret (par clé, pas par paire), on l'annonce ET on déclenche la fête
+                            //   communautaire (serveur idempotent MONDIAL par clé → aucun double-versement). Cf. concern 04/09.
+                            const syn = fusionSynergy(ma.speciesId, mb.speciesId)
+                            if (syn && markSynergyDiscovered(syn.key)) {
+                                reportSynergyDiscovery(syn.key, syn.label)
+                                showDialogue("y_dome_spaghetti", "✨ Dieu Spaghetti", [
+                                    "*Une volute dorée jaillit de l'Autel alors que la chimère prend forme…*",
+                                    `« PAR TOUTES LES NOUILLES ! Tu viens de percer un SECRET : ${syn.label} ! »`,
+                                    "« Une affinité cachée que peu de dresseurs devinent — ta chimère en sort la génétique RENFORCÉE. Je régale toute la communauté pour fêter ta perspicacité ! 🍝 »",
+                                ])
+                            }
+                        }
                         persistYellowSave()
                     }
                     setAtelierAdd(null); setAtelierPicking(null)

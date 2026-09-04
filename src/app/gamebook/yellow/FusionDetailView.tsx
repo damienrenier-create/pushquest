@@ -97,12 +97,12 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
 // FICHE d'une ESPÈCE-FUSION POSSÉDÉE (Dractriss/Voltriss/Draconvolt…) à son VRAI stade — lue depuis getSpecies
 //   (baseStats + learnset COMPLET + évolution), PAS recalculée depuis les parents. Sert au Fusiodex « Mes fusions »
 //   pour consulter la fiche de tes fusionnés, y compris les stades évolués.
-export function FusionSpeciesFiche({ speciesId, onClose, heading }: { speciesId: string; onClose: () => void; heading?: string }) {
+export function FusionSpeciesFiche({ speciesId, onClose, heading, shiny }: { speciesId: string; onClose: () => void; heading?: string; shiny?: boolean }) {
     const [err, setErr] = useState(false)
     const sp = getSpecies(speciesId)
     if (!sp) return null
     const bst = STAT_ROWS.reduce((s, [k]) => s + (sp.baseStats[k] ?? 0), 0)
-    const ring = sp.types[0] ? tc(sp.types[0]) : "#6a5a8a"
+    const ring = shiny ? "#ffd76a" : sp.types[0] ? tc(sp.types[0]) : "#6a5a8a" // anneau doré si l'instance possédée est shiny
     const CAP = 200
     const evoName = sp.evolution ? (getSpecies(sp.evolution.toId)?.name ?? null) : null
     const evoLevel = sp.evolution && sp.evolution.method.kind === "LEVEL" ? sp.evolution.method.level : null
@@ -121,8 +121,9 @@ export function FusionSpeciesFiche({ speciesId, onClose, heading }: { speciesId:
                         ? <img src={spriteSrc} alt={sp.name} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
                         : <span style={{ fontSize: 92 }}>🧬</span>}
                 </div>
-                <div style={S.name}>{sp.name.toUpperCase()}</div>
+                <div style={S.name}>{shiny ? "✨ " : ""}{sp.name.toUpperCase()}</div>
                 <div style={S.chips}>{sp.types.map((t) => <span key={t} style={{ ...S.chip, background: tc(t) }}>{t}</span>)}</div>
+                {shiny && <div style={{ ...S.bonusBadge, marginTop: 8 }}>✨ CHROMATIQUE (shiny) — tu en possèdes une instance dorée</div>}
                 <div style={S.bst}>Total des stats : <b style={{ color: bst >= 500 ? "#f0c840" : "#d9b8ff" }}>{bst}</b></div>
                 <div style={S.stats}>
                     {STAT_ROWS.map(([k, lbl]) => {
