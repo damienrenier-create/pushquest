@@ -1179,12 +1179,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const grants = (j?.grants ?? 0) as number
                     const champs = (j?.champions ?? []) as string[]
                     if (!cancelled && grants > 0) {
-                        // MODE FUN : la jauge vaut 10 000 → le 1/3-du-quota donnait toujours 1000. On scale plutôt sur le
-                        //   DERNIER BADGE d'arène du receveur (run 1 & 2) : 1 badge = 100, 2 = 200, … 5 = 500. Run 3 déjà exclu
-                        //   plus haut (aucun cadeau). Run FUSION = 1000 (à brancher quand ce run existera comme monde séparé).
+                        // MODE FUN : scale sur les BADGES d'arène du receveur — 1 badge = 200, 2 = 400, … 5 badges = 1000
+                        //   (max). Les débutants (0-1 badge) touchent moins, un joueur complet touche le jackpot 1000/sacre.
+                        //   Run 3 déjà exclu plus haut (aucun cadeau).
                         // NON-FUN (7 potes) : formule historique inchangée (1/3 du quota, plafond 1000/sacre).
                         const per = getGameMode() === "fun"
-                            ? 100 * Math.min(5, Math.max(1, getPlayer().badges.length))
+                            ? 200 * Math.min(5, Math.max(1, getPlayer().badges.length))
                             : Math.min(1000, Math.floor(getPlayer().repsCap / 3))
                         const got = grantReps(per * grants); logEnergyIncome("🏛️ Sacre (champion)", got)
                         persistYellowSave()
