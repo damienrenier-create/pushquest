@@ -790,7 +790,10 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     }
 
     // --- Effet secondaire (proba) sur capacité offensive ---
-    if (move.effect && active(defSide).currentHp > 0) {
+    // On appelle TOUJOURS (même si la cible est tombée K.O.) : maybeApplySecondary saute les effets qui VISENT la
+    //   cible morte, mais applique quand même les AUTO-BUFFS du lanceur (statChanges self) → un coup fatal ne fait
+    //   plus perdre son propre boost (Éveil Divin/Faille Sismique/Œil du Cyclone/Poing Météore… snowball standard).
+    if (move.effect) {
         maybeApplySecondary(state, side, move, events, rng)
     }
 }
@@ -985,28 +988,31 @@ function maybeApplySecondary(state: BattleState, side: SideId, move: MoveData, e
     let chance = (fx.chance ?? 100) * (talentEffect(active(state[side]))?.statusChanceMult ?? 1)
     if (fx.inflictStatus) chance *= talentEffect(active(state[other(side)]))?.statusResistMult ?? 1
     if (!rng.chance(chance)) return
+    // La cible peut être K.O. (coup fatal) : les effets qui la VISENT (statut/débuff/apeurement/volatile) sont alors
+    //   sans objet → sautés. Les AUTO-BUFFS du lanceur (statChanges target:"self") s'appliquent TOUJOURS (snowball).
+    const foeAlive = active(state[other(side)]).currentHp > 0
     if (fx.oneOf && fx.oneOf.length > 0) {
         // IMPACT (clan Combat) : UN SEUL effet tiré AU HASARD (équiprobable) parmi la liste — apeurer / paralyser / Atq +1.
         const pick = fx.oneOf[rng.int(0, fx.oneOf.length - 1)]
-        if (pick.inflictStatus) tryInflictStatus(state, other(side), pick.inflictStatus, events, rng)
-        if (pick.flinch) active(state[other(side)]).volatiles.FLINCH = 1
-        if (pick.statChanges) for (const sc of pick.statChanges) applyStatChange(state, sc.target === "self" ? side : other(side), sc.stat, sc.stages, events)
+        if (pick.inflictStatus && foeAlive) tryInflictStatus(state, other(side), pick.inflictStatus, events, rng)
+        if (pick.flinch && foeAlive) active(state[other(side)]).volatiles.FLINCH = 1
+        if (pick.statChanges) for (const sc of pick.statChanges) { if (sc.target === "self" || foeAlive) applyStatChange(state, sc.target === "self" ? side : other(side), sc.stat, sc.stages, events) }
         return
     }
-    if (fx.inflictStatus) tryInflictStatus(state, other(side), fx.inflictStatus, events, rng)
-    if (fx.inflictVolatile) applyVolatile(active(state[other(side)]), fx.inflictVolatile, rng, events, active(state[other(side)]))
+    if (fx.inflictStatus && foeAlive) tryInflictStatus(state, other(side), fx.inflictStatus, events, rng)
+    if (fx.inflictVolatile && foeAlive) applyVolatile(active(state[other(side)]), fx.inflictVolatile, rng, events, active(state[other(side)]))
     if (fx.statChanges) {
         for (const sc of fx.statChanges) {
             const tgtSide: SideId = sc.target === "self" ? side : other(side)
-            applyStatChange(state, tgtSide, sc.stat, sc.stages, events)
+            if (sc.target === "self" || foeAlive) applyStatChange(state, tgtSide, sc.stat, sc.stages, events) // auto-buff : même sur KO
         }
     }
-    if (fx.randomStatDrop && fx.randomStatDrop.length > 0) {
+    if (fx.randomStatDrop && fx.randomStatDrop.length > 0 && foeAlive) {
         // DÉBUFF ALÉATOIRE : une seule stat de la cible, tirée au hasard dans la liste, baissée d'1 cran.
         const stat = fx.randomStatDrop[rng.int(0, fx.randomStatDrop.length - 1)]
         applyStatChange(state, other(side), stat, -1, events)
     }
-    if (fx.flinch) {
+    if (fx.flinch && foeAlive) {
         const foe = active(state[other(side)])
         foe.volatiles.FLINCH = 1
     }

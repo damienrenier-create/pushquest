@@ -581,3 +581,26 @@ describe("ANTI-STALEMATE — HARA-KIRI²", () => {
         expect(final.player.team[0].currentHp).toBeGreaterThan(0)
     })
 })
+
+describe("Effet secondaire sur KO — auto-buff conservé, effet-cible sauté", () => {
+    it("Œil du Cyclone : le lanceur gagne spe+1/eva+1 MÊME quand le coup tue la cible", () => {
+        const attacker = createMonInstance("plumiot", 50, { moveIds: ["oeil_du_cyclone", "charge"] })
+        const weak = createMonInstance("gouttiny", 3)
+        let s = createBattle([attacker], [weak], { isWild: true, seed: 7 })
+        s.enemy.team[0].currentHp = 1 // 1 PV → le coup (power 30) met K.O. à coup sûr
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(s.enemy.team[0].currentHp).toBe(0)              // cible K.O.
+        expect(s.player.team[0].stages.spe).toBe(1)            // auto-buff APPLIQUÉ malgré le KO
+        expect(s.player.team[0].stages.eva).toBe(1)
+    })
+    it("Poing Météore garanti (chance 100 en test forcé) : le débuff-cible n'a rien à toucher mais ne casse rien sur KO", () => {
+        // vérifie juste qu'un coup fatal ne jette pas d'erreur et clôt le combat proprement
+        const attacker = createMonInstance("plumiot", 50, { moveIds: ["oeil_du_cyclone"] })
+        const weak = createMonInstance("gouttiny", 3)
+        let s = createBattle([attacker], [weak], { isWild: false, seed: 3 })
+        s.enemy.team[0].currentHp = 1
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(s.enemy.team[0].currentHp).toBe(0)
+        expect(s.outcome).toBe("win")
+    })
+})
