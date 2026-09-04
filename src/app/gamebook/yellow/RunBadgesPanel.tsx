@@ -31,12 +31,14 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze. RUN 1 UNIQUEMENT (le run 2 se
     //   classe à la performance /1000 + reps, pas aux médailles) → on ne fetch même pas en Remix.
     const [medals, setMedals] = useState<Record<string, "or" | "argent" | "bronze">>({})
+    const [medalCounts, setMedalCounts] = useState<Record<string, number>>({}) // badgeId → nb d'obtenteurs (3 premiers = médailles)
     useEffect(() => {
         if (!fun || isRun2 || isRun3) return
         let cancelled = false
-        fetch("/api/gamebook/yellow/fun-badges").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j?.ok) setMedals(j.medals ?? {}) }).catch(() => {})
+        fetch("/api/gamebook/yellow/fun-badges").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j?.ok) { setMedals(j.medals ?? {}); setMedalCounts(j.medalCounts ?? {}) } }).catch(() => {})
         return () => { cancelled = true }
     }, [fun, isRun2, isRun3])
+    const MEDAL_SPOTS = 3 // or / argent / bronze
 
     // ── Lignes normalisées (mêmes cartes pour run 1 « Découverte » et run 2 « Remix ») ──
     interface Row { id: string; label: string; cat: string; emoji: string; color: string; points: number; energy?: number; earned: boolean; revealed: boolean; todo: boolean }
@@ -99,7 +101,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
         totalCount = fun ? BADGES.reduce((n, b) => n + (byId.get(b.id)?.isRun1 ? 1 : 0), 0) : BADGES.length
         unit = "pts"
         footNote = fun
-            ? "Chaque trophée affiche « X pts · Y⚡ » : les PTS font ton SCORE au classement (par palier) ; les ⚡ sont l'ÉNERGIE qu'il rapporte, créditée à part au compte-gouttes à la connexion (🍝 Dieu Spaghetti). 🥇🥈🥉 = médaille de rapidité (1ᵉʳ/2ᵉ/3ᵉ à décrocher le trophée). Gris = pas encore obtenu."
+            ? "Chaque trophée affiche « X pts · Y⚡ » : les PTS font ton SCORE au classement (par palier) ; les ⚡ sont l'ÉNERGIE qu'il rapporte, créditée à part au compte-gouttes à la connexion (🍝 Dieu Spaghetti). 🥇🥈🥉 = médaille de rapidité (1ᵉʳ/2ᵉ/3ᵉ à décrocher le trophée) ; 🏅×N = places de médaille ENCORE LIBRES (dépêche-toi !), « 🏅 prises » = les 3 sont parties. Gris = pas encore obtenu."
             : "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
     }
 
@@ -128,6 +130,9 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                     {visible.map((r) => {
                                         const earned = r.earned
                                         const medal = fun && earned && !isRun2 ? medals[r.id] : undefined // médaille de rapidité (fun, run 1 only)
+                                        // Places de médaille de rapidité restantes (fun run 1) : 3 premiers = or/argent/bronze.
+                                        const funRun1 = fun && !isRun2 && !isRun3
+                                        const spotsLeft = funRun1 ? MEDAL_SPOTS - (medalCounts[r.id] ?? 0) : 0
                                         return (
                                             <div key={r.id} style={{ ...S.badge, ...(earned ? { borderColor: r.color, background: "rgba(255,255,255,.05)" } : S.badgeLocked) }} title={isRun3 ? `${r.emoji} ${r.label} — ${earned ? "accompli ✓" : "à faire"}` : `${r.emoji} ${r.points} ${unit}${r.todo ? " · à venir" : ""}${medal ? ` · ${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}` : ""}`}>
                                                 <div style={{ ...S.badgeIcon, filter: earned ? "none" : "grayscale(1) opacity(.45)" }}>{r.emoji}</div>
@@ -140,7 +145,13 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
                                                             : fun ? `${earned ? "+" : ""}${r.points} pts · ${r.energy ?? 0}⚡`
                                                             : `${earned ? "+" : ""}${r.points}`
                                                     }</span>
-                                                    {medal && <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>}
+                                                    {medal
+                                                        ? <span title={MEDAL_LABEL[medal]} style={{ fontSize: 13, lineHeight: 1 }}>{MEDAL_EMOJI[medal]}</span>
+                                                        : funRun1 && spotsLeft > 0
+                                                            ? <span title={`${spotsLeft} place${spotsLeft > 1 ? "s" : ""} de médaille encore à prendre ! Décroche-le vite.`} style={{ fontSize: 10.5, lineHeight: 1, color: "#ffd24a", fontWeight: 700 }}>🏅×{spotsLeft}</span>
+                                                            : funRun1 && !earned
+                                                                ? <span title="Les 3 médailles de rapidité sont déjà prises." style={{ fontSize: 10.5, lineHeight: 1, color: "#6b7690" }}>🏅 prises</span>
+                                                                : null}
                                                 </div>
                                             </div>
                                         )

@@ -54,7 +54,12 @@ export async function GET() {
         if (me?.gameMode !== "fun") return NextResponse.json({ ok: true, medals: {} }) // médailles = fun uniquement
         const mine = (await (prisma as any).yellowFunBadgeEarn.findMany({ where: { userId: auth.userId }, select: { badgeId: true } })) as { badgeId: string }[]
         const medals = await computeMedals(auth.userId, mine.map((r) => r.badgeId))
-        return NextResponse.json({ ok: true, medals })
+        // NB d'obtenteurs PAR BADGE (tous joueurs fun) → le panel en déduit les PLACES DE MÉDAILLE restantes
+        //   (3 premiers = or/argent/bronze). Petit volume (≈ joueurs fun × badges) → findMany + comptage JS.
+        const all = (await (prisma as any).yellowFunBadgeEarn.findMany({ select: { badgeId: true } })) as { badgeId: string }[]
+        const medalCounts: Record<string, number> = {}
+        for (const r of all) medalCounts[r.badgeId] = (medalCounts[r.badgeId] ?? 0) + 1
+        return NextResponse.json({ ok: true, medals, medalCounts })
     } catch {
         return NextResponse.json({ ok: true, medals: {} }) // table pas encore créée → neutre
     }
