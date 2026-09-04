@@ -100,7 +100,7 @@ describe("Badges run 1 — socle", () => {
 
     it("compteurs à instrumenter : non-gagnés par défaut (optionnels)", () => {
         const r = evaluateBadges(empty)
-        for (const id of ["evolve", "trade_player", "shiny_trade", "beat_mirror_higher", "bet_win", "casino_win", "league_6shiny"]) {
+        for (const id of ["evolve", "trade_player", "shiny_trade", "beat_mirror_higher", "casino_win", "league_6shiny"]) {
             expect(state(r, id).earned, id).toBe(false)
         }
         expect(state(evaluateBadges({ ...empty, evolutions: 1 }), "evolve").earned).toBe(true)

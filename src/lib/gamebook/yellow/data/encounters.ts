@@ -1279,7 +1279,10 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
         ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche")
         : (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "varovental"))
     if (pool.length === 0) return null
-    const weights = pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
+    // ⚠️ Même filtre `blockedSpecies` que le roll de zone : sinon les lignées « meme » de clan (couperin/COMBAT,
+    //   plumiot/VOL, mottoche & sa lignée/ROCHE) leakent dans la grille d'entraînement pour un joueur du mauvais clan
+    //   (bug prod : Couperin/Quadroc chez un fun de l'Air). Poids 0 → jamais tiré.
+    const weights = pool.map((e) => (ctx.blockedSpecies?.includes(e.speciesId)) ? 0 : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
     let r = rng() * total, idx = 0

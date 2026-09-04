@@ -214,7 +214,6 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "ace7", label: "Battre l'ACE 7 fois", tier: "diamond", secret: true, cat: "special", earned: (i) => i.aceWins >= 7, reveal: (i) => i.aceWins >= 1 },
     { id: "lab_defi", label: "Compléter un défi du Labo (vrai workout)", tier: "gold", secret: true, cat: "special", earned: (i) => i.labDefiDone, reveal: (i) => i.labDefiDone || i.berrySecretKnown },
     { id: "level100", label: "Amener un Daemon au niveau 100", tier: "diamond", secret: true, cat: "special", earned: (i) => i.mons.some((m) => m.level >= 100), reveal: (i) => i.mons.some((m) => m.level >= 90) },
-    { id: "bet_win", label: "Gagner un pari", tier: "silver", secret: true, cat: "special", earned: (i) => (i.betWins ?? 0) >= 1, reveal: (i) => (i.betWins ?? 0) >= 1 },
     { id: "casino_win", label: "Gagner au casino", tier: "silver", secret: true, cat: "special", earned: (i) => (i.casinoWins ?? 0) >= 1, reveal: (i) => (i.casinoWins ?? 0) >= 1 },
 
     // ── ⑤ Shiny — le prestige ──
@@ -294,7 +293,7 @@ export const FUN_TIER: Record<string, TierFun> = {
     // — pré-Sylvebarbe (RUN 1) —
     first_catch: "s1", evolve: "s1", beat_trainer: "s1", sbire: "s1", poker: "s1", grotte_nexus: "s1", get_dex: "s1", get_calepin: "s1",
     full_team: "s2", dex10: "s2", types3: "s2", beat_mirror: "s2", trade_pnj: "s2", beach: "s2",
-    nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", bet_win: "s2", casino_win: "s2", ace1: "s2",
+    nexus_guardian: "s2", held_item: "s2", gift_ct: "s2", casino_win: "s2", ace1: "s2",
     fashion: "s2", first_fish: "s2", defi_arene: "s2", defi_sprint: "s2", defi_cible: "s2", clan_pact: "s2",
     beat_arena: "s3", trade_player: "s3", pvp_win: "s3", pantheon: "s3", manoir_surprise: "s3", lab_defi: "s3", berries: "s3", orcaline: "s3", find_lamp: "s3",
     types10: "s4", dex50: "s4", beat_mirror_higher: "s4", gekroc: "s4", masterball: "s4", shiny1: "s4", ice_cave: "s4", aqua_arena: "s4", clan_daemon_50: "s4",
@@ -317,7 +316,7 @@ export const FUN_TIER: Record<string, TierFun> = {
 /** Badges du RUN 1 (pré-Sylvebarbe) — SEULS ceux-ci alimentent le score gelé du run 1 fun. Le reste = run FUSION. */
 export const RUN1_FUN_BADGE_IDS: ReadonlySet<string> = new Set<string>([
     "first_catch", "evolve", "beat_trainer", "sbire", "poker", "buy_ct", "get_dex", "get_calepin",
-    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "gift_ct", "bet_win", "casino_win", "ace1",
+    "full_team", "dex10", "types3", "beat_mirror", "trade_pnj", "orcaline", "beach", "gift_ct", "casino_win", "ace1",
     "fashion", "first_fish", "defi_arene", "defi_sprint", "defi_cible", "clan_pact",
     "beat_arena", "trade_player", "pvp_win", "pantheon", "manoir_surprise", "find_lamp",
     // RETIRÉS du run 1 FUN (ingagnables en fun) : held_item (objets tenus = marchand Jetons/endgame), lab_defi (vrai workout muscu, pas d'encodage en fun).
@@ -346,7 +345,7 @@ export const BADGE_REPS: Record<string, number> = {
     trade_pnj: 250, trade_player: 250, beat_mirror: 250, beat_mirror_higher: 250, pvp_win: 250, clan_pact: 100, clan_daemon_50: 250,
     // ④ Spéciales & secrets
     pantheon: 250, pantheon_evo: 250, gekroc: 250, manoir_surprise: 250, orcaline: 250, masterball: 250, tonytony: 250, find_lamp: 250,
-    sbire: 100, ace1: 100, ace7: 100, lab_defi: 100, level100: 1000, bet_win: 100, casino_win: 100, goshendofy: 1000,
+    sbire: 100, ace1: 100, ace7: 100, lab_defi: 100, level100: 1000, casino_win: 100, goshendofy: 1000,
     // ⑤ Shiny
     shiny1: 1000, shiny6: 1000, shiny_trade: 1000, league_6shiny: 3000,
     // ⑦ Exploration
