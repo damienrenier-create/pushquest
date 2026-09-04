@@ -2881,8 +2881,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         ],
         evolution: { toId: "possombre", method: { kind: "LEVEL", level: 22 } },
         catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
-        role: "Normal — spectre-possédé embryonnaire (mur physique)",
-        description: "Une petite ombre possédée, vaguement féline, au pelage terne qui semble avaler la lumière. Lente, mais déjà d'une ténacité déconcertante. — Création de Zyran",
+        role: "Normal — faux-mort (mur physique embryonnaire)",
+        description: "Petit opossum trapu aux pattes déjà musclées : au moindre danger, il s'effondre langue pendante et fait le mort — un réflexe qui trompe les prédateurs. — Création de Zyran",
         sprite: "/yellow/sprites/dex/possyl.png",
     },
     possombre: {
@@ -2897,8 +2897,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         ],
         evolution: { toId: "necrossum", method: { kind: "LEVEL", level: 40 } },
         catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
-        role: "Normal — spectre-possédé (mur physique tenace)",
-        description: "L'ombre s'est densifiée en une silhouette trapue et voûtée, nimbée d'une aura froide de possession. Elle encaisse sans broncher et rend coup pour coup. — Création de Zyran",
+        role: "Normal — faux-mort (mur physique tenace)",
+        description: "Plus massif et musclé, il ne feint plus la mort pour fuir mais pour attirer : certaines feintes durent des heures, sans un souffle. — Création de Zyran",
         sprite: "/yellow/sprites/dex/possombre.png",
     },
     necrossum: {
@@ -2912,8 +2912,8 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 60, moveId: "crochet_maitre" }, { level: 70, moveId: "souffle_polaire" },
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
-        role: "Normal/Spectre — apex possédé, MUR physique lent",
-        description: "L'apex de la possession : un colosse spectral au pelage d'ombre, mur immense qui absorbe les coups et frappe lourd. Ni faille de type marquée ni vitesse — juste une endurance implacable. — Création de Zyran",
+        role: "Normal/Spectre — faux-mort devenu mort-vivant, MUR physique lent",
+        description: "La feinte est devenue vérité : torse à demi décharné, griffes semi-spectrales, queue fantomatique. Il ne fait plus le mort — il l'est devenu. Mur immense qui absorbe et frappe lourd. — Création de Zyran",
         sprite: "/yellow/sprites/dex/necrossum.png",
     },
     // ── NÉMÉSIS de Shady : Caninombre → Lycanfer → Ténèbrir (loup ténébreux TÉNÈBRES/SPECTRE, attaquant SPÉCIAL). ──

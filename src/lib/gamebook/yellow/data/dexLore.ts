@@ -1050,21 +1050,21 @@ export const DEX_LORE: Record<string, DexLore> = {
     },
     // 210 · Possyl (NORMAL) — création canonisée de Zyran
     possyl: {
-        ecology: "Petite ombre possédée vaguement féline, au pelage terne gris-sombre qui semble boire la lumière alentour. Deux yeux ternes flottent dans sa silhouette floue. Lente et discrète, elle s'installe dans les recoins tièdes et refuse obstinément d'en être délogée, comme accrochée au lieu qu'elle a choisi de hanter.",
-        dicton: "Ce n'est pas la vitesse qui use l'adversaire : c'est de ne jamais pouvoir s'en débarrasser.",
-        note: "Posée sur mon sac trois heures durant. J'ai fini par contourner le sac. Elle avait gagné, et elle le savait.",
+        ecology: "Petit opossum trapu au pelage déjà épais, aux pattes étonnamment musclées pour son âge. Face au moindre danger, il se fige et s'effondre, langue pendante, comme mort — un réflexe instinctif qui trompe la plupart des prédateurs. Vit seul dans les fourrés denses, immobile des heures durant après chaque « évanouissement ».",
+        dicton: "Celui qui sait mourir un instant n'a jamais vraiment peur de la mort.",
+        note: "Je l'ai cru mort trois fois avant de comprendre le manège. La quatrième fois, il m'a regardé se relever avec un sourire presque trop humain.",
     },
     // 211 · Possombre (NORMAL)
     possombre: {
-        ecology: "L'ombre s'est densifiée en une silhouette trapue et voûtée, aux épaules basses et lourdes, ceinte d'une aura froide de possession. Elle ne bondit pas et ne fuit pas : elle s'ancre, encaisse tout ce qui vient et rend chaque coup avec une patience implacable.",
-        dicton: "Frappe-la tant que tu veux. Elle a tout son temps ; toi, non.",
-        note: "J'ai voulu la faire reculer d'un pas pour la mesurer. C'est moi qui ai reculé. Deux fois.",
+        ecology: "Plus massif, la musculature bien visible sous le pelage épais et hirsute, il a perfectionné sa technique : il ne feint plus la mort pour fuir, mais pour attirer. Certains témoins jurent avoir vu la même feinte durer des heures sans qu'un seul souffle ne trahisse la supercherie — comme si une part de lui-même y croyait un peu plus à chaque fois.",
+        dicton: "À force de mourir pour de faux, quelque chose finit par rester derrière.",
+        note: "J'ai chronométré une de ses feintes : quarante-sept minutes sans un battement de paupière. Le silence qui a suivi n'avait plus rien de naturel.",
     },
     // 212 · Nécrossum (NORMAL/SPECTRE)
     necrossum: {
-        ecology: "L'apex de la possession : un colosse spectral au pelage d'ombre dense, carrure de mur et regard éteint. Presque immobile, il absorbe les assauts les plus violents sans broncher puis répond d'un coup lourd et définitif. Ni faille de type marquée ni vitesse — rien qu'une endurance qui use tout ce qui s'y frotte.",
-        dicton: "On ne bat pas Nécrossum. On abandonne avant lui.",
-        note: "Le seul Daemon dont j'ai renoncé à noter le poids : ma balance a rendu l'âme, et lui n'avait même pas fini de s'asseoir dessus.",
+        ecology: "La feinte a fini par devenir vérité. Le buste s'est redressé et à moitié changé en torse décharné et putréfié, la colonne visible sous des plaques de fourrure arrachées ; des griffes semi-spectrales prolongent des bras toujours aussi musclés. Une queue fantomatique traîne derrière lui, seul vestige encore mobile de l'animal qu'il fut. Il ne fait plus le mort — il l'est devenu, sans jamais vraiment partir.",
+        dicton: "Il a menti à la mort si longtemps qu'elle a fini par le croire chez elle.",
+        note: "Je ne l'ai plus jamais vu s'effondrer volontairement. La première nuit où je l'ai recroisé, mon feu s'est éteint sans vent, sans raison. Je n'ai pas osé me retourner. Je ne sais toujours pas si j'ai survécu à cette nuit, ou si je continue simplement à croire que oui.",
     },
     // 171 · Caninombre (TENEBRES/SPECTRE)
     caninombre: {
