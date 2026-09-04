@@ -80,7 +80,7 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_gekraise", label: "Choper GÉKRAISE (le gecko Roche/Feu)", funTier: "s4", cat: "rencontres", earned: (i) => has(i, "gekraise") },
     { id: "r2_carillon", label: "Gagner le CARILLON au blackjack (CT Fée/Métal inédite)", funTier: "s4", cat: "rencontres", earned: () => F, reveal: () => true, todo: true }, // CT Carillon à créer (Phase 2)
     { id: "r2_orcaline", label: "Capturer ORCALINE sauvage (Grotte Gelée, niv 35+)", funTier: "s4", cat: "rencontres", earned: (i) => has(i, "orcaline") },
-    { id: "r2_master_ball", label: "Choper la Master Ball", funTier: "s4", cat: "rencontres", earned: (i) => i.hasMasterBall === true },
+    { id: "r2_master_ball", label: "Décrocher la Ball ultime (dresseur d'Orcaline)", funTier: "s4", cat: "rencontres", earned: (i) => i.hasMasterBall === true },
     { id: "r2_grotte_gelee", label: "Franchir la Grotte Gelée (5 Frères Glaçon, Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasAllMk(i, GELEE_FRERES), reveal: (i) => hasAnyMk(i, GELEE_FRERES) }, // les 5 Frères Glaçon vaincus (markers de dresseur)
     { id: "r2_aqua_arena", label: "Vaincre l'Aqua Arena re-thémée EAU (Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasMk(i, "aqua_arena") },
 

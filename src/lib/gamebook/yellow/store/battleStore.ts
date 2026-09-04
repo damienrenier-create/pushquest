@@ -1038,6 +1038,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }
             if (levelBeaten === ORCALINE_BALL_AT_LEVEL) { // palier 95 battu (une seule fois) → récompense secrète
                 addItem(ORCALINE_BALL_REWARD_ID, 1)
+                markTrainerDefeated("ach_master_ball") // HAUT FAIT « Choper la Master Ball » : marqueur PERMANENT (survit à l'usage de la ball)
                 lines.push(...dlg.ball)
             }
             rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lines }

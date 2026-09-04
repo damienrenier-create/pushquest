@@ -200,7 +200,7 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "gekroc", label: "Choper Gékroc", tier: "gold", secret: true, cat: "special", earned: (i) => i.gekrocResolved || has(i, "gekroc"), reveal: (i) => sawAny(i, "gekroc") || i.gekrocResolved },
     { id: "manoir_surprise", label: "Trouver la surprise du Manoir Hanté", tier: "gold", secret: true, cat: "special", earned: (i) => i.hhCollectorWins >= 1, reveal: (i) => i.hhCollectorWins >= 1 },
     { id: "orcaline", label: "Choper Orcaline", tier: "silver", secret: true, cat: "special", earned: (i) => has(i, "orcaline") || i.orcalineWins >= 1, reveal: (i) => sawAny(i, "orcaline") || i.orcalineWins >= 1 },
-    { id: "masterball", label: "Choper la Master Ball", tier: "gold", secret: true, cat: "special", earned: (i) => i.hasMasterBall, reveal: (i) => i.hasMasterBall },
+    { id: "masterball", label: "Décrocher la Ball ultime (dresseur d'Orcaline)", tier: "gold", secret: true, cat: "special", earned: (i) => i.hasMasterBall, reveal: (i) => i.hasMasterBall },
     { id: "find_lamp", label: "Trouver la Lampe du Génie", tier: "gold", secret: true, cat: "special", earned: (i) => hasMk(i, "y_genie_ambush") || hasMk(i, "lamp_rubbed"), reveal: (i) => hasMk(i, "y_genie_ambush") || hasMk(i, "lamp_rubbed") },
     { id: "tonytony", label: "Choper Tonytony", tier: "diamond", secret: true, cat: "special", earned: (i) => has(i, "tonytony"), reveal: (i) => sawAny(i, "tonytony") },
     { id: "goshendofy", label: "Choper Goshendofy", tier: "legend", secret: true, cat: "special", earned: (i) => has(i, "goshendofy"), reveal: (i) => sawAny(i, "goshendofy") },
@@ -440,7 +440,9 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         pnjTradeDone: s.caveTradeDone === true,
         hhCollectorWins: s.hhCollectorWins ?? 0,
         sbireWins: s.sbireWinsTotal ?? 0,
-        hasMasterBall: (s.items?.["master_ball"] ?? 0) > 0,
+        // « Choper la Master Ball » = la Ball ULTIME = récompense du dresseur d'Orcaline (super_mega_nexus_ball, niv 95).
+        //   Marqueur ach_master_ball (permanent, survit à l'usage) OU présence en sac (rétroactif : master_ball ou super_mega).
+        hasMasterBall: (s.defeatedTrainers?.includes("ach_master_ball") ?? false) || (s.items?.["master_ball"] ?? 0) > 0 || (s.items?.["super_mega_nexus_ball"] ?? 0) > 0,
         labDefiDone: s.labDefi?.squat150Done === true,
         berrySecretKnown: s.berrySecretKnown === true,
         // ── compteurs « propres » (Phase 2) ──
