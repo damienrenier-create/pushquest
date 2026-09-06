@@ -1054,11 +1054,24 @@ export function resetForIntro() {
 /** OBJETS CROSS-RUN : gagnés UNE fois, conservés dans TOUS les runs (report d'avant en avant à chaque nouveau run).
  *  La lampe rouillée (accès au génie/onglet 🧞) et la canne à pêche sont des objets-clés « à vie » : sans ça il fallait
  *  les re-gagner à chaque run (embuscade aléatoire / Fashion Victim) — et un joueur pouvait n'en avoir aucun (« moche »). */
-const CROSS_RUN_KEY_ITEMS: readonly string[] = [LAMP_ITEM_ID, FISHING_ROD_ITEM_ID]
+export const CROSS_RUN_KEY_ITEMS: readonly string[] = [LAMP_ITEM_ID, FISHING_ROD_ITEM_ID]
 /** Extrait, du sac du run précédent, les objets-clés cross-run à reporter dans le nouveau run (quantité 1, présence only). */
 function carryCrossRunItems(prev: Record<string, number>): Record<string, number> {
     const out: Record<string, number> = {}
     for (const id of CROSS_RUN_KEY_ITEMS) if ((prev[id] ?? 0) > 0) out[id] = 1
+    return out
+}
+
+/** RATTRAPAGE CROSS-RUN (au chargement) : si un objet-clé « à vie » (lampe/canne) manque dans le sac du monde ACTIF
+ *  mais existe dans un AUTRE monde du joueur, on le redépose dans le monde actif. Répare rétroactivement les saves
+ *  antérieures au report cross-run (ex. joueur passé en run 3 sans sa lampe). Pur, additif, idempotent → renvoie le
+ *  nouveau sac (identité si rien à ajouter). Cf. applyServerSave. */
+export function reconcileCrossRunItems(activeItems: Record<string, number>, otherWorldsItems: readonly Record<string, number>[]): Record<string, number> {
+    let out = activeItems
+    for (const id of CROSS_RUN_KEY_ITEMS) {
+        if ((out[id] ?? 0) > 0) continue
+        if (otherWorldsItems.some((it) => (it[id] ?? 0) > 0)) out = { ...out, [id]: 1 }
+    }
     return out
 }
 

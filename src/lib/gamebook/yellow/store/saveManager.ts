@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX } from "../storage/save"
@@ -73,6 +73,12 @@ export function applyServerSave(save: YellowSave): void {
     if (aw === "replay") setReplayContext(save.replayRun ?? "run1", save.replayReturn ?? "live")
     else clearReplayContext()
     const activeData = aw === "ngplus" ? save.ngplusWorld! : aw === "run3" ? save.run3World! : aw === "replay" ? save.replayWorld! : liveWorldOf(save)
+    // RATTRAPAGE CROSS-RUN : les objets-clés « à vie » (lampe/canne) gagnés dans un AUTRE monde mais perdus à la
+    //   transition (saves antérieures au report cross-run) → re-déposés dans le monde ACTIF à CHAQUE chargement.
+    //   Additif/idempotent, et re-persisté au prochain save → répare rétroactivement (ex. Zyran passé en run 3 sans lampe).
+    const crossRunWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld]
+        .filter((w): w is YellowSave => !!w).map((w) => w.items ?? {})
+    activeData.items = reconcileCrossRunItems(activeData.items ?? {}, crossRunWorlds)
     hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
