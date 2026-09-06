@@ -45,17 +45,17 @@ describe("Saiyan — couche additive de stats", () => {
 })
 
 describe("règle Saiyan 0/1/2 (amende / quota)", () => {
-    it("amende dans la fenêtre → 0 point", () => {
-        expect(saiyanPointsPerLevel({ hadFine: true, quotaEveryDay: true })).toBe(0)
+    it("amende dans la fenêtre → 0 point (prioritaire)", () => {
+        expect(saiyanPointsPerLevel({ hadFine: true, quotaDoubled: true })).toBe(0)
     })
-    it("quota dépassé chaque jour (sans amende) → 2 points", () => {
-        expect(saiyanPointsPerLevel({ hadFine: false, quotaEveryDay: true })).toBe(2)
+    it("quota dépassé hier ET aujourd'hui (sans amende) → 2 points (doublé)", () => {
+        expect(saiyanPointsPerLevel({ hadFine: false, quotaDoubled: true })).toBe(2)
     })
     it("sinon → 1 point", () => {
-        expect(saiyanPointsPerLevel({ hadFine: false, quotaEveryDay: false })).toBe(1)
+        expect(saiyanPointsPerLevel({ hadFine: false, quotaDoubled: false })).toBe(1)
     })
     it("multi-niveaux = × nombre de niveaux", () => {
-        expect(saiyanPointsForLevels(3, { hadFine: false, quotaEveryDay: true })).toBe(6)
-        expect(saiyanPointsForLevels(3, { hadFine: true, quotaEveryDay: true })).toBe(0)
+        expect(saiyanPointsForLevels(3, { hadFine: false, quotaDoubled: true })).toBe(6)
+        expect(saiyanPointsForLevels(3, { hadFine: true, quotaDoubled: true })).toBe(0)
     })
 })

@@ -11,25 +11,27 @@
 import type { StatKey } from "../battle/types"
 
 /**
- * Contexte PushQuest d'une fenêtre [dernier level-up → hier] pour un Daemon.
- * - hadFine : au moins une amende reçue dans la fenêtre.
- * - quotaEveryDay : quota DÉPASSÉ chaque jour terminé de la fenêtre (≥ 1 jour).
+ * Contexte PushQuest pour la conversion des points Saiyan d'un Daemon.
+ * - hadFine : au moins une amende reçue dans la fenêtre [dernier level-up → hier] (discipline brisée).
+ * - quotaDoubled : quota STRICTEMENT dépassé HIER **et** AUJOURD'HUI (2 jours d'affilée, aujourd'hui inclus)
+ *   → entraînement exemplaire soutenu = points DOUBLÉS. (Ancienne règle « chaque jour de la fenêtre » abandonnée :
+ *   quasi inatteignable pour un joueur quotidien qui convertissait le jour même.)
  */
 export interface SaiyanWindow {
     hadFine: boolean
-    quotaEveryDay: boolean
+    quotaDoubled: boolean
 }
 
 /**
  * Règle "inspirée des Saiyans" : combien de points par niveau gagné ?
  *   0 si une amende est tombée (discipline brisée),
- *   2 si le quota a été dépassé chaque jour (entraînement exemplaire),
+ *   2 si le quota a été dépassé HIER ET AUJOURD'HUI (élan exemplaire → doublé),
  *   1 sinon (croissance normale).
- * Indéterminé / hors-ligne → traiter comme { hadFine:false, quotaEveryDay:false } = 1/niveau.
+ * Indéterminé / hors-ligne → traiter comme { hadFine:false, quotaDoubled:false } = 1/niveau.
  */
 export function saiyanPointsPerLevel(w: SaiyanWindow): 0 | 1 | 2 {
     if (w.hadFine) return 0
-    if (w.quotaEveryDay) return 2
+    if (w.quotaDoubled) return 2
     return 1
 }
 

@@ -36,40 +36,37 @@ export async function getRepsTotals(userId: string): Promise<{ totalToDate: numb
 }
 
 /**
- * ENTRAÎNEMENT SAIYAN — évalue la fenêtre [since → hier] pour un joueur :
- * - hadFine : au moins une amende (FineRecord) tombée dans la fenêtre.
- * - quotaEveryDay : quota DÉPASSÉ (reps > cible) chaque jour terminé (≥ 1 jour).
- * Fenêtre sans jour terminé (since aujourd'hui/futur) → { false, false } = 1 point/niveau.
+ * ENTRAÎNEMENT SAIYAN — évalue la conversion des points d'un Daemon :
+ * - hadFine : au moins une amende (FineRecord) tombée dans la fenêtre [since → hier] (0 point). Invité : quota RATÉ un jour terminé.
+ * - quotaDoubled : quota STRICTEMENT dépassé (reps > cible) HIER **et** AUJOURD'HUI → points DOUBLÉS.
+ *   (2 jours d'affilée incluant aujourd'hui, indépendant de `since` → atteignable même en convertissant le jour même.)
  */
 export async function getSaiyanWindow(userId: string, since: string): Promise<SaiyanWindow> {
+    const today = getTodayISO()
     const yesterday = getYesterdayISO()
-    if (since > yesterday) return { hadFine: false, quotaEveryDay: false }
-    const dates = getDatesInRangeToYesterday(since)
-    if (dates.length === 0) return { hadFine: false, quotaEveryDay: false }
-
+    const hasWindow = since <= yesterday // au moins un jour TERMINÉ dans [since → hier] (pour l'amende)
+    const repsFrom = hasWindow ? since : yesterday // on lit toujours au moins hier+aujourd'hui (doublage)
     const [fine, user, sets] = await Promise.all([
-        (prisma as any).fineRecord.findFirst({ where: { userId, date: { gte: since, lte: yesterday } } }),
+        hasWindow ? (prisma as any).fineRecord.findFirst({ where: { userId, date: { gte: since, lte: yesterday } } }) : Promise.resolve(null),
         (prisma as any).user.findUnique({ where: { id: userId } }),
-        (prisma as any).exerciseSet.findMany({ where: { userId, date: { gte: since, lte: yesterday } } }),
+        (prisma as any).exerciseSet.findMany({ where: { userId, date: { gte: repsFrom, lte: today } } }),
     ])
-    if (!user) return { hadFine: !!fine, quotaEveryDay: false }
+    if (!user) return { hadFine: !!fine, quotaDoubled: false }
 
     const repsByDate: Record<string, number> = {}
     for (const s of sets as { date: string; reps: number }[]) repsByDate[s.date] = (repsByDate[s.date] ?? 0) + s.reps
+    const exceeded = (d: string) => (repsByDate[d] ?? 0) > getDailyTargetForUserOnDate(user, d) // "dépassé" = strictement >
 
-    let quotaEveryDay = true
+    // DOUBLAGE : quota dépassé HIER ET AUJOURD'HUI (élan exemplaire soutenu).
+    const quotaDoubled = exceeded(yesterday) && exceeded(today)
+
+    // AMENDE (0 point) : fenêtre [since → hier]. Invité (jamais amendé financièrement) : pénalité = quota RATÉ un jour terminé.
     let missedQuota = false
-    for (const d of dates) {
-        const target = getDailyTargetForUserOnDate(user, d)
-        const reps = repsByDate[d] ?? 0
-        if (reps <= target) quotaEveryDay = false // "dépassé" = strictement >
-        if (reps < target) missedQuota = true      // quota RATÉ ce jour-là
+    if (hasWindow) {
+        for (const d of getDatesInRangeToYesterday(since)) if ((repsByDate[d] ?? 0) < getDailyTargetForUserOnDate(user, d)) { missedQuota = true; break }
     }
-    // INVITÉ (hors-concours, jamais amendé financièrement) : la pénalité Saiyan (0 point)
-    // vient du quota RATÉ, pas du FineRecord → même exigence que tout le monde (faut faire
-    // ses reps). Joueurs normaux : inchangés (FineRecord + ses exemptions).
     const hadFine = user.isGuest ? missedQuota : !!fine
-    return { hadFine, quotaEveryDay }
+    return { hadFine, quotaDoubled }
 }
 
 // ════════════ DÉFIS PHYSIQUES DU LABO (validation serveur, vraies reps) ════════════

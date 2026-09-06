@@ -799,8 +799,8 @@ export async function processSaiyanPoints(): Promise<void> {
     const results = pending.map((m) => {
         // FUN : jamais de quota reps → fenêtre NEUTRE (ni amende ni quota) → saiyanPointsForLevels rend +1 FIXE/niveau.
         const w: SaiyanWindow = fun
-            ? { hadFine: false, quotaEveryDay: false }
-            : ((m.lastLevelUpAt && windows[m.lastLevelUpAt]) || { hadFine: false, quotaEveryDay: false })
+            ? { hadFine: false, quotaDoubled: false }
+            : ((m.lastLevelUpAt && windows[m.lastLevelUpAt]) || { hadFine: false, quotaDoubled: false })
         return { uid: m.uid, points: saiyanPointsForLevels(m.pendingSaiyanLevels ?? 0, w) }
     })
     applySaiyanResults(results, today)
