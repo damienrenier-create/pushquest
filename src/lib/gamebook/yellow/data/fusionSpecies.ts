@@ -56,10 +56,11 @@ export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, Fusion
 const STATS5: readonly StatKey[] = ["hp", "atk", "def", "spe", "spc"]
 
 // ═══════ FUSIONS SPÉCIALES & SYNERGIES (07/08) — génétique BOOSTÉE + types forcés ═══════
-/** Poids (dominant, récessif) par TIER de génétique. normal = base ; boosted = paires/synergies ; shiny = 2 shiny. */
-export type FusionWeightMode = "normal" | "boosted" | "shiny" | "all"
+/** Poids (dominant, récessif) par TIER de génétique. normal = base ; boosted = paires/synergies ; shiny = 2 shiny ;
+ *  shiny_synergy = 2 shiny ET paire synergique (JACKPOT rare → au-dessus de shiny seul). */
+export type FusionWeightMode = "normal" | "boosted" | "shiny" | "shiny_synergy" | "all"
 const WEIGHTS: Record<Exclude<FusionWeightMode, "all">, [number, number]> = {
-    normal: [0.6, 0.45], boosted: [0.7, 0.5], shiny: [0.8, 0.6],
+    normal: [0.6, 0.45], boosted: [0.7, 0.5], shiny: [0.8, 0.6], shiny_synergy: [0.9, 0.7],
 }
 /** CLANS : fusionner DEUX membres d'un même clan = synergie boostée (0,7/0,5). `label` = annonce de découverte. */
 const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"]) // 6 panthères évoluées (Panthéon-base exclu)
@@ -142,8 +143,10 @@ export function fusionWeights(stats: Readonly<Record<StatKey, number>>, mode: Fu
  *  le poids vaut 0,6 si la stat est parmi les 3 plus hautes du parent, 0,45 sinon. Une stat dominante des DEUX côtés
  *  atteint 1,2 (peut dépasser les deux parents). Totalement INDÉPENDANT de l'ordre des parents (PvP déterministe). */
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
-    // Tier de la fusion : 2 shiny (0,8/0,6) > inédite/synergie (0,7/0,5) > normal (0,6/0,45). Mimimoy = 0,7 partout (par parent).
-    const tier: FusionWeightMode = isShinyFusion(a, b) ? "shiny" : isBoostedFusion(a, b) ? "boosted" : "normal"
+    // Tier : 2 shiny + synergie (0,9/0,7 JACKPOT) > 2 shiny (0,8/0,6) > inédite/synergie (0,7/0,5) > normal (0,6/0,45).
+    //   Mimimoy = 0,7 partout (par parent, via modeFor).
+    const shiny = isShinyFusion(a, b), boosted = isBoostedFusion(a, b)
+    const tier: FusionWeightMode = shiny && boosted ? "shiny_synergy" : shiny ? "shiny" : boosted ? "boosted" : "normal"
     const modeFor = (p: FusionParent): FusionWeightMode => (p.speciesId === MIMIMOY_ID ? "all" : tier)
     const wA = fusionWeights(a.stats, modeFor(a)), wB = fusionWeights(b.stats, modeFor(b))
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])

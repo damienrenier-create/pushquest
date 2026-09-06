@@ -14,6 +14,7 @@ describe("génétique de fusion — tiers de poids", () => {
         expect(fusionWeights(EQ, "normal").hp).toBe(0.6); expect(fusionWeights(EQ, "normal").spc).toBe(0.45)
         expect(fusionWeights(EQ, "boosted").hp).toBe(0.7); expect(fusionWeights(EQ, "boosted").spc).toBe(0.5)
         expect(fusionWeights(EQ, "shiny").hp).toBe(0.8); expect(fusionWeights(EQ, "shiny").spc).toBe(0.6)
+        expect(fusionWeights(EQ, "shiny_synergy").hp).toBe(0.9); expect(fusionWeights(EQ, "shiny_synergy").spc).toBe(0.7)
         const all = fusionWeights(EQ, "all"); expect(Object.values(all).every((w) => w === 0.7)).toBe(true)
     })
     it("paire NORMALE (aucune synergie) → 0.6/0.45", () => {
@@ -55,6 +56,16 @@ describe("synergies", () => {
     })
     it("1 seule panthère → PAS de boost", () => {
         expect(computeFusion(P("florapanthe"), P("draclet")).stats.hp).toBe(120)
+    })
+    it("2 PANTHÈRES SHINY → JACKPOT shiny_synergy (0.9/0.7)", () => {
+        const f = computeFusion(P("florapanthe", { shiny: true, types: ["PLANTE"] }), P("pyropanthe", { shiny: true, types: ["FEU"] }))
+        expect(f.stats.hp).toBe(180)  // dominant : 0.9+0.9
+        expect(f.stats.spc).toBe(140) // récessif : 0.7+0.7
+    })
+    it("2 shiny SANS synergie → shiny seul (0.8/0.6), pas le jackpot", () => {
+        const f = computeFusion(P("draclet", { shiny: true }), P("nouillon", { shiny: true }))
+        expect(f.stats.hp).toBe(160)  // 0.8+0.8
+        expect(f.stats.spc).toBe(120) // 0.6+0.6
     })
     it("merorem × tonytony → boosté", () => {
         expect(computeFusion(P("merorem"), P("tonytony")).stats.hp).toBe(140)
@@ -104,10 +115,6 @@ describe("synergies", () => {
         expect(fusionSynergy("florapanthe", "draclet")).toBeNull() // 1 seule panthère = pas de secret
     })
 
-    it("2 SHINY → tier max 0.8/0.6 (l'emporte sur le boost)", () => {
-        const f = computeFusion(P("florapanthe", { shiny: true, types: ["PLANTE"] }), P("pyropanthe", { shiny: true, types: ["FEU"] }))
-        expect(f.stats.hp).toBe(160); expect(f.stats.spc).toBe(120) // 0.8/0.6
-    })
     it("1 seul shiny → pas le tier shiny (reste normal ici)", () => {
         expect(computeFusion(P("draclet", { shiny: true }), P("nouillon")).stats.hp).toBe(120)
     })
