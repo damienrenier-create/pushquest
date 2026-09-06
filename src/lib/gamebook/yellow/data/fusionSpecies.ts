@@ -45,6 +45,18 @@ export interface FusionResult {
     parents: [string, string]
 }
 
+/** CHOIX DE TYPE (égalités) : quand un parent a 2 types À ÉGALITÉ (même stat dominante représentative), le joueur peut
+ *  décider lequel il apporte à la fusion. `a` = type imposé pour le parent TÊTE, `b` = pour le second. Optionnels. */
+export interface FusionTypeChoice { a?: PokeType; b?: PokeType }
+/** Résolveur INJECTÉ (le store le branche au boot via setFusionTypeChoiceResolver) : (aId,bId) → choix de type mémorisé,
+ *  ou undefined. Reste null par défaut (modules PURS/tests → aucun choix, comportement d'origine). Grâce à cette
+ *  injection, TOUT appel à computeFusion (atelier, Ligue, Fusiodex, fiche, sprite, PvP) reflète le choix, sans toucher
+ *  aux 20+ sites d'appel. */
+let _typeChoiceResolver: ((aId: string, bId: string) => FusionTypeChoice | undefined) | null = null
+export function setFusionTypeChoiceResolver(fn: ((aId: string, bId: string) => FusionTypeChoice | undefined) | null): void {
+    _typeChoiceResolver = fn
+}
+
 /** Le parent « rapide » puis le « lent » (par vitesse ; égalité départagée par la spc la plus haute → intrinsèque,
  *  indépendant de l'ordre). Sert au MOVESET (2 premières du rapide + 2 dernières du lent). */
 export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, FusionParent] {
@@ -201,11 +213,27 @@ function repValue(type: PokeType, fused: FusionStats): number {
     return fused[r]
 }
 
-/** Type le plus fidèle aux GROSSES STATS d'un parent (repValue max sur ses propres types ; égalité → ordre du tableau reçu). */
-function bestType(types: readonly PokeType[], fused: FusionStats): PokeType {
+/** Type le plus fidèle aux GROSSES STATS d'un parent (repValue max sur ses propres types ; égalité → ordre du tableau
+ *  reçu, SAUF si un `chosen` valide est fourni ET qu'il est LUI AUSSI au sommet → on respecte le choix du joueur.
+ *  Le choix n'a d'effet QU'EN CAS D'ÉGALITÉ : un type strictement meilleur l'emporte toujours (règle Sartay). */
+function bestType(types: readonly PokeType[], fused: FusionStats, chosen?: PokeType): PokeType {
     const arr = [...new Set(types)]
     if (arr.length === 0) return "NORMAL" // défensif : un parent a TOUJOURS ≥1 type (garanti par les données) → évite un undefined
-    return arr.reduce((best, t) => (repValue(t, fused) > repValue(best, fused) ? t : best), arr[0])
+    const best = arr.reduce((b, t) => (repValue(t, fused) > repValue(b, fused) ? t : b), arr[0])
+    // ÉGALITÉ uniquement : le type choisi doit exister sur le parent ET égaler le meilleur repValue pour primer.
+    if (chosen && arr.includes(chosen) && repValue(chosen, fused) === repValue(best, fused)) return chosen
+    return best
+}
+
+/** Types d'un parent À ÉGALITÉ au sommet (même stat dominante représentative) → le joueur peut CHOISIR lequel le parent
+ *  apporte. Renvoie [] si aucun choix ne se pose (1 seul type, ou un type strictement meilleur). Ordre = tableau reçu. */
+export function tiedFusionTypes(parent: FusionParent): PokeType[] {
+    const arr = [...new Set(parent.types)]
+    if (arr.length < 2) return []
+    let maxV = -Infinity
+    for (const t of arr) maxV = Math.max(maxV, repValue(t, parent.stats))
+    const tied = arr.filter((t) => repValue(t, parent.stats) === maxV)
+    return tied.length >= 2 ? tied : []
 }
 
 /** Typage du fusionné (RÈGLE Sartay, CORRIGÉE 16/08) : CHAQUE parent amène le type le plus fidèle à SES PROPRES
@@ -216,8 +244,10 @@ function bestType(types: readonly PokeType[], fused: FusionStats): PokeType {
  *  type du parent TÊTE (a) ; ordre cosmétique (STAB agnostique). SET indépendant de l'ordre des parents (départage des
  *  égalités par NOM de type → PvP/Fusiodex déterministes). */
 export function fuseTypes(a: FusionParent, b: FusionParent): PokeType[] {
-    const aType = bestType(a.types, a.stats) // ← stats du PARENT A (plus du fusionné)
-    const bType = bestType(b.types, b.stats) // ← stats du PARENT B
+    // CHOIX DE TYPE mémorisé (égalités seulement) : injecté par le store via le résolveur (undefined en test/pur).
+    const choice = a.speciesId && b.speciesId ? _typeChoiceResolver?.(a.speciesId, b.speciesId) : undefined
+    const aType = bestType(a.types, a.stats, choice?.a) // ← stats du PARENT A (plus du fusionné)
+    const bType = bestType(b.types, b.stats, choice?.b) // ← stats du PARENT B
     if (aType !== bType) return [aType, bType]
     // Type partagé S : S + le meilleur AUTRE type du couple (chaque candidat jugé sur les stats de SON parent),
     //   égalités départagées par nom de type → SET stable et indépendant de l'ordre d'appel.

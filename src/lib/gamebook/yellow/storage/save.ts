@@ -243,6 +243,8 @@ export interface YellowSave {
     fusionRoster: { a: string; b: string }[]
     /** FUSION — NOMS PERSO des fusions jouées en Ligue, clé = paire d'espèces parentes « aId>bId ». Optionnel/additif. */
     fusionNames?: Record<string, string>
+    /** FUSION — CHOIX DE TYPE (égalités), clé « aId>bId » → type imposé au parent A/B. Optionnel/additif. */
+    fusionTypeChoices?: Record<string, { a?: string; b?: string }>
     /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
      *  (contrairement au roster) ; union monotone à la fusion des mondes. Défaut []. */
     fusionHistory: { a: string; b: string }[]
@@ -822,6 +824,18 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             : [],
         fusionNames: o.fusionNames && typeof o.fusionNames === "object" && !Array.isArray(o.fusionNames)
             ? Object.fromEntries(Object.entries(o.fusionNames as Record<string, unknown>).filter(([, v]) => typeof v === "string").map(([k, v]) => [k, (v as string).slice(0, 20)]))
+            : undefined,
+        fusionTypeChoices: o.fusionTypeChoices && typeof o.fusionTypeChoices === "object" && !Array.isArray(o.fusionTypeChoices)
+            ? Object.fromEntries(Object.entries(o.fusionTypeChoices as Record<string, unknown>)
+                .filter(([, v]) => !!v && typeof v === "object" && !Array.isArray(v))
+                .map(([k, v]) => {
+                    const o2 = v as { a?: unknown; b?: unknown }
+                    const c: { a?: string; b?: string } = {}
+                    if (typeof o2.a === "string") c.a = o2.a
+                    if (typeof o2.b === "string") c.b = o2.b
+                    return [k, c] as const
+                })
+                .filter(([, c]) => c.a || c.b))
             : undefined,
         fusionHistory: Array.isArray(o.fusionHistory)
             ? (o.fusionHistory as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(-200) // garde les 200 PLUS RÉCENTES (cohérent avec recordFusionCreated/mergeWorlds)

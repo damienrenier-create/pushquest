@@ -13,6 +13,7 @@ import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
+import { setFusionTypeChoiceResolver } from "../data/fusionSpecies"
 import { leagueFusionSpecies } from "../data/leagueFusionDex"
 import { getGauntletTeam } from "./fusionGauntlet" // LEAF (types only) — pas de cycle. Fallback de gel du roster reflet.
 import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
@@ -233,6 +234,7 @@ interface PlayerState {
     fusionRoster: { a: string; b: string }[]
     fusionNames?: Record<string, string> // NOMS PERSO des fusions (clé "aId>bId") → affichés à l'atelier + en Ligue de Fusion
     fusionMoveOrders?: Record<string, string[]> // ORDRE PERSO des attaques d'une fusion (clé "aId>bId") → slots 1..4 en Ligue/atelier
+    fusionTypeChoices?: Record<string, { a?: string; b?: string }> // CHOIX DE TYPE (égalités) d'une fusion (clé "aId>bId") : type imposé au parent A/B en cas d'égalité
     fusionHistory: { a: string; b: string }[] // JOURNAL permanent des fusions créées (speciesId des 2 parents, a=tête). Fusiodex.
     /** JOURNAL D'ÉNERGIE — dernières ENTRÉES {ts, source, amount} (diagnostic calepin). Per-monde, borné, optionnel (défaut absent). */
     energyLog?: { ts: number; source: string; amount: number }[]
@@ -687,6 +689,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionRoster: p.fusionRoster ?? st.fusionRoster ?? [],
         fusionNames: "fusionNames" in p ? p.fusionNames : st.fusionNames,
         fusionMoveOrders: "fusionMoveOrders" in p ? p.fusionMoveOrders : st.fusionMoveOrders,
+        fusionTypeChoices: "fusionTypeChoices" in p ? p.fusionTypeChoices : st.fusionTypeChoices,
         fusionHistory: p.fusionHistory ?? st.fusionHistory ?? [],
         energyLog: p.energyLog ?? st.energyLog ?? [],
         run3LavapetitSeen: p.run3LavapetitSeen ?? st.run3LavapetitSeen ?? false,
@@ -944,6 +947,27 @@ export function setFusionMoves(aId: string, bId: string, moves: string[]) {
     st = { ...st, fusionMoveOrders: Object.keys(next).length ? next : undefined }
     emit()
 }
+
+/** CHOIX DE TYPE (égalités) d'une fusion (par espèces parentes), ou undefined si aucun choix imposé. */
+export function getFusionTypeChoice(aId: string, bId: string): { a?: string; b?: string } | undefined {
+    return st.fusionTypeChoices?.[fusionNameKey(aId, bId)]
+}
+/** Impose le type apporté par un parent (A=tête, B=second) d'une fusion en cas d'ÉGALITÉ. `type` vide/undefined =
+ *  retire le choix pour ce parent (retour au type par défaut). Persisté. N'a d'effet que si le type est réellement à
+ *  égalité au sommet (garde dans fusionSpecies.bestType). */
+export function setFusionTypeChoice(aId: string, bId: string, which: "a" | "b", type?: string) {
+    const key = fusionNameKey(aId, bId)
+    const cur = { ...(st.fusionTypeChoices?.[key] ?? {}) }
+    if (type) cur[which] = type; else delete cur[which]
+    const next: Record<string, { a?: string; b?: string }> = {}
+    for (const [k, v] of Object.entries(st.fusionTypeChoices ?? {})) if (k !== key) next[k] = v
+    if (cur.a || cur.b) next[key] = cur // n'enregistre que s'il reste au moins un choix
+    st = { ...st, fusionTypeChoices: Object.keys(next).length ? next : undefined }
+    emit()
+}
+// Branche le résolveur de choix de type sur le module PUR fusionSpecies : dès ce module chargé (boot de l'app),
+// tout computeFusion (atelier, Ligue, Fusiodex, fiche, sprite, PvP) reflète les choix mémorisés du joueur.
+setFusionTypeChoiceResolver((aId, bId) => st.fusionTypeChoices?.[fusionNameKey(aId, bId)] as { a?: PokeType; b?: PokeType } | undefined)
 
 /** FUSIODEX — journalise une fusion CRÉÉE (speciesId des 2 parents, a=tête/dominant → l'ORDRE compte pour le nom).
  *  Dédup : une même paire (a,b) n'est loggée qu'UNE fois. (a,b) ≠ (b,a) (fusions distinctes). Cap 200. Persisté. */

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest"
-import { computeFusion, fusionWeights, fusionSynergy, type FusionParent } from "./fusionSpecies"
+import { describe, it, expect, afterEach } from "vitest"
+import { computeFusion, fusionWeights, fusionSynergy, tiedFusionTypes, setFusionTypeChoiceResolver, type FusionParent } from "./fusionSpecies"
 import type { StatKey } from "../battle/types"
 
 // Génétique boostée + fusions inédites + synergies (07/08). On travaille en stats ÉGALES (100 partout) → le poids
@@ -117,5 +117,39 @@ describe("synergies", () => {
 
     it("1 seul shiny → pas le tier shiny (reste normal ici)", () => {
         expect(computeFusion(P("draclet", { shiny: true }), P("nouillon")).stats.hp).toBe(120)
+    })
+})
+
+// CHOIX DE TYPE (égalités). Avec des stats ÉGALES (EQ 100 partout), repValue est identique pour TOUS les types →
+// un parent bi-type est TOUJOURS à égalité → cas idéal pour tester le mécanisme de choix.
+describe("choix de type sur égalité", () => {
+    afterEach(() => setFusionTypeChoiceResolver(null)) // le résolveur est module-global → on nettoie après chaque test
+
+    it("tiedFusionTypes : 2 types (stats égales) → égalité proposée ; mono-type → aucun choix", () => {
+        expect(tiedFusionTypes(P("x", { types: ["FEU", "EAU"] }))).toEqual(["FEU", "EAU"])
+        expect(tiedFusionTypes(P("y", { types: ["FEU"] }))).toEqual([])
+    })
+
+    it("sans résolveur : type par défaut = 1er du tableau (comportement d'origine intact)", () => {
+        const f = computeFusion(P("aa", { types: ["FEU", "EAU"] }), P("bb", { types: ["PLANTE"] }))
+        expect(f.types).toEqual(["FEU", "PLANTE"])
+    })
+
+    it("résolveur : le type CHOISI (à égalité) prime pour le parent tête", () => {
+        setFusionTypeChoiceResolver((aId) => (aId === "aa" ? { a: "EAU" } : undefined))
+        const f = computeFusion(P("aa", { types: ["FEU", "EAU"] }), P("bb", { types: ["PLANTE"] }))
+        expect(f.types).toEqual(["EAU", "PLANTE"])
+    })
+
+    it("choix ignoré si le type n'appartient pas au parent (garde de validité)", () => {
+        setFusionTypeChoiceResolver(() => ({ a: "PLANTE" })) // PLANTE n'est pas un type de aa → ignoré
+        const f = computeFusion(P("aa", { types: ["FEU", "EAU"] }), P("bb", { types: ["PLANTE"] }))
+        expect(f.types).toEqual(["FEU", "PLANTE"])
+    })
+
+    it("choix des DEUX parents indépendants", () => {
+        setFusionTypeChoiceResolver(() => ({ a: "EAU", b: "GLACE" }))
+        const f = computeFusion(P("aa", { types: ["FEU", "EAU"] }), P("bb", { types: ["ELEC", "GLACE"] }))
+        expect(f.types).toEqual(["EAU", "GLACE"])
     })
 })

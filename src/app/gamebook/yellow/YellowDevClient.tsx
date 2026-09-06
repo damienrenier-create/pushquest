@@ -82,7 +82,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -101,7 +101,7 @@ import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, 
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { computeFusion, reorderToStored, fusionSynergy } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { reportSynergyDiscovery } from "@/lib/gamebook/yellow/synergyGift"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
@@ -3859,6 +3859,34 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                                         style={{ background: "transparent", border: "1px solid #7c4fc0", color: "#c79cff", borderRadius: 5, cursor: "pointer", fontSize: 10, padding: "2px", marginTop: 2 }}>↺ Ordre par défaut</button>
                                                                 </div>
                                                             )}
+                                                        </div>
+                                                    )
+                                                })()}
+                                                {/* CHOIX DE TYPE (égalités) : quand la meilleure stat d'un parent correspond à SES DEUX types (égalité),
+                                                    le joueur décide lequel ce parent apporte à la fusion. Sauvegardé par recette (aId>bId) → reflété
+                                                    partout (fiche, Ligue, Fusiodex, sprite) via le résolveur. Masqué s'il n'y a aucune égalité. */}
+                                                {a && b && (() => {
+                                                    const tiedA = tiedFusionTypes(fusionParentFromInstance(a)), tiedB = tiedFusionTypes(fusionParentFromInstance(b))
+                                                    if (!tiedA.length && !tiedB.length) return null
+                                                    const choice = getFusionTypeChoice(a.speciesId, b.speciesId)
+                                                    const active = (tied: string[], stored?: string) => (stored && tied.includes(stored) ? stored : tied[0])
+                                                    const typeRow = (which: "a" | "b", label: string, tied: string[], stored?: string) => (
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginTop: 2 }}>
+                                                            <span style={{ fontSize: 9.5, opacity: 0.75, flexShrink: 0 }}>{label} :</span>
+                                                            {tied.map((t) => {
+                                                                const on = active(tied, stored) === t
+                                                                return (
+                                                                    <button key={t} onClick={() => { setFusionTypeChoice(a.speciesId, b.speciesId, which, t); persistYellowSave() }}
+                                                                        style={{ background: on ? "#7c4fc0" : "transparent", border: "1px solid #7c4fc0", color: on ? "#fff" : "#c79cff", borderRadius: 5, cursor: "pointer", fontSize: 9.5, fontWeight: on ? 700 : 400, padding: "1px 8px" }}>{t}</button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    )
+                                                    return (
+                                                        <div style={{ marginTop: 3, padding: "4px 6px", background: "rgba(124,79,192,0.10)", borderRadius: 6 }}>
+                                                            <div style={{ fontSize: 9, opacity: 0.65, marginBottom: 1 }}>🎨 Égalité de type — choisis le type apporté :</div>
+                                                            {tiedA.length ? typeRow("a", `① ${displayName(a)}`, tiedA, choice?.a) : null}
+                                                            {tiedB.length ? typeRow("b", `② ${displayName(b)}`, tiedB, choice?.b) : null}
                                                         </div>
                                                     )
                                                 })()}
