@@ -10,6 +10,8 @@ import { getMove } from "../data/moves"
 
 /** Espèce cible si le monstre peut évoluer MAINTENANT (méthode niveau), sinon null. */
 export function levelEvolutionTarget(mon: MonInstance): string | null {
+    // MALÉDICTION BERTIE CROCHUE : après une dé-évolution, le Daemon REFUSE d'évoluer tant que level < evoLockUntilLevel.
+    if (typeof mon.evoLockUntilLevel === "number" && mon.level < mon.evoLockUntilLevel) return null
     const sp = getSpecies(mon.speciesId)
     if (!sp?.evolution) return null
     const evo = sp.evolution

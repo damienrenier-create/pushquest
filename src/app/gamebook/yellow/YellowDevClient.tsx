@@ -82,7 +82,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -147,8 +147,9 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
 import { pateDeLuxeGodLines, pateDeLuxeRestoreLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
+import { bertieCrochueLines, BERTIE_NPC, BERTIE_NAME } from "@/lib/gamebook/yellow/data/bertieCrochue"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -589,6 +590,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
     const [luxePick, setLuxePick] = useState(false) // sélecteur Pâte de Luxe (loterie IV) ouvert
     const [tiramisuPick, setTiramisuPick] = useState(false) // sélecteur Tiramisu (restaurer / re-tenter) ouvert
+    const [bertiePick, setBertiePick] = useState(false) // sélecteur Pâtes de Bertie Crochue (pari d'évolution) ouvert
     const [toast, setToast] = useState<string | null>(null)
     // PARRAINAGE (modes easy/debutant) — feedback quand le pool d'énergie se recharge à sec (spendReps).
     useEffect(() => {
@@ -2480,6 +2482,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (pastaPick) { setPastaPick(false); return true }
         if (luxePick) { setLuxePick(false); return true }
         if (tiramisuPick) { setTiramisuPick(false); return true }
+        if (bertiePick) { setBertiePick(false); return true }
         if (buyConfirm) { setBuyConfirm(null); return true }
         if (sellMode) { setSellMode(false); return true }
         if (ctShop) { setCtShop(false); setCtPick(null); return true }
@@ -3102,10 +3105,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🌀 Poche Pâtes de Bertie Crochue (pari d'évolution) : un clic ouvre le sélecteur → +1 niv + évo OU dé-évo. */}
+                                    {(player.items[BERTIE_ITEM_ID] ?? 0) > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🌀 Pâtes de Bertie Crochue</div>
+                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#e0a86a", color: "#ffd9a8" }}
+                                                onClick={() => { setMenu("none"); setBagItem(null); setBertiePick(true) }}>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>Pâtes de Bertie Crochue 🌀</span><span>×{player.items[BERTIE_ITEM_ID]}</span>
+                                                </span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Pari : le plus souvent +1 niveau ET évolution forcée… mais 1 fois sur 3, DÉ-ÉVOLUTION + refus d'évoluer plusieurs niveaux. À tes risques !</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && !it.luxePasta && !it.tiramisu && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && !it.fishingRod && !it.superPasta && !it.luxePasta && !it.tiramisu && !it.bertiePasta && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -4840,6 +4856,43 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => setLuxePick(false)}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 🌀 Pâtes de Bertie Crochue : pari d'évolution. +1 niv + évolution forcée (2/3) OU dé-évolution + malédiction (1/3). */}
+            {!battle && bertiePick && (
+                <div style={menuOverlayStyle} onClick={() => setBertiePick(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>🌀 QUEL DAEMON ?</span><span>🍝 ×{player.items[BERTIE_ITEM_ID] ?? 0}</span>
+                        </div>
+                        <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
+                            Le plus souvent : +1 niveau ET évolution forcée. Mais 1 fois sur 3 : DÉ-ÉVOLUTION + refus d'évoluer plusieurs niveaux. Irréversible — c'est un pari !
+                        </div>
+                        {[...player.team, ...player.pc].map((m) => (
+                            <button
+                                key={m.uid}
+                                style={menuBtnStyle}
+                                onClick={() => {
+                                    const nm = displayName(m)
+                                    const r = useBertieCrochue(m.uid)
+                                    if (r.ok && r.outcome) {
+                                        setBertiePick(false)
+                                        showDialogue(BERTIE_NPC, BERTIE_NAME, bertieCrochueLines(r.outcome, r.fromName ?? nm, r.toName ?? nm, Math.random()))
+                                        persistYellowSave()
+                                    } else if (r.reason === "none") {
+                                        setToast("Tu n'as plus de Pâtes de Bertie Crochue.")
+                                        setBertiePick(false)
+                                    }
+                                }}
+                            >
+                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{displayName(m)}{m.shiny ? " ✨" : ""}</span><span>N.{m.level}</span>
+                                </span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setBertiePick(false)}>← ANNULER</button>
                     </div>
                 </div>
             )}

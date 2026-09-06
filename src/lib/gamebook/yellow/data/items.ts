@@ -45,6 +45,10 @@ export interface ItemData {
     /** TIRAMISU (MISC, s'utilise HORS combat) : « seconde chance » sur un Daemon DÉJÀ pâté (Pâte de Luxe) → au choix
      *  RESTAURER ses IV d'origine, ou RE-TENTER la loterie. Un clic dans le sac ouvre le sélecteur (cf. useTiramisu). */
     tiramisu?: boolean
+    /** PÂTES DE BERTIE CROCHUE (MISC, s'utilise HORS combat) : PARI d'évolution. Le plus souvent → +1 niveau ET
+     *  évolution forcée (hors palier) ; parfois (1/3) → DÉ-ÉVOLUTION + malédiction (refuse d'évoluer 5-20 niveaux).
+     *  Un clic dans le sac ouvre le sélecteur ; l'issue est aléatoire (cf. useBertieCrochue). */
+    bertiePasta?: boolean
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -218,6 +222,10 @@ export const ITEMS: Record<string, ItemData> = {
         id: "tiramisu", name: "Tiramisu", category: "MISC",
         description: "Dessert du remords. Sur un Daemon qui a déjà goûté une Pâte de Luxe : au choix, RESTAURER ses IV d'origine… ou RE-TENTER la loterie (PARFAIT/rang D). La seconde chance des cuisiniers repentis.", price: 0, tiramisu: true,
     },
+    bertie_crochue: {
+        id: "bertie_crochue", name: "Pâtes de Bertie Crochue", category: "MISC",
+        description: "De drôles de pâtes au goût imprévisible. Le plus souvent, elles font GAGNER UN NIVEAU et ÉVOLUER le Daemon sur-le-champ (même hors palier) ! Mais une bouchée sur trois le fait RÉGRESSER d'un stade… et il refusera d'évoluer pendant plusieurs niveaux. À tes risques et périls !", price: 0, bertiePasta: true,
+    },
 }
 
 /** Id de l'objet Super Pasta (cadeau de ferveur de clan). */
@@ -228,6 +236,9 @@ export const PATE_LUXE_ITEM_ID = "pate_de_luxe"
 
 /** Id de l'objet Tiramisu (seconde chance : restaurer les IV d'origine OU re-tenter la loterie). */
 export const TIRAMISU_ITEM_ID = "tiramisu"
+
+/** Id des Pâtes de Bertie Crochue (pari d'évolution : +1 niv + évolution forcée, OU dé-évolution + malédiction). */
+export const BERTIE_ITEM_ID = "bertie_crochue"
 
 /** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
 export const MAGNETOR_EVO_ITEM = "noyau_metal"

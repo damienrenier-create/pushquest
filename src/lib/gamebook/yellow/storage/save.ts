@@ -263,6 +263,9 @@ export interface YellowSave {
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
     luxeOutcomeQueue: string[]
+    /** PÂTES DE BERTIE CROCHUE — file PRÉ-TIRÉE des tirages (cadeau du génie, ex. TomGotrails : 2 "good" + 1 "bad" mélangés).
+     *  Chaque usage consomme la tête ; file vide → tirage générique 1/3 "bad". Valeurs : "good"|"bad". Défaut []. */
+    bertieOutcomeQueue: string[]
     /** VŒU « ABONDANCE MAUDITE » (Jacanon) — début (ms) de la malédiction (1 semaine) ; nb d'objets gratuits pris
      *  (→ nb de Daemons rendus désobéissants à la fin, max 7) ; date du dernier objet gratuit (throttle 1/jour).
      *  Tous optionnels/absents par défaut → save-safe, additif. */
@@ -353,7 +356,7 @@ export const ENERGY_LOG_MAX = 80
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -415,6 +418,7 @@ function parseMon(raw: unknown): MonInstance | null {
         pendingSaiyanLevels: typeof o.pendingSaiyanLevels === "number" ? Math.max(0, Math.floor(o.pendingSaiyanLevels)) : undefined,
         lastLevelUpAt: typeof o.lastLevelUpAt === "string" ? o.lastLevelUpAt : undefined,
         capturedLevel: typeof o.capturedLevel === "number" ? Math.floor(o.capturedLevel) : undefined,
+        evoLockUntilLevel: typeof o.evoLockUntilLevel === "number" && o.evoLockUntilLevel > 0 ? Math.max(1, Math.min(100, Math.floor(o.evoLockUntilLevel))) : undefined, // BERTIE CROCHUE : verrou d'évolution (dé-évolution)
         capturedAt: typeof o.capturedAt === "string" ? o.capturedAt : undefined,
         bestDmg: typeof o.bestDmg === "number" ? Math.max(0, Math.floor(o.bestDmg)) : undefined,
         bestDmgMove: typeof o.bestDmgMove === "string" ? o.bestDmgMove : undefined,
@@ -834,6 +838,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         luxeOutcomeQueue: Array.isArray(o.luxeOutcomeQueue) ? (o.luxeOutcomeQueue as unknown[]).filter((v): v is string => v === "perfect" || v === "min" || v === "shiny_perfect").slice(0, 100) : [],
+        bertieOutcomeQueue: Array.isArray(o.bertieOutcomeQueue) ? (o.bertieOutcomeQueue as unknown[]).filter((v): v is string => v === "good" || v === "bad").slice(0, 100) : [],
         forcedEncounter: typeof o.forcedEncounter === "string" ? o.forcedEncounter : undefined,
         // MULTI-PROFILS : profils inactifs portés OPAQUES (jamais imbriqués dans un monde `nested` → top-level only).
         //   Re-parsés seulement au moment de la bascule (switchProfile). Les blobs stockés n'ont PAS d'altProfiles (stripés au stash).
@@ -893,6 +898,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         pendingSaiyanLevels: m.pendingSaiyanLevels && m.pendingSaiyanLevels > 0 ? m.pendingSaiyanLevels : undefined,
         lastLevelUpAt: m.lastLevelUpAt,
         capturedLevel: m.capturedLevel,
+        evoLockUntilLevel: m.evoLockUntilLevel, // BERTIE CROCHUE : verrou d'évolution — DOIT être ici (sinon strippé après combat)
         capturedAt: m.capturedAt,
         bestDmg: m.bestDmg && m.bestDmg > 0 ? m.bestDmg : undefined,
         bestDmgMove: m.bestDmgMove,

@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
-import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
+import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -23,7 +23,7 @@ import { LAMP_ITEM_ID } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID } from "../data/items"
 import { IV_MAX } from "../data/ivConfig"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
@@ -246,6 +246,8 @@ interface PlayerState {
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
+    /** PÂTES DE BERTIE CROCHUE — file pré-tirée des tirages "good"/"bad" (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
+    bertieOutcomeQueue: string[]
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) consommée au prochain sauvage. */
     forcedEncounter?: string
     /** LIGUE DE FUSION — usure du gauntlet persistée (JSON) pour REPRENDRE la ligue au reload (équipe abîmée). */
@@ -325,7 +327,7 @@ export interface DomeStats {
 }
 export function emptyDomeStats(): DomeStats { return { wins: 0, losses: 0, daemonUse: {}, moveUse: {} } }
 
-let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -693,6 +695,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
+        bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
         forcedEncounter: p.forcedEncounter ?? st.forcedEncounter,
         fusionLeagueCarry: p.fusionLeagueCarry ?? st.fusionLeagueCarry,
         curseAbundanceStart: "curseAbundanceStart" in p ? p.curseAbundanceStart : st.curseAbundanceStart,
@@ -1044,7 +1047,7 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
-    st = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    st = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1066,7 +1069,7 @@ function carryCrossRunItems(prev: Record<string, number>): Record<string, number
  *  Les OBJETS CROSS-RUN (lampe/canne) sont reportés depuis le run précédent (carryCrossRunItems). */
 export function startNgPlusWorld(starter: MonInstance) {
     const carriedItems = carryCrossRunItems(st.items) // AVANT réassignation de st (= sac du run live)
-    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1076,7 +1079,7 @@ export function startNgPlusWorld(starter: MonInstance) {
  *  comme horodatage de départ du run (le run 3 n'a pas de champ dédié). */
 export function startRun3World(starter: MonInstance) {
     const carriedItems = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
-    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [] }
+    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1530,6 +1533,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "energy_drain": st = { ...st, reps: Math.max(0, st.reps - Math.max(0, amt)) }; return true     // malus d'⚡
         case "level_drain": return applyLevelDrain(e.id, Math.max(1, amt))                                  // le Daemon `id` recrache N niveaux
         case "luxe_pasta_batch": grantLuxePastaBatch(Math.max(1, amt || 6)); return true                     // N Pâtes de Luxe + file garantie (1 parfait/1 shiny/1 min/reste 50-50)
+        case "bertie_crochue_batch": grantBertieCrochueBatch(Math.max(1, amt || 3)); return true             // N Pâtes de Bertie Crochue + file garantie (~1/3 mauvaises ; n=3 → 2 bonnes + 1 mauvaise)
         case "force_encounter": if (e.id) {
             // Si un vœu écrase une rencontre GALIJAH en attente, on RE-ARME Galijah (sinon sa chasse serait perdue).
             const clobbersGalijah = st.forcedEncounter?.includes('"galijah"') && !st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)
@@ -2614,6 +2618,105 @@ export function grantLuxePastaBatch(n = 6): void {
     for (let i = outcomes.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [outcomes[i], outcomes[j]] = [outcomes[j], outcomes[i]] } // Fisher-Yates
     addItem(PATE_LUXE_ITEM_ID, n) // (addItem émet + réassigne st)
     st = { ...st, luxeOutcomeQueue: [...(st.luxeOutcomeQueue ?? []), ...outcomes] }
+    emit()
+}
+
+// ═══════════════════════ PÂTES DE BERTIE CROCHUE (pari d'évolution) ═══════════════════════
+/** Issue d'une Pâte de Bertie Crochue. "evolved"=+1 niv + évolution forcée · "flat"=+1 niv seul (stade final OU maudit)
+ *  · "devolved"=dé-évolution + malédiction · "cursed"=mauvais tirage sur un stade de base (pas de dé-évo mais malédiction). */
+export type BertieOutcome = "evolved" | "flat" | "devolved" | "cursed"
+const BERTIE_LOCK_MIN = 5, BERTIE_LOCK_MAX = 20 // durée (niveaux) de la malédiction anti-évolution après un mauvais tirage
+
+/** Utilise UNE Pâte de Bertie Crochue sur `uid` (équipe OU PC). Tirage : file pré-tirée (cadeau) en tête, sinon 1/3 "bad".
+ *  BON → +1 niveau puis évolution forcée au stade suivant (si possible ET non maudit), sinon +1 niveau seul ("flat").
+ *  MAUVAIS → dé-évolution au stade précédent (niveau inchangé) + malédiction anti-évolution 5-20 niv ; sur un stade de
+ *  BASE (rien en dessous), pas de dé-évo mais la malédiction s'applique quand même ("cursed"). Consomme 1 objet. */
+export function useBertieCrochue(uid: string): { ok: boolean; reason?: "none" | "introuvable"; outcome?: BertieOutcome; fromName?: string; toName?: string; toLevel?: number } {
+    if ((st.items[BERTIE_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
+    let inTeam = true
+    let idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) { idx = st.pc.findIndex((m) => m.uid === uid); inTeam = false }
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const orig = (inTeam ? st.team : st.pc)[idx]
+    const fromSp = getSpecies(orig.speciesId)
+    const fromName = fromSp?.name ?? orig.speciesId
+    // Tirage : file pré-tirée (cadeau du génie) en tête, sinon 1/3 mauvais.
+    const queue = st.bertieOutcomeQueue ?? []
+    const roll: "good" | "bad" = queue.length > 0 ? (queue[0] as "good" | "bad") : (Math.random() < 1 / 3 ? "bad" : "good")
+    const nextQueue = queue.length > 0 ? queue.slice(1) : queue
+    // Clone défensif (applyExp/applyEvolution MUTENT).
+    const mon: MonInstance = {
+        ...orig, ivs: { ...orig.ivs }, moves: orig.moves.map((s) => ({ ...s })),
+        pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined,
+    }
+    let outcome: BertieOutcome
+    let toName = fromName
+    if (roll === "good") {
+        // +1 niveau effectif (patron Super Pasta), plafonné à 100.
+        const baseExp = Math.max(orig.exp, expForLevel(orig.level, orig.speciesId))
+        const effLevel = Math.max(orig.level, levelFromExp(orig.exp, orig.speciesId))
+        if (effLevel < MAX_LEVEL) {
+            const target = Math.min(MAX_LEVEL, effLevel + 1)
+            const hpBefore = fromSp ? fullStats(orig, fromSp).hp : orig.currentHp
+            applyExp(mon, Math.max(1, expForLevel(target, orig.speciesId) - baseExp))
+            const hpMid = fromSp ? fullStats(mon, fromSp).hp : mon.currentHp
+            mon.currentHp = mon.currentHp <= 0 ? 0 : Math.min(hpMid, mon.currentHp + Math.max(0, hpMid - hpBefore))
+        }
+        // Évolution FORCÉE au stade suivant SI l'espèce en a un ET que le Daemon n'est pas maudit.
+        const evoId = fromSp?.evolution?.toId
+        const locked = typeof mon.evoLockUntilLevel === "number" && mon.level < mon.evoLockUntilLevel
+        const curSp = getSpecies(mon.speciesId)
+        if (evoId && !locked && curSp) {
+            const hpBefore2 = fullStats(mon, curSp).hp
+            const res = applyEvolution(mon, evoId)
+            const toSp = getSpecies(evoId)
+            if (res && toSp) {
+                const hpAfter = fullStats(mon, toSp).hp
+                mon.currentHp = mon.currentHp <= 0 ? 0 : Math.min(hpAfter, mon.currentHp + Math.max(0, hpAfter - hpBefore2))
+                markCaught(evoId); markCaughtThisRun(evoId)
+                toName = toSp.name
+                outcome = "evolved"
+            } else outcome = "flat"
+        } else {
+            outcome = "flat" // stade final (pas d'évo) OU maudit → juste le +1 niveau
+        }
+    } else {
+        // MAUVAIS tirage : dé-évolution si un stade précédent existe (scan inverse SPECIES), sinon "cursed".
+        const preSp = Object.values(SPECIES).find((s) => s.evolution?.toId === orig.speciesId)
+        if (preSp) {
+            mon.speciesId = preSp.id
+            const hpAfter = fullStats(mon, preSp).hp
+            mon.currentHp = mon.currentHp <= 0 ? 0 : Math.min(hpAfter, mon.currentHp) // re-clamp au nouveau max (plus petit)
+            toName = preSp.name
+            outcome = "devolved"
+        } else {
+            outcome = "cursed" // stade de base : pas de dé-évo possible
+        }
+        // MALÉDICTION : refuse d'évoluer pendant 5-20 niveaux (appliquée MÊME sur un stade de base — choix Sartay).
+        const lock = BERTIE_LOCK_MIN + Math.floor(Math.random() * (BERTIE_LOCK_MAX - BERTIE_LOCK_MIN + 1))
+        mon.evoLockUntilLevel = Math.min(MAX_LEVEL, mon.level + lock)
+    }
+    const arr = (inTeam ? st.team : st.pc).slice()
+    arr[idx] = mon
+    // Consomme 1 objet (rebuild sans la clé quand le stock tombe à 0).
+    const items: Record<string, number> = {}
+    for (const [k, v] of Object.entries(st.items)) {
+        if (k === BERTIE_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
+    }
+    st = inTeam ? { ...st, team: arr, items, bertieOutcomeQueue: nextQueue } : { ...st, pc: arr, items, bertieOutcomeQueue: nextQueue }
+    emit()
+    return { ok: true, outcome, fromName, toName, toLevel: mon.level }
+}
+
+/** Cadeau (vœu du génie, ex. TomGotrails) : N Pâtes de Bertie Crochue + une file PRÉ-TIRÉE garantissant ~1/3 de
+ *  mauvaises (n=3 → 2 bonnes + 1 mauvaise), mélangée Fisher-Yates → le joueur ne sait pas laquelle le trahira. */
+export function grantBertieCrochueBatch(n = 3): void {
+    const bad = Math.max(1, Math.round(n / 3))
+    const rolls: ("good" | "bad")[] = []
+    for (let i = 0; i < n; i++) rolls.push(i < bad ? "bad" : "good")
+    for (let i = rolls.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rolls[i], rolls[j]] = [rolls[j], rolls[i]] } // Fisher-Yates
+    addItem(BERTIE_ITEM_ID, n) // (addItem émet + réassigne st)
+    st = { ...st, bertieOutcomeQueue: [...(st.bertieOutcomeQueue ?? []), ...rolls] }
     emit()
 }
 

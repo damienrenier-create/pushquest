@@ -299,6 +299,10 @@ export interface MonInstance {
     pendingSaiyanLevels?: number
     /** SAIYAN — date (YYYY-MM-DD) du dernier passage de niveau converti (début de fenêtre). */
     lastLevelUpAt?: string
+    /** PÂTES DE BERTIE CROCHUE — MALÉDICTION : suite à une dé-évolution (ou un mauvais tirage sur un stade de base),
+     *  ce Daemon REFUSE d'évoluer (changer de stade) tant que son niveau est < cette valeur (5-20 niv après coup).
+     *  Persisté (interface + parseMon + toMonInstance). Le niveau/Saiyan continuent d'avancer ; seul le stade est gelé. */
+    evoLockUntilLevel?: number
     /** Niveau auquel ce Daemon a été capturé (flavor, affiché dans la fiche). */
     capturedLevel?: number
     /** Date de capture (YYYY-MM-DD). */
