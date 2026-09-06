@@ -38,7 +38,7 @@ import type { StatKey } from "../battle/types"
 import type { AnanasVariant } from "../data/ananas"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
-import { aceTargetLevel, bestCounter, ACE_EASY_START, baseSpeciesOf } from "../data/ace"
+import { aceTargetLevel, bestCounter, ACE_EASY_START, baseSpeciesOf, ACE_PANTHEON_WIN } from "../data/ace"
 import { GEKROC_STONE_ITEM, PANTHEON_BASE_ID, PANTHEON_STONE_EVOS } from "../data/gekroc"
 import { markCaught, getPokedex } from "./pokedexStore"
 import type { PokeType } from "../battle/types"
@@ -2343,31 +2343,16 @@ export function aceBattleLevel(playerBestLevel: number): number {
     }
     return st.acePeakLevel
 }
-/** VŒU GÉNIE (Rob) — plafond QUOTIDIEN de victoires ACE relevé à 7 (au lieu de 1) via ce marqueur permanent. */
+/** VŒU GÉNIE (Rob) — « ACE 7×/jour » : marqueur PERMANENT qui permet d'ENCHAÎNER les combats d'ACE (au lieu d'1
+ *  victoire/jour) jusqu'à décrocher le Panthéon (7 victoires). CONTREPARTIE : perdre remet la SÉRIE à zéro (cf.
+ *  recordAceStreakLoss) → il faut 7 victoires D'AFFILÉE. */
 export const ACE_DAILY_CAP_MARKER = "ace_daily_cap_boost"
-export const ACE_BOOSTED_DAILY_CAP = 7
-const ACE_WINS_DAY_PREFIX = "ace_wins_day_" // marqueur journalier borné : `ace_wins_day_<jour>#<compte>` (auto-reset au change de jour)
 
-/** Plafond de victoires ACE par jour : 7 si le vœu « ACE 7×/jour » est actif (marqueur), sinon 1 (règle historique). */
-function aceDailyCap(): number {
-    return st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER) ? ACE_BOOSTED_DAILY_CAP : 1
-}
-/** Victoires ACE déjà obtenues AUJOURD'HUI (lues depuis le marqueur journalier ; 0 si aucune ou jour différent → auto-reset). */
-function aceWinsTodayCount(): number {
-    const m = st.defeatedTrainers.find((t) => t.startsWith(ACE_WINS_DAY_PREFIX))
-    if (!m) return 0
-    const rest = m.slice(ACE_WINS_DAY_PREFIX.length)
-    const sep = rest.lastIndexOf("#")
-    if (sep < 0) return 0
-    const day = rest.slice(0, sep)
-    const n = parseInt(rest.slice(sep + 1), 10)
-    return day === st.creditedThrough && Number.isFinite(n) ? Math.max(0, n) : 0
-}
-/** ACE affrontable aujourd'hui ? Historique : 1 VICTOIRE/jour (retry libre si on perd). Avec le vœu « ACE 7×/jour »
- *  (marqueur ACE_DAILY_CAP_MARKER, ex. Rob) : jusqu'à 7 victoires/jour, comptées via le marqueur journalier. */
+/** ACE affrontable maintenant ? Historique : 1 VICTOIRE/jour (retry libre si on perd). Avec le vœu « ACE 7×/jour »
+ *  (marqueur, ex. Rob) : enchaînable tant que la SÉRIE (aceWins) n'a pas atteint 7 — une défaite la remet à zéro. */
 export function aceAvailableToday(): boolean {
     if (st.creditedThrough === "") return true
-    if (aceDailyCap() > 1) return aceWinsTodayCount() < aceDailyCap() // BOOSTÉ : compteur du jour
+    if (st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) return st.aceWins < ACE_PANTHEON_WIN // boosté : jusqu'au Panthéon (7 d'affilée)
     return st.aceDefeatedDate !== st.creditedThrough // règle historique (inchangée pour tous les autres joueurs)
 }
 /**
@@ -2379,12 +2364,19 @@ export function recordAceDefeat(playerBestLevel: number, playerLastTypes: PokeTy
     const peak = aceTargetLevel(st.acePeakLevel, playerBestLevel)
     const counter = bestCounter(playerLastTypes)
     const box = { ...st.aceBox, [counter]: Math.max(st.aceBox[counter] ?? 0, playerLastLevel) }
-    const prevToday = aceWinsTodayCount() // victoires ACE déjà faites aujourd'hui (avant celle-ci)
     st = { ...st, acePeakLevel: peak, aceBox: box, aceWins: wins, aceDefeatedDate: st.creditedThrough }
-    // Compteur de victoires ACE du JOUR (utile UNIQUEMENT au plafond boosté 7/j de Rob) — marqueur journalier borné.
-    if (aceDailyCap() > 1 && st.creditedThrough) setDailyMarker(ACE_WINS_DAY_PREFIX, `${ACE_WINS_DAY_PREFIX}${st.creditedThrough}#${prevToday + 1}`) // emit inclus
-    else emit()
+    emit()
     return wins
+}
+
+/** VŒU « ACE 7×/jour » (Rob) — CONTREPARTIE : PERDRE contre ACE remet la SÉRIE (aceWins) à ZÉRO → il faut 7 victoires
+ *  D'AFFILÉE pour décrocher le Panthéon. N'affecte QUE les joueurs boostés (marqueur ACE_DAILY_CAP_MARKER) ; pour tous
+ *  les autres, perdre contre ACE ne casse rien (règle historique). Renvoie true si une série a bien été remise à zéro. */
+export function recordAceStreakLoss(): boolean {
+    if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER) || st.aceWins === 0) return false
+    st = { ...st, aceWins: 0 }
+    emit()
+    return true
 }
 
 // === DUELS reflets (Viridian = exacts / arène eau = inversés) ===
