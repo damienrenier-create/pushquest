@@ -22,6 +22,26 @@ export interface AiChoice {
     teamIndex?: number
 }
 
+const STAGE_CAP = 6 // plafond des crans de stat (±6), comme le moteur
+
+/** Un move de STATUT est-il INUTILE ce tour (aucun effet possible) ? → l'IA ne doit pas le spammer (softlock).
+ *  Vrai si TOUS ses effets sont déjà « au max » : chaque changement de stat vise une stat déjà à son plafond
+ *  (débuff cible à −6 / buff soi à +6) ET (le cas échéant) le statut infligé l'est déjà (cible pas NONE).
+ *  Fixe le bug « Jet de Sable à l'infini » : une fois la Précision adverse à −6, le move ne sert plus à rien. */
+function statusMoveWasted(mv: NonNullable<ReturnType<typeof getMove>>, self: BattleMon, foe: BattleMon): boolean {
+    const eff = mv.effect
+    if (!eff) return false
+    const changes = eff.statChanges ?? []
+    const inflicts = eff.inflictStatus
+    if (changes.length === 0 && !inflicts) return false // pas un move « effet sur stat/statut » → non concerné
+    const changesWasted = changes.length === 0 || changes.every((c) => {
+        const cur = (c.target === "self" ? self.stages : foe.stages)?.[c.stat] ?? 0
+        return c.stages < 0 ? cur <= -STAGE_CAP : c.stages > 0 ? cur >= STAGE_CAP : true
+    })
+    const inflictWasted = !inflicts || foe.status !== "NONE" // statut déjà présent → re-infliger échoue
+    return changesWasted && inflictWasted
+}
+
 interface ScoredMove { index: number; score: number; eff: number; power: number }
 
 function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
@@ -39,9 +59,11 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
         const power = mv.power || 0
         let score: number
         if (isStatus) {
+            // INUTILE ce tour (stat déjà au plafond / statut déjà posé) → surtout NE PAS le spammer (softlock Jet de Sable).
+            if (statusMoveWasted(mv, self, foe)) score = -2
             // SOIN (Repos/Linceul/Reprise d'Ailes…) : ne vaut RIEN à pleine vie, précieux à basse vie → on
             // l'échelonne sur les PV MANQUANTS (fini le « Repos en premier alors qu'il a toute sa vie »).
-            if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            else if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
             else score = 25 // autre statut (para/sommeil/boost…) : score plancher utile
         } else {
             score = power * eff
@@ -76,8 +98,10 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
         const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
         let score: number
         if (isStatus) {
+            // INUTILE ce tour (stat déjà au plafond / statut déjà posé) → ne JAMAIS le spammer (anti-softlock).
+            if (statusMoveWasted(mv, self, foe)) score = -2
             // SOIN : inutile à pleine vie, précieux à basse vie → échelonné sur les PV MANQUANTS (anti « Repos à full »).
-            if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            else if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
             // BUFF de stat sur SOI (Danse-Lames…) : à ÉVITER à bas PV (on meurt avant d'en profiter) ET si le boost
             //   OFFENSIF ne matche pas notre stat d'attaque dominante (ex. +Atk sur un attaquant SPÉCIAL = quasi
             //   inutile). Sinon, mise en place raisonnable (sous un bon coup). Corrige « Danse-Lames à bas PV / spé ».
@@ -349,7 +373,31 @@ export function chooseReplacementIndex(team: BattleMon[], foe: BattleMon, foeTea
     return bestI
 }
 
+/** Choix d'action de l'IA + GARDE-FOU ANTI-SOFTLOCK (règles b+c, TOUTES les IA) : après 6 attaques de STATUT
+ *  D'AFFILÉE, le 7e tour FORCE un coup offensif si le combattant en a un (≥ 1 coup / 7 tours → jamais de spam de
+ *  statut infini, ex. Jet de Sable). Met à jour `self.aiStatusStreak` (série de statuts consécutifs) sur le mon IA.
+ *  Combiné à la règle (a) (statut inutile = jamais choisi, cf. statusMoveWasted), élimine les stalemates d'IA. */
 export function chooseAiAction(
+    self: BattleMon,
+    foe: BattleMon,
+    team: BattleMon[],
+    activeIndex: number,
+    level: AiLevel,
+    rng: Rng,
+): AiChoice {
+    let choice = chooseAiActionInner(self, foe, team, activeIndex, level, rng)
+    const isStatusIdx = (idx?: number) => { const mv = getMove(self.moves[idx ?? 0]?.moveId ?? ""); return !mv || mv.power <= 0 }
+    // (b)+(c) : 6 statuts d'affilée → 7e = coup offensif OBLIGATOIRE si dispo (bestDamageMove renvoie -1 si aucun).
+    if (choice.kind === "move" && isStatusIdx(choice.moveIndex) && (self.aiStatusStreak ?? 0) >= 6) {
+        const dmg = bestDamageMove(self, foe, true)
+        if (dmg >= 0) choice = { kind: "move", moveIndex: dmg }
+    }
+    // Série de statuts consécutifs : +1 sur un coup de statut, remise à 0 sur un coup offensif OU un switch.
+    self.aiStatusStreak = (choice.kind === "move" && isStatusIdx(choice.moveIndex)) ? (self.aiStatusStreak ?? 0) + 1 : 0
+    return choice
+}
+
+function chooseAiActionInner(
     self: BattleMon,
     foe: BattleMon,
     team: BattleMon[],

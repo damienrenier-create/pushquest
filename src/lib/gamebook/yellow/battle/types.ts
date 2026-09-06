@@ -349,6 +349,9 @@ export interface BattleMon extends MonInstance {
     talentStatGuardUsed?: boolean
     /** TALENT Cuirasse mentale : le crit garanti du combat a-t-il déjà été consommé ? (one-shot, runtime, non persisté). */
     talentCritUsed?: boolean
+    /** IA — nb d'attaques de STATUT jouées D'AFFILÉE par ce combattant (0 = le dernier coup était offensif). Anti-softlock :
+     *  au-delà de 6, l'IA FORCE un coup offensif (≥ 1 coup / 7 tours). Mis à jour par chooseAiAction. Runtime, non persisté. */
+    aiStatusStreak?: number
     /** Plus gros coup porté DANS CE COMBAT — runtime, JAMAIS persisté. Repart de 0 à
      *  chaque combat (toBattleMon le laisse undefined) → le débrief GOAT ne reflète QUE
      *  le combat courant, sans traîner les records des combats précédents. À ne pas
