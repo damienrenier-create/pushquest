@@ -1545,6 +1545,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
+        case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
         default: return false                                                                              // type non géré → non appliqué
     }
 }
@@ -2342,9 +2343,32 @@ export function aceBattleLevel(playerBestLevel: number): number {
     }
     return st.acePeakLevel
 }
-/** ACE affrontable aujourd'hui ? (1 défaite/jour ; retry libre si on perd). */
+/** VŒU GÉNIE (Rob) — plafond QUOTIDIEN de victoires ACE relevé à 7 (au lieu de 1) via ce marqueur permanent. */
+export const ACE_DAILY_CAP_MARKER = "ace_daily_cap_boost"
+export const ACE_BOOSTED_DAILY_CAP = 7
+const ACE_WINS_DAY_PREFIX = "ace_wins_day_" // marqueur journalier borné : `ace_wins_day_<jour>#<compte>` (auto-reset au change de jour)
+
+/** Plafond de victoires ACE par jour : 7 si le vœu « ACE 7×/jour » est actif (marqueur), sinon 1 (règle historique). */
+function aceDailyCap(): number {
+    return st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER) ? ACE_BOOSTED_DAILY_CAP : 1
+}
+/** Victoires ACE déjà obtenues AUJOURD'HUI (lues depuis le marqueur journalier ; 0 si aucune ou jour différent → auto-reset). */
+function aceWinsTodayCount(): number {
+    const m = st.defeatedTrainers.find((t) => t.startsWith(ACE_WINS_DAY_PREFIX))
+    if (!m) return 0
+    const rest = m.slice(ACE_WINS_DAY_PREFIX.length)
+    const sep = rest.lastIndexOf("#")
+    if (sep < 0) return 0
+    const day = rest.slice(0, sep)
+    const n = parseInt(rest.slice(sep + 1), 10)
+    return day === st.creditedThrough && Number.isFinite(n) ? Math.max(0, n) : 0
+}
+/** ACE affrontable aujourd'hui ? Historique : 1 VICTOIRE/jour (retry libre si on perd). Avec le vœu « ACE 7×/jour »
+ *  (marqueur ACE_DAILY_CAP_MARKER, ex. Rob) : jusqu'à 7 victoires/jour, comptées via le marqueur journalier. */
 export function aceAvailableToday(): boolean {
-    return st.creditedThrough === "" || st.aceDefeatedDate !== st.creditedThrough
+    if (st.creditedThrough === "") return true
+    if (aceDailyCap() > 1) return aceWinsTodayCount() < aceDailyCap() // BOOSTÉ : compteur du jour
+    return st.aceDefeatedDate !== st.creditedThrough // règle historique (inchangée pour tous les autres joueurs)
 }
 /**
  * Défaite d'ACE : ratchet du pic de niveau (= max(pic, ton meilleur + 2), ne régresse
@@ -2355,8 +2379,11 @@ export function recordAceDefeat(playerBestLevel: number, playerLastTypes: PokeTy
     const peak = aceTargetLevel(st.acePeakLevel, playerBestLevel)
     const counter = bestCounter(playerLastTypes)
     const box = { ...st.aceBox, [counter]: Math.max(st.aceBox[counter] ?? 0, playerLastLevel) }
+    const prevToday = aceWinsTodayCount() // victoires ACE déjà faites aujourd'hui (avant celle-ci)
     st = { ...st, acePeakLevel: peak, aceBox: box, aceWins: wins, aceDefeatedDate: st.creditedThrough }
-    emit()
+    // Compteur de victoires ACE du JOUR (utile UNIQUEMENT au plafond boosté 7/j de Rob) — marqueur journalier borné.
+    if (aceDailyCap() > 1 && st.creditedThrough) setDailyMarker(ACE_WINS_DAY_PREFIX, `${ACE_WINS_DAY_PREFIX}${st.creditedThrough}#${prevToday + 1}`) // emit inclus
+    else emit()
     return wins
 }
 
