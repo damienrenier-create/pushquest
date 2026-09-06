@@ -447,6 +447,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const fusionSpeciesRef = useRef<string[]>([])              // espèces éphémères des fusionnés (1 épreuve simple, jusqu'à 6 pour un roster) → dispose au prochain combat / unmount
     const [atelierAdd, setAtelierAdd] = useState<{ a: string; b: string } | null>(null) // ATELIER : brouillon d'ajout (Parent A + Parent B) ; null = vue d'ensemble
     const [atelierPicking, setAtelierPicking] = useState<"a" | "b" | null>(null)         // quel picker de parent est ouvert
+    const [atelierEnemyPick, setAtelierEnemyPick] = useState<string[]>([])               // ATELIER : paires (`${a}_${b}`) choisies comme ÉQUIPE ADVERSE du test ; [] = adversaire par défaut (Tonyront·Maîtrelmin)
+    const [atelierEnemyOpen, setAtelierEnemyOpen] = useState(false)                       // ATELIER : panneau de choix de l'adversaire déplié ?
     const [fusionDetail, setFusionDetail] = useState<{ aId: string; bId: string } | null>(null) // ATELIER : fiche COMPLÈTE d'une fusion du roster
     const [fusionRenaming, setFusionRenaming] = useState<{ aId: string; bId: string } | null>(null) // ATELIER : fusion en cours de renommage
     const [fusionRenameVal, setFusionRenameVal] = useState("")
@@ -3781,9 +3783,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     fusionSpeciesRef.current.forEach(disposeFusion)
                     const built = valid.map((p) => { const a = byUid(p.a)!, b = byUid(p.b)!; return buildFusion(a, b, { name: getFusionName(a.speciesId, b.speciesId), moves: fusionMovesFor(a, b) }) })
                     const lvl = Math.max(...built.map((f) => f.result.level))
-                    // ÉPREUVE D'OUVERTURE : vs les 2 mêmes fusions ennemies que l'épreuve simple (Tonyront · Maîtrelmin).
-                    const enemy = buildFusionTrialEnemy(lvl)
-                    fusionSpeciesRef.current = [...built.map((f) => f.speciesId), ...enemy.speciesIds]
+                    // ÉQUIPE ADVERSE : soit un sous-ensemble CHOISI parmi MES fusions (combat-miroir), soit — par défaut —
+                    //   les 2 fusions de l'épreuve d'ouverture (Tonyront · Maîtrelmin). Les paires choisies sont bâties à
+                    //   l'identique (owned:false) ; une même paire des 2 côtés partage son espèce éphémère (dispose dédupliqué).
+                    const chosen = valid.filter((p) => atelierEnemyPick.includes(`${p.a}_${p.b}`))
+                    const enemyBuilt = chosen.length ? chosen.map((p) => { const a = byUid(p.a)!, b = byUid(p.b)!; return buildFusion(a, b, { name: getFusionName(a.speciesId, b.speciesId), moves: fusionMovesFor(a, b) }) }) : null
+                    const enemy = enemyBuilt ? { team: enemyBuilt.map((f) => f.instance), speciesIds: enemyBuilt.map((f) => f.speciesId) } : buildFusionTrialEnemy(lvl)
+                    fusionSpeciesRef.current = [...new Set([...built.map((f) => f.speciesId), ...enemy.speciesIds])]
                     startFusionTrialBattle(built.map((f) => f.instance), enemy.team, Math.floor(Math.random() * 0x7fffffff))
                     closeIt()
                 }
@@ -3870,6 +3876,39 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     )}
                                     {collection.length < 2 && <div style={{ fontSize: 11, color: "#c83030", margin: "4px 0" }}>Il te faut au moins 2 Daemons.</div>}
                                     <button style={menuBtnStyle} onClick={() => openPc()}>📦 BOÎTE / ÉQUIPE (ranger tes Daemons)</button>
+                                    {/* CHOIX DE L'ADVERSAIRE du combat-test : par défaut Tonyront · Maîtrelmin, ou une équipe composée
+                                        PARMI mes propres fusions (combat-miroir). Coche 1 à 6 ; aucune coche = adversaire par défaut. */}
+                                    {valid.length > 0 && (() => {
+                                        const enemyCount = valid.filter((p) => atelierEnemyPick.includes(`${p.a}_${p.b}`)).length
+                                        return (
+                                            <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, margin: "2px 0", padding: "6px 9px", background: "rgba(124,79,192,0.05)" }}>
+                                                <button onClick={() => setAtelierEnemyOpen((o) => !o)}
+                                                    style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#c79cff", cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, padding: 0 }}>
+                                                    <span>🆚 Adversaire : {enemyCount > 0 ? `${enemyCount} de mes fusion${enemyCount > 1 ? "s" : ""}` : "défaut (Tonyront · Maîtrelmin)"}</span>
+                                                    <span style={{ flexShrink: 0 }}>{atelierEnemyOpen ? "▲" : "▼"}</span>
+                                                </button>
+                                                {atelierEnemyOpen && (
+                                                    <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                                                        <div style={{ fontSize: 10, opacity: 0.7 }}>Coche 1 à 6 de tes fusions pour composer l&apos;équipe adverse (combat-miroir). Aucune coche = adversaire par défaut.</div>
+                                                        {valid.map((p) => {
+                                                            const key = `${p.a}_${p.b}`
+                                                            const on = atelierEnemyPick.includes(key)
+                                                            return (
+                                                                <button key={key} onClick={() => setAtelierEnemyPick((prev) => on ? prev.filter((k) => k !== key) : [...prev, key])}
+                                                                    style={{ textAlign: "left", background: on ? "rgba(124,79,192,0.18)" : "transparent", border: `1px solid ${on ? "#7c4fc0" : "#4a3a6a"}`, color: on ? "#e6d6ff" : "#b9a9d9", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 11, padding: "4px 8px" }}>
+                                                                    {on ? "☑" : "☐"} {fusionNameOf(p)}
+                                                                </button>
+                                                            )
+                                                        })}
+                                                        {enemyCount > 0 && (
+                                                            <button onClick={() => setAtelierEnemyPick([])}
+                                                                style={{ background: "transparent", border: "1px solid #7c4fc0", color: "#c79cff", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 10.5, padding: "3px 8px" }}>↺ Adversaire par défaut</button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
                                     <button style={menuBtnDimStyle} disabled={!valid.length} onClick={fight}>⚔️ Tester au combat (optionnel){valid.length ? ` — ${valid.length} fusion${valid.length > 1 ? "s" : ""}` : ""}</button>
                                     <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
                                 </>

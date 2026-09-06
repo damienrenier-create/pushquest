@@ -555,6 +555,13 @@ export function getBattleEnergy(): { spent: number; cap: number } {
     return { spent: storeState.energySpent, cap: battleEnergyCap(getPlayer().badges.length) }
 }
 
+/** trainerId du combat courant (null en combat sauvage / hors combat). Lu par l'UI pour reconnaître un combat
+ *  particulier — ex. l'ÉPREUVE DE FUSION `fusion:TRIAL` (bac à sable) où on autorise un abandon sans pénalité.
+ *  Sûr à lire pendant le rendu : `trainer` est posé/effacé ATOMIQUEMENT avec `battle` (même setStore). */
+export function getBattleTrainerId(): string | null {
+    return storeState.trainer?.trainerId ?? null
+}
+
 /** Coût en reps de l'attaque du Daemon actif (0 si introuvable). `mon` : override le Daemon dont on calcule le coût
  *  (PvP : le mon LOCAL peut être côté "enemy" si on est le joueur B ; sinon défaut = b.player). */
 function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInstance): number {

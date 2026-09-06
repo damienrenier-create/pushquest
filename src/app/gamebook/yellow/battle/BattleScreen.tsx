@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, getBattleTrainerId, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
 import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -251,6 +251,9 @@ export default function BattleScreen() {
     const enemy = battle.enemy.team[eIdx]
 
     const isEnded = battle.phase === "ended"
+    // ÉPREUVE DE FUSION (Atelier / Autel) : bac à sable sans écriture save → on autorise un ABANDON immédiat
+    // du test (sinon la FUITE est grisée : !isWild) pour ne pas devoir enchaîner tous les combats-tests.
+    const isFusionTrial = getBattleTrainerId() === "fusion:TRIAL"
     // Victoire = combat fini ET il me reste au moins un Daemon debout (mon camp canonique
     // après swap éventuel) → déclenche la célébration (confettis + débrief GOAT/FLOP).
     const playerWon = isEnded && battle.player.team.some((m) => m.currentHp > 0)
@@ -364,6 +367,8 @@ export default function BattleScreen() {
                 // FUITE → écran de confirmation (évite la fuite accidentelle).
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
             }
+            // ÉPREUVE DE FUSION : quitter le test à tout moment (bac à sable, aucune écriture) → retour direct à l'Atelier.
+            if (isFusionTrial) options.push({ label: "🚪 QUITTER LE TEST", onSelect: () => endBattle(), detail: "Termine le combat-test tout de suite et revient à l'Atelier (aucune conséquence)." })
         } else if (menu === "moves") {
             // Coût AFFICHÉ = miroir EXACT de la déduction du store (inclut ×3 entraînement rival, ×10 vœu maudit,
             //   quota run3/fun, coût ∝ PV manquants) → source de vérité unique, plus de désync affichage/débit.
