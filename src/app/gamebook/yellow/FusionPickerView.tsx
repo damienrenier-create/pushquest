@@ -101,11 +101,11 @@ export function FusionPickerView({ slot, daemons, disabledUids, onPick, onClose 
                         <button key={r.m.uid} disabled={r.disabled} onClick={() => !r.disabled && onPick(r.m.uid)}
                             style={{ ...S.card, borderColor: r.types[0] ? tc(r.types[0]) : "#4a3a6a", opacity: r.disabled ? 0.4 : 1, cursor: r.disabled ? "not-allowed" : "pointer" }}>
                             <div style={S.cardTop}>
-                                <div style={{ ...S.spriteBox, borderColor: r.types[0] ? tc(r.types[0]) : "#4a3a6a" }}>
+                                <div style={{ ...S.spriteBox, borderColor: r.m.shiny ? "#ffd76a" : r.types[0] ? tc(r.types[0]) : "#4a3a6a", ...(r.m.shiny ? { boxShadow: "0 0 8px #ffd76a88" } : {}) }}>
                                     {r.sprite ? <img src={r.sprite} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} /> : <span style={{ opacity: 0.6 }}>❔</span>}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={S.name}>{r.name}</div>
+                                    <div style={S.name}>{r.m.shiny ? "✨ " : ""}{r.name}</div>
                                     <div style={S.chipRow}>{r.types.map((t) => <span key={t} style={{ ...S.tChip, background: tc(t) }}>{t}</span>)}</div>
                                     <div style={S.meta}>N.{r.m.level} · <b style={{ color: r.bst >= 450 ? "#f0c840" : "#d9b8ff" }}>BST {r.bst}</b>{r.disabled ? " · déjà en fusion" : ""}</div>
                                 </div>
