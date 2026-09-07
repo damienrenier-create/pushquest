@@ -1099,6 +1099,20 @@ export function reconcileCrossRunItems(activeItems: Record<string, number>, othe
     return out
 }
 
+/** CORRECTIF run 2 (07/09/2026) : le kit de départ du run 2 (mode fun) donnait par erreur des FUSIO-BALLS, qui
+ *  n'attrapent QUE les fusions → inutiles pour capturer les Daemons sauvages du run 2. On les convertit 1:1 en
+ *  Nexus-Balls (poke_ball) au CHARGEMENT du monde ngplus (un patch serveur serait écrasé par l'autosave client).
+ *  Pur & idempotent (plus de fusio_ball après → no-op au rechargement suivant). Aucune Fusio-Ball LÉGITIME n'existe en
+ *  run 2 : l'économie Fusio-Ball vit en Ligue de Fusion (monde run 4/live), jamais en ngplus → conversion sans risque. */
+export function fixNgplusFusioBalls(items: Record<string, number>): Record<string, number> {
+    const fusio = items["fusio_ball"] ?? 0
+    if (fusio <= 0) return items
+    const out = { ...items }
+    out["poke_ball"] = (out["poke_ball"] ?? 0) + fusio
+    delete out["fusio_ball"]
+    return out
+}
+
 /** NG+ : démarre un MONDE NG+ FRAIS dans les stores — comme resetForIntro, MAIS l'intro des 3 starters est
  *  sautée (introSeen=true) et le Daemon custom est déjà en équipe. isChampion=false (on relève le défi à
  *  nouveau), customDaemons GLOBAUX préservés, cadeaux de bienvenue neutralisés (l'énergie NG+ est créditée à
