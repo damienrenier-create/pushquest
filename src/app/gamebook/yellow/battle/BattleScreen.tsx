@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, getBattleTrainerId, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, getBattleTrainerId, getMinitelState, armMinitel, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
 import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -72,6 +72,8 @@ export default function BattleScreen() {
     const [cursor, setCursor] = useState(0)
     const selRowRef = useRef<HTMLButtonElement | null>(null) // option focalisée → maintenue visible (scroll auto)
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
+    const [minitelAnim, setMinitelAnim] = useState<{ name: string } | null>(null) // 📟 anim minibus quand le renfort débarque
+    const [minitelMsg, setMinitelMsg] = useState<string | null>(null)             // 📟 confirmation d'armement (toast transitoire)
     const atkKeyRef = useRef(0)
     const lastMoveSlotRef = useRef(0) // #3 : mémorise la dernière attaque choisie (rouvre dessus)
     // #7 — APPRENTISSAGE EN COMBAT : attaques « plus tard » mises en veille pour CE combat (uid:moveId),
@@ -187,6 +189,10 @@ export default function BattleScreen() {
             atkKeyRef.current += 1
             setAtkFx({ spec: pickAttackFx(ev.moveId), side: ev.side, key: atkKeyRef.current })
             delay = 360
+        } else if (ev.kind === "minitel") {
+            // 📟 RENFORT MINITEL : le minibus déboule et largue le 7e Daemon. On laisse jouer l'anim (~2,2 s) avant le switchIn.
+            setMinitelAnim({ name: ev.name })
+            delay = 2200
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)
@@ -369,6 +375,8 @@ export default function BattleScreen() {
             }
             // ÉPREUVE DE FUSION : quitter le test à tout moment (bac à sable, aucune écriture) → retour direct à l'Atelier.
             if (isFusionTrial) options.push({ label: "🚪 QUITTER LE TEST", onSelect: () => endBattle(), detail: "Termine le combat-test tout de suite et revient à l'Atelier (aucune conséquence)." })
+            // 📟 MINITEL (perk vœu) : armer l'appel — à la chute du dernier Daemon, un 7e surgit (au hasard du PC / fusion créée).
+            if (getMinitelState().canArm) options.push({ label: "📟 MINITEL", onSelect: () => { const msg = armMinitel(); if (msg) { setMinitelMsg(msg); setTimeout(() => setMinitelMsg(null), 3200) } }, detail: "Passe un coup de fil à ton PC : si ton DERNIER Daemon tombe K.O., un 7e renfort débarque au hasard ! (1×/combat)" })
         } else if (menu === "moves") {
             // Coût AFFICHÉ = miroir EXACT de la déduction du store (inclut ×3 entraînement rival, ×10 vœu maudit,
             //   quota run3/fun, coût ∝ PV manquants) → source de vérité unique, plus de désync affichage/débit.
@@ -609,7 +617,39 @@ export default function BattleScreen() {
                 </div>
             )}
 
+            {/* 📟 MINITEL — toast de confirmation d'armement (l'appel est passé). */}
+            {minitelMsg && <div style={MIN.toast}>{minitelMsg}</div>}
+
+            {/* 📟 MINITEL — le renfort débarque EN MINIBUS : il déboule de la gauche, klaxonne, largue le Daemon, repart. */}
+            {minitelAnim && (
+                <div style={MIN.overlay} onClick={(e) => e.stopPropagation()}>
+                    <div style={MIN.honk}>TÛÛÛT&nbsp;TÛÛÛT&nbsp;! 📟</div>
+                    <div style={MIN.bus} onAnimationEnd={() => setMinitelAnim(null)}>🚐💨</div>
+                    <div style={MIN.drop}>💥 {minitelAnim.name} débarque&nbsp;!</div>
+                </div>
+            )}
+
             <style jsx>{`
+                @keyframes minitelBus {
+                    0%   { transform: translateX(-130%) scaleX(1); }
+                    38%  { transform: translateX(-8%) scaleX(1); }
+                    46%  { transform: translateX(-8%) scaleX(1) rotate(-3deg); }
+                    54%  { transform: translateX(-8%) scaleX(1) rotate(3deg); }
+                    62%  { transform: translateX(-8%) scaleX(1) rotate(0deg); }
+                    100% { transform: translateX(150%) scaleX(-1); }
+                }
+                @keyframes minitelHonk {
+                    0%, 32% { opacity: 0; transform: translateY(6px) scale(0.8); }
+                    46% { opacity: 1; transform: translateY(0) scale(1.12); }
+                    64% { opacity: 1; transform: translateY(0) scale(1); }
+                    80%, 100% { opacity: 0; }
+                }
+                @keyframes minitelDrop {
+                    0%, 55% { opacity: 0; transform: translateY(14px) scale(0.7); }
+                    68% { opacity: 1; transform: translateY(0) scale(1.18); }
+                    82% { transform: translateY(0) scale(1); }
+                    100% { opacity: 1; transform: translateY(0) scale(1); }
+                }
                 @keyframes bobNext {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(2px); }
@@ -682,6 +722,15 @@ const LRN: Record<string, React.CSSProperties> = {
     primary: { width: "100%", marginTop: 8, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#1a1400", background: "#f5d020", border: "none", borderRadius: 8, cursor: "pointer" },
     giveUp: { width: "100%", marginTop: 4, padding: "9px", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#1a1400", background: "#f5d020", border: "none", borderRadius: 8, cursor: "pointer" },
     later: { width: "100%", marginTop: 8, padding: "8px", fontFamily: "inherit", fontSize: 11, color: "#fff", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, cursor: "pointer" },
+}
+
+// 📟 styles de l'anim MINITEL (minibus qui déboule) + du toast d'armement.
+const MIN: Record<string, React.CSSProperties> = {
+    toast: { position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 9200, background: "rgba(20,16,40,0.96)", color: "#ffe36b", border: "2px solid #f5d020", borderRadius: 10, padding: "8px 14px", fontFamily: "'Courier New', monospace", fontSize: 12, fontWeight: 700, maxWidth: "92%", textAlign: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" },
+    overlay: { position: "absolute", inset: 0, zIndex: 9150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, pointerEvents: "none", overflow: "hidden", fontFamily: "'Courier New', monospace" },
+    honk: { fontSize: 22, fontWeight: 900, color: "#ffe36b", textShadow: "0 2px 6px #000", animation: "minitelHonk 2.2s ease-in-out forwards" },
+    bus: { fontSize: 72, lineHeight: 1, filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.5))", animation: "minitelBus 2.2s cubic-bezier(.4,.05,.3,1) forwards" },
+    drop: { fontSize: 18, fontWeight: 800, color: "#fff", textShadow: "0 2px 6px #000", animation: "minitelDrop 2.2s ease-out forwards" },
 }
 
 // ============================================================

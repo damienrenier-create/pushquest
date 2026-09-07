@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -56,6 +56,7 @@ import { DUEL_EXP_MULT } from "../data/duel"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
+import { buildFusion } from "../data/fusionMon"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
@@ -280,7 +281,10 @@ function persistBattleSnapshot(): void {
         let fusionSpecies: SpeciesData[] | undefined
         if (isFusionLeagueTrainer(trainer?.trainerId)) {
             const seen = new Set<string>(); const chain: SpeciesData[] = []
-            for (const m of [...battle.player.team, ...battle.enemy.team]) {
+            // + le RENFORT MINITEL pré-tiré (fusion éphémère) : sa définition doit voyager AUSSI, sinon un reload
+            //   pendant un combat de Ligue armé casserait le renfort à son entrée (getSpecies=null).
+            const roster = battle.minitelReserve ? [...battle.player.team, ...battle.enemy.team, battle.minitelReserve] : [...battle.player.team, ...battle.enemy.team]
+            for (const m of roster) {
                 if (seen.has(m.speciesId)) continue
                 seen.add(m.speciesId)
                 const sp = getSpecies(m.speciesId)
@@ -562,6 +566,78 @@ export function getBattleTrainerId(): string | null {
     return storeState.trainer?.trainerId ?? null
 }
 
+// ═══════ 📟 MINITEL (perk vœu) — renfort 7e Daemon à la chute du dernier ═══════
+/** Préfixe d'uid du RENFORT MINITEL : instance ÉPHÉMÈRE (jamais persistée). Le retrait avant écriture save s'appuie
+ *  dessus (stripMinitelReserve) → le 7e emprunté ne rejoint JAMAIS l'équipe réelle ni la boîte. */
+const MINITEL_UID_PREFIX = "minitel__"
+function isMinitelReserveUid(uid: string): boolean { return uid.startsWith(MINITEL_UID_PREFIX) }
+/** Retire le renfort MINITEL d'une liste d'équipe AVANT toute écriture save (idempotent, no-op sans renfort). */
+function stripMinitelReserve<T extends { uid: string }>(team: readonly T[]): T[] { return team.filter((m) => !isMinitelReserveUid(m.uid)) }
+
+/** État MINITEL pour l'UI (perk débloqué ? déjà armé ce combat ? peut-on armer maintenant ?). */
+export function getMinitelState(): { unlocked: boolean; armed: boolean; canArm: boolean } {
+    const b = storeState.battle
+    const unlocked = isMinitelUnlocked()
+    const armed = !!b?.minitelArmed
+    // Armable : perk + combat en cours + pas déjà armé/utilisé + PAS de PvP (désync) + une source de renfort dispo.
+    const canArm = unlocked && !!b && b.phase !== "ended" && !b.pvp && !armed && !b.minitelUsed && minitelReserveAvailable()
+    return { unlocked, armed, canArm }
+}
+
+/** Y a-t-il un renfort disponible à appeler ? PC non vide (combat normal) OU une fusion créée non engagée (Ligue de Fusion). */
+function minitelReserveAvailable(): boolean {
+    if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) return availableFusionReserves().length > 0
+    return getPlayer().pc.length > 0
+}
+
+/** Paires de fusion du roster DÉJÀ CRÉÉES et NON ENGAGÉES dans l'équipe de combat courante (Ligue de Fusion). */
+function availableFusionReserves(): { a: string; b: string }[] {
+    const b = storeState.battle
+    const fielded = new Set((b?.player.team ?? []).map((m) => m.speciesId))
+    const all = [...getPlayer().team, ...getPlayer().pc]
+    return getPlayer().fusionRoster.filter((p) => {
+        if (p.a === p.b) return false
+        if (fielded.has(`fusion_${p.a}_${p.b}`)) return false // espèce éphémère déterministe (fusionSpeciesId) déjà en jeu
+        return !!all.find((m) => m.uid === p.a) && !!all.find((m) => m.uid === p.b) // les 2 parents existent encore
+    })
+}
+
+/** 📟 ARMER l'appel MINITEL : tire AU HASARD le 7e renfort (PC, ou fusion créée non engagée en Ligue de Fusion), le
+ *  stashe sur l'état de combat (éphémère, uid préfixé) → il débarquera à la chute du dernier Daemon. Une fois/combat.
+ *  Refuse en PvP (désync : simulation miroir). Renvoie un message pour l'UI, ou null si impossible. */
+export function armMinitel(): string | null {
+    const b = storeState.battle
+    if (!b || b.phase === "ended" || b.minitelArmed || b.minitelUsed) return null
+    if (!isMinitelUnlocked()) return null
+    if (b.pvp) return "📟 …tût tût tût. Pas de réseau MINITEL en plein duel PvP !"
+    let reserve: MonInstance | null = null
+    if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) {
+        const avail = availableFusionReserves()
+        if (!avail.length) return "📟 Aucune fusion créée disponible à appeler (elles sont déjà toutes en jeu)."
+        const pick = avail[Math.floor(Math.random() * avail.length)]
+        const all = [...getPlayer().team, ...getPlayer().pc]
+        const pa = all.find((m) => m.uid === pick.a)!, pb = all.find((m) => m.uid === pick.b)!
+        reserve = buildFusion(pa, pb).instance
+    } else {
+        const pc = getPlayer().pc
+        if (!pc.length) return "📟 Ton PC est vide — aucun Daemon à appeler en renfort !"
+        reserve = { ...pc[Math.floor(Math.random() * pc.length)] }
+    }
+    // Copie ÉPHÉMÈRE : uid préfixé (jamais persistée) + PV pleins (le renfort arrive frais). moves clonés pour ne pas
+    //   partager la réf des PP avec l'original du PC.
+    const sp = getSpecies(reserve.speciesId)
+    const fresh: MonInstance = {
+        ...reserve,
+        uid: `${MINITEL_UID_PREFIX}${reserve.uid}`,
+        currentHp: sp ? fullStats(reserve, sp).hp : reserve.currentHp,
+        status: "NONE", statusCounter: 0,
+        moves: reserve.moves.map((mv) => ({ ...mv, pp: mv.ppMax })),
+    }
+    setStore({ battle: { ...b, minitelArmed: true, minitelReserve: fresh } })
+    persistBattleSnapshot()
+    return `📟 Appel passé ! Un renfort mystère décrochera si ton dernier Daemon tombe…`
+}
+
 /** Coût en reps de l'attaque du Daemon actif (0 si introuvable). `mon` : override le Daemon dont on calcule le coût
  *  (PvP : le mon LOCAL peut être côté "enemy" si on est le joueur B ; sinon défaut = b.player). */
 function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInstance): number {
@@ -733,7 +809,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // PNJ-JOUEUR RUN 2 : on n'écrit l'équipe (donc l'XP ×2 des KO) dans la save QUE si VICTOIRE. Une DÉFAITE ne garde
     //   RIEN → tue le farm du ×2 XP par défaite volontaire (le combat reste retentable, mais un échec ne rapporte aucune XP).
     const isRun2GhostLoss = storeState.trainer?.trainerId?.startsWith("run2ghost:") === true && b.outcome !== "win"
-    if (!isFactory && !isRun2GhostLoss) setTeam(b.player.team.map(toMonInstance))
+    // 📟 stripMinitelReserve : le 7e RENFORT MINITEL (éphémère, uid préfixé) est RETIRÉ avant l'écriture → il ne
+    //   rejoint jamais l'équipe réelle (sinon setTeam grave une 7e slot permanente). No-op sans renfort.
+    if (!isFactory && !isRun2GhostLoss) setTeam(stripMinitelReserve(b.player.team).map(toMonInstance))
 
     // HAUT FAIT « KO du starter » (run 1) : grave le NIVEAU du starter à sa 1ʳᵉ chute (plus il tombe tard/haut, plus le
     //   badge vaut de points). UID mémorisé à l'intro (marqueur starter_uid:), 1 seule fois (marqueur starter_ko:). Combats
@@ -754,7 +832,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let fusionParentReward: string | null = null
     if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) {
         const team = getPlayer().team, pc = getPlayer().pc
-        const { edited, grew } = creditFusionParents(b.player.team, b.xpByUid, (uid) => team.find((m) => m.uid === uid) ?? pc.find((m) => m.uid === uid))
+        const { edited, grew } = creditFusionParents(stripMinitelReserve(b.player.team), b.xpByUid, (uid) => team.find((m) => m.uid === uid) ?? pc.find((m) => m.uid === uid))
         if (edited.size > 0) {
             setTeamAndPc(team.map((m) => edited.get(m.uid) ?? m), pc.map((m) => edited.get(m.uid) ?? m))
             fusionParentReward = grew.length
@@ -1259,7 +1337,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const lid = storeState.trainer?.trainerId
     if (b.outcome === "win" && lid && lid.startsWith("y_ligue_")) {
         let best = { dmg: 0, mon: "", move: "" }
-        for (const m of b.player.team) {
+        for (const m of stripMinitelReserve(b.player.team)) { // 📟 le renfort emprunté n'entre pas au Hall of Fame (best-of)
             const d = (m as { battleBestDmg?: number }).battleBestDmg ?? 0
             if (d > best.dmg) best = { dmg: d, mon: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: (m as { battleBestDmgMove?: string }).battleBestDmgMove ?? "" }
         }
@@ -1423,8 +1501,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const nemesisLossTaunt = nemesisRewardSp ? nemesisLostLines(nemesisRewardName(nemesisRewardSp))[0] : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
     // DUEL reflet : on retient si le reflet adverse avait un Σ niveaux d'équipe SUPÉRIEUR (badge « Reflet niveau-sup »).
-    const duelEnemyHigher = b.enemy.team.reduce((s, m) => s + m.level, 0) > b.player.team.reduce((s, m) => s + m.level, 0)
-    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent, faints: b.player.team.filter((m) => m.currentHp <= 0).length, enemyHigher: duelEnemyHigher } : null
+    // 📟 le renfort MINITEL emprunté ne compte pas dans les stats du duel (Σ niveaux / K.O.) → badge « reflet niveau-sup » juste.
+    const duelPlayerTeam = stripMinitelReserve(b.player.team)
+    const duelEnemyHigher = b.enemy.team.reduce((s, m) => s + m.level, 0) > duelPlayerTeam.reduce((s, m) => s + m.level, 0)
+    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent, faints: duelPlayerTeam.filter((m) => m.currentHp <= 0).length, enemyHigher: duelEnemyHigher } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.

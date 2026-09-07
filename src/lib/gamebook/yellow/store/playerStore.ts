@@ -1587,6 +1587,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
+        case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
         default: return false                                                                              // type non géré → non appliqué
     }
 }
@@ -2388,6 +2389,13 @@ export function aceBattleLevel(playerBestLevel: number): number {
  *  victoire/jour) jusqu'à décrocher le Panthéon (7 victoires). CONTREPARTIE : perdre remet la SÉRIE à zéro (cf.
  *  recordAceStreakLoss) → il faut 7 victoires D'AFFILÉE. */
 export const ACE_DAILY_CAP_MARKER = "ace_daily_cap_boost"
+
+/** 📟 VŒU « équipe de 7 » (Task1) — marqueur qui débloque l'APPEL MINITEL : une fois par combat, le joueur arme
+ *  l'appel ; à la chute de son DERNIER Daemon, un 7e surgit (tiré au hasard du PC ; en Ligue de Fusion, une fusion
+ *  créée non engagée). Le hasard est la seule contrepartie. PvE uniquement (armMinitel refuse le PvP → pas de désync). */
+export const MINITEL_UNLOCK_MARKER = "minitel_unlocked"
+/** Le joueur a-t-il débloqué l'appel MINITEL (vœu accepté) ? */
+export function isMinitelUnlocked(): boolean { return st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER) }
 
 /** ACE affrontable maintenant ? Historique : 1 VICTOIRE/jour (retry libre si on perd). Avec le vœu « ACE 7×/jour »
  *  (marqueur, ex. Rob) : enchaînable tant que la SÉRIE (aceWins) n'a pas atteint 7 — une défaite la remet à zéro. */

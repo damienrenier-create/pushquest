@@ -42,6 +42,7 @@ export type BattleEvent =
     | { kind: "faint"; side: SideId; name: string }
     | { kind: "status"; side: SideId; status: MajorStatus }
     | { kind: "switchIn"; side: SideId; name: string; teamIndex: number }
+    | { kind: "minitel"; name: string; teamIndex: number } // 📟 RENFORT MINITEL : le 7e Daemon débarque (déclenche l'anim minibus)
     | { kind: "ball"; action: "throw" | "shake" | "result" | "miss"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
@@ -73,6 +74,13 @@ export interface BattleState {
      *  Tant que ce champ est non-null, le combat est en PAUSE sur cette décision (cf. action "stay"
      *  ou "switch"). null hors de ce contexte (sauvage/PvP : pas de fenêtre, cf. checkFaints). */
     enemySendOut: { teamIndex: number } | null
+    /** 📟 MINITEL (perk vœu) : le joueur a « armé » l'appel ce combat → à la chute de son DERNIER Daemon, un 7e
+     *  RENFORT (pré-tiré au hasard de son PC, stashé ici) entre en jeu au lieu de la défaite. `minitelReserve` est
+     *  une instance ÉPHÉMÈRE (uid préfixé MINITEL_UID_PREFIX) — le store la RETIRE de l'équipe avant toute écriture
+     *  save. Un seul déclenchement par combat (minitelUsed). PvE seulement (armMinitel refuse en PvP → pas de désync). */
+    minitelArmed?: boolean
+    minitelUsed?: boolean
+    minitelReserve?: MonInstance
     /** File d'événements du dernier tour résolu (vidée par l'UI). */
     events: BattleEvent[]
     /** État RNG persistant (déterministe / rejouable). */
@@ -1300,6 +1308,26 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         state.phase = "ended"; state.outcome = "win"
         events.push({ kind: "end", outcome: "win" })
         return
+    }
+    // 📟 RENFORT MINITEL : le joueur n'a plus AUCUN Daemon debout MAIS il a « armé » l'appel ce combat et le renfort
+    //   n'a pas encore servi → le 7e (pré-tiré, stashé sur l'état) DÉBARQUE au lieu de la défaite. Une seule fois.
+    //   Il entre PLEINE VIE comme actif. (Placé APRÈS le check victoire ennemie → ne sauve que si l'ennemi tient encore.)
+    if (!hasAlive(state.player) && state.minitelArmed && !state.minitelUsed && state.minitelReserve) {
+        state.minitelUsed = true
+        const reinforcement = toBattleMon(state.minitelReserve)
+        state.minitelReserve = undefined
+        const idx = state.player.team.length
+        state.player.team.push(reinforcement)
+        state.player.activeIndex = idx
+        if (!state.participated.includes(reinforcement.uid)) state.participated.push(reinforcement.uid)
+        events.push({ kind: "message", text: `📟 DRRRING ! Tu passes un coup de MINITEL à ton PC…` })
+        events.push({ kind: "minitel", name: displayName(reinforcement), teamIndex: idx })
+        events.push({ kind: "switchIn", side: "player", name: displayName(reinforcement), teamIndex: idx })
+        events.push({ kind: "hp", side: "player", hp: reinforcement.currentHp, max: maxHpOf(reinforcement) })
+        events.push({ kind: "message", text: `🚐 ${displayName(reinforcement)} débarque en trombe pour te sauver la mise !` })
+        // PAS de `return` : on RETOMBE dans la logique ci-dessous. Le joueur a de nouveau un actif vivant (le renfort)
+        //   → le bloc défaite est sauté, mais si l'actif ENNEMI est AUSSI tombé ce tour (double-KO) son remplaçant est
+        //   bien mis en file (sinon : actif ennemi mort + aucun envoi = tour adverse offert + double animation de KO).
     }
     if (!hasAlive(state.player)) {
         state.phase = "ended"; state.outcome = "lose"
