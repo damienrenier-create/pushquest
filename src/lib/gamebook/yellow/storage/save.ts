@@ -243,6 +243,8 @@ export interface YellowSave {
     fusionRoster: { a: string; b: string }[]
     /** FUSION — NOMS PERSO des fusions jouées en Ligue, clé = paire d'espèces parentes « aId>bId ». Optionnel/additif. */
     fusionNames?: Record<string, string>
+    /** FUSION — ORDRE PERSO des attaques d'une fusion (slots 1..4), clé « aId>bId ». Optionnel/additif. */
+    fusionMoveOrders?: Record<string, string[]>
     /** FUSION — CHOIX DE TYPE (égalités), clé « aId>bId » → type imposé au parent A/B. Optionnel/additif. */
     fusionTypeChoices?: Record<string, { a?: string; b?: string }>
     /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
@@ -824,6 +826,12 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             : [],
         fusionNames: o.fusionNames && typeof o.fusionNames === "object" && !Array.isArray(o.fusionNames)
             ? Object.fromEntries(Object.entries(o.fusionNames as Record<string, unknown>).filter(([, v]) => typeof v === "string").map(([k, v]) => [k, (v as string).slice(0, 20)]))
+            : undefined,
+        fusionMoveOrders: o.fusionMoveOrders && typeof o.fusionMoveOrders === "object" && !Array.isArray(o.fusionMoveOrders)
+            ? Object.fromEntries(Object.entries(o.fusionMoveOrders as Record<string, unknown>)
+                .filter(([, v]) => Array.isArray(v))
+                .map(([k, v]) => [k, (v as unknown[]).filter((m): m is string => typeof m === "string").slice(0, 4)] as const)
+                .filter(([, v]) => v.length > 0))
             : undefined,
         fusionTypeChoices: o.fusionTypeChoices && typeof o.fusionTypeChoices === "object" && !Array.isArray(o.fusionTypeChoices)
             ? Object.fromEntries(Object.entries(o.fusionTypeChoices as Record<string, unknown>)
