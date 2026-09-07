@@ -44,6 +44,7 @@ describe("📟 MINITEL — renfort à la chute du dernier Daemon", () => {
         const active = s.player.team[s.player.activeIndex]
         expect(active.uid).toBe("minitel__test")          // c'est bien la réserve qui est active
         expect(active.currentHp).toBeGreaterThan(0)       // entrée pleine vie
+        expect(s.participated).not.toContain("minitel__test") // EMPRUNTÉ : hors partage d'XP → ne gagne aucune XP
     })
 
     it("NON armé : la défaite tombe normalement", () => {

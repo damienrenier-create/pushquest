@@ -1319,7 +1319,8 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         const idx = state.player.team.length
         state.player.team.push(reinforcement)
         state.player.activeIndex = idx
-        if (!state.participated.includes(reinforcement.uid)) state.participated.push(reinforcement.uid)
+        // ⚠️ On NE l'ajoute PAS à `participated` → il ne partage AUCUNE XP (awardExp ne crédite que les participants).
+        //   Le renfort est EMPRUNTÉ : il ne gagne rien, ni à l'écran ni en save (il est de toute façon strippé du write-back).
         events.push({ kind: "message", text: `📟 DRRRING ! Tu passes un coup de MINITEL à ton PC…` })
         events.push({ kind: "minitel", name: displayName(reinforcement), teamIndex: idx })
         events.push({ kind: "switchIn", side: "player", name: displayName(reinforcement), teamIndex: idx })
