@@ -64,7 +64,11 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
             // SOIN (Repos/Linceul/Reprise d'Ailes…) : ne vaut RIEN à pleine vie, précieux à basse vie → on
             // l'échelonne sur les PV MANQUANTS (fini le « Repos en premier alors qu'il a toute sa vie »).
             else if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
-            else score = 25 // autre statut (para/sommeil/boost…) : score plancher utile
+            // AUTO-BOOST (Focalisation, Danse-Lames…) : ne JAMAIS se mettre en place sous 50 % PV (on tombe avant d'en
+            //   profiter — plainte joueur : « focalisation alors qu'il va se faire tuer ») ; sinon score TRÈS bas → une
+            //   vraie attaque passe presque toujours devant. On ne « focalise » qu'en dernier recours (aucun coup utile).
+            else if (mv.effect?.statChanges?.some((c) => c.target === "self" && c.stages > 0)) score = selfFrac < 0.5 ? -1 : 8
+            else score = 25 // statut OFFENSIF (para/sommeil/débuff cible) : plancher utile même en perdant (sert la suite de l'équipe)
         } else {
             score = power * eff
             if (eff === 0) score = -1 // IMMUNISÉ (ex. NORMAL→SPECTRE, SOL→VOL) : ne JAMAIS choisir tant qu'un autre coup existe
@@ -112,8 +116,9 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
                 const mismatched = (boostsAtk && !boostsSpc && !isPhysAttacker) || (boostsSpc && !boostsAtk && isPhysAttacker)
                 // BUFF sur SOI (Danse-Lames/Focalisation…) : JAMAIS sous 50 % PV — on meurt avant d'en profiter (plainte
                 //   Ligue Fusion : le Conseil « elite » buffait à ~30 %). Score NÉGATIF = jamais devant une vraie attaque
-                //   ou un soin. Sinon 18, ou 2 si le boost ne matche pas la stat offensive dominante (+Atk sur un spécial).
-                score = selfFrac < 0.5 ? -1 : (mismatched ? 2 : 18)
+                //   ou un soin. Sinon 10 (baissé de 18 → un miroir/boss préfère FRAPPER dès qu'il a un vrai coup ; le
+                //   buff ne passe devant que si TOUS ses coups sont faibles), ou 2 si le boost ne matche pas la stat off.
+                score = selfFrac < 0.5 ? -1 : (mismatched ? 2 : 10)
             }
             // STATUT offensif : la PARALYSIE est forte à TOUT niveau de PV (ampute la vitesse + 25 % full-para) ;
             //   SOMMEIL/GEL neutralisent une menace vivante ; POISON/BRÛLURE = usure (meilleure tôt). Ne dépend plus

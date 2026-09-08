@@ -40,3 +40,32 @@ describe("IA anti-softlock — attaques de statut", () => {
         expect(self.aiStatusStreak).toBe(2)
     })
 })
+
+// AUTO-BUFF EN PURE PERTE (plainte : « focalisation alors qu'il va se faire tuer ») — l'IA préfère FRAPPER plutôt que
+// de se mettre en place quand ça ne sert à rien. moveIds : 0 = focalisation (auto-buff Spé), 1 = charge (offensif).
+describe("IA — pas de Focalisation en pure perte", () => {
+    it("PV pleins : un auto-buff ne passe PAS devant une vraie attaque (dresseur)", () => {
+        const self = mon("goatiny", 30, ["focalisation", "charge"])
+        const foe = mon("razmaree", 30, ["charge"]) // EAU, neutre au NORMAL → charge fait des dégâts
+        const choice = chooseAiAction(self, foe, [self], 0, "trainer", new Rng(1))
+        expect(choice.kind).toBe("move")
+        expect(choice.moveIndex).toBe(1) // charge, PAS focalisation (0)
+    })
+
+    it("bas PV (<50 %) : jamais de Focalisation — on frappe (on tomberait avant d'en profiter)", () => {
+        const self = mon("goatiny", 30, ["focalisation", "charge"])
+        self.currentHp = 3 // bien sous 50 % PV
+        const foe = mon("razmaree", 30, ["charge"])
+        const choice = chooseAiAction(self, foe, [self], 0, "trainer", new Rng(1))
+        expect(choice.moveIndex).toBe(1) // charge
+    })
+
+    it("miroir/boss (hof) bas PV : préfère frapper plutôt que se buffer", () => {
+        const self = mon("goatiny", 30, ["focalisation", "charge"])
+        self.currentHp = 3
+        const foe = mon("razmaree", 30, ["charge"])
+        const choice = chooseAiAction(self, foe, [self], 0, "hof", new Rng(1))
+        expect(choice.kind).toBe("move")
+        expect(choice.moveIndex).toBe(1)
+    })
+})
