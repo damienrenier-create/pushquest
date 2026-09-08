@@ -253,6 +253,9 @@ export interface YellowSave {
     /** JOURNAL D'ÉNERGIE — les N dernières ENTRÉES d'énergie {ts, source, amount} (diagnostic « d'où vient mon énergie »,
      *  affiché dans le calepin). Per-monde, borné (slice(-N)), OPTIONNEL/ADDITIF (défaut absent → aucune migration). */
     energyLog?: { ts: number; source: string; amount: number }[]
+    /** JOURNAL DES MESSAGES — les N derniers dialogues « info » reçus {ts, npcId, name, lines, mapId} du run (calepin
+     *  onglet Messages). Per-monde, borné, OPTIONNEL/ADDITIF (défaut absent → aucune migration). */
+    messageLog?: { ts: number; npcId: string; name: string; lines: string[]; mapId?: string }[]
     /** RUN 3 — teaser Dieu Spaghetti sur Lavapetit déjà montré (à la rencontre) / Lavapetit déjà capturé ?
      *  Per-monde, one-time (ne re-teaser jamais). Défaut false. */
     run3LavapetitSeen: boolean
@@ -356,6 +359,8 @@ export interface FusionChampionMon {
 export const SAVE_VERSION = 2
 /** Journal d'énergie : nombre max d'entrées conservées (les plus récentes). Borne écriture ET lecture (parse). */
 export const ENERGY_LOG_MAX = 80
+/** Journal des messages (calepin) : nombre max de dialogues « info » conservés par run. Borne écriture ET lecture. */
+export const MSG_LOG_MAX = 120
 /** Version à partir de laquelle le cliquet ACE est réinitialisé une fois (cf. coerce). */
 const ACE_RATCHET_RESET_VERSION = 2
 
@@ -853,6 +858,20 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         //   lecture (client + serveur) → la taille ne peut pas dériver, même si une save injecte un log surdimensionné.
         energyLog: Array.isArray(o.energyLog)
             ? (o.energyLog as unknown[]).filter((v): v is { ts: number; source: string; amount: number } => !!v && typeof v === "object" && typeof (v as { ts?: unknown }).ts === "number" && isFinite((v as { ts: number }).ts) && typeof (v as { source?: unknown }).source === "string" && typeof (v as { amount?: unknown }).amount === "number" && isFinite((v as { amount: number }).amount)).map((v) => ({ ts: Math.floor(v.ts), source: String(v.source).slice(0, 24), amount: Math.trunc(v.amount) })).slice(-ENERGY_LOG_MAX)
+            : undefined,
+        // JOURNAL DES MESSAGES : optionnel/additif. Filtre les entrées cassées, tronque champs + lignes (anti-bloat),
+        //   garde les MSG_LOG_MAX plus récents. Re-sanitize à chaque lecture (client+serveur) → taille bornée.
+        messageLog: Array.isArray(o.messageLog)
+            ? (o.messageLog as unknown[])
+                .filter((v): v is { ts: number; npcId: string; name: string; lines: unknown[]; mapId?: unknown } => !!v && typeof v === "object" && typeof (v as { ts?: unknown }).ts === "number" && isFinite((v as { ts: number }).ts) && typeof (v as { npcId?: unknown }).npcId === "string" && typeof (v as { name?: unknown }).name === "string" && Array.isArray((v as { lines?: unknown }).lines))
+                .map((v) => {
+                    const lines = (v.lines as unknown[]).filter((l): l is string => typeof l === "string").map((l) => l.slice(0, 400)).slice(0, 12)
+                    const e: { ts: number; npcId: string; name: string; lines: string[]; mapId?: string } = { ts: Math.floor(v.ts), npcId: String(v.npcId).slice(0, 40), name: String(v.name).slice(0, 40), lines }
+                    if (typeof v.mapId === "string") e.mapId = v.mapId.slice(0, 40)
+                    return e
+                })
+                .filter((e) => e.lines.length > 0)
+                .slice(-MSG_LOG_MAX)
             : undefined,
         run3LavapetitSeen: o.run3LavapetitSeen === true,
         run3LavapetitCaught: o.run3LavapetitCaught === true,

@@ -82,7 +82,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -102,6 +102,7 @@ import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/g
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { shouldLogMessage } from "@/lib/gamebook/yellow/data/messageJournal"
 import { reportSynergyDiscovery } from "@/lib/gamebook/yellow/synergyGift"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
@@ -352,6 +353,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const posterImage = useGameStore((s) => s.posterImage)
     const closePoster = useGameStore((s) => s.closePoster)
     const dialogue = useGameStore((s) => s.dialogue)
+    // 📖 JOURNAL DES MESSAGES (calepin) : capture CENTRALE — tous les dialogues du jeu convergent vers ce champ `dialogue`.
+    //   À chaque NOUVEAU dialogue « info » (filtre shouldLogMessage → exclut les railleries de combat), on consigne
+    //   ses lignes + la zone (mapId). Dédup par signature (l'avance ligne-par-ligne ne re-log pas). Per-run, persisté.
+    const lastMsgSigRef = useRef<string>("")
+    useEffect(() => {
+        if (!dialogue) return
+        const sig = `${dialogue.npcId}|${dialogue.lines.join("¶")}`
+        if (sig === lastMsgSigRef.current) return // même dialogue (avance de ligne) → déjà consigné
+        lastMsgSigRef.current = sig
+        if (shouldLogMessage(dialogue.npcId, dialogue.npcName)) {
+            logDialogueMessage(dialogue.npcId, dialogue.npcName, dialogue.lines, getCurrentMapId() ?? undefined)
+            persistYellowSave()
+        }
+    }, [dialogue])
     const pendingNgplusAbandon = useGameStore((s) => s.pendingNgplusAbandon) // NG+ : offre d'abandon CHEN → confirmation
     const pendingChenGift = useGameStore((s) => s.pendingChenGift) // MODE FUN : offre de cadeau ⚡ CHEN → confirmation
     const confirmChenGift = useGameStore((s) => s.confirmChenGift)

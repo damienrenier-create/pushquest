@@ -34,7 +34,7 @@ import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASI
 import { emptyFunDefis, funArenaRewardScaled, funSprintReward, funDailyZones, FUN_ARENA_WINDOW_MS, FUN_SPRINT_WINDOW_MS, FUN_DAILY_WINDOW_MS, type FunDefisState, type FunDefiKind } from "../data/funDefis"
 import { funDailyTarget } from "../data/encounters"
 import { createMonInstance } from "../battle/factory"
-import { emptyYellowStats, emptyAchTrack, ENERGY_LOG_MAX, type YellowStats, type AchTrack } from "../storage/save"
+import { emptyYellowStats, emptyAchTrack, ENERGY_LOG_MAX, MSG_LOG_MAX, type YellowStats, type AchTrack } from "../storage/save"
 import type { StatKey } from "../battle/types"
 import type { AnanasVariant } from "../data/ananas"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -238,6 +238,10 @@ interface PlayerState {
     fusionHistory: { a: string; b: string }[] // JOURNAL permanent des fusions créées (speciesId des 2 parents, a=tête). Fusiodex.
     /** JOURNAL D'ÉNERGIE — dernières ENTRÉES {ts, source, amount} (diagnostic calepin). Per-monde, borné, optionnel (défaut absent). */
     energyLog?: { ts: number; source: string; amount: number }[]
+    /** JOURNAL DES MESSAGES — derniers dialogues « info » reçus (Dieu Spaghetti / génie / PNJ à indices) du RUN en cours,
+     *  pour re-consulter objectifs/infos de zone/indices sans requestionner les PNJ. Per-monde (reset auto par run,
+     *  omis des starts), borné, optionnel. `mapId` = zone de réception (filtre « par zone »). Cf. calepin onglet Messages. */
+    messageLog?: { ts: number; npcId: string; name: string; lines: string[]; mapId?: string }[]
     /** RUN 3 — teaser Dieu Spag Lavapetit vu / capturé (one-time, per-monde). Défaut false. */
     run3LavapetitSeen: boolean
     run3LavapetitCaught: boolean
@@ -692,6 +696,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionTypeChoices: "fusionTypeChoices" in p ? p.fusionTypeChoices : st.fusionTypeChoices,
         fusionHistory: p.fusionHistory ?? st.fusionHistory ?? [],
         energyLog: p.energyLog ?? st.energyLog ?? [],
+        messageLog: p.messageLog ?? st.messageLog ?? [],
         run3LavapetitSeen: p.run3LavapetitSeen ?? st.run3LavapetitSeen ?? false,
         run3LavapetitCaught: p.run3LavapetitCaught ?? st.run3LavapetitCaught ?? false,
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
@@ -1708,6 +1713,19 @@ export function logEnergyIncome(source: string, amount: number): void {
     const amt = Math.trunc(amount)
     if (amt <= 0) return
     st = { ...st, energyLog: [...(st.energyLog ?? []), { ts: Date.now(), source: source.slice(0, 24), amount: amt }].slice(-ENERGY_LOG_MAX) }
+}
+
+/** JOURNAL DES MESSAGES (calepin, onglet Messages) : consigne un dialogue « info » reçu {ts, npcId, name, lines, mapId},
+ *  borné aux MSG_LOG_MAX plus récents. DÉDUP : un message identique (même npcId + mêmes lignes) déjà présent est RETIRÉ
+ *  puis ré-ajouté en tête de récence (re-lire un panneau le remonte au lieu de le dupliquer). Le FILTRE « info seulement »
+ *  est appliqué à la CAPTURE (shouldLogMessage). Pas d'emit() : lu à l'ouverture du calepin ; l'appelant persiste. */
+export function logDialogueMessage(npcId: string, name: string, lines: readonly string[], mapId?: string): void {
+    const cleanLines = lines.map((l) => String(l).slice(0, 400)).filter((l) => l.trim().length > 0)
+    if (cleanLines.length === 0) return
+    const sig = `${npcId} ${cleanLines.join("")}`
+    const prev = (st.messageLog ?? []).filter((m) => `${m.npcId} ${m.lines.join("")}` !== sig)
+    const entry = { ts: Date.now(), npcId: npcId.slice(0, 40), name: name.slice(0, 40), lines: cleanLines, ...(mapId ? { mapId: mapId.slice(0, 40) } : {}) }
+    st = { ...st, messageLog: [...prev, entry].slice(-MSG_LOG_MAX) }
 }
 
 /** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté.

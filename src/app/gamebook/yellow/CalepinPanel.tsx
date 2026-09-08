@@ -3,10 +3,12 @@
 // LE CALEPIN — carnet d'astuces reçu d'ACE (1re défaite). Liste les conseils DÉJÀ LUS (panneaux du parc), dans
 //   l'ordre reçu (triable), avec des NOTES PERSO annotables. Contenu = mêmes fiches TOPICS que le Manuel.
 
-import { Fragment, useState, type ReactNode } from "react"
+import { Fragment, useState, type ReactNode, type CSSProperties } from "react"
 import { TOPICS, topicCat } from "./ParkSignPanel"
 import { getCalepin, setCalepinNote } from "@/lib/gamebook/yellow/store/calepinStore"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { messageSource, type MessageSource } from "@/lib/gamebook/yellow/data/messageJournal"
+import { mapLabel } from "@/lib/gamebook/yellow/data/mapLabels"
 import { VILLE_JAUNE_TIPS } from "@/lib/gamebook/yellow/data/villeJauneTips"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
@@ -29,7 +31,7 @@ const fmtTime = (ts: number) => { const d = new Date(ts); return `${String(d.get
 export default function CalepinPanel({ userId, onClose }: { userId: string; onClose: () => void }) {
     const [cal, setCal] = useState(() => getCalepin(userId))
     const player = usePlayer()                              // pour le JOURNAL D'ÉNERGIE (player.energyLog)
-    const [tab, setTab] = useState<"astuces" | "energie">("astuces")
+    const [tab, setTab] = useState<"astuces" | "messages" | "energie">("astuces")
     const [sort, setSort] = useState<"recu" | "alpha" | "theme">("recu")
     const [open, setOpen] = useState<string | null>(null)   // tip (titre) déplié en détail
     const [draft, setDraft] = useState("")                  // brouillon de note du tip ouvert
@@ -53,7 +55,7 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                 </div>
 
                 <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                    {([["astuces", "📌 Mes astuces"], ["energie", "⚡ Journal d'énergie"]] as const).map(([k, lbl]) => (
+                    {([["astuces", "📌 Astuces"], ["messages", "📖 Messages"], ["energie", "⚡ Énergie"]] as const).map(([k, lbl]) => (
                         <button key={k} onClick={() => { setTab(k); setOpen(null) }} style={{ flex: 1, background: tab === k ? INK : "transparent", color: tab === k ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "6px 8px", cursor: "pointer", fontWeight: 800, fontSize: 11.5 }}>{lbl}</button>
                     ))}
                 </div>
@@ -99,9 +101,84 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                     </>
                 ))}
 
+                {tab === "messages" && <MessageJournal log={player.messageLog ?? []} />}
+
                 {tab === "energie" && <EnergyJournal log={player.energyLog ?? []} />}
             </div>
         </div>
+    )
+}
+
+// JOURNAL DES MESSAGES — tous les dialogues « info » reçus ce run (Dieu Spaghetti, génie, indices PNJ), du plus récent
+//   au plus ancien, pour re-consulter objectifs/infos de zone/indices sans requestionner les PNJ. Filtres : source
+//   (Dieu Spaghetti / Génie / PNJ), zone (mapId), date (jour). Vierge tant qu'aucun message reçu.
+function MessageJournal({ log }: { log: { ts: number; npcId: string; name: string; lines: string[]; mapId?: string }[] }) {
+    const [src, setSrc] = useState<"all" | MessageSource>("all")
+    const [zone, setZone] = useState<string>("all")
+    const [day, setDay] = useState<string>("all")
+    if (log.length === 0) {
+        return (
+            <div style={{ textAlign: "center", padding: "26px 14px", fontSize: 13, lineHeight: 1.6, opacity: 0.85 }}>
+                📖 Aucun <b>message</b> enregistré pour ce run.<br />
+                Les infos du <b>Dieu Spaghetti</b> et des <b>PNJ</b> (objectifs, indices, zones…) viendront s&apos;inscrire ici — tu pourras les relire quand tu veux.
+            </div>
+        )
+    }
+    const zones = [...new Set(log.map((m) => m.mapId).filter((z): z is string => !!z))]
+    const days = [...new Set(log.map((m) => fmtDay(m.ts)))].reverse()
+    const filtered = [...log].reverse().filter((m) =>
+        (src === "all" || messageSource(m.npcId, m.name) === src) &&
+        (zone === "all" || m.mapId === zone) &&
+        (day === "all" || fmtDay(m.ts) === day),
+    )
+    const chip = (active: boolean): CSSProperties => ({ background: active ? INK : "transparent", color: active ? CREAM : INK, border: `1px solid ${INK}`, borderRadius: 7, padding: "3px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 })
+    const selStyle: CSSProperties = { background: "#fff8e6", color: INK, border: `1px solid ${DARK}`, borderRadius: 7, padding: "3px 6px", fontSize: 11, fontFamily: "inherit", fontWeight: 700 }
+    return (
+        <>
+            <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 8 }}>
+                Tes derniers messages « info » de ce run (Dieu Spaghetti, génie, indices des PNJ) — du plus récent au plus ancien.
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 6, fontSize: 11 }}>
+                <span style={{ opacity: 0.7 }}>Source :</span>
+                {([["all", "Tous"], ["spaghetti", "🍝 Dieu Spaghetti"], ["genie", "🧞 Génie"], ["pnj", "💬 PNJ"]] as const).map(([k, lbl]) => (
+                    <button key={k} onClick={() => setSrc(k)} style={chip(src === k)}>{lbl}</button>
+                ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8, fontSize: 11 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 4 }}>Zone :
+                    <select value={zone} onChange={(e) => setZone(e.target.value)} style={selStyle}>
+                        <option value="all">Toutes</option>
+                        {zones.map((z) => <option key={z} value={z}>{mapLabel(z)}</option>)}
+                    </select>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 4 }}>Date :
+                    <select value={day} onChange={(e) => setDay(e.target.value)} style={selStyle}>
+                        <option value="all">Toutes</option>
+                        {days.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                </label>
+            </div>
+            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>{filtered.length} message{filtered.length > 1 ? "s" : ""}</div>
+            {filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "18px 14px", fontSize: 12, opacity: 0.7 }}>Aucun message pour ce filtre.</div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {filtered.map((m, i) => {
+                        const s = messageSource(m.npcId, m.name)
+                        const icon = s === "spaghetti" ? "🍝" : s === "genie" ? "🧞" : "💬"
+                        return (
+                            <div key={i} style={{ background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "8px 10px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                                    <span style={{ fontWeight: 900, fontSize: 12 }}>{icon} {m.name}</span>
+                                    <span style={{ opacity: 0.55, fontSize: 10, fontVariantNumeric: "tabular-nums", flexShrink: 0, textAlign: "right" }}>{fmtDay(m.ts)} · {fmtTime(m.ts)}{m.mapId ? <><br />{mapLabel(m.mapId)}</> : ""}</span>
+                                </div>
+                                {m.lines.map((ln, j) => <p key={j} style={{ fontSize: 12.5, lineHeight: 1.5, color: INK, margin: "0 0 4px" }}>{ln}</p>)}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </>
     )
 }
 
