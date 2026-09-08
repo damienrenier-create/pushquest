@@ -90,6 +90,9 @@ const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("leviathonn", "mobyd")]: "la synergie des monstres marins",
     [pairKey("mobyd", "orcaline")]: "la synergie des monstres marins",
     [pairKey("tenebrir", "loupyre")]: "la synergie de la meute",
+    [pairKey("karatame", "bouhbou")]: "la synergie des arts martiaux",   // 2 combattants (Combat × Combat/Spectre)
+    [pairKey("namizeus", "brookhante")]: "la synergie des âmes errantes", // 2 spectres (Spectre/Élec × Spectre)
+    [pairKey("kilipanda", "druidours")]: "la synergie des ursidés",       // panda × ours-druide (les plantigrades)
 }
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
 interface SpecialFusion { name: string; forcedType?: PokeType; concept?: string }
