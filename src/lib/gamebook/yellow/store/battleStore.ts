@@ -1257,6 +1257,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     const topUp = r3arena.energy - getPlayer().reps
                     if (topUp > 0) grantReps(topUp, true)
                 }
+                // BONUS BADGE 4 (elec, arène Dragon) du run 3 : +100 reps EN PLUS de la recharge, pour TOUT LE MONDE
+                //   (choix Sartay 08/09). Forcé (le run 3 bloque les gains non-forcés) ; 1×/run (le badge est one-shot).
+                if (badgeAwarded === "elec") logEnergyIncome("🏅 Badge 4 run 3", grantReps(100, true))
             }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
