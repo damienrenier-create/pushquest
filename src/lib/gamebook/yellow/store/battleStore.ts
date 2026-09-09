@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -1339,6 +1339,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let championRun: BattleStoreState["championRun"] = null
     const lid = storeState.trainer?.trainerId
     if (b.outcome === "win" && lid && lid.startsWith("y_ligue_")) {
+        // HAUTS FAITS de LIGUE (défi d'équipe) : « battre la Ligue » = vaincre le MAÎTRE → on évalue l'équipe (6 clones
+        //   même espèce écart ≤30 niv / mono-type). Sur l'équipe RÉELLE, hors renfort MINITEL emprunté.
+        if (lid === "y_ligue_maitre") recordLeagueCompoAchievements(stripMinitelReserve(b.player.team).map(toMonInstance))
         let best = { dmg: 0, mon: "", move: "" }
         for (const m of stripMinitelReserve(b.player.team)) { // 📟 le renfort emprunté n'entre pas au Hall of Fame (best-of)
             const d = (m as { battleBestDmg?: number }).battleBestDmg ?? 0
@@ -1448,6 +1451,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                         }
                     }),
                 }
+            }
+            // HAUTS FAITS de LIGUE via la LIGUE DE FUSION (« aussi validé ») : 6 fusions partageant une même espèce
+            //   PARENTE (« 6 clones » en fusion, ex. 6 fusions de Jerbiwat, écart de niveau ≤30) et/ou 6 fusions d'un
+            //   même type. Mêmes marqueurs que la Ligue Champion (ach_league_clone / _monotype).
+            if (gt && gt.length >= 6) {
+                let commonParent: string[] | null = null
+                let commonType: string[] | null = null
+                for (const f of gt) {
+                    const par = [...(getSpecies(f.speciesId)?.fusionParents ?? [])] as string[]
+                    commonParent = commonParent === null ? par : commonParent.filter((x) => par.includes(x))
+                    const ty = [...f.result.types] as string[]
+                    commonType = commonType === null ? ty : commonType.filter((x) => ty.includes(x))
+                }
+                const lvls = gt.map((f) => f.result.level)
+                const cloneOk = (commonParent?.length ?? 0) > 0 && (Math.max(...lvls) - Math.min(...lvls)) <= 30
+                awardLeagueCompoMarkers(cloneOk, (commonType?.length ?? 0) > 0)
             }
             // 🐉🪨 MÉGAMONARX : un DRACOLITHE niv 100 dans l'équipe vainqueur TRANSCENDE (octroi one-shot). Jamais en rejeu.
             if (getActiveWorld() !== "replay" && !hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {

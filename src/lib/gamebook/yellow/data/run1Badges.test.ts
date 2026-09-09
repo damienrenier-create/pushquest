@@ -23,7 +23,7 @@ describe("Badges run 1 — défis de maîtrise + consolations (marqueurs ach_*)"
         expect(state(evaluateBadges({ ...empty, markers: [...mk5, "ach_monotype:VOL"] }), "monotype_six").earned).toBe(true)
     })
     it("marqueurs one-shot : monostage / relâche / consolations", () => {
-        const pairs: [string, string][] = [["ach_monostage_win", "monostage_win"], ["ach_release_iv", "release_iv"], ["ach_release_ev", "release_ev"], ["ach_ball_miss10", "ball_miss10"], ["ach_samefoe_loss3", "samefoe_loss3"], ["ach_losses10_day", "losses10_day"], ["ach_noko_win10", "noko_win10"]]
+        const pairs: [string, string][] = [["ach_monostage_win", "monostage_win"], ["ach_release_iv", "release_iv"], ["ach_release_ev", "release_ev"], ["ach_ball_miss10", "ball_miss10"], ["ach_samefoe_loss3", "samefoe_loss3"], ["ach_losses10_day", "losses10_day"], ["ach_noko_win10", "noko_win10"], ["ach_league_clone", "league_clone"], ["ach_league_monotype", "league_monotype"]]
         for (const [marker, id] of pairs) {
             expect(state(evaluateBadges(empty), id).earned).toBe(false)
             expect(state(evaluateBadges({ ...empty, markers: [marker] }), id).earned).toBe(true)

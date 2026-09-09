@@ -277,6 +277,8 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "evo3_six", label: "Mener 6 Daemons jusqu'à leur stade final", tier: "gold", secret: false, cat: "progression", earned: (i) => mk(i).filter((m) => m.startsWith("ach_evo3:")).length >= 6, reveal: (i) => mk(i).some((m) => m.startsWith("ach_evo3:")) },
     { id: "monostage_win", label: "Vaincre avec une équipe 100 % mono-stade (Daemons sans évolution)", tier: "silver", secret: false, cat: "progression", earned: (i) => hasMk(i, "ach_monostage_win") },
     { id: "monotype_six", label: "Vaincre en mono-type — 6 types différents", tier: "gold", secret: false, cat: "progression", earned: (i) => mk(i).filter((m) => m.startsWith("ach_monotype:")).length >= 6, reveal: (i) => mk(i).some((m) => m.startsWith("ach_monotype:")) },
+    { id: "league_clone", label: "Vaincre la Ligue avec 6 CLONES (même espèce, écart ≤ 30 niveaux)", tier: "gold", secret: false, cat: "progression", earned: (i) => hasMk(i, "ach_league_clone") },
+    { id: "league_monotype", label: "Vaincre la Ligue avec une équipe 100 % MONO-TYPE (6 du même type)", tier: "silver", secret: false, cat: "progression", earned: (i) => hasMk(i, "ach_league_monotype") },
     { id: "release_iv", label: "Relâcher un Daemon au génome quasi-parfait (IV ≥ 75)", tier: "silver", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_release_iv"), reveal: (i) => hasMk(i, "ach_release_iv") },
     { id: "release_ev", label: "Relâcher un Daemon surentraîné (EV > 100)", tier: "silver", secret: true, cat: "special", earned: (i) => hasMk(i, "ach_release_ev"), reveal: (i) => hasMk(i, "ach_release_ev") },
     // ── ⑫ CONSOLATIONS (poisse) — marqueurs ach_*, posés par les hooks combat/capture ──

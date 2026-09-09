@@ -3642,6 +3642,25 @@ export function recordTeamCompoAchievements(team: readonly MonInstance[]): void 
     for (const t of common ?? []) { const mkid = `ach_monotype:${t}`; if (!st.defeatedTrainers.includes(mkid) && !add.includes(mkid)) add.push(mkid) }
     if (add.length) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ...add] }; emit() }
 }
+/** HAUTS FAITS de LIGUE (défi d'équipe, choix Sartay 08/09) — posés QUAND ON BAT LA LIGUE (Champion, rejouable — ou
+ *  la Ligue de Fusion via ses parents). Idempotents (marqueurs one-shot dans defeatedTrainers, lus par run1Badges). */
+export function awardLeagueCompoMarkers(clone: boolean, monotype: boolean): void {
+    const add: string[] = []
+    if (clone && !st.defeatedTrainers.includes("ach_league_clone")) add.push("ach_league_clone")       // 6 « clones » (même espèce/parent, écart ≤30 niv)
+    if (monotype && !st.defeatedTrainers.includes("ach_league_monotype")) add.push("ach_league_monotype") // 6 du même type
+    if (add.length) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ...add] }; emit() }
+}
+/** Évalue l'équipe (RÉGULIÈRE) qui vient de vaincre la Ligue : « 6 clones » (même espèce, écart de niveau ≤ 30) et/ou
+ *  « mono-type » (un type commun aux 6). Exige une équipe COMPLÈTE (≥6). Cf. awardLeagueCompoMarkers. */
+export function recordLeagueCompoAchievements(team: readonly MonInstance[]): void {
+    if (team.length < 6) return
+    const sameSpecies = team.every((m) => m.speciesId === team[0].speciesId)
+    const levels = team.map((m) => m.level)
+    const clone = sameSpecies && (Math.max(...levels) - Math.min(...levels)) <= 30
+    let common: string[] | null = null
+    for (const m of team) { const t = (getSpecies(m.speciesId)?.types ?? []) as string[]; common = common === null ? [...t] : common.filter((x) => t.includes(x)) }
+    awardLeagueCompoMarkers(clone, (common?.length ?? 0) > 0)
+}
 /** CONSOLATION « 10 balls d'affilée sans capturer » : série de captures ratées (remise à zéro à la réussite). */
 export function recordCaptureResult(caught: boolean): void {
     const t = st.achTrack
