@@ -3629,11 +3629,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {domeTab === "inscrire" && (
                                 <div style={{ textAlign: "center" }}>
-                                    {isDan && isDomeChampion() && !isMasterCtClaimed("dome") && (
+                                    {/* CT DU MAÎTRE (Sacre) : visible dès qu'on est Champion du Dôme (11 tiers) et pas encore réclamée —
+                                        QUEL QUE SOIT le PNJ ouvrant ce panneau (Gardien des Dan, COUPE DU DÔME de la Salle du Sacre `y_dome_coupe`,
+                                        ou Maître central). Auparavant gaté sur `isDan` → invisible depuis la Coupe (bug : « je ne vois rien / pas de CT »). */}
+                                    {isDomeChampion() && !isMasterCtClaimed("dome") && (
                                         <div style={{ textAlign: "left", background: "rgba(255,215,74,.08)", border: "1.5px solid #ffd54a", borderRadius: 10, padding: 10, marginBottom: 14 }}>
                                             <div style={{ fontWeight: 800, color: "#ffd54a", fontSize: 13, marginBottom: 4 }}>🏆 MAÎTRE DU DÔME — ta récompense t'attend !</div>
                                             <div style={{ fontSize: 10.5, opacity: 0.85, marginBottom: 8, lineHeight: 1.4 }}>Tu as vaincu les 11 tiers, jusqu'au 4ᵉ Dan. Ton nom est gravé dans l'histoire du Dôme. Reçois une CT INÉDITE du Maître :</div>
-                                            <MasterCtChoice facility="dome" onClaimed={(name) => { setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DU DÔME. 🏆`); closeDanMenu() }} />
+                                            <MasterCtChoice facility="dome" onClaimed={(name) => { setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DU DÔME. 🏆`); if (isDan) closeDanMenu(); else closeDomeMenu() }} />
                                         </div>
                                     )}
                                     <div style={{ fontSize: 12, opacity: 0.88, marginBottom: 14, lineHeight: 1.55 }}>« Ton palier : <b style={{ color: "#c9a0ff" }}>{DOME_TITLES[cur]}</b>. Prêt à te battre, aspirant ? »<br /><span style={{ fontSize: 10.5, opacity: 0.8 }}>Tu reprends toujours à ton rang — jamais depuis Bronze.</span></div>
