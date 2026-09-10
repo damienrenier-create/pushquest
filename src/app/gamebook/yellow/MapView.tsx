@@ -382,7 +382,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     // le nb d'arbres cueillis ET le flag du secret, pour que l'icône apparaisse dès la révélation.
     useSyncExternalStore(
         subscribePlayer,
-        () => `${getPlayer().berrySecretKnown ? 1 : 0}:${getPlayer().berryHarvestPicked.length}`,
+        () => `${getPlayer().berrySecretKnown ? 1 : 0}:${getPlayer().berryHarvestPicked.length}:${getPlayer().team.some((m) => m.speciesId === "galijah") ? 1 : 0}`,
         () => "0:0",
     )
 
@@ -665,6 +665,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     <ArenaOpponentSprite key={o.userId} o={o} screenPos={screenPos} onClick={() => onArenaClick?.(o.userId)} />
                 ))}
 
+                {/* Galijah ne sort QUE si le joueur l'a dans son équipe (cf. abonnement playerStore ci-dessus). */}
+                {getPlayer().team.some((m) => m.speciesId === "galijah") && <GalijahFollower player={player} screenPos={screenPos} />}
                 <PlayerSprite player={player} screenPos={screenPos} avatar={myAvatar} />
                 {/* #9 — ma propre bulle de chat, au-dessus de mon perso */}
                 {myUserId && chatBubbles?.[myUserId] && (
@@ -1403,6 +1405,54 @@ function sheetBgPosition(cell: SpriteCell): string {
     return `${posX}% ${posY}%`
 }
 
+// 🐈‍⬛ GALIJAH FARCEUR — le légendaire refuse de rester dans sa Ball : quand un joueur qui le possède DANS SON
+//   ÉQUIPE regarde vers le BAS et cesse de bouger, Galijah sort et vient LÉVITER derrière lui (une case au nord).
+//   4 frames de flottement (planche 720×175) + un léger bob vertical. 100 % COSMÉTIQUE : aucune interaction,
+//   aucune case bloquée, aucun effet de jeu. Disparaît dès que le joueur bouge ou se retourne.
+const GALIJAH_POP_SHEET = "/yellow/sprites/galijah_pop.png"
+const GALIJAH_POP_FRAMES = 4
+const GALIJAH_IDLE_DELAY = 900   // ms d'immobilité avant qu'il ose sortir
+const GALIJAH_FRAME_MS = 260     // vitesse du flottement
+const GALIJAH_SCALE = 0.72       // < 1 tuile → nettement plus petit que le joueur
+const GALIJAH_BOB = [0, -2, 0, 2] // px, léger va-et-vient vertical
+
+function GalijahFollower({ player, screenPos }: {
+    player: { posX: number; posY: number; direction: string }
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    const stepFrame = useGameStore((s) => s.stepFrame)
+    const [idle, setIdle] = useState(false)
+    const [frame, setFrame] = useState(0)
+    // Tout mouvement (case OU direction OU pas de marche) ré-arme le compte à rebours.
+    useEffect(() => {
+        setIdle(false)
+        const t = setTimeout(() => setIdle(true), GALIJAH_IDLE_DELAY)
+        return () => clearTimeout(t)
+    }, [player.posX, player.posY, player.direction, stepFrame])
+    useEffect(() => {
+        if (!idle) return
+        const i = setInterval(() => setFrame((f) => (f + 1) % GALIJAH_POP_FRAMES), GALIJAH_FRAME_MS)
+        return () => clearInterval(i)
+    }, [idle])
+    if (!idle || player.direction !== "down") return null
+    const off = (1 - GALIJAH_SCALE) / 2 // recentre horizontalement sur la tuile
+    return (
+        <div style={{
+            position: "absolute",
+            ...screenPos(player.posX + off, player.posY - 1 + off, GALIJAH_SCALE, GALIJAH_SCALE),
+            backgroundImage: `url(${GALIJAH_POP_SHEET})`,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: `${GALIJAH_POP_FRAMES * 100}% 100%`,
+            backgroundPosition: `${(frame / (GALIJAH_POP_FRAMES - 1)) * 100}% 0%`,
+            transform: `translateY(${GALIJAH_BOB[frame]}px)`,
+            transition: "transform 240ms ease-in-out",
+            imageRendering: "pixelated",
+            filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+            zIndex: 2, // DERRIÈRE le joueur (qui est en 3)
+            pointerEvents: "none",
+        }} />
+    )
+}
 function PlayerSprite({
     player,
     screenPos,
