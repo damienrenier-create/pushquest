@@ -8,11 +8,13 @@ import { visibleDexSpecies, registerCustomSpecies } from "./species"
 registerCustomSpecies(FUSION_BASE_SPECIES)
 
 describe("Fusiodex — couche data + anti-spoiler", () => {
-    it("officialFusions : RACINES Grotte (stades évolués exclus) + fusions de LIGUE, gating par `seen`", () => {
+    it("officialFusions : RACINES Grotte + fusions de LIGUE + Ukognofy, gating par `seen`", () => {
         const roots = fusionRootSpeciesIds()
         const ligueCount = leagueFusionSpecies().length
         const none = officialFusions([])
-        expect(none).toHaveLength(roots.size + ligueCount) // racines Grotte + fusions de Ligue (non capturables)
+        // +1 = UKOGNOFY, la double-légendaire : ni Grotte ni Ligue, mais bien une fusion OFFICIELLE (Sartay 10/09).
+        expect(none).toHaveLength(roots.size + ligueCount + 1)
+        expect(none.some((f) => f.id === "ukognofy")).toBe(true)
         expect(none.every((f) => !f.seen)).toBe(true) // rien d'aperçu → tout masqué
         expect(none.some((f) => f.id === "mottelave")).toBe(true) // une racine Grotte
         expect(none.some((f) => roots.has(f.id))).toBe(true)
@@ -23,10 +25,11 @@ describe("Fusiodex — couche data + anti-spoiler", () => {
         expect(seen.find((f) => f.id === "nouiflot")?.seen).toBe(false)
     })
 
-    it("progression : compte les aperçues sur le total (racines Grotte + Ligue)", () => {
-        const total = fusionRootSpeciesIds().size + leagueFusionSpecies().length
+    it("progression : compte les aperçues sur le total (racines Grotte + Ligue + Ukognofy)", () => {
+        const total = fusionRootSpeciesIds().size + leagueFusionSpecies().length + 1 // +1 = Ukognofy
         expect(officialFusionProgress([])).toEqual({ seen: 0, total })
         expect(officialFusionProgress(["mottelave", "nouiflot", "inconnu"]).seen).toBe(2)
+        expect(officialFusionProgress(["ukognofy"]).seen).toBe(1) // Ukognofy compte dans la progression
     })
 
     it("lignée d'évolution (révélée à la capture) : Mottelave → … → Sidérobloc (Noyau) → Sidéralithe", () => {

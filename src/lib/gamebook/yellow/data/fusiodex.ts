@@ -12,6 +12,7 @@
 import type { PokeType, SpeciesData } from "../battle/types"
 import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
 import { leagueFusionSpecies } from "./leagueFusionDex"
+import { UKOGNOFY_SPECIES } from "./ukognofy"
 import { FUSION_RULES } from "./fusionLore"
 import { computeFusion, type FusionParent, type FusionStats } from "./fusionSpecies"
 import { getSpecies } from "./species"
@@ -107,7 +108,16 @@ export function officialFusions(seenIds: string[]): OfficialFusionEntry[] {
     const ligue = leagueFusionSpecies().map((s) => ({
         id: s.id, name: s.name, types: s.types, dexNo: s.dexNo, sprite: s.sprite, description: s.description, seen: seenIds.includes(s.id),
     }))
-    return [...grotte, ...ligue]
+    // UKOGNOFY — la double-légendaire (Goshendofy × Ukognos). Ni une fusion de la Grotte (elle ne se capture que
+    //   dans la chambre cachée, à la Fusio-Ball), ni une fusion de Ligue → elle manquait au Fusiodex alors qu'elle
+    //   EST une fusion officielle (cf. officialFusions.ts). Ajoutée ici (demande Sartay 10/09). Zéro spoiler : comme
+    //   toutes les entrées, elle reste MASQUÉE (nom/sprite/type cachés) tant que le joueur ne l'a pas APERÇUE.
+    const u = UKOGNOFY_SPECIES
+    const ukognofy = {
+        id: u.id, name: u.name, types: u.types, dexNo: u.dexNo, sprite: u.sprite, description: u.description,
+        seen: seenIds.includes(u.id),
+    }
+    return [...grotte, ...ligue, ukognofy]
 }
 
 /** Nombre de fusions (Grotte racines + Ligue) aperçues / total (badge de progression du Fusiodex). */
@@ -115,8 +125,9 @@ export function officialFusionProgress(seenIds: string[]): { seen: number; total
     const roots = fusionRootSpeciesIds()
     const rootList = FUSION_BASE_SPECIES.filter((s) => roots.has(s.id))
     const ligue = leagueFusionSpecies()
-    const total = rootList.length + ligue.length
+    const total = rootList.length + ligue.length + 1 // +1 = Ukognofy (cf. officialFusions)
     const seen = rootList.filter((s) => seenIds.includes(s.id)).length + ligue.filter((s) => seenIds.includes(s.id)).length
+        + (seenIds.includes(UKOGNOFY_SPECIES.id) ? 1 : 0)
     return { seen, total }
 }
 
