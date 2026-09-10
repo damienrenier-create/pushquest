@@ -2045,9 +2045,21 @@ export function addCraftedItem(input: { stat: CraftStat; pct: number; precision:
         boundUid: input.boundUid, boundName: input.boundName, boundSpeciesId: input.boundSpeciesId, equipped: true,
     }
     const items = [...(st.craftedItems ?? []), item]
-    st = { ...st, craftedItems: items, craftsUsed: n + 1, craftReady: false, team: st.team.map((m) => monWithSig(m, items)), pc: st.pc.map((m) => monWithSig(m, items)) }
+    // 1 SEUL OBJET par Daemon : la pièce forgée est ÉQUIPÉE d'office → l'objet tenu éventuel retourne au sac.
+    const freed = freeHeldSlot(input.boundUid)
+    st = { ...st, craftedItems: items, items: freed.items, craftsUsed: n + 1, craftReady: false, team: freed.team.map((m) => monWithSig(m, items)), pc: freed.pc.map((m) => monWithSig(m, items)) }
     emit()
     return item
+}
+/** ARTISANE — libère le slot d'objet TENU d'un Daemon (l'objet retourne au sac). Sert à garantir la règle
+ *  « 1 seul objet par Daemon normal » quand on lui équipe une pièce de l'Artisane. Une FUSION échappe à cette
+ *  règle : elle hérite légitimement des objets de ses DEUX parents (heldItem + heldItem2). */
+function freeHeldSlot(uid: string): { items: Record<string, number>; team: MonInstance[]; pc: MonInstance[] } {
+    const mon = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    if (!mon?.heldItem) return { items: st.items, team: st.team, pc: st.pc }
+    const items = { ...st.items, [mon.heldItem]: (st.items[mon.heldItem] ?? 0) + 1 }
+    const strip = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: undefined } : m)
+    return { items, team: st.team.map(strip), pc: st.pc.map(strip) }
 }
 /** (Dés)équipe un objet signature. Équiper un objet DÉSÉQUIPE tout autre objet du MÊME Daemon (1 seul actif par uid). */
 export function setCraftedItemEquipped(id: string, equipped: boolean) {
@@ -2059,7 +2071,9 @@ export function setCraftedItemEquipped(id: string, equipped: boolean) {
         if (equipped && c.boundUid === target.boundUid) return { ...c, equipped: false }
         return c
     })
-    st = { ...st, craftedItems: items, team: st.team.map((m) => monWithSig(m, items)), pc: st.pc.map((m) => monWithSig(m, items)) }
+    // 1 SEUL OBJET par Daemon : équiper la pièce de l'Artisane rend au sac l'objet tenu classique.
+    const freed = equipped ? freeHeldSlot(target.boundUid) : { items: st.items, team: st.team, pc: st.pc }
+    st = { ...st, craftedItems: items, items: freed.items, team: freed.team.map((m) => monWithSig(m, items)), pc: freed.pc.map((m) => monWithSig(m, items)) }
     emit()
 }
 /** LIGUE DE FUSION — (dés)active l'inclusion de MÉGAMONARX dans l'équipe de Ligue (1 slot). */
@@ -3837,8 +3851,11 @@ export function equipHeldItem(uid: string, itemId: string): boolean {
     }
     const items = { ...st.items, [itemId]: st.items[itemId] - 1 }
     if (target.heldItem) items[target.heldItem] = (items[target.heldItem] ?? 0) + 1 // l'ancien objet revient au sac
-    const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: itemId } : m)
-    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items }
+    // 1 SEUL OBJET par Daemon : donner un objet tenu DÉSÉQUIPE la pièce de l'Artisane (elle reste dans le sac,
+    //   toujours liée à ce Daemon — rien n'est détruit, il peut la ré-équiper quand il veut).
+    const crafted = (st.craftedItems ?? []).map((c) => (c.boundUid === uid && c.equipped ? { ...c, equipped: false } : c))
+    const apply = (m: MonInstance): MonInstance => monWithSig(m.uid === uid ? { ...m, heldItem: itemId } : m, crafted)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items, craftedItems: crafted }
     emit()
     return true
 }

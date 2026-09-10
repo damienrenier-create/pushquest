@@ -14,7 +14,25 @@ import { MISSINGNO_SPRITE } from "./fusionSprite"
 import { getFusionSpriteFromMemory } from "./fusionSpriteRegistry"
 import { createMonInstance } from "../battle/factory"
 import { fullStats } from "../battle/stats"
-import type { MonInstance, SpeciesData } from "../battle/types"
+import type { MonInstance, SpeciesData, StatKey } from "../battle/types"
+
+/** Stats du parent pour la fusion, objet SIGNATURE de l'Artisane COMPRIS (décision Sartay 10/09).
+ *  POURQUOI un helper : `fullStats` n'applique un signature NON-PV que si `inst.sigActive === true` — un jet posé
+ *  PAR TOUR par le moteur. Or on calcule ici HORS COMBAT, et la fusion FIGE ensuite ses stats (frozenStats) : sans
+ *  ça, la pièce forgée était purement et simplement ignorée par la fusion.
+ *  VALEUR ESPÉRÉE (pct × précision) plutôt que pct plein : la fusion ne peut pas re-tirer la précision à chaque
+ *  tour, donc on l'intègre en moyenne. Ça ferme aussi l'exploit « forger +40 % à 20 % de précision sur un Daemon
+ *  bidon, puis fusionner pour un +40 % PERMANENT ». Les PV sont déjà appliqués par fullStats (toujours actifs) et
+ *  l'Esquive n'est pas une base-stat (gérée dans accuracy.ts) → les deux sont exclus ici. */
+function parentStatsWithSignature(inst: MonInstance, sp: SpeciesData): Record<StatKey, number> {
+    const s = { ...fullStats(inst, sp) }
+    const sig = inst.signatureItem
+    if (!sig || sig.stat === "hp" || sig.stat === "eva") return s
+    const k = sig.stat as StatKey
+    const prec = Math.max(0, Math.min(100, sig.precision)) / 100
+    s[k] = Math.floor(s[k] * (1 + (sig.pct / 100) * prec))
+    return s
+}
 
 /** FusionParent depuis une instance réelle : stats FINALES (via fullStats), types, moves actuels, objet tenu. */
 export function fusionParentFromInstance(inst: MonInstance): FusionParent {
@@ -23,7 +41,7 @@ export function fusionParentFromInstance(inst: MonInstance): FusionParent {
     return {
         name: sp.name,
         types: sp.types,
-        stats: fullStats(inst, sp),
+        stats: parentStatsWithSignature(inst, sp),
         level: inst.level,
         moves: inst.moves.map((m) => m.moveId),
         heldItem: inst.heldItem,
