@@ -81,7 +81,7 @@ function effectBits(m: MoveData): string[] {
     const fx = m.effect
     if (!fx) return bits
     const ch = fx.chance != null && fx.chance < 100 ? ` (${fx.chance}%)` : ""
-    if (fx.adaptiveStab) bits.push("Type & catégorie s'adaptent au Daemon porteur (sa meilleure stat) → STAB toujours garanti")
+    if (fx.adaptiveStab) bits.push("Prend le TYPE PRIMAIRE du porteur (pour une fusion : celui du parent tête) et frappe sur sa meilleure stat → STAB toujours garanti")
     if (fx.twoTurn) bits.push("Décharge en 2 tours (charge puis libère)")
     if (fx.multiHit) bits.push(`Frappe ${fx.multiHit[0]}–${fx.multiHit[1]} fois`)
     if (fx.statChanges) {

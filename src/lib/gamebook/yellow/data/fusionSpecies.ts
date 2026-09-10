@@ -244,8 +244,11 @@ export function tiedFusionTypes(parent: FusionParent): PokeType[] {
  *  Ténébrir gonflé en PV amène TÉNÈBRES ; gonflé en Spé, son autre type). JAMAIS 2 types d'un parent + 0 de l'autre.
  *  Si les DEUX parents pointent vers le MÊME type S (partagé), on garde S + le meilleur AUTRE type du couple (chaque
  *  type jugé sur les stats de SON parent ; reste bi-type ; mono seulement s'il n'existe aucun autre type). types[0] =
- *  type du parent TÊTE (a) ; ordre cosmétique (STAB agnostique). SET indépendant de l'ordre des parents (départage des
- *  égalités par NOM de type → PvP/Fusiodex déterministes). */
+ *  type du parent TÊTE (a). SET indépendant de l'ordre des parents (départage des égalités par NOM de type →
+ *  PvP/Fusiodex déterministes).
+ *  ⚠️ L'ORDRE DES PARENTS N'EST PLUS COSMÉTIQUE (10/09) : la CT « Apothéose » (adaptiveStab) tape TOUJOURS dans
+ *  types[0] → fusionner A+B ou B+A donne une Apothéose de type DIFFÉRENT (le SET, lui, ne bouge pas).
+ *  Cf. resolveAdaptiveStab (battle/typeChart.ts). */
 export function fuseTypes(a: FusionParent, b: FusionParent): PokeType[] {
     // CHOIX DE TYPE mémorisé (égalités seulement) : injecté par le store via le résolveur (undefined en test/pur).
     const choice = a.speciesId && b.speciesId ? _typeChoiceResolver?.(a.speciesId, b.speciesId) : undefined

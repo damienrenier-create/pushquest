@@ -893,7 +893,7 @@ const STAGE_FR: Record<string, string> = { atk: "ATQ", def: "DÉF", spe: "VIT", 
 function moveEffectTag(mv: MoveData): string | null {
     const e = mv.effect
     if (!e) return null
-    if (e.adaptiveStab) return "STAB adaptatif : type & catégorie calés sur ce Daemon (sa meilleure stat)"
+    if (e.adaptiveStab) return "STAB adaptatif : type PRIMAIRE du Daemon, catégorie calée sur sa meilleure stat"
     if (e.recoilPct) return `Recul : ${e.recoilPct}% des dégâts subis`
     if (e.drainPct) return `Vol de PV : ${e.drainPct}%`
     if (e.healPct) return `Soigne ${e.healPct}% des PV`

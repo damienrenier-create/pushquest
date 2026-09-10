@@ -23,7 +23,7 @@ const TYPE_FR: Record<PokeType, string> = {
 function effectTag(mv: MoveData): string | null {
     const e = mv.effect
     if (!e) return null
-    if (e.adaptiveStab) return "Type & catégorie adaptatifs (toujours STAB, meilleure stat)"
+    if (e.adaptiveStab) return "Adaptatif : type primaire + meilleure stat (toujours STAB)"
     if (e.recoilPct) return `Recul ${e.recoilPct}%`
     if (e.drainPct) return `Vol de PV ${e.drainPct}%`
     if (e.healPct) return `Soigne ${e.healPct}% PV`

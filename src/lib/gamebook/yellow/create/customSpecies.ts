@@ -393,7 +393,7 @@ export function moveCard(id: string, types: PokeType[]): MoveCardInfo | null {
 }
 function effectSummary(m: MoveData): string {
     const e = m.effect; if (!e) return m.power > 0 ? "" : "—"
-    if (e.adaptiveStab) return "type & catégorie adaptatifs"
+    if (e.adaptiveStab) return "type primaire + meilleure stat"
     if (e.fixedDamage) return `${e.fixedDamage} PV fixes`
     if (e.healPct) return `soigne ${e.healPct}% PV`
     if (e.restSleep) return "soigne + s'endort"
