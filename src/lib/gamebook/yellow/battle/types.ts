@@ -383,6 +383,12 @@ export interface BattleMon extends MonInstance {
     captureMinBallBonus?: number
     /** SAUVAGE : multiplie la valeur de capture (×<1 = plus dur, ex. Thundah/Bélunode). Runtime. */
     captureMult?: number
+    /** SAUVAGE : NIVEAU UTILISÉ PAR LA FORMULE DE CAPTURE, à la place du niveau réel (le facteur de niveau est
+     *  INVERSE : 13/niveau, planché à 0,15). Sert aux LÉGENDAIRES qui montent en puissance au fil des paliers
+     *  (Galijah : niv 70→100) : ils restent des adversaires de plus en plus coriaces EN COMBAT, mais leur
+     *  difficulté de CAPTURE reste alignée sur la référence (niv 50 → 0,26), au lieu de devenir absurde.
+     *  Décision Sartay 10/09 : « comme s'ils avaient tous le niveau 50 ». Runtime, non persisté. */
+    captureLevel?: number
     /** SAUVAGE : message de RAILLERIE affiché au 1er lancer de Ball (ex. créations finales niv 75 de la Grotte du
      *  Nexus : « tu ne pensais pas l'attraper aussi facilement ? »). Runtime, non persisté. */
     captureTaunt?: string

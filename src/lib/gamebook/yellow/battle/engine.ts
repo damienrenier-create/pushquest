@@ -24,7 +24,7 @@ import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/captureConfig"
 import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
+import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
@@ -1527,9 +1527,13 @@ export function applyForfeitWin(
 function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
     const wild = active(state.enemy)
     const sp = speciesOf(wild)
-    // SUPER MÉGA NEXUS-BALL : capture GARANTIE de GOSHENDOFY s'il est sous 50% de ses PV (shunte le verrou
-    // de statut et la formule). Hors de ce cas précis, elle se comporte comme une Ball très forte (bonus 6).
-    const goshGuaranteed = itemId === "super_mega_nexus_ball" && wild.speciesId === "goshendofy" && wild.currentHp < maxHpOf(wild) * 0.5
+    // SUPER MÉGA NEXUS-BALL : capture GARANTIE du LÉGENDAIRE DE CHAQUE RUN (Goshendofy run 1, Ukognos run 2,
+    // Flamarokto run 3, Galijah endgame — cf. SUPER_MEGA_TARGET_IDS) s'il est sous 50 % de ses PV. Shunte le
+    // verrou de STATUT (l. ~1599) et la FORMULE (l. ~1611), rien d'autre. Hors de ces cibles, elle se comporte
+    // comme une Ball très forte (bonus 6).
+    // ⚠️ UKOGNOFY n'arrive JAMAIS jusqu'ici : le verrou FUSION ci-dessous la renvoie avant (elle exige sa
+    //   Fusio-Ball). Si ce verrou devait un jour bouger, il faudrait la ré-exclure explicitement.
+    const legGuaranteed = itemId === SUPER_MEGA_BALL_ID && isSuperMegaTarget(wild.speciesId) && wild.currentHp < maxHpOf(wild) * 0.5
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
     // RAILLERIE (créations finales niv 75 de la Grotte du Nexus) : au 1er lancer, la bête toise le dresseur. Une
     //   seule fois par combat (flag captureTauntShown). Purement flavor → n'affecte pas les chances de capture.
@@ -1596,7 +1600,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     }
     // VERROU DE STATUT (hommage légendaire Gen1, ex. Goshendofy) : incapturable tant qu'il n'a pas de
     // statut majeur (para/sommeil/poison/brûlure/gel). La Master Ball shunte. Placé AVANT tryCapture.
-    if (wild.captureRequiresStatus && wild.status === "NONE" && !isGuaranteedBall(itemId) && !goshGuaranteed) {
+    if (wild.captureRequiresStatus && wild.status === "NONE" && !isGuaranteedBall(itemId) && !legGuaranteed) {
         events.push({ kind: "ball", action: "miss" })
         events.push({ kind: "message", text: `${displayName(wild)} dévie la Ball d'un revers ! Il faudra l'affaiblir par un STATUT avant d'espérer le capturer…` })
         return
@@ -1608,14 +1612,16 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         events.push({ kind: "message", text: `${displayName(wild)} est bien trop FRAIS ! Il ne se laisse pas capturer à pleins PV — affaiblis-le d'abord.` })
         return
     }
-    const res = isGuaranteedBall(itemId) || goshGuaranteed
+    const res = isGuaranteedBall(itemId) || legGuaranteed
         ? { caught: true, shakes: 3, value: Infinity }
         : tryCapture(
             {
                 catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status,
                 // captureMult (<1) rend la capture PLUS DURE (ex. Thundah/Bélunode). ESCALADE : chaque lancer
                 // raté (captureAttempts) augmente la proba du prochain (×(1 + 0,4×N)) → l'acharnement paie.
-                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier * (wild.captureMult ?? 1) * (1 + CAPTURE_ESCALATION_PER_ATTEMPT * state.captureAttempts),
+                // captureLevel : niveau de RÉFÉRENCE pour la capture (les légendaires à paliers le figent à 50)
+                //   → ils cognent plus fort à chaque palier sans devenir INCAPTURABLES. Défaut = niveau réel.
+                ballBonus: ballBonusOf(itemId), level: wild.captureLevel ?? wild.level, extraBonus: state.captureModifier * (wild.captureMult ?? 1) * (1 + CAPTURE_ESCALATION_PER_ATTEMPT * state.captureAttempts),
             },
             rng,
         )

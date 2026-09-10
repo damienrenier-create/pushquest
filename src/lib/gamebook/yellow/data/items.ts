@@ -81,10 +81,11 @@ export const ITEMS: Record<string, ItemData> = {
         description: "Capture infaillible. Rarissime.", price: 0, ballBonus: 255, guaranteed: true,
     },
     // Récompense du DRESSEUR D'ORCALINE (plaine d'entraînement). Très forte (ballBonus 6 → satisfait toute
-    // exigence de Ball), ET capture GARANTIE sur GOSHENDOFY s'il est sous 50% PV (cas spécial dans engine.ts).
+    // exigence de Ball), ET capture GARANTIE sur le LÉGENDAIRE DE CHAQUE RUN sous 50 % PV — cf.
+    // SUPER_MEGA_TARGET_IDS + le cas `legGuaranteed` dans engine.performCapture.
     super_mega_nexus_ball: {
         id: "super_mega_nexus_ball", name: "Super Méga Nexus-Ball", category: "BALL",
-        description: "Ball légendaire. Capture à coup sûr le plus insaisissable des Daemons s'il est suffisamment affaibli.", price: 0, ballBonus: 6,
+        description: "Ball légendaire, à usage unique. Capture À COUP SÛR le grand légendaire de ton run (Goshendofy, Ukognos, Flamarokto ou Galijah) s'il est descendu sous la MOITIÉ de ses PV — sans même avoir besoin de l'endormir. Sur tout autre Daemon, ce n'est « qu' »une Ball redoutable.", price: 0, ballBonus: 6,
     },
     // FUSIO-BALL : le SEUL vecteur pour capturer un Daemon FUSIONNÉ sauvage (Grotte du Nexus). Refusée sur les
     //   non-fusions (garde dans engine.performCapture). price 0 = hors shop normal → vendue via l'éco Ligue de
@@ -256,4 +257,21 @@ export function ballBonusOf(itemId: string): number {
 /** Ball à capture garantie (Master-Éclair) ? */
 export function isGuaranteedBall(itemId: string): boolean {
     return getItem(itemId)?.guaranteed === true
+}
+
+/** SUPER MÉGA NEXUS-BALL — les LÉGENDAIRES qu'elle capture à COUP SÛR sous 50 % de PV (décision Sartay 10/09 :
+ *  « elle doit fonctionner avec le légendaire unique de chaque run »). Un par run + Galijah (le légendaire de
+ *  l'endgame, celui qui motivait la demande). Liste EXPLICITE plutôt qu'un test `rarity === "LEGENDARY"` :
+ *   • DRACONARQUE est LEGENDARY mais s'obtient par ÉVOLUTION sauvage banale (draclet niv 40) → la garantir
+ *     serait absurde et gâcherait l'unique Ball du run ;
+ *   • MÉGAMONARX n'est jamais sauvage (octroyé par la Ligue de Fusion) ;
+ *   • UKOGNOFY garde SON rituel (Fusio-Ball, nuit, niv 100) — elle est de toute façon interceptée en amont par
+ *     le verrou FUSION du moteur, donc l'ajouter ici n'aurait aucun effet.
+ *  La Ball reste NON `guaranteed` au sens strict (elle ne capture pas n'importe quoi) : c'est le moteur qui
+ *  croise « cette Ball » × « cette cible » × « < 50 % PV ». */
+export const SUPER_MEGA_BALL_ID = "super_mega_nexus_ball"
+export const SUPER_MEGA_TARGET_IDS: readonly string[] = ["goshendofy", "ukognos", "flamarokto", "galijah"]
+/** Cette espèce est-elle une cible « capture garantie » de la Super Méga Nexus-Ball ? */
+export function isSuperMegaTarget(speciesId: string): boolean {
+    return SUPER_MEGA_TARGET_IDS.includes(speciesId)
 }

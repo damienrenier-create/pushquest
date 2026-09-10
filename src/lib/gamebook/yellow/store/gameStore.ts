@@ -1991,7 +1991,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (!firstOfDay && galijahCanAppear() && Math.random() < 0.25) {
                     // PALIER de repop selon le nb d'espèces : niveau croissant (70→100) puis EV (190=50 %, 200=100 %).
                     const gTier = Math.max(0, galijahTier(dex.length))
-                    spawn = buildForcedSpawn("galijah", GALIJAH_TIER_LEVELS[gTier], true); Object.assign(spawn, { captureMult: 0.3 }) // capture LÉGENDAIRE (très faible)
+                    // Capture ALIGNÉE sur les autres légendaires (Sartay 10/09) : captureMult 0.8 comme
+                    //   Goshendofy/Ukognos/Flamarokto (c'était 0.3), et captureLevel 50 → le facteur de niveau de la
+                    //   formule ne le pénalise plus quand il repop en niv 70→100. Il reste plus FORT à chaque palier,
+                    //   il n'est plus plus DUR à attraper.
+                    spawn = buildForcedSpawn("galijah", GALIJAH_TIER_LEVELS[gTier], true); Object.assign(spawn, { captureMult: 0.8, captureLevel: 50 })
                     const gEvPct = GALIJAH_TIER_EVPCT[gTier]
                     if (gEvPct > 0) { const gSp = getSpecies("galijah"); if (gSp) spawn.ev = distributeEvs(gSp.baseStats, Math.round(EV_TOTAL_CAP * gEvPct)) } // paliers 190/200 : Galijah PRÉ-ENTRAÎNÉ
                     markGalijahAppeared(); persistYellowSave() // apparu → re-gate jusqu'au palier suivant (+10 espèces)

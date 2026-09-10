@@ -2566,7 +2566,9 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 30, moveId: "griffe_spectrale" }, { level: 38, moveId: "eveil_divin" }, { level: 46, moveId: "eclat_lunaire" },
             { level: 54, moveId: "ball_ombre" }, { level: 62, moveId: "vague_mentale" }, { level: 72, moveId: "cataclysme_lunaire" },
         ],
-        catchRate: 3, baseExp: 280, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true, exclusive: true,
+        // catchRate 8 = celui de Goshendofy/Ukognos/Flamarokto : TOUS les légendaires de run partagent le même
+        //   profil de capture (décision Sartay 10/09). C'était 3 avant → Galijah était ~3× plus dur que les autres.
+        catchRate: 8, baseExp: 280, rarity: "LEGENDARY", growthRate: "slow", hiddenUntilCaught: true, exclusive: true,
         learnsAllCts: true, learnsAllCtsExcept: ["TENEBRES"], // façon Mew : apprend TOUS les types sauf Ténèbres
         role: "Fée/Spectre — LÉGENDAIRE polyvalent (façon Mew)",
         description: "Galijah — créature paisible et joueuse que l'on croyait légende. On raconte qu'elle porte en elle l'empreinte de tous les Daemons : elle imite n'importe quelle technique (hormis les ténèbres, qu'elle fuit). Elle n'apparaît qu'aux dresseurs les plus assidus, un jour de grande chasse.",
