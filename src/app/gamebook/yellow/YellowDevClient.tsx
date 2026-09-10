@@ -84,6 +84,8 @@ import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/stora
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
+import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
 import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
@@ -5445,10 +5447,25 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )}
 
-                            <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => setHeldOpen(true)}>
-                                🎒 {live.heldItem ? `Objet tenu : ${getHeldItem(live.heldItem)?.name ?? "?"}` : "Objet tenu — aucun"}
-                            </button>
-                            {heldOpen && <HeldItemModal uid={live.uid} onClose={() => setHeldOpen(false)} />}
+                            {/* OBJET TENU — un porteur de pièce de l'ARTISANE est VERROUILLÉ : la pièce s'affiche en clair
+                                (nom, stat, %, précision) et le sélecteur d'objet tenu disparaît. 1 seul objet par Daemon. */}
+                            {(() => {
+                                const forged = equippedCraftedItem(live.uid)
+                                if (forged) return (
+                                    <div style={{ ...menuBtnDimStyle, marginTop: 8, width: "100%", cursor: "default", textAlign: "left", lineHeight: 1.35 }}>
+                                        ⚒️ <b>{forged.name}</b> — {CRAFT_STAT_LABEL[forged.stat]} +{forged.pct} % <span style={{ opacity: 0.7 }}>(précision {forged.precision} %)</span>
+                                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 2 }}>Pièce de l'Artisane : ce Daemon ne peut porter aucun autre objet. Va la retirer chez l'Artisane pour en changer.</div>
+                                    </div>
+                                )
+                                return (
+                                    <>
+                                        <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => setHeldOpen(true)}>
+                                            🎒 {live.heldItem ? `Objet tenu : ${getHeldItem(live.heldItem)?.name ?? "?"}` : "Objet tenu — aucun"}
+                                        </button>
+                                        {heldOpen && <HeldItemModal uid={live.uid} onClose={() => setHeldOpen(false)} />}
+                                    </>
+                                )
+                            })()}
 
                             {live.speciesId === "pantheon" && (player.items["pierre_gekroc"] ?? 0) > 0 && (
                                 <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => { setPantheonEvo(live); setSelected(null) }}>

@@ -2061,6 +2061,12 @@ function freeHeldSlot(uid: string): { items: Record<string, number>; team: MonIn
     const strip = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: undefined } : m)
     return { items, team: st.team.map(strip), pc: st.pc.map(strip) }
 }
+
+/** ARTISANE — la pièce ÉQUIPÉE sur ce Daemon, ou undefined. Sert (a) au verrou « 1 seul objet » dans
+ *  equipHeldItem et (b) à l'AFFICHAGE de la pièce sur la fiche du Daemon (nom, stat, %, précision). */
+export function equippedCraftedItem(uid: string): CraftedItem | undefined {
+    return (st.craftedItems ?? []).find((c) => c.boundUid === uid && c.equipped)
+}
 /** (Dés)équipe un objet signature. Équiper un objet DÉSÉQUIPE tout autre objet du MÊME Daemon (1 seul actif par uid). */
 export function setCraftedItemEquipped(id: string, equipped: boolean) {
     const cur = st.craftedItems ?? []
@@ -3838,7 +3844,8 @@ export function reviveTeamMember(uid: string, itemId: string): boolean {
 }
 
 /** Équipe un objet tenu (depuis le sac) sur un Daemon (équipe ou PC). L'éventuel objet déjà tenu
- *  retourne au sac. Refuse si pas en stock, ou si c'est un objet SIGNATURE d'une autre espèce. */
+ *  retourne au sac. Refuse si pas en stock, si c'est un objet SIGNATURE d'une autre espèce, ou si le Daemon
+ *  porte déjà une pièce de l'Artisane (1 seul objet par Daemon — cf. equippedCraftedItem). */
 export function equipHeldItem(uid: string, itemId: string): boolean {
     if (!isHeldItem(itemId) || (st.items[itemId] ?? 0) <= 0) return false
     const target = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
@@ -3849,13 +3856,14 @@ export function equipHeldItem(uid: string, itemId: string): boolean {
         const ok = Array.isArray(it.species) ? it.species.includes(target.speciesId) : it.species === target.speciesId
         if (!ok) return false
     }
+    // 1 SEUL OBJET par Daemon : un porteur de pièce de l'ARTISANE REFUSE tout autre objet tenu (règle Sartay
+    //   10/09). On ne la déséquipe PAS en douce : elle est plafonnée à 12 À VIE, la perdre par mégarde serait
+    //   irréversible. Pour changer d'objet, il faut la retirer explicitement chez l'Artisane.
+    if (equippedCraftedItem(uid)) return false
     const items = { ...st.items, [itemId]: st.items[itemId] - 1 }
     if (target.heldItem) items[target.heldItem] = (items[target.heldItem] ?? 0) + 1 // l'ancien objet revient au sac
-    // 1 SEUL OBJET par Daemon : donner un objet tenu DÉSÉQUIPE la pièce de l'Artisane (elle reste dans le sac,
-    //   toujours liée à ce Daemon — rien n'est détruit, il peut la ré-équiper quand il veut).
-    const crafted = (st.craftedItems ?? []).map((c) => (c.boundUid === uid && c.equipped ? { ...c, equipped: false } : c))
-    const apply = (m: MonInstance): MonInstance => monWithSig(m.uid === uid ? { ...m, heldItem: itemId } : m, crafted)
-    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items, craftedItems: crafted }
+    const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: itemId } : m)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items }
     emit()
     return true
 }

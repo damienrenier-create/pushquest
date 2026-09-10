@@ -54,7 +54,10 @@ describe("Artisane — gating & synchro signature (playerStore)", () => {
 })
 
 // RÈGLE « 1 SEUL OBJET » (Sartay 10/09) : un Daemon NORMAL ne peut pas porter à la fois un objet tenu du catalogue
-// ET une pièce de l'Artisane. Les deux sens sont exclusifs, et RIEN n'est détruit (l'évincé retourne au sac).
+// ET une pièce de l'Artisane. Les deux sens ne sont PAS symétriques, volontairement :
+//   • équiper la PIÈCE évince l'objet tenu (qui retourne au sac) — le joueur choisit explicitement la pièce ;
+//   • équiper un OBJET TENU sur un porteur de pièce est REFUSÉ — la pièce est plafonnée à 12 à vie, on ne la
+//     retire jamais implicitement. Il faut passer par l'Artisane pour la déséquiper.
 describe("Artisane — 1 seul objet par Daemon (pièce vs objet tenu)", () => {
     it("forger/équiper la pièce RENVOIE AU SAC l'objet tenu", () => {
         hydratePlayer({ team: [{ ...mkMon("c"), heldItem: "restes" }], pc: [], items: { restes: 0 }, craftedItems: undefined, craftsUsed: undefined, craftReady: undefined, isChampion: true, fusionChampionRoster: undefined })
@@ -63,15 +66,26 @@ describe("Artisane — 1 seul objet par Daemon (pièce vs objet tenu)", () => {
         expect(getPlayer().items.restes).toBe(1)                      // l'objet est revenu au sac, pas détruit
         expect(getPlayer().team[0].signatureItem?.stat).toBe("atk")
     })
-    it("donner un objet tenu DÉSÉQUIPE la pièce (qui reste liée au Daemon)", () => {
+    it("un porteur de pièce REFUSE tout autre objet tenu (pas de déséquipement en douce)", () => {
+        // La pièce est plafonnée à 12 À VIE : on ne la retire JAMAIS implicitement. equipHeldItem renvoie false
+        // et l'état ne bouge pas d'un pouce (ni le sac, ni la pièce, ni le Daemon).
         hydratePlayer({ team: [mkMon("d")], pc: [], items: { restes: 1 }, craftedItems: undefined, craftsUsed: undefined, craftReady: undefined, isChampion: true, fusionChampionRoster: undefined })
         const item = addCraftedItem({ stat: "def", pct: 20, precision: 100, boundUid: "d", boundName: "D", boundSpeciesId: "x", name: "Carapace renforcée" })!
         expect(getPlayer().team[0].signatureItem?.stat).toBe("def")
-        expect(equipHeldItem("d", "restes")).toBe(true)
+        expect(equipHeldItem("d", "restes")).toBe(false)              // REFUSÉ
+        expect(getPlayer().team[0].heldItem).toBeUndefined()          // rien n'est équipé
+        expect(getPlayer().items.restes).toBe(1)                      // l'objet n'est pas consommé
+        expect(getPlayer().team[0].signatureItem?.stat).toBe("def")   // la pièce reste ACTIVE
+        expect(getPlayer().craftedItems?.find((c) => c.id === item.id)?.equipped).toBe(true)
+    })
+
+    it("une fois la pièce déséquipée à l'Artisane, l'objet tenu redevient possible", () => {
+        hydratePlayer({ team: [mkMon("e")], pc: [], items: { restes: 1 }, craftedItems: undefined, craftsUsed: undefined, craftReady: undefined, isChampion: true, fusionChampionRoster: undefined })
+        const item = addCraftedItem({ stat: "spe", pct: 20, precision: 100, boundUid: "e", boundName: "E", boundSpeciesId: "x", name: "Plume véloce" })!
+        expect(equipHeldItem("e", "restes")).toBe(false)
+        setCraftedItemEquipped(item.id, false)                        // retrait EXPLICITE
+        expect(equipHeldItem("e", "restes")).toBe(true)
         expect(getPlayer().team[0].heldItem).toBe("restes")
-        expect(getPlayer().team[0].signatureItem).toBeUndefined()     // la pièce n'est plus active…
-        expect(getPlayer().craftedItems?.find((c) => c.id === item.id)?.equipped).toBe(false)
-        expect(getPlayer().craftedItems?.find((c) => c.id === item.id)?.boundUid).toBe("d") // …mais toujours la sienne
     })
 })
 
