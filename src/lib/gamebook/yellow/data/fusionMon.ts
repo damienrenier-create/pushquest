@@ -7,7 +7,7 @@
 // Cycle de vie : buildFusion() enregistre l'espèce → à la fin du combat, unregisterCustomSpecies([speciesId]).
 // Les 2 Daemons parents ne sont PAS mutés (l'instance fusionnée est neuve).
 
-import { computeFusion, type FusionParent, type FusionResult } from "./fusionSpecies"
+import { computeFusion, specialFusionForIds, type FusionParent, type FusionResult } from "./fusionSpecies"
 import { getSpecies, registerCustomSpecies, unregisterCustomSpecies } from "./species"
 import { officialFusionForParents } from "./officialFusions"
 import { MISSINGNO_SPRITE } from "./fusionSprite"
@@ -15,6 +15,7 @@ import { getFusionSpriteFromMemory } from "./fusionSpriteRegistry"
 import { createMonInstance } from "../battle/factory"
 import { fullStats } from "../battle/stats"
 import type { MonInstance, SpeciesData, StatKey } from "../battle/types"
+import { getMove } from "./moves"
 
 /** Stats du parent pour la fusion, objet SIGNATURE de l'Artisane COMPRIS (décision Sartay 10/09).
  *  POURQUOI un helper : `fullStats` n'applique un signature NON-PV que si `inst.sigActive === true` — un jet posé
@@ -105,7 +106,17 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     applyFusionStats(instance, result)
     if (a.shiny && b.shiny) instance.shiny = true // ✨ FUSION DORÉE : 2 parents shiny → résultat shiny (+ génétique 0,8/0,6 déjà appliquée)
     // TRANSMUTATION : les attaques converties dans le type de la fusion (cf. transmutedMoveTypes). Lu par le moteur.
-    if (Object.keys(result.moveTypes).length) instance.moveTypeOverride = { ...result.moveTypes }
+    //   Moveset CURÉ (opts.moves — fusions de Ligue/boss) : la provenance parentale n'a plus de sens, donc on
+    //   convertit la 1re attaque OFFENSIVE de la liste curée. Sans ça, une fusion à type FORCÉ dotée d'un moveset
+    //   choisi à la main (ex. le Cendrecerf d'ACE) se retrouverait SANS le moindre STAB.
+    const forcedType = specialFusionForIds(a.speciesId, b.speciesId)?.forcedType
+    const curedTypes: Record<string, string> = {}
+    if (opts?.moves && forcedType) {
+        const lead = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && getMove(m)?.type !== forcedType)
+        if (lead) curedTypes[lead] = forcedType
+    }
+    const moveTypes = opts?.moves ? curedTypes : result.moveTypes
+    if (Object.keys(moveTypes).length) instance.moveTypeOverride = { ...moveTypes } as MonInstance["moveTypeOverride"]
     instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
     // Objets tenus : le fusionné hérite des 2 objets de ses parents (heldItem + heldItem2). Les helpers de
     //   data/heldItems.ts COMBINENT les 2 effets (le moteur lit ces helpers → aucune touche à engine.ts).

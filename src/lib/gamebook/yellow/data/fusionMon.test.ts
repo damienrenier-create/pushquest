@@ -3,6 +3,7 @@ import { buildFusion, disposeFusion, fusionParentFromInstance } from "./fusionMo
 import { fusionWeights } from "./fusionSpecies"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
+import { getMove } from "./moves"
 import { fullStats } from "../battle/stats"
 import { createBattle, resolveTurn } from "../battle/engine"
 
@@ -65,5 +66,34 @@ describe("fusionMon — builder du BattleMon fusionné", () => {
         const p = fusionParentFromInstance(a)
         expect(p.stats.hp).toBeGreaterThan(getSpecies("razmaree")!.baseStats.hp) // niv 80 ≫ base
         expect(p.level).toBe(80)
+    })
+})
+
+// TRANSMUTATION sur MOVESET CURÉ. Les fusions de Ligue/boss reçoivent leurs 4 attaques à la main (opts.moves) :
+// la provenance parentale n'a alors plus de sens, donc on convertit la 1re attaque OFFENSIVE de la liste curée.
+// Sans ça, une fusion à type FORCÉ dotée d'un moveset choisi (le Cendrecerf d'ACE) n'aurait AUCUN STAB.
+describe("fusionMon — transmutation sur moveset curé (fusions de Ligue)", () => {
+    const mk = (id: string) => createMonInstance(id, 100)
+
+    it("Cendrecerf curé : la 1re attaque offensive passe en TÉNÈBRES (STAB), les autres intactes", () => {
+        const moves = ["lance_soleil", "lance_flammes", "spores_dodo", "focalisation"]
+        const f = buildFusion(mk("sylvapuce"), mk("pyrokoss"), { name: "Cendrecerf", moves })
+        expect(f.result.types).toEqual(["TENEBRES"])
+        expect(f.instance.moveTypeOverride).toEqual({ lance_soleil: "TENEBRES" }) // Lance-Soleil (pw120) mène
+        expect(getMove("lance_soleil")!.type).toBe("PLANTE") // le move GLOBAL n'est jamais modifié
+        expect(f.instance.moveTypeOverride?.["lance_flammes"]).toBeUndefined()
+        disposeFusion(f.speciesId)
+    })
+
+    it("aucune transmutation si la liste curée contient déjà une attaque du type forcé", () => {
+        const f = buildFusion(mk("sylvapuce"), mk("pyrokoss"), { name: "Cendrecerf", moves: ["reflet_fatal", "lance_flammes"] })
+        expect(f.instance.moveTypeOverride?.["reflet_fatal"]).toBeUndefined()
+        disposeFusion(f.speciesId)
+    })
+
+    it("une fusion SANS type forcé ne transmute rien, même curée", () => {
+        const f = buildFusion(mk("maitrezenc"), mk("zappeureal"), { name: "Test", moves: ["seisme", "fulgurance"] })
+        expect(f.instance.moveTypeOverride).toBeUndefined()
+        disposeFusion(f.speciesId)
     })
 })
