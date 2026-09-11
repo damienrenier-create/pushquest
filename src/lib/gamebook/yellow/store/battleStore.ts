@@ -76,6 +76,7 @@ import { champBattlesLeft, recordChampBattle } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, fusionTierHasReflet, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { previousFusionTier } from "../data/fusionLeague"
+import { FUSION_PLATINE_OPEN_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
 import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
@@ -1473,6 +1474,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else {
             // SACRE effectif : bronze (au boss), argent/or (au reflet), ou fallback boss-sans-reflet.
             markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])
+            // OUVERTURE DU PALIER PLATINE (décision Sartay) : boucler l'OR déverrouille le trône. C'est le seul
+            //   endroit qui pose ce marqueur — les champions OR d'avant sont rattrapés au chargement.
+            if (sacredTier === "or") markTrainerDefeated(FUSION_PLATINE_OPEN_MARKER)
             snapshotFusionChampionRoster(sacredTier) // gèle le roster vainqueur → reflet du palier SUIVANT
             // BOUCLE ENDGAME (OR) : recréer son Daemon perso & rejouer le run 1. Jamais en bulle de rejeu.
             if (sacredTier === "or" && getActiveWorld() !== "replay") loopOffer = true

@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -82,6 +82,8 @@ export function applyServerSave(save: YellowSave): void {
     // CORRECTIF run 2 : les Fusio-Balls du kit de départ fun (inutiles hors fusion) → Nexus-Balls, au chargement du
     //   monde ngplus (un patch serveur serait clobberé par l'autosave client). Idempotent, re-persisté au prochain save.
     if (aw === "ngplus") activeData.items = fixNgplusFusioBalls(activeData.items ?? {})
+    // PALIER PLATINE : quiconque a déjà bouclé l'OR voit la porte du trône s'ouvrir, sans refaire la Ligue.
+    activeData.defeatedTrainers = openPlatineIfOrCleared(activeData.defeatedTrainers ?? [])
     hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)

@@ -5,6 +5,7 @@ import {
 } from "./platineThrone"
 import { emptyLedger, recordHit, topHits, bestHitOverall, ledgerTotals } from "./platineLedger"
 import type { FusionChampionMon } from "../storage/save"
+import { openPlatineIfOrCleared } from "../store/playerStore"
 
 const mon = (name: string): FusionChampionMon => ({
     name, sprite: "/x.png", types: ["TENEBRES"], level: 100,
@@ -128,5 +129,33 @@ describe("platineLedger — le générique des meilleurs coups", () => {
         for (let i = 0; i < 10; i++) l = recordHit(l, "mine", hit(`M${i}`, 100 + i))
         const top = topHits(l, "mine", 3)
         expect(top.map((h) => h.damage)).toEqual([109, 108, 107])
+    })
+})
+
+// OUVERTURE DU PALIER. Le marqueur est pose au sacre OR — mais Jacanon et Mools avaient deja boucle l or AVANT
+// que le palier existe. Sans rattrapage au chargement, ils devraient refaire toute la Ligue pour y acceder.
+describe("platine — ouverture du palier", () => {
+    const OR = "fusleague_or", OPEN = "fusleague_platine_open"
+
+    it("un champion OR d avant la feature recoit le marqueur au chargement", () => {
+        expect(openPlatineIfOrCleared(["fusleague_bronze", "fusleague_argent", OR])).toContain(OPEN)
+    })
+
+    it("sans l or, la porte reste fermee", () => {
+        expect(openPlatineIfOrCleared(["fusleague_bronze", "fusleague_argent"])).not.toContain(OPEN)
+        expect(openPlatineIfOrCleared([])).toEqual([])
+    })
+
+    it("IDEMPOTENT : rien n est duplique si le marqueur est deja la", () => {
+        const once = openPlatineIfOrCleared([OR])
+        const twice = openPlatineIfOrCleared(once)
+        expect(twice.filter((m) => m === OPEN)).toHaveLength(1)
+        expect(twice).toEqual(once)
+    })
+
+    it("les autres marqueurs sont preserves tels quels", () => {
+        const before = ["y_fusion_1", OR, "fusioball_owed"]
+        const after = openPlatineIfOrCleared(before)
+        for (const m of before) expect(after).toContain(m)
     })
 })

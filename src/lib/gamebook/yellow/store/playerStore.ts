@@ -1112,6 +1112,17 @@ export function reconcileCrossRunItems(activeItems: Record<string, number>, othe
  *  Nexus-Balls (poke_ball) au CHARGEMENT du monde ngplus (un patch serveur serait écrasé par l'autosave client).
  *  Pur & idempotent (plus de fusio_ball après → no-op au rechargement suivant). Aucune Fusio-Ball LÉGITIME n'existe en
  *  run 2 : l'économie Fusio-Ball vit en Ligue de Fusion (monde run 4/live), jamais en ngplus → conversion sans risque. */
+/** PALIER PLATINE — RATTRAPAGE AU CHARGEMENT. Le marqueur d'ouverture est posé au sacre OR, mais deux joueurs
+ *  avaient DÉJÀ bouclé l'or avant l'existence du palier : sans ce correctif, ils devraient refaire toute la
+ *  Ligue pour y accéder. On le pose donc à la volée pour quiconque porte déjà `fusleague_or`.
+ *  Migration CÔTÉ CLIENT (un patch serveur serait clobberé par l'autosave — cf. leçon de la lampe Zyran).
+ *  Pure et idempotente : rend le tableau INCHANGÉ s'il n'y a rien à faire. */
+export function openPlatineIfOrCleared(defeated: readonly string[]): string[] {
+    const OR = "fusleague_or", OPEN = "fusleague_platine_open"
+    if (!defeated.includes(OR) || defeated.includes(OPEN)) return [...defeated]
+    return [...defeated, OPEN]
+}
+
 export function fixNgplusFusioBalls(items: Record<string, number>): Record<string, number> {
     const fusio = items["fusio_ball"] ?? 0
     if (fusio <= 0) return items
