@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
-import { currentPlatineOpponent, getPlatineStep } from "./platineRun"
+import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep } from "./platineRun"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -1635,6 +1635,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             //   argent) qu'APRÈS avoir vaincu le Dieu Spaghetti DANS CETTE run (flag transient). Sinon (boss pas encore
             //   battu, ou save d'avant la feature) → porte SCELLÉE : CUL-DE-SAC (on annule le pas). Bronze/argent n'ont PAS
             //   cette porte (FUSION_MIROIR_BRONZE) : le boss y sacre direct. Le joueur sort par la gauche.
+            // LE TRÔNE — la porte droite REBOUCLE sur la même salle. Elle reste SCELLÉE tant que l'adversaire du
+            //   moment n'est pas tombé ; une fois battu, la franchir fait AVANCER le couloir : on ressort, on
+            //   rentre, et quelqu'un d'autre se tient là. La porte gauche (retraite) n'est jamais bloquée.
+            if (targetMapId === "yellow_fusion_platine" && map.id === "yellow_fusion_platine") {
+                if (!isPlatineOpponentBeaten()) {
+                    set({ player: { ...player, direction: next.direction } }) // face à la porte murée
+                    return
+                }
+                advancePlatineStep()
+            }
             if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten()) {
                 set({ player: { ...player, direction: next.direction } }) // reste sur place, face à la porte murée
                 return

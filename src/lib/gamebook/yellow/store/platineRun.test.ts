@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import {
     setPlatineCorridor, resetPlatineRun, currentPlatineOpponent, advancePlatineStep,
     isPlatineCorridorCleared, isPlatineCorridorLoaded, platineTotalSteps, getPlatineStep,
-    getPlatineLedger, setPlatineLedger, type PlatineThroneHolder,
+    getPlatineLedger, setPlatineLedger, markPlatineOpponentBeaten, isPlatineOpponentBeaten, type PlatineThroneHolder,
 } from "./platineRun"
 import { recordHit, topHits } from "../data/platineLedger"
 import type { PlatineChampion } from "../data/platineArena"
@@ -88,5 +88,40 @@ describe("platineRun — la séquence du couloir", () => {
         setPlatineLedger(recordHit(getPlatineLedger(), "foes", { name: "Voltombre", move: "Ultra-Foudre", damage: 611, target: "Orochitachi", room: "ACE" }))
         expect(topHits(getPlatineLedger(), "mine")[0].damage).toBe(420)
         expect(topHits(getPlatineLedger(), "foes")[0].damage).toBe(611)
+    })
+})
+
+// LA PORTE. Battre l adversaire ne fait PAS venir le suivant : ca DEVERROUILLE la porte droite. C est en la
+// franchissant que le couloir avance — le joueur ressort, rentre, et quelqu un d autre se tient la.
+describe("platineRun — la porte droite", () => {
+    beforeEach(() => resetPlatineRun())
+
+    it("la porte est SCELLEE tant que l adversaire du moment tient", () => {
+        setPlatineCorridor([champ("Jacanon")], null)
+        expect(isPlatineOpponentBeaten()).toBe(false)
+        markPlatineOpponentBeaten()
+        expect(isPlatineOpponentBeaten()).toBe(true)
+    })
+
+    it("battre NE change PAS l adversaire : seul le franchissement le fait", () => {
+        setPlatineCorridor([champ("Jacanon")], null)
+        markPlatineOpponentBeaten()
+        expect(currentPlatineOpponent()).toMatchObject({ kind: "ace" }) // toujours ACE dans la salle
+        advancePlatineStep()                                            // on franchit la porte
+        expect(currentPlatineOpponent()).toMatchObject({ kind: "room", label: "Jacanon" })
+    })
+
+    it("franchir REVERROUILLE la porte pour l adversaire suivant", () => {
+        setPlatineCorridor([champ("Jacanon")], null)
+        markPlatineOpponentBeaten()
+        advancePlatineStep()
+        expect(isPlatineOpponentBeaten()).toBe(false) // Jacanon n est pas encore tombe
+    })
+
+    it("abandonner reverrouille tout", () => {
+        setPlatineCorridor([champ("A")], null)
+        markPlatineOpponentBeaten()
+        resetPlatineRun()
+        expect(isPlatineOpponentBeaten()).toBe(false)
     })
 })

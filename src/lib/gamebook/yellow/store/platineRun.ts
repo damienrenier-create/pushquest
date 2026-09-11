@@ -39,6 +39,10 @@ let rooms: PlatineChampion[] = []
 let holder: PlatineThroneHolder | null = null
 let loaded = false
 let step = 0
+/** L'adversaire de l'ÉTAPE COURANTE est-il vaincu ? C'est lui qui DÉVERROUILLE la porte droite : on bat, puis
+ *  on franchit la porte, et c'est le franchissement qui fait apparaître le suivant. Sans ce drapeau, la porte
+ *  n'aurait aucun rôle (le PNJ changerait tout seul dans le dos du joueur). */
+let beaten = false
 let ledger: PlatineLedger = emptyLedger()
 
 /** Dépose le couloir récupéré au serveur (à l'entrée de la salle). Remet le parcours à zéro. */
@@ -47,6 +51,7 @@ export function setPlatineCorridor(nextRooms: PlatineChampion[], nextHolder: Pla
     holder = nextHolder
     loaded = true
     step = 0
+    beaten = false
     ledger = emptyLedger()
 }
 
@@ -80,8 +85,12 @@ export function currentPlatineOpponent(): PlatineOpponent | null {
     return null
 }
 
-/** Avance d'une salle (appelé à chaque victoire). */
-export function advancePlatineStep(): void { step += 1 }
+/** VICTOIRE dans la salle : on NE change PAS encore d'adversaire — on déverrouille la porte. */
+export function markPlatineOpponentBeaten(): void { beaten = true }
+/** L'adversaire du moment est-il tombé ? (= la porte droite est-elle ouverte ?) */
+export function isPlatineOpponentBeaten(): boolean { return beaten }
+/** FRANCHISSEMENT de la porte : c'est LÀ que le suivant prend place dans la salle. */
+export function advancePlatineStep(): void { step += 1; beaten = false }
 
 /** Le couloir est-il TERMINÉ ? (plus aucun adversaire → le joueur prend la chaise) */
 export function isPlatineCorridorCleared(): boolean {
@@ -98,5 +107,6 @@ export function resetPlatineRun(): void {
     holder = null
     loaded = false
     step = 0
+    beaten = false
     ledger = emptyLedger()
 }
