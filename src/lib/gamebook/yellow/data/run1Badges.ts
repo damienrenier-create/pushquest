@@ -131,7 +131,8 @@ const MK_FUSION_UNLOCK = "fusion_unlocked"
 const MK_FUSION_BRONZE = "fusleague_bronze"
 const MK_FUSION_ARGENT = "fusleague_argent"
 const MK_FUSION_OR = "fusleague_or"
-const MK_FUSION_TIERS: readonly string[] = ["fusleague_bronze", "fusleague_argent", "fusleague_or"]
+const MK_FUSION_PLATINE = "fusleague_platine"
+const MK_FUSION_TIERS: readonly string[] = ["fusleague_bronze", "fusleague_argent", "fusleague_or", MK_FUSION_PLATINE]
 /** Barème DÉGRESSIF d'un haut fait de complétion de palier (Ligue de Fusion) : run PARFAIT (0 défaite) = max ;
  *  chaque défaite subie sur CE palier retire `step` points, plancher `floor`. Cf. recordFusionLeagueDefeat. */
 const fusionTierPoints = (tier: string, max: number, step: number, floor: number) => (i: BadgeInput) =>

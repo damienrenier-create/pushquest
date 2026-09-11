@@ -26,8 +26,8 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier (Or > Argent > Bronze) puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
 ]
 
-const TIER_RANK: Record<string, number> = { or: 3, argent: 2, bronze: 1 }
-const TIER_LABEL: Record<string, string> = { or: "🥇 OR", argent: "🥈 ARGENT", bronze: "🥉 BRONZE" }
+const TIER_RANK: Record<string, number> = { platine: 4, or: 3, argent: 2, bronze: 1 }
+const TIER_LABEL: Record<string, string> = { platine: "💎 PLATINE", or: "🥇 OR", argent: "🥈 ARGENT", bronze: "🥉 BRONZE" }
 
 const topN = (rec: Record<string, number> | undefined, n: number): [string, number][] =>
     Object.entries(rec ?? {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n)

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest"
 import {
     FUSION_LEAGUE, FUSION_TIERS, FUSION_BOSS_PAIRS, allFusionLeaguePairs,
     buildFusionLeagueTeam, disposeFusionLeagueTeam,
+    FUSION_TIER_ORDER, FUSION_TIER_MARKER, FUSION_PLATINE_OPEN_MARKER,
+    activeFusionTier, previousFusionTier, isTopFusionTier,
 } from "./fusionLeague"
 import { getSpecies } from "./species"
 import { computeFusion } from "./fusionSpecies"
@@ -98,5 +100,48 @@ describe("Ligue de Fusion — data", () => {
             disposeFusionLeagueTeam(bronze)
             disposeFusionLeagueTeam(or)
         }
+    })
+})
+
+// PALIER PLATINE (Sartay 11/09) - le TRONE, 4e cran de l echelle. Il est POSE mais VERROUILLE : ses adversaires
+// (ACE + les equipes figees des champions OR) n existent pas encore. Sans ce verrou, tout joueur ayant deja boucle
+// l OR basculerait instantanement en platine et re-combattrait le Conseil en boucle - d ou le test central ci-dessous.
+describe("Ligue de Fusion - palier PLATINE (pose, verrouille)", () => {
+    const cleared = (...marks: string[]) => (m: string) => marks.includes(m)
+    const ALL_TIERS = [FUSION_TIER_MARKER.bronze, FUSION_TIER_MARKER.argent, FUSION_TIER_MARKER.or]
+
+    it("l echelle compte 4 crans, et chacun a son libelle + son marqueur", () => {
+        expect([...FUSION_TIER_ORDER]).toEqual(["bronze", "argent", "or", "platine"])
+        expect(FUSION_TIERS.platine.label).toBe("Platine")
+        expect(FUSION_TIER_MARKER.platine).toBe("fusleague_platine")
+        for (const t of FUSION_TIER_ORDER) expect(FUSION_TIERS[t]).toBeTruthy()
+    })
+
+    it("VERROU : or boucle SANS le marqueur d ouverture -> on reste sur OR (prod inchangee)", () => {
+        expect(activeFusionTier(cleared(...ALL_TIERS))).toBe("or")
+    })
+
+    it("le marqueur d ouverture fait basculer en PLATINE", () => {
+        expect(activeFusionTier(cleared(...ALL_TIERS, FUSION_PLATINE_OPEN_MARKER))).toBe("platine")
+    })
+
+    it("le marqueur d ouverture ne SAUTE PAS les paliers inferieurs", () => {
+        expect(activeFusionTier(cleared(FUSION_PLATINE_OPEN_MARKER))).toBe("bronze")
+        expect(activeFusionTier(cleared(FUSION_TIER_MARKER.bronze, FUSION_PLATINE_OPEN_MARKER))).toBe("argent")
+        expect(activeFusionTier(cleared(FUSION_TIER_MARKER.bronze, FUSION_TIER_MARKER.argent, FUSION_PLATINE_OPEN_MARKER))).toBe("or")
+    })
+
+    it("previousFusionTier : le REFLET affronte le roster du cran d en dessous", () => {
+        expect(previousFusionTier("bronze")).toBeUndefined()
+        expect(previousFusionTier("argent")).toBe("bronze")
+        expect(previousFusionTier("or")).toBe("argent")
+        expect(previousFusionTier("platine")).toBe("or") // en platine, ton reflet serait ton roster OR
+    })
+
+    it("isTopFusionTier : platine herite du budget d objets maximal de l OR", () => {
+        expect(isTopFusionTier("platine")).toBe(true)
+        expect(isTopFusionTier("or")).toBe(true)
+        expect(isTopFusionTier("argent")).toBe(false)
+        expect(isTopFusionTier("bronze")).toBe(false)
     })
 })

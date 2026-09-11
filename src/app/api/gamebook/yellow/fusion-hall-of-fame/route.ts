@@ -17,7 +17,7 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 
 export const dynamic = "force-dynamic"
 
-const TIERS = new Set(["bronze", "argent", "or"])
+const TIERS = new Set(["bronze", "argent", "or", "platine"])
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)

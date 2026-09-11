@@ -25,7 +25,7 @@ function FusionSprite({ m, style, fallback }: { m: FusionChampionMon; style: Rea
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
 interface FusionChampionEntry { nickname: string; wonAt: string; team: FusionChampionMon[]; tier: string }
 const TIER_META: Record<string, { label: string; color: string }> = {
-    bronze: { label: "BRONZE", color: "#cd7f32" }, argent: { label: "ARGENT", color: "#c0c6cf" }, or: { label: "OR", color: "#ffd54a" },
+    bronze: { label: "BRONZE", color: "#cd7f32" }, argent: { label: "ARGENT", color: "#c0c6cf" }, or: { label: "OR", color: "#ffd54a" }, platine: { label: "PLATINE", color: "#e5e4e2" },
 }
 
 // Runs visibles au toggle : le spectateur ne voit QUE les runs qu'il a atteints (anti-spoiler).

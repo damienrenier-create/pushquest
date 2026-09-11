@@ -19,11 +19,15 @@ import { createMonInstance } from "../battle/factory"
 import { buildFusion, disposeFusion, type BuiltFusion } from "./fusionMon"
 import { fusionSpritePath } from "./fusionSprite"
 
-export type FusionTier = "bronze" | "argent" | "or"
+export type FusionTier = "bronze" | "argent" | "or" | "platine"
 export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; label: string }> = {
     bronze: { level: 80, saiyan: 75, label: "Bronze" },
     argent: { level: 90, saiyan: 85, label: "Argent" },
     or: { level: 100, saiyan: 95, label: "Or" },
+    // PLATINE - le TRONE. Ses adversaires ne sont PAS le Conseil : c'est ACE puis les champions OR eux-memes
+    //   (equipes de joueurs figees). Le niveau reste plafonne a 100 par le moteur ; la difficulte vient des
+    //   equipes reelles, pas d'un scaling.
+    platine: { level: 100, saiyan: 95, label: "Platine" },
 }
 
 // moves = moveset CURÉ (4 attaques) ; sinon dérivé. sprite = PNG dédié de la fusion (à remplir quand les 21
@@ -195,14 +199,14 @@ const ROLE_OBJECT: Record<FusionRole, string> = {
  *  berriesActive) ; objets passifs aux fusions de tête (toujours). Rien en bronze. Modifie les instances EN PLACE. */
 function assignEnemyHeldItems(team: BuiltFusion[], roles: (FusionRole | undefined)[], tier: FusionTier, berriesActive: boolean): void {
     if (tier === "bronze") return
-    const nBerry = tier === "or" ? 2 : 1
-    const nObj = tier === "or" ? 2 : 1
+    const nBerry = isTopFusionTier(tier) ? 2 : 1
+    const nObj = isTopFusionTier(tier) ? 2 : 1
     const roleAt = (i: number): FusionRole => roles[i] ?? "tank_atk"
     if (berriesActive) {
         for (let k = 0; k < nBerry; k++) {
             const i = team.length - 1 - k
             if (i < 0) break
-            team[i].instance.heldItem = (tier === "or" && k === 0) ? "baie_phenix" : ROLE_BERRY[roleAt(i)]
+            team[i].instance.heldItem = (isTopFusionTier(tier) && k === 0) ? "baie_phenix" : ROLE_BERRY[roleAt(i)]
         }
     }
     let placed = 0
@@ -336,13 +340,34 @@ export function fusionLeagueKeyForTrainer(trainerId: string): string | null {
 // PALIERS EN ÉCHELLE — marqueurs de complétion persistés dans `defeatedTrainers` (per-monde, NON purgés par le
 // reset du gauntlet qui ne vise que `y_fusion_*`). Le palier ACTIF = le 1er non encore complété.
 export const FUSION_TIER_MARKER: Record<FusionTier, string> = {
-    bronze: "fusleague_bronze", argent: "fusleague_argent", or: "fusleague_or",
+    bronze: "fusleague_bronze", argent: "fusleague_argent", or: "fusleague_or", platine: "fusleague_platine",
 }
+/** Les paliers DU PLUS BAS AU PLUS HAUT. Source unique pour « le palier d'en dessous » et « est-ce le haut du
+ *  panier ». Evite les branches en dur (=== "or", !== "bronze") qui devenaient silencieusement fausses en platine. */
+export const FUSION_TIER_ORDER: readonly FusionTier[] = ["bronze", "argent", "or", "platine"]
+/** Le palier juste EN DESSOUS (undefined pour bronze). Sert au REFLET : en or tu affrontes ton roster ARGENT gele,
+ *  en platine ce serait ton roster OR. */
+export function previousFusionTier(tier: FusionTier): FusionTier | undefined {
+    const i = FUSION_TIER_ORDER.indexOf(tier)
+    return i > 0 ? FUSION_TIER_ORDER[i - 1] : undefined
+}
+/** Palier « haut de gamme » (or ou platine) : budget d'objets ennemis maximal + baies TOUJOURS actives. */
+export function isTopFusionTier(tier: FusionTier): boolean {
+    return tier === "or" || tier === "platine"
+}
+/** PLATINE VERROUILLE tant que ce marqueur n'est pas pose. ATTENTION : sans ce garde-fou, tout joueur ayant boucle
+ *  l'OR (Jacanon, Mools) basculerait INSTANTANEMENT en platine et re-combattrait le Conseil a l'infini. Le palier
+ *  ne s'ouvrira qu'une fois son contenu reel en place (ACE + salles des champions). */
+export const FUSION_PLATINE_OPEN_MARKER = "fusleague_platine_open"
+
 /** Palier actif (le plus haut débloqué mais pas encore bouclé). `isCleared(marker)` = a-t-on complété ce palier ? */
 export function activeFusionTier(isCleared: (marker: string) => boolean): FusionTier {
     if (!isCleared(FUSION_TIER_MARKER.bronze)) return "bronze"
     if (!isCleared(FUSION_TIER_MARKER.argent)) return "argent"
-    return "or"
+    if (!isCleared(FUSION_TIER_MARKER.or)) return "or"
+    // Or boucle : on ne passe en PLATINE que si le palier a ete explicitement ouvert (cf. marqueur). Sinon on
+    //   reste sur "or" - comportement strictement identique a avant.
+    return isCleared(FUSION_PLATINE_OPEN_MARKER) ? "platine" : "or"
 }
 /** A-t-on décroché le titre « Maître de la Chimère » (au moins Bronze bouclé) ? */
 export function isFusionChampion(isCleared: (marker: string) => boolean): boolean {

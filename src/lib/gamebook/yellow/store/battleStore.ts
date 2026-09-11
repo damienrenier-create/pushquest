@@ -74,6 +74,7 @@ import { funOnBadge, funOnCapture } from "./playerStore"
 import { champBattlesLeft, recordChampBattle } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, fusionTierHasReflet, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
+import { previousFusionTier } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
 import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
@@ -1421,7 +1422,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (wonFusionBoss || wonFusionReflet) {
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
-        if (wonFusionBoss && fusionTierHasReflet(sacredTier) && getFusionChampionRoster("argent").length >= 2) {
+        if (wonFusionBoss && fusionTierHasReflet(sacredTier) && getFusionChampionRoster(previousFusionTier(sacredTier) ?? "bronze").length >= 2) {
             // OR : boss battu AVEC ton reflet argent gelé → on DIFFÈRE le sacre : la porte droite du miroir s'ouvre sur la
             //   salle ultime. Le titre ULTIME s'obtient en battant ton reflet argent (y_fusion_reflet). Bronze/argent → sacre direct (else).
             setGauntletBossBeaten(true)

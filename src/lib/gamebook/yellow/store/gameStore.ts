@@ -28,6 +28,7 @@ import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
+import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -721,7 +722,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         //   seulement à la 1re run du jour en ARGENT (les objets passifs, eux, sont toujours là). Cf. assignEnemyHeldItems.
         const startTier = activeFusionTier((m) => isTrainerDefeated(m))
         const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
-        setGauntletBerries(startTier === "or" || (startTier === "argent" && firstTryToday))
+        setGauntletBerries(isTopFusionTier(startTier) || (startTier === "argent" && firstTryToday))
         setGauntletBossBeaten(false) // SALLE ULTIME : nouvelle run → le Dieu Spaghetti n'est pas encore vaincu (porte ultime fermée)
         const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
         // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
@@ -763,7 +764,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         //   bronze, or affronte ton argent). Reflet INCAPTURABLE (owned:false). Sécurité anti-soft-lock : si le roster
         //   gelé est vide/illisible (ex. save d'avant la feature), on renvoie à l'Autel (le boss aura sacré en fallback).
         const tier = activeFusionTier((m) => isTrainerDefeated(m))
-        const flat = getFusionChampionRoster(tier === "or" ? "argent" : "bronze")
+        const flat = getFusionChampionRoster(previousFusionTier(tier) ?? "bronze")
         const reflet: BuiltFusion[] = []
         for (let i = 0; i + 1 < flat.length; i += 2) {
             const a = flat[i], b = flat[i + 1]
