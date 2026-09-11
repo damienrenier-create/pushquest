@@ -32,7 +32,12 @@ export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; l
 
 // moves = moveset CURÉ (4 attaques) ; sinon dérivé. sprite = PNG dédié de la fusion (à remplir quand les 21
 // sprites arrivent, ex. "/yellow/sprites/dex/fusion/morcaline.png") ; sinon le sprite du parent dominant.
-export interface FusionPairDef { a: string; b: string; name: string; moves?: string[]; sprite?: string; role?: FusionRole }
+export interface FusionPairDef {
+    a: string; b: string; name: string; moves?: string[]; sprite?: string; role?: FusionRole
+    /** Les DEUX parents sont chromatiques -> genetique DOREE (0,8/0,6), ou JACKPOT (0,9/0,7) si la paire est aussi
+     *  synergique. Reserve au palier PLATINE : c'est ce qui met l'equipe d'ACE au-dessus du boss OR. */
+    shiny?: boolean
+}
 export interface FusionLeagueTrainer {
     key: string
     name: string    // nom du dresseur
@@ -121,19 +126,20 @@ const PERFECT_IVS: Record<StatKey, number> = { hp: 15, atk: 15, def: 15, spe: 15
 /** Parent optimisé. Sans `role` : build « au mieux » historique (252 signature + 252 PV, Saiyan signature). Avec `role` :
  *  spread EV/Saiyan du rôle → la fusion (moyenne des 2 parents bâtis avec le même rôle) hérite d'une identité claire.
  *  `perfectIv` : IV 15 partout (ultra-team du boss). */
-function buildParent(speciesId: string, level: number, saiyan: number, role?: FusionRole, perfectIv = false): MonInstance {
+function buildParent(speciesId: string, level: number, saiyan: number, role?: FusionRole, perfectIv = false, shiny = false): MonInstance {
     const sp = getSpecies(speciesId)
     if (!sp) throw new Error(`Ligue Fusion : espèce inconnue ${speciesId}`)
     const iv = perfectIv ? { ivsByStat: PERFECT_IVS } : {}
+    const sh = shiny ? { shiny: true } : {}
     if (role) {
         const { ev: [e1, e2], saiyan: sy } = ROLE_EV[role]
-        return createMonInstance(speciesId, level, { ev: { [e1]: 252, [e2]: 252 }, allocated: { [sy]: saiyan }, ...iv })
+        return createMonInstance(speciesId, level, { ev: { [e1]: 252, [e2]: 252 }, allocated: { [sy]: saiyan }, ...iv, ...sh })
     }
     const primary = signatureStat(sp)
     const ev: Partial<Record<StatKey, number>> = {}
     if (primary === "hp") { ev.hp = 252; ev[secondStat(speciesId, "hp")] = 252 }
     else { ev[primary] = 252; ev.hp = 252 }
-    return createMonInstance(speciesId, level, { ev, allocated: { [primary]: saiyan }, ...iv })
+    return createMonInstance(speciesId, level, { ev, allocated: { [primary]: saiyan }, ...iv, ...sh })
 }
 
 // ==================== RENFORTS ANTI-TRIO (Spectre/Psy/Ténèbres) — ARGENT/OR SEULEMENT ====================
@@ -277,6 +283,55 @@ export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0, berriesAct
         buildFusion(buildParent(p.a, level, saiyan, p.role, ultra), buildParent(p.b, level, saiyan, p.role, ultra), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
     assignEnemyHeldItems(team, pairs.map((p) => p.role), tier, berriesActive)
+    return team
+}
+
+// ==================== PALIER PLATINE — ACE, LE PORTIER DU TRONE ====================
+// Premiere salle du couloir platine : avant d'affronter ceux qui ont battu la Ligue OR, il faut passer ACE.
+// Son equipe (choix Sartay 11/09) melange ses PANTHERES signature, les deux legendaires du joueur et une
+// fusion curee. TOUT sort des learnsets des parents (regle des fusions de Ligue).
+//
+// SHINY partout SAUF MegamonarX (retire) et Galijah x Flamarokto : ces exceptions creent d'elles-memes une
+// COURBE MONTANTE 1778 -> 2480, donc un ordre d'arrivee evident et un vrai crescendo, au lieu d'un mur plat.
+export const PLATINE_ACE_PAIRS: FusionPairDef[] = [
+    // 1771 — la double-legendaire ouvre. NON-shiny : construite en FUSION (et non comme l'espece Ukognofy, BST 597),
+    //   le shiny la propulsait a 2594, au-dessus de l'ACE lui-meme — elle aurait ecrase la fin du couloir.
+    //   La paire goshendofy x ukognos EST Ukognofy : nom et sprite sont reconnus via officialFusions.
+    { a: "goshendofy", b: "ukognos", name: "Ukognofy", role: "tank_spc",
+      moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] },
+    // 1778 — double STAB special (Fee 115 + Glace 110). Non-shiny : c'est la 2e marche d'entree.
+    { a: "galijah", b: "flamarokto", name: "Galirokto", role: "sweep_spc",
+      moves: ["cataclysme_lunaire", "blizzard", "eveil_divin", "repos"] },
+    // 2245 — le marteau. atk 756 : double STAB PHYSIQUE (Metal 90 + Combat 100) + Seisme + Danse-Lames.
+    { a: "magnetor", b: "lievrocogne", name: "Magnicogne", role: "sweep_atk", shiny: true,
+      moves: ["poing_meteore", "coup_de_boutoir", "seisme", "danse_lames"] },
+    // 2349 — synergie des GECKOS. ROLE tank_atk et pas sweep_atk : en sweep, Gekraise apportait FEU au lieu de
+    //   ROCHE et la fusion sortait en [FEU/ROCHE], Deferlante n'etait alors plus STAB. tank_atk donne [ROCHE/EAU]
+    //   ET garde atk 826. Les degats passent par le PHYSIQUE (Roche/Sol) ; l'Eau porte surtout l'identite.
+    { a: "gekraise", b: "geaucke", name: "Gékaucké", role: "tank_atk", shiny: true,
+      moves: ["roc_titanesque", "seisme", "deferlante", "cage_eclair"] },
+    // 2422 — fusion INEDITE a type FORCE : Lance-Soleil est TRANSMUTE en TENEBRES (cf. transmutedMoveTypes),
+    //   donc 120 de puissance en STAB sur 756 de Speciale. Schema : endort, se booste, efface.
+    { a: "sylvapuce", b: "pyrokoss", name: "Cendrecerf", role: "sweep_spc", shiny: true,
+      moves: ["lance_soleil", "lance_flammes", "spores_dodo", "focalisation"] },
+    // 2479 — ACE de l'ACE, et sa SIGNATURE (les pantheres, cf. ACE_PANTHERS_EVOLVED). vit 628 / spc 748.
+    //   Ball'Ombre repond aux SOL, immunises a l'Electrik — sans elle, un seul Sol murait toute la salle.
+    { a: "voltapanthe", b: "ombrapanthe", name: "Voltombre", role: "sweep_spc", shiny: true,
+      moves: ["ultra_foudre", "ball_ombre", "focalisation", "cage_eclair"] },
+]
+
+/** L'equipe d'ACE au palier PLATINE. Parents niveau 100, IV parfaits, spreads par role, et chromatiques la ou
+ *  la paire le demande (genetique doree). BuiltFusion ephemeres -> a DETRUIRE via disposeFusionLeagueTeam. */
+export function buildPlatineAceTeam(levelBonus = 0, berriesActive = false): BuiltFusion[] {
+    const { level: baseLevel, saiyan } = FUSION_TIERS.platine
+    const level = Math.min(100, baseLevel + Math.max(0, Math.floor(levelBonus)))
+    const team = PLATINE_ACE_PAIRS.map((p) =>
+        buildFusion(
+            buildParent(p.a, level, saiyan, p.role, true, p.shiny),
+            buildParent(p.b, level, saiyan, p.role, true, p.shiny),
+            { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) },
+        ))
+    assignEnemyHeldItems(team, PLATINE_ACE_PAIRS.map((p) => p.role), "platine", berriesActive)
     return team
 }
 

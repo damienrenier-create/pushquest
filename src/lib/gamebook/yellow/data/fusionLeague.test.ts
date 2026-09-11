@@ -4,8 +4,10 @@ import {
     buildFusionLeagueTeam, disposeFusionLeagueTeam,
     FUSION_TIER_ORDER, FUSION_TIER_MARKER, FUSION_PLATINE_OPEN_MARKER,
     activeFusionTier, previousFusionTier, isTopFusionTier,
+    PLATINE_ACE_PAIRS, buildPlatineAceTeam,
 } from "./fusionLeague"
 import { getSpecies } from "./species"
+import { getMove } from "./moves"
 import { computeFusion } from "./fusionSpecies"
 import { fusionParentFromInstance } from "./fusionMon"
 import { createMonInstance } from "../battle/factory"
@@ -143,5 +145,61 @@ describe("Ligue de Fusion - palier PLATINE (pose, verrouille)", () => {
         expect(isTopFusionTier("or")).toBe(true)
         expect(isTopFusionTier("argent")).toBe(false)
         expect(isTopFusionTier("bronze")).toBe(false)
+    })
+})
+
+// ACE, PORTIER DU TRONE (palier platine). Son equipe melange ses PANTHERES signature, les legendaires et une
+// fusion curee. Les exceptions shiny voulues par Sartay (Ukognofy et Galijah x Flamarokto en normaux) creent une
+// COURBE MONTANTE : sans elles, l ACE final n aurait pas ete le plus fort de sa propre salle.
+describe("Ligue de Fusion - equipe PLATINE d ACE", () => {
+    it("6 fusions, movesets de 4, ACE final = les pantheres (sa signature)", () => {
+        expect(PLATINE_ACE_PAIRS).toHaveLength(6)
+        for (const p of PLATINE_ACE_PAIRS) expect(p.moves).toHaveLength(4)
+        const ace = PLATINE_ACE_PAIRS[PLATINE_ACE_PAIRS.length - 1]
+        expect([ace.a, ace.b].sort()).toEqual(["ombrapanthe", "voltapanthe"])
+    })
+
+    it("la puissance MONTE du 1er au dernier (crescendo, pas un mur plat)", () => {
+        const team = buildPlatineAceTeam()
+        const bst = team.map((f) => { const s = f.result.stats; return s.hp + s.atk + s.def + s.spe + s.spc })
+        expect(bst).toEqual([...bst].sort((a, b) => a - b)) // strictement croissant
+        expect(bst[0]).toBeLessThan(2000)      // une vraie marche d entree
+        expect(bst[5]).toBeGreaterThan(2400)   // un vrai climax
+        disposeFusionLeagueTeam(team)
+    })
+
+    it("CHAQUE fusion a au moins un STAB offensif (transmutation comprise)", () => {
+        const team = buildPlatineAceTeam()
+        for (const f of team) {
+            const types = f.result.types as string[]
+            const stab = f.instance.moves.filter((slot) => {
+                const mv = getMove(slot.moveId)!
+                const eff = f.instance.moveTypeOverride?.[slot.moveId] ?? mv.type
+                return (mv.power ?? 0) > 0 && types.includes(eff)
+            })
+            expect(stab.length, `${f.result.name} sans STAB`).toBeGreaterThan(0)
+        }
+        disposeFusionLeagueTeam(team)
+    })
+
+    it("Cendrecerf : son Lance-Soleil est bien TRANSMUTE en TENEBRES", () => {
+        const team = buildPlatineAceTeam()
+        const cc = team.find((f) => f.result.name === "Cendrecerf")!
+        expect(cc.instance.moveTypeOverride?.["lance_soleil"]).toBe("TENEBRES")
+        disposeFusionLeagueTeam(team)
+    })
+
+    it("Gekaucke sort bien en ROCHE/EAU (le role tank_atk evite le basculement en FEU)", () => {
+        const team = buildPlatineAceTeam()
+        const i = PLATINE_ACE_PAIRS.findIndex((p) => p.a === "gekraise" && p.b === "geaucke")
+        const g = team[i]
+        expect([...g.result.types].sort()).toEqual(["EAU", "ROCHE"])
+        disposeFusionLeagueTeam(team)
+    })
+
+    it("budget platine = celui de l OR : 2 baies dont la Phenix sur l ACE", () => {
+        const team = buildPlatineAceTeam(0, true)
+        expect(team[team.length - 1].instance.heldItem).toBe("baie_phenix")
+        disposeFusionLeagueTeam(team)
     })
 })
