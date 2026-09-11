@@ -116,7 +116,7 @@ import { shopPrice, BOURSE_INTRO_LINES, BOURSE_SHOP_LINES, BOURSE_INTRO_MARKER, 
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
-import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX } from "@/lib/gamebook/yellow/data/fusionLeague"
+import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS, FUSIOBALL_REOFFER_PREFIX , FUSION_TIER_ORDER, FUSION_TIER_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun, postReplaySpend, postSpend, fetchFrontierProfile, type FrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
@@ -5792,7 +5792,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // Coup/Daemon fétiche : d'abord l'usage PvP réel, sinon repli sur le roster vainqueur (toujours dispo).
                     const rosterMoveCount: Record<string, number> = {}
                     for (const m of fusionEpilogue.roster) for (const mv of m.moves) rosterMoveCount[mv] = (rosterMoveCount[mv] ?? 0) + 1
-                    const tiers = ["bronze", "argent", "or"].filter((t) => player.defeatedTrainers.includes(`fusleague_${t}`))
+                    // Dérivé de FUSION_TIER_ORDER : une liste en dur aurait affiché « Bronze · Argent · Or » à un
+                    //   joueur venant de décrocher le PLATINE (omission silencieuse, aucun warning tsc).
+                    const tiers = FUSION_TIER_ORDER.filter((t) => player.defeatedTrainers.includes(FUSION_TIER_MARKER[t]))
                     const palmares: SacrePalmares = {
                         playtime: formatDuration(player.playtimeMs), battles: s.battles, wins: s.wins,
                         captures: caught.length, dexCount, badges: player.badges.length,

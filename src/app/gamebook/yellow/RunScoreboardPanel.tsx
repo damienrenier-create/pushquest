@@ -23,7 +23,7 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
     { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
-    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier (Or > Argent > Bronze) puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
+    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier (Platine > Or > Argent > Bronze) puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
 ]
 
 const TIER_RANK: Record<string, number> = { platine: 4, or: 3, argent: 2, bronze: 1 }
@@ -320,7 +320,7 @@ const FEAT_FIRST_META: { id: string; label: string }[] = [
 ]
 
 /** Onglet RUN 4 / LIGUE : 🥇 PREMIÈRES DU GROUPE (course au premier, gravé à vie) + Maîtres de la Chimère classés
- *  par palier (Or>Argent>Bronze) puis par ANCIENNETÉ du sacre (le 1er vainqueur en tête). */
+ *  par palier (Platine>Or>Argent>Bronze) puis par ANCIENNETÉ du sacre (le 1er vainqueur en tête). */
 function Run4Tab({ champs, firsts }: { champs: FusionChamp[]; firsts: Record<string, { userId: string; nickname: string }> }) {
     const ranked = champs.slice().sort((a, b) =>
         (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0) || (Date.parse(a.wonAt) - Date.parse(b.wonAt)))
