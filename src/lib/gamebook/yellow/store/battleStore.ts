@@ -69,6 +69,7 @@ import { setTeamAndPc } from "./playerStore"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
+import { snapshotFusionChampionAvatar } from "./playerStore"
 import { funOnBadge, funOnCapture } from "./playerStore"
 import { champBattlesLeft, recordChampBattle } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
@@ -1424,6 +1425,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // OR : boss battu AVEC ton reflet argent gelé → on DIFFÈRE le sacre : la porte droite du miroir s'ouvre sur la
             //   salle ultime. Le titre ULTIME s'obtient en battant ton reflet argent (y_fusion_reflet). Bronze/argent → sacre direct (else).
             setGauntletBossBeaten(true)
+            // REFLET : on PHOTOGRAPHIE le skin du joueur ICI — c'est littéralement « au moment où il a battu la
+            //   Ligue OR », et c'est juste avant qu'il n'entre dans la salle ultime affronter son reflet.
+            snapshotFusionChampionAvatar(sacredTier)
         } else {
             // SACRE effectif : bronze (au boss), argent/or (au reflet), ou fallback boss-sans-reflet.
             markTrainerDefeated(FUSION_TIER_MARKER[sacredTier])

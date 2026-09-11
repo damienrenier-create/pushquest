@@ -33,6 +33,8 @@ import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
+import { getFusionChampionAvatar } from "./playerStore"
+import { avatarFilter } from "../data/avatars"
 import { currentVilleJauneTip } from "../data/villeJauneTips"
 import { recordCalepinTip } from "./calepinStore"
 import { getHeldItem } from "../data/heldItems"
@@ -123,6 +125,20 @@ export function activeNpcs() {
             const o = NGPLUS_ARENA_NPCS[n.id]
             return o ? { ...n, name: o.name, gen3: { url: o.gen3 }, initialX: o.x ?? n.initialX, initialY: o.y ?? n.initialY } : n
         })
+    }
+    // REFLET DE LA LIGUE DE FUSION — il porte le SKIN DU JOUEUR, figé au moment où celui-ci a abattu le boss OR
+    //   (cf. snapshotFusionChampionAvatar). Même mécanique que le re-skin des arènes RUN 2 : on pose `gen3` sur le
+    //   PNJ, planche + teinte. Sans avatar gelé (vieille save, ou joueur sans avatar), on ne touche à rien → il
+    //   garde son emoji 🪞 d'origine. Le reflet AFFRONTÉ reste le roster ARGENT gelé : seule l'apparence change.
+    {
+        // REPLI (décision Sartay) : pour les joueurs qui avaient DÉJÀ bouclé l or avant l ajout du gel, aucune photo
+        //   n existe — on prend alors leur skin ACTUEL plutôt que de retomber sur l emoji.
+        const refletAvatar = getFusionChampionAvatar("or") ?? getPlayerSave().chosenAvatar
+        if (isValidAvatar(refletAvatar)) {
+            list = list.map((n) => (n.id === "y_fusion_reflet"
+                ? { ...n, gen3: { url: avatarSheet(refletAvatar), tint: avatarFilter(refletAvatar) } }
+                : n))
+        }
     }
     // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE UNIQUEMENT, on AJOUTE le MAÎTRE
     // DES CAPACITÉS (PNJ dédié en (9,3), regarde le nord). L'assistant reste en place (invisible/décor) des deux côtés.

@@ -847,7 +847,7 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
 
 // PNJ rendus depuis une planche Gen 3 40×40 : cellule UNIQUE, pose neutre, face au
 // joueur (IDLE — ces PNJ ne bougent pas).
-const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number }> = {
+const NPC_GEN3_IDLE: Record<string, { url: string; col?: number; row?: number; tint?: string }> = {
     // FASHION VICTIM (Grotte 1F) — 6 looks (planches Gen3) ; le spawn choisit un id suffixé au hasard (cf. gameStore).
     y_fashion_victim_1: { url: "/yellow/sprites/fashionvictim_1_gen3.png" },
     y_fashion_victim_2: { url: "/yellow/sprites/fashionvictim_2_gen3.png" },
@@ -1015,7 +1015,7 @@ function NpcSprite({
     screenPos,
     overrideSprite,
 }: {
-    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string }; gen3?: { url: string; col?: number; row?: number } }
+    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string }; gen3?: { url: string; col?: number; row?: number; tint?: string } }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     overrideSprite?: { url: string; frames: number; h?: number }
 }) {
@@ -1047,7 +1047,8 @@ function NpcSprite({
                 style={{
                     ...npc40ContainerStyle(screenPos, npc.initialX, npc.initialY),
                     ...npc40CellStyle(gen3.url, gen3.col ?? NPC40_IDLE_COL, gen3.row ?? NPC40_ROW_DOWN),
-                    filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.35))",
+                    // `tint` = personnalisation d'avatar (le REFLET porte le skin exact du joueur, teinte comprise).
+                    filter: `${gen3.tint ?? ""} drop-shadow(0 2px 2px rgba(0,0,0,0.35))`.trim(),
                     zIndex: 4,
                     pointerEvents: "none",
                 }}

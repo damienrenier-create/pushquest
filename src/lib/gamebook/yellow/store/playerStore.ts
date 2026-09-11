@@ -303,6 +303,8 @@ interface PlayerState {
     fusionLeagueTryDate?: string
     /** SALLE ULTIME — roster de fusion GELÉ (parents à plat [a,b,a,b,…]) qui a bouclé chaque palier → reconstruit TON reflet. */
     fusionChampionRoster?: Record<string, MonInstance[]>
+    /** AVATAR gelé au sacre de chaque palier de Ligue de Fusion (`tier → chosenAvatar`). Cf. le REFLET. */
+    fusionChampionAvatar?: Record<string, string>
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -728,6 +730,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         megaInLigue: "megaInLigue" in p ? p.megaInLigue : st.megaInLigue,
         fusionLeagueTryDate: "fusionLeagueTryDate" in p ? p.fusionLeagueTryDate : st.fusionLeagueTryDate,
         fusionChampionRoster: "fusionChampionRoster" in p ? p.fusionChampionRoster : st.fusionChampionRoster,
+        fusionChampionAvatar: "fusionChampionAvatar" in p ? p.fusionChampionAvatar : st.fusionChampionAvatar,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
     }
     // ARTISANE — re-dérive l'objet signature ÉQUIPÉ sur chaque instance (champ transient, jamais sérialisé).
@@ -2140,6 +2143,18 @@ export function snapshotFusionChampionRoster(tier: string) {
     emit()
 }
 /** Le roster de fusion gelé d'un palier (parents à plat [a,b,a,b,…]) — vide si aucun sacre de ce palier. */
+/** REFLET — gèle l'AVATAR du joueur pour ce palier (au moment où il abat le boss, donc juste avant la salle
+ *  ultime). Idempotent : on n'écrase pas une photo déjà prise. Sans avatar choisi, rien n'est posé (repli emoji). */
+export function snapshotFusionChampionAvatar(tier: string) {
+    const cur = st.fusionChampionAvatar ?? {}
+    if (cur[tier] || !st.chosenAvatar) return
+    st = { ...st, fusionChampionAvatar: { ...cur, [tier]: st.chosenAvatar } }
+    emit()
+}
+/** Avatar gelé au sacre de ce palier, ou undefined (vieilles saves / aucun avatar choisi). */
+export function getFusionChampionAvatar(tier: string): string | undefined {
+    return st.fusionChampionAvatar?.[tier]
+}
 export function getFusionChampionRoster(tier: string): MonInstance[] { return st.fusionChampionRoster?.[tier] ?? [] }
 
 /**

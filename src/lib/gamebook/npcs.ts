@@ -37,7 +37,9 @@ export interface NpcDefinition {
     run3Y?: number
     // RUN 2 (Nexus Jaune) : sprite Gen 3 (planche 760×160) posé dynamiquement par activeNpcs pour les arènes NG+
     //   re-skinnées (ex. arène VOL). Prime sur NPC_GEN3_IDLE/NPC_SPRITES dans MapView. Ignoré hors run 2.
-    gen3?: { url: string; col?: number; row?: number }
+    /** `tint` = filtre CSS de personnalisation (hue-rotate/saturate/brightness) appliqué EN PLUS de l'ombre —
+     *  sert au REFLET de la Ligue de Fusion, qui porte l'avatar exact du joueur (teinte comprise). */
+    gen3?: { url: string; col?: number; row?: number; tint?: string }
     // Pour les wanderers : rayon de patrouille autour de la position initiale
     wanderRadius?: number
     // Dialogues

@@ -312,6 +312,9 @@ export interface YellowSave {
     /** SALLE ULTIME — roster de fusion GELÉ qui a bouclé chaque palier (parents à plat : [a0,b0,a1,b1,…]). Sert à
      *  reconstruire TON reflet dans la salle ultime (argent affronte le bronze ; or affronte l'argent). Optionnel/additif. */
     fusionChampionRoster?: Record<string, MonInstance[]>
+    /** AVATAR GELÉ au sacre de chaque palier de Ligue de Fusion (`tier → chosenAvatar`). Le REFLET de la salle
+     *  ultime porte ainsi le skin EXACT que le joueur avait en battant le palier, même s'il se rhabille ensuite. */
+    fusionChampionAvatar?: Record<string, string>
     /** VŒU DU GÉNIE — rencontre FORCÉE one-shot (JSON {speciesId,level,hard}) : la prochaine rencontre sauvage
      *  devient cette espèce, puis se consomme. Absent = aucune rencontre forcée. */
     forcedEncounter?: string
@@ -913,6 +916,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         craftReady: o.craftReady === true ? true : undefined,
         megaInLigue: o.megaInLigue === true ? true : undefined,
         fusionLeagueTryDate: typeof o.fusionLeagueTryDate === "string" ? o.fusionLeagueTryDate : undefined,
+        fusionChampionAvatar: o.fusionChampionAvatar && typeof o.fusionChampionAvatar === "object" && !Array.isArray(o.fusionChampionAvatar)
+            ? Object.fromEntries(Object.entries(o.fusionChampionAvatar as Record<string, unknown>).filter(([, v]) => typeof v === "string").map(([k, v]) => [k, (v as string).slice(0, 200)]))
+            : undefined,
         fusionChampionRoster: o.fusionChampionRoster && typeof o.fusionChampionRoster === "object" && !Array.isArray(o.fusionChampionRoster)
             ? Object.fromEntries(Object.entries(o.fusionChampionRoster as Record<string, unknown>)
                 .filter(([, v]) => Array.isArray(v))
