@@ -66,7 +66,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { markPlatineOpponentBeaten } from "./platineRun"
+import { markPlatineOpponentBeaten, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun } from "./platineRun"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
@@ -151,7 +151,11 @@ interface BattleStoreState {
     loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
-    fusionDefeat: { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null // LIGUE DE FUSION — DÉFAITE : générique (récap : attaque fatale de chaque fusion + DRESSEUR vainqueur) avant le renvoi à l'Autel (transitoire)
+    fusionDefeat: { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null
+    /** LE TRÔNE — le joueur vient de boucler le couloir platine : déclenche le GÉNÉRIQUE de sacre (transitoire). */
+    platineSacre: boolean
+    /** LE TRÔNE — le joueur est tombé dans le couloir : générique de défaite, le Maître en titre a marqué (transitoire). */
+    platineDefeat: boolean // LIGUE DE FUSION — DÉFAITE : générique (récap : attaque fatale de chaque fusion + DRESSEUR vainqueur) avant le renvoi à l'Autel (transitoire)
     megamonarxReveal: boolean // 🐉🪨 MÉGAMONARX : signal one-shot « Dracolithe niv100 a transcendé » → cinématique + persist côté client (transitoire)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
@@ -209,7 +213,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, fusionDefeat: null, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, fusionDefeat: null, platineSacre: false, platineDefeat: false, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -868,7 +872,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)
     //        et la Pierre Gékroc est libérée (objet → fait évoluer Panthéon, cf. Part B).
     let stoneReward: string | null = null
-    let loopOffer = false // BOUCLE ENDGAME : passe à true à la capture d'Ukognofy ou au sacre OR (hors bulle de rejeu) → exposé au client
+    let loopOffer = false
+    // LE TRÔNE : signaux de fin de couloir, lus par l'UI pour déclencher le générique (sacre ou défaite).
+    let platineSacre = false
+    let platineDefeat = false // BOUCLE ENDGAME : passe à true à la capture d'Ukognofy ou au sacre OR (hors bulle de rejeu) → exposé au client
     if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc" || e.speciesId === "gekraise" || e.speciesId === "gekosmic")) {
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
@@ -1421,7 +1428,36 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // LE TRÔNE (palier platine) : battre l'adversaire OUVRE la porte droite, mais ne fait pas encore venir le
     //   suivant — c'est le FRANCHISSEMENT de la porte qui le met en place (cf. gameStore). Le joueur sort donc
     //   de la salle et y revient pour trouver quelqu'un d'autre, ce qui rend la progression lisible.
-    if (b.outcome === "win" && lid === "y_fusion_platine") markPlatineOpponentBeaten()
+    if (lid === "y_fusion_platine") {
+        if (b.outcome === "win") {
+            markPlatineOpponentBeaten()
+            // DERNIÈRE salle : inutile de faire franchir une porte de plus pour tomber sur une salle vide —
+            //   le couloir est bouclé, on prend la chaise. L'équipe gravée est le roster gauntlet VAINQUEUR,
+            //   figé exactement comme au sacre de la Ligue (nom/sprite/types/stats/attaques + parents).
+            if (isPlatineFinalStep()) {
+                const gt = getGauntletTeam()
+                const frozen = (gt ?? []).map((f) => {
+                    const par = getSpecies(f.speciesId)?.fusionParents
+                    return {
+                        name: f.result.name,
+                        sprite: getSpecies(f.speciesId)?.sprite ?? "",
+                        types: [...f.result.types],
+                        level: f.result.level,
+                        stats: { ...f.result.stats },
+                        moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                        aId: par?.[0], bId: par?.[1],
+                    }
+                })
+                reportPlatineClaim(frozen, getPlayer().chosenAvatar)
+                platineSacre = true
+            }
+        } else if (b.outcome === "lose") {
+            // Tombé dans le couloir : le Maître en titre marque +1, et la tentative est perdue (pas de reprise).
+            reportPlatineFail()
+            resetPlatineRun()
+            platineDefeat = true
+        }
+    }
     const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir"
     const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet"
     if (wonFusionBoss || wonFusionReflet) {
@@ -1593,7 +1629,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }) }
         : null
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, platineSacre, platineDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()

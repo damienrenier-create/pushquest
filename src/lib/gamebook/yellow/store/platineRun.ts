@@ -92,6 +92,12 @@ export function isPlatineOpponentBeaten(): boolean { return beaten }
 /** FRANCHISSEMENT de la porte : c'est LÀ que le suivant prend place dans la salle. */
 export function advancePlatineStep(): void { step += 1; beaten = false }
 
+/** L'adversaire du moment est-il le DERNIER du couloir ? Le battre déclenche le sacre : on ne fait pas franchir
+ *  une porte de plus pour trouver une salle vide. */
+export function isPlatineFinalStep(): boolean {
+    return loaded && step === platineTotalSteps() - 1
+}
+
 /** Le couloir est-il TERMINÉ ? (plus aucun adversaire → le joueur prend la chaise) */
 export function isPlatineCorridorCleared(): boolean {
     return loaded && currentPlatineOpponent() === null
@@ -109,4 +115,28 @@ export function resetPlatineRun(): void {
     step = 0
     beaten = false
     ledger = emptyLedger()
+}
+
+// ─────────── REMONTÉE AU SERVEUR ───────────
+// Best-effort et JAMAIS bloquant : un réseau muet ne doit pas gâcher une victoire ni figer un écran de fin.
+// Le serveur refait de toute façon les vérifications qui comptent (identité, anti-auto-crédit, unicité du trône).
+
+const THRONE_API = "/api/gamebook/yellow/platine-throne"
+
+/** SACRE : le joueur a traversé tout le couloir → il prend la place, avec son équipe figée et son skin. */
+export function reportPlatineClaim(team: FusionChampionMon[], avatar?: string): void {
+    void fetch(THRONE_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim", team: team.slice(0, 6), avatar }),
+    }).catch(() => { /* best-effort */ })
+}
+
+/** ÉCHEC : le challenger est tombé → le Maître en titre marque +1. Le serveur ignore l'auto-crédit. */
+export function reportPlatineFail(): void {
+    void fetch(THRONE_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "fail" }),
+    }).catch(() => { /* best-effort */ })
 }
