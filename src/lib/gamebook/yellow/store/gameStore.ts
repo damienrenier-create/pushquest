@@ -29,6 +29,9 @@ import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCa
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
+import { buildPlatineAceTeam } from "../data/fusionLeague"
+import { buildPlatineRoomTeam } from "../data/platineArena"
+import { currentPlatineOpponent, getPlatineStep } from "./platineRun"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -772,6 +775,32 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         }
         if (!reflet.length) { disposeFusionGauntlet(); return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*La salle vacille… ton reflet ne se forme pas. Retourne à l'Autel.*"] } }
         enemyFusions = reflet
+    } else if (trainerId === "y_fusion_platine") {
+        // LE TRÔNE (palier PLATINE) — une SEULE salle réutilisée, donc c'est l'ÉTAPE du couloir qui décide de
+        //   l'adversaire : ACE d'abord, puis chaque champion OR rejoué depuis la photo de son sacre, puis le
+        //   MAÎTRE en titre. Le couloir vient du SERVEUR (route platine-throne) et a été déposé à l'entrée de la
+        //   salle ; on le lit ici SYNCHRONEMENT, comme le reste du lancement de combat.
+        const opp = currentPlatineOpponent()
+        if (!opp) {
+            // Couloir non chargé (réseau muet) ou déjà terminé : on ne lance JAMAIS un combat dans le vide.
+            disposeFusionGauntlet()
+            return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*La salle est vide. Redescends voir le Dieu Spaghetti.*"] }
+        }
+        if (opp.kind === "ace") {
+            enemyFusions = buildPlatineAceTeam(lvlBonus, getGauntletBerries())
+        } else {
+            // Une salle de champion OU le Maître : dans les deux cas on rejoue une ÉQUIPE FIGÉE (photo du sacre),
+            //   jamais une fusion recalculée. `getPlatineStep()` rend les ids d'espèces uniques d'une salle à l'autre.
+            const src = opp.kind === "room"
+                ? opp.champion
+                : { userId: opp.holder.userId, nickname: opp.holder.nickname, wonAt: opp.holder.sinceAt, team: opp.holder.team }
+            enemyFusions = buildPlatineRoomTeam(src, `s${getPlatineStep()}`).team
+            if (!enemyFusions.length) {
+                // Sacre corrompu / illisible : on ne bloque pas le joueur dans une salle sans adversaire.
+                disposeFusionGauntlet()
+                return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*Le souvenir vacille et ne se forme pas. Redescends voir le Dieu Spaghetti.*"] }
+            }
+        }
     } else if (trainerId === "y_fusion_miroir") {
         // BOSS FINAL — le Dieu Spaghetti forme ULTIME : 3 chimères + UKOGNOFY (Goshendofy+Ukognos), scalé au palier.
         //   (Remplace l'ancien miroir/reflet du roster.) Fusions FIXES, curées.

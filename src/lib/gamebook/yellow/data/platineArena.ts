@@ -18,6 +18,7 @@ import { POKE_TYPES } from "../battle/types"
 import { registerCustomSpecies, unregisterCustomSpecies } from "./species"
 import { getMoveByName } from "./moves"
 import { MISSINGNO_SPRITE } from "./fusionSprite"
+import type { BuiltFusion } from "./fusionMon"
 
 /** Un sacre OR gravé au serveur, tel que le renvoie /api/gamebook/yellow/fusion-hall-of-fame. */
 export interface PlatineChampion {
@@ -101,8 +102,9 @@ function safeMoves(names: readonly string[] | undefined): MoveSlot[] {
 }
 
 export interface BuiltPlatineRoom {
-    /** L'équipe prête à combattre (stats FIGÉES = celles du sacre). */
-    team: MonInstance[]
+    /** L'équipe prête à combattre (stats FIGÉES = celles du sacre). Des BuiltFusion, comme tout adversaire de
+     *  Ligue : le lanceur de combat et le démontage manipulent partout la même forme. */
+    team: BuiltFusion[]
     /** Les espèces éphémères enregistrées → à DÉTRUIRE après le combat via disposePlatineRoom. */
     speciesIds: string[]
     champion: PlatineChampion
@@ -113,7 +115,7 @@ export interface BuiltPlatineRoom {
  *  chimère). Les stats ne sont JAMAIS recalculées : on rejoue la photo, pas une fusion. */
 export function buildPlatineRoomTeam(champion: PlatineChampion, roomKey: string): BuiltPlatineRoom {
     const species: SpeciesData[] = []
-    const team: MonInstance[] = []
+    const team: BuiltFusion[] = []
     champion.team.slice(0, 6).forEach((m, i) => {
         const id = `platine_${roomKey}_${i}`
         const types = safeTypes(m.types)
@@ -131,7 +133,7 @@ export function buildPlatineRoomTeam(champion: PlatineChampion, roomKey: string)
             fusionParents: m.aId && m.bId ? [m.aId, m.bId] : undefined,
             hiddenUntilCaught: true,
         })
-        team.push({
+        const instance: MonInstance = {
             uid: `platine-${roomKey}-${i}`,
             speciesId: id,
             level: m.level,
@@ -143,6 +145,17 @@ export function buildPlatineRoomTeam(champion: PlatineChampion, roomKey: string)
             moves,
             frozenStats: stats, // ← la photo : aucun recalcul IV/EV/Saiyan
             owned: false,
+        }
+        // FusionResult SYNTHÉTIQUE : on n'a pas refait de fusion, on rejoue une photo — mais le reste du moteur
+        //   (nom affiché, démontage, journalisation) attend cette forme. Pas de transmutation ici : le moveset
+        //   gravé est déjà celui qui a servi le jour du sacre.
+        team.push({
+            instance, speciesId: id,
+            result: {
+                name: m.name, types, stats, level: m.level,
+                moves: moves.map((s2) => s2.moveId), heldItems: [],
+                parents: [m.aId ?? m.name, m.bId ?? m.name], moveTypes: {},
+            },
         })
     })
     registerCustomSpecies(species)

@@ -61,7 +61,7 @@ describe("platineArena — reconstruction d'une salle", () => {
         const c = champ("Jacanon", 150)
         const room = buildPlatineRoomTeam(c, "r1")
         expect(room.team).toHaveLength(2)
-        const m0 = room.team[0]
+        const m0 = room.team[0].instance
         expect(m0.frozenStats).toEqual({ hp: 150, atk: 150, def: 150, spe: 150, spc: 150 }) // aucun recalcul
         expect(m0.currentHp).toBe(150)
         expect(m0.owned).toBe(false)
@@ -88,7 +88,7 @@ describe("platineArena — reconstruction d'une salle", () => {
         }
         const room = buildPlatineRoomTeam(casse, "rc")
         expect(getSpecies(room.speciesIds[0])!.types).toEqual(["NORMAL"])
-        expect(room.team[0].moves.map((s) => s.moveId)).toEqual(["charge"])
+        expect(room.team[0].instance.moves.map((s) => s.moveId)).toEqual(["charge"])
         disposePlatineRoom(room.speciesIds)
     })
 
