@@ -1528,6 +1528,25 @@ export const TRAINERS: TrainerData[] = [
         ],
     },
     {
+        // LE TRÔNE (palier PLATINE). UN SEUL dresseur pour TOUT le couloir : son identité, son équipe et son skin
+        //   changent à chaque passage (ACE, puis chaque champion OR figé, puis le Maître en titre). Équipe 100 %
+        //   DYNAMIQUE, bâtie à l'exécution — cf. buildPlatineAceTeam et buildPlatineRoomTeam.
+        //   Le placeholder ci-dessous n'est JAMAIS fieldé ; il n'existe que pour satisfaire le type.
+        id: "y_fusion_platine", name: "LE TRÔNE", title: "Maître Ultime du Nexus",
+        sprite: { emoji: "🪑", color: "#e5e4e2" },
+        mapId: "yellow_fusion_platine", x: 10, y: 2,
+        team: [{ speciesId: "morrow", level: 100 }], // placeholder (équipe dynamique : ACE / champion / Maître)
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*La salle est nue. Au fond, une chaise — et quelqu'un devant elle.*",
+            "« On ne prend pas cette place. On la retire à quelqu'un. »",
+        ],
+        defeat: [
+            "*La silhouette s'efface. La chaise, elle, est toujours là.*",
+            "« Encore une. Avance. »",
+        ],
+    },
+    {
         // SALLE ULTIME — TON REFLET (argent/or). Après le Dieu Spaghetti, la porte droite s'ouvre : affronte l'équipe
         //   de fusion avec laquelle tu as bouclé le palier PRÉCÉDENT (reflet GELÉ). Équipe DYNAMIQUE bâtie à l'exécution
         //   (getFusionChampionRoster → buildFusion, gameStore launchFusionLeague/y_fusion_reflet). Le VRAI dernier test.

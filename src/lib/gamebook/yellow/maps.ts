@@ -1720,6 +1720,18 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [{ x: 2, y: 6, targetMapId: "yellow_fusion_miroir", targetSpawnX: 18, targetSpawnY: 6 }],
         backgroundImage: "/yellow/sprites/fusion_salle_ultime.jpg", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128,
     },
+    // SALLE PLATINE — LE TRÔNE. UNE SEULE salle, RÉUTILISÉE pour tout le couloir : ACE, puis les salles des
+    //   champions OR, puis le Maître en titre. La porte DROITE REBOUCLE sur la salle elle-même → on la franchit
+    //   après chaque victoire et l'adversaire suivant s'y tient déjà. Le couloir « ne finit pas » : il finit quand
+    //   on prend la chaise. Porte GAUCHE = retraite vers la salle du Dieu Spaghetti (jamais de whiteout en fusion).
+    //   ⚠️ Le GATING des portes (droite scellée tant que l'adversaire du moment n'est pas vaincu) vit dans gameStore,
+    //   comme pour les autres salles de la Ligue. Tant que le palier platine n'est pas ouvert, rien ne mène ici.
+    yellow_fusion_platine: {
+        id: "yellow_fusion_platine", name: "LIGUE FUSION — LE TRÔNE", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_platine", targetSpawnX: 3, targetSpawnY: 6 }))
+            .concat([{ x: 2, y: 6, targetMapId: "yellow_fusion_miroir", targetSpawnX: 18, targetSpawnY: 6 }]),
+        backgroundImage: "/yellow/sprites/fusion_room_platine.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128,
+    },
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
     yellow_arena_eau: {
         id: "yellow_arena_eau", name: "SANCTUAIRE DES MARÉES", tiles: buildAreneEau(), width: 16, height: 16,
