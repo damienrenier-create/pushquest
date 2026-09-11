@@ -66,6 +66,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
+import { advancePlatineStep } from "./platineRun"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
@@ -1417,6 +1418,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // SALLE ULTIME — SACRE. Bronze & ARGENT : le Dieu Spaghetti (y_fusion_miroir) SACRE DIRECTEMENT. SEUL le palier OR
     //   diffère : le boss n'accorde PAS le titre — il OUVRE la salle ultime, et c'est la victoire sur TON REFLET ARGENT
     //   (y_fusion_reflet) qui sacre MÉGA-champion. FALLBACK anti-soft-lock : sans roster argent gelé, le boss sacre quand même.
+    // LE TRÔNE (palier platine) : la salle est UNE SEULE carte réutilisée, donc rien ne distingue l'adversaire
+    //   suivant à part ce compteur. Sans cet appel, le joueur retomberait indéfiniment sur ACE.
+    if (b.outcome === "win" && lid === "y_fusion_platine") advancePlatineStep()
     const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir"
     const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet"
     if (wonFusionBoss || wonFusionReflet) {

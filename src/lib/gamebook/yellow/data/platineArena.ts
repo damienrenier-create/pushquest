@@ -27,6 +27,9 @@ export interface PlatineChampion {
     /** ISO — date du sacre. Sert au départage à puissance égale (le plus ANCIEN passe devant : il l'a fait en premier). */
     wonAt: string
     team: FusionChampionMon[]
+    /** Skin du champion, pour que son souvenir porte SON visage dans la salle du trône. Joint à la lecture
+     *  (le sacre OR n'archive pas l'avatar) → c'est donc le skin ACTUEL du joueur, pas celui du jour du sacre. */
+    avatar?: string
 }
 
 /** PLAFOND DU COULOIR (décision Sartay 11/09) : au-delà, on ne garde que les salles les PLUS FORTES.

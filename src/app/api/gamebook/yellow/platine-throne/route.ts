@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import {
     PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, awardFailurePoint, reignDays,
 } from "@/lib/gamebook/yellow/data/platineThrone"
@@ -56,6 +56,23 @@ export async function GET() {
             take: 150,
             select: { userId: true, nickname: true, team: true, wonAt: true },
         })) as { userId: string; nickname: string; team: string; wonAt: Date }[]
+        // SKINS — le sacre OR n'archive PAS l'avatar (seulement l'équipe). On le JOINT donc à la lecture, sur la
+        //   save du joueur, exactement comme le fait hall-of-fame pour les PNJ-joueurs. Conséquence assumée : c'est
+        //   le skin ACTUEL du champion, pas celui du jour de son sacre — si le joueur se rhabille, son souvenir
+        //   change de tenue. Best-effort : une save illisible laisse simplement le PNJ sans skin (repli emoji).
+        const avatarByUser = new Map<string, string>()
+        try {
+            const ids = [...new Set(orRows.map((r) => r.userId))]
+            const progs = (await (prisma as any).gamebookProgress.findMany({
+                where: { chapterId: YELLOW_CHAPTER_ID, userId: { in: ids } },
+                select: { userId: true, flags: true },
+            })) as { userId: string; flags: any }[]
+            for (const p of progs) {
+                const av = p.flags?.chosenAvatar
+                if (typeof av === "string" && av) avatarByUser.set(p.userId, av.slice(0, 200))
+            }
+        } catch { /* saves illisibles → aucun skin, jamais d'erreur */ }
+
         const all: PlatineChampion[] = orRows.map((r) => {
             let team: any = []
             try { team = JSON.parse(r.team) } catch { team = [] }
@@ -63,6 +80,7 @@ export async function GET() {
                 userId: r.userId, nickname: r.nickname,
                 wonAt: new Date(r.wonAt).toISOString(),
                 team: Array.isArray(team) ? team : [],
+                avatar: avatarByUser.get(r.userId),
             }
         })
         const rooms = buildPlatineCorridor(all)

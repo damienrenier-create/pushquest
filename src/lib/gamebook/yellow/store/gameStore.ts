@@ -144,6 +144,21 @@ export function activeNpcs() {
                 : n))
         }
     }
+    // LE TRÔNE — le PNJ de la salle platine n'est pas un personnage fixe : il PORTE l'adversaire du moment.
+    //   Comme la salle est une seule carte qu'on retraverse, c'est ce qui rend le couloir lisible : on franchit la
+    //   porte et quelqu'un d'AUTRE se tient là, avec son pseudo et son skin. Repli sur le 🪑 si pas d'avatar.
+    {
+        const opp = currentPlatineOpponent()
+        if (opp) {
+            list = list.map((n) => {
+                if (n.id !== "y_fusion_platine") return n
+                const named = { ...n, name: opp.label }
+                return isValidAvatar(opp.avatar)
+                    ? { ...named, gen3: { url: avatarSheet(opp.avatar), tint: avatarFilter(opp.avatar) } }
+                    : named
+            })
+        }
+    }
     // ÉTAGE DU CENTRE (map partagée Ville Jaune ↔ Cendreville) : côté CENDREVILLE UNIQUEMENT, on AJOUTE le MAÎTRE
     // DES CAPACITÉS (PNJ dédié en (9,3), regarde le nord). L'assistant reste en place (invisible/décor) des deux côtés.
     if (useGameStore.getState().interiorReturn?.mapId === "yellow_cendreville") {

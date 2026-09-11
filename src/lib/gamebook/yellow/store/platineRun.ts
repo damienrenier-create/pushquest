@@ -31,9 +31,9 @@ export interface PlatineThroneHolder {
 
 /** Ce qu'on trouve dans la salle à une étape donnée. */
 export type PlatineOpponent =
-    | { kind: "ace"; label: string }
-    | { kind: "room"; label: string; champion: PlatineChampion }
-    | { kind: "throne"; label: string; holder: PlatineThroneHolder }
+    | { kind: "ace"; label: string; avatar?: string }
+    | { kind: "room"; label: string; avatar?: string; champion: PlatineChampion }
+    | { kind: "throne"; label: string; avatar?: string; holder: PlatineThroneHolder }
 
 let rooms: PlatineChampion[] = []
 let holder: PlatineThroneHolder | null = null
@@ -74,9 +74,9 @@ export function currentPlatineOpponent(): PlatineOpponent | null {
     const roomIdx = step - 1
     if (roomIdx < rooms.length) {
         const c = rooms[roomIdx]
-        return { kind: "room", label: c.nickname, champion: c }
+        return { kind: "room", label: c.nickname, avatar: c.avatar, champion: c }
     }
-    if (holder && roomIdx === rooms.length) return { kind: "throne", label: holder.nickname, holder }
+    if (holder && roomIdx === rooms.length) return { kind: "throne", label: holder.nickname, avatar: holder.avatar, holder }
     return null
 }
 
