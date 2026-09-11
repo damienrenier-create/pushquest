@@ -18,6 +18,7 @@
 //   • Nom : 1re moitié du nom du 1er parent (dominant) + « - » + 2e moitié du 2e.
 
 import { SPECIES } from "./species"
+import { getMove } from "./moves"
 import type { PokeType, StatKey } from "../battle/types"
 
 /** Un parent de fusion : stats FINALES (leveled) en usage réel — base en test. `types[0]` = type primaire. */
@@ -95,14 +96,23 @@ const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("kilipanda", "druidours")]: "la synergie des ursidés",       // panda × ours-druide (les plantigrades)
 }
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
-interface SpecialFusion { name: string; forcedType?: PokeType; concept?: string }
+interface SpecialFusion {
+    name: string
+    forcedType?: PokeType
+    concept?: string
+    /** STAB GARANTI (fusions à TYPE FORCÉ). Le type est imposé, mais le moveset est dérivé des PARENTS — qui
+     *  n'ont aucune attaque de ce type : sans ça la fusion n'a AUCUN STAB (les 4 étaient concernées). Cette
+     *  attaque est injectée en slot 1 si le moveset naturel ne contient rien du type forcé. Vaut pour les
+     *  fusions du JOUEUR comme pour celles des PNJ (computeFusion est la source unique). */
+    stabMove?: string
+}
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
 const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
-    [pairKey("sylvapuce", "pyrokoss")]: { name: "Cendrecerf", forcedType: "TENEBRES", concept: "un cerf sombre au corps de CHARBON noir craquelé, bois et sabots incandescents comme des braises, volutes de fumée âcre s'échappant de son pelage carbonisé" }, // plante × feu → charbon
-    [pairKey("sylvapuce", "razmaree")]: { name: "Bourbicerf", forcedType: "SOL", concept: "un cerf trapu fait de BOUE et d'argile terreuse dégoulinante, bois de racines et de vase séchée, sabots enfoncés dans la fange, coulures brunes" }, // plante × eau → boue
-    [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE", concept: "un spectre vaporeux fait de NUAGE et de brume bouillonnante née de la rencontre du feu et de l'eau, silhouette fantomatique aux volutes de vapeur, yeux luisants dans la brume" }, // feu × eau → nuage
+    [pairKey("sylvapuce", "pyrokoss")]: { name: "Cendrecerf", forcedType: "TENEBRES", stabMove: "reflet_fatal", concept: "un cerf sombre au corps de CHARBON noir craquelé, bois et sabots incandescents comme des braises, volutes de fumée âcre s'échappant de son pelage carbonisé" }, // plante × feu → charbon
+    [pairKey("sylvapuce", "razmaree")]: { name: "Bourbicerf", forcedType: "SOL", stabMove: "sables_voraces", concept: "un cerf trapu fait de BOUE et d'argile terreuse dégoulinante, bois de racines et de vase séchée, sabots enfoncés dans la fange, coulures brunes" }, // plante × eau → boue
+    [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE", stabMove: "ball_ombre", concept: "un spectre vaporeux fait de NUAGE et de brume bouillonnante née de la rencontre du feu et de l'eau, silhouette fantomatique aux volutes de vapeur, yeux luisants dans la brume" }, // feu × eau → nuage
     [pairKey("crocavern", "alirocaillus")]: { name: "Crocaroc", concept: "un crocodile massif cuirassé de ROCHE, plaques rocheuses et ailes membraneuses repliées, gueule minérale hérissée de cristaux" }, // croisement des crocos (type calculé)
-    [pairKey("rochison", "mouflorage")]: { name: "Aimouflon", forcedType: "METAL", concept: "une chèvre-bouquetin faite de MÉTAL aimanté, grandes cornes en fer magnétisé attirant des éclats métalliques en orbite, pelage de limaille grise, sabots d'acier" }, // roche × mouflon → chèvre de métal (aimant)
+    [pairKey("rochison", "mouflorage")]: { name: "Aimouflon", forcedType: "METAL", stabMove: "tete_de_fer", concept: "une chèvre-bouquetin faite de MÉTAL aimanté, grandes cornes en fer magnétisé attirant des éclats métalliques en orbite, pelage de limaille grise, sabots d'acier" }, // roche × mouflon → chèvre de métal (aimant)
     [pairKey("crapotaure", "uzumaro")]: { name: "Gamabunta", concept: "un crapaud GIGANTESQUE bordeaux (rouge sombre) façon chef des crapauds, portant un pagne/haori de guerrier, fumant une longue pipe japonaise (kiseru), un immense sabre (katana) à la ceinture, posture massive et martiale" }, // les 2 grenouilles → crapaud-boss (type calculé)
     [pairKey("vipember", "necrocorbe")]: { name: "Orochitachi", concept: "une immense chimère CORBEAU-SERPENT façon Orochi : corbeau noir-violet aux vastes ailes ornées de plumes-joyaux rouges et vertes, longue queue-serpent écaillée se terminant par une TÊTE DE SERPENT, yeux rouges hypnotiques (façon sharingan), aura ténébreuse et maléfique" }, // vipère × corbeau (type calculé)
     [pairKey("karmaki", "enclumind")]: { name: "Karmind Z", concept: "un gorille-singe SUPER SAIYAN (cheveux dorés hérissés, visage et poings rouges, yeux rouges perçants), en méditation position du lotus, armure de PIERRE/ENCLUME grise sur le torse, flottant sur une tige-liane verte fleurie (plante), une lourde enclume suspendue, aura de karma psychique. Style Dragon Ball Z." }, // karma × enclume (type calculé)
@@ -274,15 +284,25 @@ export function fusionName(a: FusionParent, b: FusionParent): string {
 
 /** Calcule le profil complet de la fusion de A (dominant/tête) et B. Pur. Applique les FUSIONS INÉDITES
  *  (nom curé + type MONO forcé) ; les stats intègrent déjà les tiers boostés (fuseStats). */
+/** Garantit au moins UNE attaque du type de la fusion. Ne concerne que les fusions à TYPE FORCÉ munies d'un
+ *  `stabMove` : leur type est imposé alors que leur moveset vient des parents, qui n'ont rien de ce type.
+ *  L'attaque est posée en SLOT 1 (c'est la signature), les naturelles suivent, le tout tronqué à 4. */
+export function withGuaranteedStab(moves: readonly string[], types: readonly PokeType[], stabMove?: string): string[] {
+    if (!stabMove) return [...moves]
+    if (moves.some((id) => { const t = getMove(id)?.type; return !!t && types.includes(t as PokeType) })) return [...moves]
+    return [stabMove, ...moves.filter((m) => m !== stabMove)].slice(0, 4)
+}
+
 export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const stats = fuseStats(a, b)
     const special = specialFusionFor(a, b)
+    const types = special?.forcedType ? [special.forcedType] : fuseTypes(a, b)
     return {
         name: special?.name ?? fusionName(a, b),
-        types: special?.forcedType ? [special.forcedType] : fuseTypes(a, b),
+        types,
         stats,
         level: Math.max(a.level, b.level),
-        moves: fuseMoves(a, b),
+        moves: withGuaranteedStab(fuseMoves(a, b), types, special?.stabMove),
         heldItems: fuseHeldItems(a, b),
         parents: [a.name, b.name],
     }

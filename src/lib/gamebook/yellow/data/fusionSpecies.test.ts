@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { computeFusion, fuseStats, fuseTypes, fusionName, fusionWeights, typeRepStat, reorderToStored, type FusionParent } from "./fusionSpecies"
+import { computeFusion, fuseStats, fuseTypes, fusionName, fusionWeights, typeRepStat, reorderToStored, withGuaranteedStab, type FusionParent } from "./fusionSpecies"
+import { getMove } from "./moves"
 import { SPECIES } from "./species"
 import type { PokeType } from "../battle/types"
 
@@ -163,5 +164,42 @@ describe("reorderToStored — ordre perso des attaques d'une fusion", () => {
         // stocké réfère "x" (disparue) et omet "d" (nouvelle) → x ignorée, d ajoutée en fin
         expect(reorderToStored(natural, ["c", "x", "a", "b"])).toEqual(["c", "a", "b", "d"])
         expect(reorderToStored(["a", "b"], ["z", "y"])).toEqual(["a", "b"]) // stock 100% périmé → naturel
+    })
+})
+
+// TYPE FORCÉ ⇒ STAB GARANTI (Sartay 10/09). Ces 4 fusions ont un type IMPOSÉ alors que leur moveset est dérivé
+// de leurs parents, qui n'ont aucune attaque de ce type : elles se retrouvaient avec ZÉRO STAB. Vaut aussi pour
+// les fusions tentées par les JOUEURS, puisque computeFusion est la source unique.
+describe("fusion — type FORCÉ : au moins un STAB", () => {
+    // ⚠️ specialFusionFor() s'appuie sur speciesId — le helper P() ne le pose pas, donc on le complète ici.
+    const PS = (id: string): FusionParent => ({ ...P(id), speciesId: id })
+    const FORCED: [string, string, string][] = [
+        ["sylvapuce", "pyrokoss", "Cendrecerf"],
+        ["sylvapuce", "razmaree", "Bourbicerf"],
+        ["pyrokoss", "razmaree", "Vaporêve"],
+        ["rochison", "mouflorage", "Aimouflon"],
+    ]
+    it.each(FORCED)("%s × %s (%s) : le moveset contient une attaque de son type forcé", (a, b, name) => {
+        const fr = computeFusion(PS(a), PS(b))
+        expect(fr.name).toBe(name)
+        expect(fr.types).toHaveLength(1) // type MONO forcé
+        const stab = fr.moves.filter((m) => getMove(m)?.type === fr.types[0])
+        expect(stab.length).toBeGreaterThan(0)
+        expect(fr.moves).toHaveLength(4) // on n'a pas gonflé le moveset
+        expect(new Set(fr.moves).size).toBe(4) // ni créé de doublon
+    })
+
+    it("l'attaque garantie est posée en SLOT 1 (c'est la signature)", () => {
+        expect(getMove(computeFusion(PS("sylvapuce"), PS("pyrokoss")).moves[0])?.type).toBe("TENEBRES")
+    })
+
+    it("withGuaranteedStab n'injecte RIEN si un STAB est déjà là, et rien sans stabMove", () => {
+        const nat = ["morsure_sombre", "belier", "repos", "charge"]
+        expect(withGuaranteedStab(nat, ["TENEBRES"], "reflet_fatal")).toEqual(nat) // morsure_sombre est déjà TÉNÈBRES
+        expect(withGuaranteedStab(nat, ["TENEBRES"], undefined)).toEqual(nat)      // pas de stabMove → intact
+        // Sans STAB naturel : injection en tête, total borné à 4.
+        const out = withGuaranteedStab(["belier", "repos", "charge", "plaquage"], ["TENEBRES"], "reflet_fatal")
+        expect(out[0]).toBe("reflet_fatal")
+        expect(out).toHaveLength(4)
     })
 })
