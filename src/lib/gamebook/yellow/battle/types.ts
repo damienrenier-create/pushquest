@@ -266,6 +266,14 @@ export interface MonInstance {
      *  ⚠️ INVARIANT (setter Inc.1) : frozenStats.spc (SpA) ET frozenSpd (SpD) doivent être posés ENSEMBLE — ils
      *  viennent en PAIRE de computeFusion. Poser l'un sans l'autre = profil incohérent. Utiliser UN seul helper. */
     frozenSpd?: number
+    /** FUSION — TRANSMUTATION D'ATTAQUES : `moveId → type effectif` pour CE Daemon uniquement. Une fusion à type
+     *  FORCÉ convertit dans sa propre essence la 1re attaque OFFENSIVE héritée de CHACUN de ses parents (ex. le
+     *  Lance-Soleil de Cerfeuillu devient TÉNÈBRES chez Cendrecerf) → elle obtient un vrai STAB sans qu'on lui
+     *  plaque une attaque étrangère. Seul le TYPE change : la CATÉGORIE reste celle du move d'origine (un rayon
+     *  spécial reste spécial). L'attaque d'origine n'est JAMAIS modifiée (MOVES est global) — c'est le moteur qui
+     *  lit cette table. Transient (construct de combat éphémère), jamais persisté.
+     *  ⚠️ Apothéose (adaptiveStab) prime : elle recalcule son type après coup. */
+    moveTypeOverride?: Partial<Record<string, PokeType>>
     /** LIGUE DE FUSION : uids des 2 PARENTS d'un fusionné éphémère → à la fin d'un combat de Ligue, chaque parent
      *  reçoit la MOITIÉ de l'XP gagnée par le fusionné (cf. finishBattle). Transient (jamais persisté). */
     fusionParents?: [string, string]

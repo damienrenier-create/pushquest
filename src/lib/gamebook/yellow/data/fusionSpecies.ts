@@ -42,6 +42,8 @@ export interface FusionResult {
     stats: FusionStats
     level: number
     moves: string[]            // 2 premières du parent rapide + 2 dernières du lent (dédup, complété à 4)
+    /** Attaques TRANSMUTÉES dans le type forcé de la fusion (`moveId → type`). Vide hors fusion à type forcé. */
+    moveTypes: Record<string, PokeType>
     heldItems: string[]        // 0, 1 ou 2 objets tenus hérités des parents (le fusionné peut en tenir DEUX)
     parents: [string, string]
 }
@@ -293,16 +295,36 @@ export function withGuaranteedStab(moves: readonly string[], types: readonly Pok
     return [stabMove, ...moves.filter((m) => m !== stabMove)].slice(0, 4)
 }
 
+/** TRANSMUTATION (fusions à TYPE FORCÉ) : pour CHAQUE parent, la 1re attaque OFFENSIVE qu'il lègue au fusionné
+ *  prend le type forcé. Idée Sartay 11/09 — la fusion convertit l'héritage de ses parents dans sa propre essence,
+ *  au lieu de recevoir une attaque plaquée. Les STATUTS sont ignorés (les retyper ne donnerait aucun STAB), et une
+ *  attaque déjà du bon type n'est pas recomptée. Renvoie {} hors fusion à type forcé. */
+export function transmutedMoveTypes(a: FusionParent, b: FusionParent, moves: readonly string[], forced?: PokeType): Record<string, PokeType> {
+    if (!forced) return {}
+    const out: Record<string, PokeType> = {}
+    for (const parent of bySpeed(a, b)) {
+        const hit = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && parent.moves.includes(m) && !out[m])
+        if (hit) out[hit] = forced
+    }
+    return out
+}
+
 export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const stats = fuseStats(a, b)
     const special = specialFusionFor(a, b)
     const types = special?.forcedType ? [special.forcedType] : fuseTypes(a, b)
+    const natural = fuseMoves(a, b)
+    // La transmutation suffit à donner un STAB : on ne plaque `stabMove` QUE si elle n'a rien pu convertir
+    //   (parent sans la moindre attaque offensive — possible pour une fusion tentée par un joueur).
+    const moveTypes = transmutedMoveTypes(a, b, natural, special?.forcedType)
+    const moves = Object.keys(moveTypes).length > 0 ? natural : withGuaranteedStab(natural, types, special?.stabMove)
     return {
         name: special?.name ?? fusionName(a, b),
         types,
         stats,
         level: Math.max(a.level, b.level),
-        moves: withGuaranteedStab(fuseMoves(a, b), types, special?.stabMove),
+        moves,
+        moveTypes,
         heldItems: fuseHeldItems(a, b),
         parents: [a.name, b.name],
     }

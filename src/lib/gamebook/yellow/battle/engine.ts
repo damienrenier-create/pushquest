@@ -827,6 +827,11 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // catégorie SUIT cette stat → toujours STAB, frappant avec la bonne stat (ex. Feu mais PHYSIQUE).
     let effType = move.type
     let isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
+    // FUSION — TRANSMUTATION : une fusion à type FORCÉ convertit dans sa propre essence la 1re attaque offensive
+    //   héritée de chaque parent (cf. moveTypeOverride). Seul le TYPE change → STAB + table des types ; la
+    //   CATÉGORIE reste celle du move d'origine, pour ne pas basculer un rayon spécial sur l'Attaque physique.
+    const transmuted = attacker.moveTypeOverride?.[move.id]
+    if (transmuted) effType = transmuted
     if (move.effect?.adaptiveStab) {
         const adapted = resolveAdaptiveStab(atkSpecies.types, rawStats.atk, rawStats.spc)
         effType = adapted.type

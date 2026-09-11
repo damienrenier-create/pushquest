@@ -924,6 +924,10 @@ function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
     const adaptive = !!mv.effect?.adaptiveStab && mv.power > 0
     let dispType = mv.type
     let isPhys = (mv.category ?? moveCategory(mv.type)) === "PHYSICAL"
+    // FUSION — TRANSMUTATION : une fusion à type FORCÉ convertit dans son essence la 1re attaque offensive héritée
+    //   de chaque parent. Seul le TYPE change (la catégorie reste celle du move) → l'affichage doit le refléter.
+    const transmuted = mon.moveTypeOverride?.[mv.id]
+    if (transmuted) dispType = transmuted
     if (adaptive) {
         const fs = fullStats(mon, speciesOf(mon))
         const r = resolveAdaptiveStab(speciesOf(mon).types, fs.atk, fs.spc)

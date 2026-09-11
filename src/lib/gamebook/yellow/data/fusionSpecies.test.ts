@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeFusion, fuseStats, fuseTypes, fusionName, fusionWeights, typeRepStat, reorderToStored, withGuaranteedStab, type FusionParent } from "./fusionSpecies"
+import { computeFusion, fuseStats, fuseTypes, fuseMoves, fusionName, fusionWeights, typeRepStat, reorderToStored, withGuaranteedStab, type FusionParent } from "./fusionSpecies"
 import { getMove } from "./moves"
 import { SPECIES } from "./species"
 import type { PokeType } from "../battle/types"
@@ -167,10 +167,12 @@ describe("reorderToStored — ordre perso des attaques d'une fusion", () => {
     })
 })
 
-// TYPE FORCÉ ⇒ STAB GARANTI (Sartay 10/09). Ces 4 fusions ont un type IMPOSÉ alors que leur moveset est dérivé
-// de leurs parents, qui n'ont aucune attaque de ce type : elles se retrouvaient avec ZÉRO STAB. Vaut aussi pour
-// les fusions tentées par les JOUEURS, puisque computeFusion est la source unique.
-describe("fusion — type FORCÉ : au moins un STAB", () => {
+// TYPE FORCÉ ⇒ STAB GARANTI PAR TRANSMUTATION (idée Sartay 11/09). Ces 4 fusions ont un type MONO imposé alors que
+// leur moveset vient de leurs parents, qui n'ont aucune attaque de ce type → elles sortaient avec ZÉRO STAB.
+// Plutôt que de leur plaquer une attaque étrangère, la fusion CONVERTIT dans sa propre essence la 1re attaque
+// OFFENSIVE héritée de CHACUN de ses parents (le Lance-Soleil de Cerfeuillu devient TÉNÈBRES chez Cendrecerf).
+// Le move global n'est jamais modifié : la conversion vit dans `moveTypes`, lue par le moteur et l'UI.
+describe("fusion — type FORCÉ : STAB par TRANSMUTATION des attaques parentales", () => {
     // ⚠️ specialFusionFor() s'appuie sur speciesId — le helper P() ne le pose pas, donc on le complète ici.
     const PS = (id: string): FusionParent => ({ ...P(id), speciesId: id })
     const FORCED: [string, string, string][] = [
@@ -179,25 +181,55 @@ describe("fusion — type FORCÉ : au moins un STAB", () => {
         ["pyrokoss", "razmaree", "Vaporêve"],
         ["rochison", "mouflorage", "Aimouflon"],
     ]
-    it.each(FORCED)("%s × %s (%s) : le moveset contient une attaque de son type forcé", (a, b, name) => {
+    const effType = (fr: { moves: string[]; moveTypes: Record<string, string> }, id: string) => fr.moveTypes[id] ?? getMove(id)!.type
+
+    it.each(FORCED)("%s × %s (%s) : au moins une attaque frappe dans son type forcé", (a, b, name) => {
         const fr = computeFusion(PS(a), PS(b))
         expect(fr.name).toBe(name)
         expect(fr.types).toHaveLength(1) // type MONO forcé
-        const stab = fr.moves.filter((m) => getMove(m)?.type === fr.types[0])
+        const stab = fr.moves.filter((m) => (getMove(m)!.power ?? 0) > 0 && effType(fr, m) === fr.types[0])
         expect(stab.length).toBeGreaterThan(0)
-        expect(fr.moves).toHaveLength(4) // on n'a pas gonflé le moveset
-        expect(new Set(fr.moves).size).toBe(4) // ni créé de doublon
     })
 
-    it("l'attaque garantie est posée en SLOT 1 (c'est la signature)", () => {
-        expect(getMove(computeFusion(PS("sylvapuce"), PS("pyrokoss")).moves[0])?.type).toBe("TENEBRES")
+    it.each(FORCED)("%s × %s (%s) : le MOVESET n'est pas altéré (aucune attaque plaquée)", (a, b) => {
+        const fr = computeFusion(PS(a), PS(b))
+        expect(fr.moves).toEqual(fuseMoves(PS(a), PS(b))) // exactement l'héritage naturel
+        expect(new Set(fr.moves).size).toBe(fr.moves.length)
     })
 
-    it("withGuaranteedStab n'injecte RIEN si un STAB est déjà là, et rien sans stabMove", () => {
+    it("seules des attaques OFFENSIVES sont transmutées (retyper un statut ne donnerait aucun STAB)", () => {
+        const fr = computeFusion(PS("sylvapuce"), PS("pyrokoss"))
+        for (const id of Object.keys(fr.moveTypes)) expect(getMove(id)!.power).toBeGreaterThan(0)
+        // Brume Sporale (PLANTE, pw 0) est héritée mais NON transmutée.
+        expect(fr.moves).toContain("brume_sporale")
+        expect(fr.moveTypes["brume_sporale"]).toBeUndefined()
+    })
+
+    it("une attaque par PARENT est convertie (Cendrecerf : Bélier de Pyrokoss + Lance-Soleil de Cerfeuillu)", () => {
+        const fr = computeFusion(PS("sylvapuce"), PS("pyrokoss"))
+        expect(fr.moveTypes["belier"]).toBe("TENEBRES")
+        expect(fr.moveTypes["lance_soleil"]).toBe("TENEBRES")
+        expect(Object.keys(fr.moveTypes)).toHaveLength(2)
+    })
+
+    it("une fusion SANS type forcé ne transmute rien", () => {
+        expect(computeFusion(PS("maitrezenc"), PS("zappeureal")).moveTypes).toEqual({})
+    })
+
+    it("REPLI : sans aucune attaque offensive à convertir, on injecte le stabMove", () => {
+        // Deux parents 100 % statut → rien à transmuter : la garantie retombe sur l'attaque plaquée.
+        const statuts = ["repos", "brume_sporale", "danse_lames", "mur_de_fer"]
+        const a: FusionParent = { ...PS("sylvapuce"), moves: statuts }
+        const b: FusionParent = { ...PS("pyrokoss"), moves: statuts }
+        const fr = computeFusion(a, b)
+        expect(fr.moveTypes).toEqual({})
+        expect(getMove(fr.moves[0])!.type).toBe("TENEBRES") // Reflet Fatal injecté en slot 1
+    })
+
+    it("withGuaranteedStab : n'injecte rien si un STAB est déjà là, ni sans stabMove", () => {
         const nat = ["morsure_sombre", "belier", "repos", "charge"]
-        expect(withGuaranteedStab(nat, ["TENEBRES"], "reflet_fatal")).toEqual(nat) // morsure_sombre est déjà TÉNÈBRES
-        expect(withGuaranteedStab(nat, ["TENEBRES"], undefined)).toEqual(nat)      // pas de stabMove → intact
-        // Sans STAB naturel : injection en tête, total borné à 4.
+        expect(withGuaranteedStab(nat, ["TENEBRES"], "reflet_fatal")).toEqual(nat)
+        expect(withGuaranteedStab(nat, ["TENEBRES"], undefined)).toEqual(nat)
         const out = withGuaranteedStab(["belier", "repos", "charge", "plaquage"], ["TENEBRES"], "reflet_fatal")
         expect(out[0]).toBe("reflet_fatal")
         expect(out).toHaveLength(4)
