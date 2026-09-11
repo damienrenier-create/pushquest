@@ -10,6 +10,10 @@
 //   • DIEU SPAGHETTI : grandiloquent, chaleureux, solennel. Il vouvoie l'exploit, jamais le joueur.
 //   • ACE : nihiliste, blasé, drôle à froid. Il appelle le joueur « rival ». Il ne se vante jamais vraiment.
 
+/** Le grand discours n'est prononcé QU'UNE FOIS par joueur (marqueur dans defeatedTrainers) ; ensuite il
+ *  s'efface et laisse passer (PLATINE_SPAGHETTI_SHORT). */
+export const PLATINE_INTRO_MARKER = "platine_intro_seen"
+
 /** Le Dieu Spaghetti, dans la salle de fusion, AVANT de laisser entrer dans le couloir platine. Il explique la
  *  règle du trône — et prévient que les adversaires ne sont plus des créatures de sa main, mais de vraies gens. */
 export const PLATINE_SPAGHETTI_LINES = [

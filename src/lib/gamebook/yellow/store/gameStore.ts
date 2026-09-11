@@ -32,6 +32,7 @@ import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep } from "./platineRun"
+import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -1770,6 +1771,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ player: next, dialogue: { npcId: "y_fusion_gate", npcName: "AUTEL DE LA CHIMÈRE", lineIndex: 0, lines: ["La Ligue de Fusion exige une équipe de chimères. Assemble-la au 💻 de l'Autel, puis reviens !"] } })
                     scheduleSave(next)
                     return
+                }
+                // PALIER PLATINE — la porte à dragons ne mène PAS au Conseil. Le couloir du trône, c'est ACE
+                //   puis les champions : on ne refait pas les 5 Conseillers ni le Dieu Spaghetti pour y accéder.
+                //   La porte est donc RE-ROUTÉE vers la salle du trône dès que le palier actif est le platine.
+                if (activeFusionTier((m) => isTrainerDefeated(m)) === "platine") {
+                    // Le Dieu Spaghetti pose la règle UNE SEULE FOIS : il ouvre la dernière porte et prévient que
+                    //   derrière, ce ne sont plus ses créatures. On interrompt AVANT de franchir (comme l'intro
+                    //   des synergies) ; le pas suivant fait entrer.
+                    if (!isTrainerDefeated(PLATINE_INTRO_MARKER)) {
+                        markTrainerDefeated(PLATINE_INTRO_MARKER)
+                        set({ player: next, dialogue: { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...PLATINE_SPAGHETTI_LINES] } })
+                        scheduleSave(next)
+                        return
+                    }
+                    targetMapId = "yellow_fusion_platine"
                 }
                 resetFusionLeagueProgress()
                 disposeFusionLeagueSpecies()
