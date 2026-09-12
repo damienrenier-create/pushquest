@@ -165,7 +165,7 @@ import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
-import { usePlatineCorridor } from "@/lib/gamebook/yellow/multiplayer/usePlatineCorridor"
+import { usePlatineCorridor, PLATINE_MAP_ID } from "@/lib/gamebook/yellow/multiplayer/usePlatineCorridor"
 import { flushPendingPlatineClaim } from "@/lib/gamebook/yellow/store/platineRun"
 import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
 import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, ARCHIVISTE_DAILY_LIMIT_LINES, ARCHIVISTE_MAX_MATCHES_PER_DAY, archivisteEscalation, buildArchivisteTeam, archivisteGreeting, archivisteBadgeLevelOffset } from "@/lib/gamebook/yellow/data/collectionneurNpc"
@@ -501,7 +501,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
     // PALIER PLATINE : charge le couloir (ACE + salles des champions + Maître en titre) à l'entrée de la salle
     //   du trône, et l'oublie en sortant. Sans lui, la salle n'a aucun adversaire à présenter.
-    usePlatineCorridor(mapPlayer.mapId) // appelé pour son EFFET (charge/oublie le couloir), pas pour sa valeur
+    const platineCorridor = usePlatineCorridor(mapPlayer.mapId) // effet (charge/oublie le couloir) ET état affiché
     // SACRE EN CARAFE : si le réseau a lâché pile au moment de graver un sacre platine, on le rejoue ici, une
     //   fois par chargement. Silencieux : c'est du rattrapage, pas un événement de jeu.
     useEffect(() => { void flushPendingPlatineClaim() }, [])
@@ -5834,6 +5834,33 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* LIGUE DE FUSION — GÉNÉRIQUE DE DÉFAITE (5s) : après avoir QUITTÉ le combat perdu (!battle), on joue le récap
                 thématique « par quelle attaque chaque fusion est tombée » ; à la fin (onDone → clearFusionDefeat) le
                 whiteout reprend et renvoie à l'Autel. zIndex 9999 (au-dessus de tout). */}
+            {/* COULOIR PLATINE — ce que fait le réseau. Sans ça, un fetch en échec laissait le joueur devant
+                un PNJ muet qui répondait « la salle est vide » : un message qui ressemble à une fin de couloir
+                légitime, alors que c'est une panne. La porte droite reboucle sur la même carte, donc l'effet ne
+                se relance jamais seul — d'où le bouton, sinon il fallait refaire tout le trajet depuis l'Autel. */}
+            {mapPlayer.mapId === PLATINE_MAP_ID && !battle && (platineCorridor.loading || platineCorridor.failed) && (
+                <div style={{
+                    position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 9300,
+                    display: "flex", alignItems: "center", gap: 10, padding: "7px 13px", borderRadius: 10,
+                    background: platineCorridor.failed ? "rgba(60,16,16,0.94)" : "rgba(20,18,42,0.94)",
+                    border: `1.5px solid ${platineCorridor.failed ? "#e06a5a" : "#b9dcff"}`,
+                    color: "#fff", fontFamily: "inherit", fontSize: 12, fontWeight: 700,
+                    boxShadow: "0 4px 18px rgba(0,0,0,.45)", maxWidth: "92vw",
+                }}>
+                    <span>{platineCorridor.failed
+                        ? "⚠️ Le couloir ne s'est pas formé — le Nexus ne répond pas."
+                        : "⏳ Le couloir se forme…"}</span>
+                    {platineCorridor.failed && (
+                        <button
+                            onClick={platineCorridor.retry}
+                            style={{
+                                padding: "4px 10px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                                fontWeight: 800, fontSize: 11, background: "#e06a5a", color: "#2a0d0d", border: "none",
+                            }}
+                        >RÉESSAYER</button>
+                    )}
+                </div>
+            )}
             {fusionDefeat && !battle && (
                 <FusionDefeatOverlay trainerName={fusionDefeat.trainerName} koLog={fusionDefeat.koLog} onDone={clearFusionDefeat} />
             )}

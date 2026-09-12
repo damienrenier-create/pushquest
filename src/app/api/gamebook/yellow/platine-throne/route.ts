@@ -130,6 +130,10 @@ export async function GET() {
                 avatar: avatarByUser.get(r.userId),
             }
         })
+        // ⚠️ AUCUN FILTRE « SOI-MÊME », ET C'EST VOULU (décision Sartay) : on affronte TA PROPRE SALLE OR, ton
+        //   ancien soi, exactement comme la salle dorée du run 2. Il faut avoir l'OR pour venir ici, donc tout
+        //   le monde a sa ligne « fusion:or » — le PNJ portera ton pseudo et ton skin, et s'excusera devant
+        //   toi-même. C'est le gag, pas un oubli : ne pas « corriger » en ajoutant un filtre sur auth.userId.
         const rooms = buildPlatineCorridor(all)
 
         // LE TENANT = la fiche la plus récemment sacrée. C'est LUI qu'on affronte en dernière salle (👑), même

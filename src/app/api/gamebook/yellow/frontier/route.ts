@@ -12,14 +12,22 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 
 export const dynamic = "force-dynamic"
 
 const DEFAULTS = { jc: 0, towerBest: 0, factoryBest: 0, domeBest: 0, symbols: [] as string[] }
-/** Plafond d'un DON de jetons (couloir platine : 6 Daemons × 50 JC). Empêche un client bricolé de se servir. */
+/** Plafond d'un DON de jetons, PAR APPEL (couloir platine : 6 Daemons × 50 JC).
+ *
+ *  ⚠️ Ce plafond ne protège PAS d'une boucle — le commentaire précédent l'affirmait, à tort. Rien n'empêche
+ *  d'appeler la route cent fois depuis une console. Ce qui limite réellement l'abus, c'est la PORTE ci-dessous
+ *  (il faut avoir ouvert le palier platine, donc bouclé l'OR) et le fait que le jeton n'a de valeur que dans
+ *  ce jeu, entre joueurs qui se connaissent. Un vrai quota journalier demanderait une colonne de plus ;
+ *  si le besoin se présente, c'est la migration additive à faire — pas un plafond par appel. */
 const GRANT_MAX = 300
+/** Sans ce marqueur dans la save, le joueur n'a rien à faire dans le couloir platine — donc rien à encaisser. */
+const PLATINE_OPEN_MARKER = "fusleague_platine_open"
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -79,15 +87,25 @@ export async function POST(req: NextRequest) {
         if (action === "grant") {
             const amount = Math.max(0, Math.min(GRANT_MAX, Math.floor(Number(body.amount) || 0)))
             if (amount === 0) return NextResponse.json({ ok: true, jc: 0, skipped: "zero" })
-            const fp = (prisma as any).frontierProfile
-            const cur = await fp.findUnique({ where: { userId: auth.userId }, select: { jc: true } })
-            const next = (cur?.jc ?? 0) + amount
-            await fp.upsert({
+            // PORTE : seul un joueur dont le palier platine est ouvert peut recevoir un pot-de-vin. La save est
+            //   cliente-autoritaire, donc ce n'est pas un rempart — c'est une porte, et elle ferme le cas du
+            //   joueur qui n'a jamais mis les pieds dans le couloir.
+            const prog = await (prisma as any).gamebookProgress.findFirst({
+                where: { chapterId: YELLOW_CHAPTER_ID, userId: auth.userId },
+                select: { flags: true },
+            })
+            const markers = (prog?.flags as { defeatedTrainers?: unknown })?.defeatedTrainers
+            if (!Array.isArray(markers) || !markers.includes(PLATINE_OPEN_MARKER)) {
+                return NextResponse.json({ ok: false, reason: "not-eligible" }, { status: 403 })
+            }
+            // Crédit ATOMIQUE : un read-then-write perdait un don sur deux appels concurrents.
+            const saved = await (prisma as any).frontierProfile.upsert({
                 where: { userId: auth.userId },
                 create: { userId: auth.userId, ...DEFAULTS, jc: amount },
-                update: { jc: next },
+                update: { jc: { increment: amount } },
+                select: { jc: true },
             })
-            return NextResponse.json({ ok: true, jc: next })
+            return NextResponse.json({ ok: true, jc: saved.jc })
         }
         if (action === "recordRun") {
             const bestField = BEST_FIELD[String(body.mode)]
