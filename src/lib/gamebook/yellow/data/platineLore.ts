@@ -10,6 +10,8 @@
 //   • DIEU SPAGHETTI : grandiloquent, chaleureux, solennel. Il vouvoie l'exploit, jamais le joueur.
 //   • ACE : nihiliste, blasé, drôle à froid. Il appelle le joueur « rival ». Il ne se vante jamais vraiment.
 
+import { topHits, bestHitOverall, type BestHit, type PlatineLedger } from "./platineLedger"
+
 /** ANNONCE D'OUVERTURE — posée à l'Autel, une seule fois. Le sacre OR d'un futur champion dit déjà « va au
  *  trône » (cf. le REFLET dans trainers.ts), mais les champions OR d'AVANT la feature ne reverront jamais
  *  ce texte : sans cette annonce, le palier leur serait ouvert en SILENCE et ils ne le sauraient jamais. */
@@ -84,6 +86,9 @@ export const PLATINE_ACE_WIN_LINES = [
 /** Entrée dans la salle d'un champion : son fantôme se lève. `{nick}` = pseudo, `{date}` = jour du sacre. */
 export const PLATINE_ROOM_INTRO = "*Le souvenir de {nick} se dresse devant toi — son équipe exacte, figée le {date}.*"
 
+/** Entrée dans la salle du MAÎTRE EN TITRE — la dernière. `{nick}` = pseudo, `{days}` = jours de règne. */
+export const PLATINE_THRONE_INTRO = "*La chaise n'est pas vide. {nick} s'y tient depuis {days} — et son équipe se lève sans se presser.*"
+
 /** SACRE — le joueur prend le trône. Le texte doit dire « à partir de maintenant », pas « bravo ». */
 export const PLATINE_SACRE_LINES = [
     "*Le couloir s'éteint derrière toi. Au bout, la chaise est vide.*",
@@ -148,3 +153,21 @@ export const PLATINE_BRIBE_LINE = "*Il sort une poignée de jetons et te la four
 export const PLATINE_BRIBE_DEAL = "« Tiens. {jc} jetons — {n} des tiens sont tombés, c'est le tarif. On est d'accord que rien de tout ça n'est arrivé ? »"
 /** Cas où il n'a mis AUCUN Daemon K.O. : il n'a rien à monnayer, et c'est encore pire pour lui. */
 export const PLATINE_BRIBE_NONE = "« Je te donnerais bien quelque chose pour ton silence, mais je n'ai même pas touché un seul des tiens. Garde ta pitié. »"
+
+// ─────────── LE GÉNÉRIQUE, EN LIGNES LISIBLES ───────────
+// Le registre (platineLedger) retient le plus gros coup de chaque chimère, des deux côtés. On en fait ici des
+// lignes de dialogue : c'est ce qui transforme « tu as gagné » en récit — on se souvient du coup, pas du score.
+// Fonction PURE (aucun store, aucune date) → testable, et réutilisable telle quelle par un futur écran dédié.
+
+/** Récapitulatif des meilleurs coups du parcours, prêt à être affiché ligne par ligne. */
+export function platineCreditsLines(ledger: PlatineLedger, won: boolean, limit = 3): string[] {
+    const fmt = (h: BestHit) => `  ${h.name} — ${h.move} · ${h.damage} dégâts${h.room ? ` (${h.room})` : ""}`
+    const mine = topHits(ledger, "mine", limit)
+    const foes = topHits(ledger, "foes", limit)
+    const out: string[] = [won ? PLATINE_CREDITS_TITLE_WIN : PLATINE_CREDITS_TITLE_LOSS]
+    out.push(PLATINE_CREDITS_MINE, ...(mine.length ? mine.map(fmt) : [`  ${PLATINE_CREDITS_EMPTY}`]))
+    out.push(PLATINE_CREDITS_FOES, ...(foes.length ? foes.map(fmt) : [`  ${PLATINE_CREDITS_EMPTY}`]))
+    const best = bestHitOverall(ledger)
+    if (best) out.push(`LE coup du parcours : ${best.name} — ${best.move}, ${best.damage} dégâts.`)
+    return out
+}

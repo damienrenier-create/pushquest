@@ -4,7 +4,8 @@ import {
     setPlatineCorridor, resetPlatineRun, currentPlatineOpponent, advancePlatineStep,
     markPlatineOpponentBeaten, isPlatineOpponentBeaten, platineTotalSteps, type PlatineThroneHolder,
 } from "./platineRun"
-import { platineBribe, PLATINE_BRIBE_PER_KO } from "../data/platineLore"
+import { platineBribe, PLATINE_BRIBE_PER_KO, platineCreditsLines } from "../data/platineLore"
+import { emptyLedger, recordHit } from "../data/platineLedger"
 import type { PlatineChampion } from "../data/platineArena"
 import type { FusionChampionMon } from "../storage/save"
 
@@ -118,5 +119,43 @@ describe("couloir platine — le tarif du silence ne facture QUE sa propre salle
     it("un compteur d'ouverture en avance ne cree JAMAIS de dette negative", () => {
         expect(platineBribe(1, 4)).toEqual({ ko: 0, jc: 0 })
         expect(platineBribe(0, 0)).toEqual({ ko: 0, jc: 0 })
+    })
+})
+
+// LE GENERIQUE. Le registre retient le plus gros coup de chaque chimere, des deux cotes ; ces lignes sont ce que
+//   le joueur lit au sacre. Fonction pure, donc verrouillable sans monter de combat.
+describe("couloir platine — le generique des meilleurs coups", () => {
+    const hit = (name: string, damage: number, move = "Ultra-Foudre", room = "ACE") =>
+        ({ name, move, damage, target: "X", room })
+
+    it("raconte les deux camps, et designe LE coup du parcours", () => {
+        let l = emptyLedger()
+        l = recordHit(l, "mine", hit("Voltombre", 712))
+        l = recordHit(l, "mine", hit("Cendrecerf", 480, "Lance-Soleil"))
+        l = recordHit(l, "foes", hit("Magnicogne", 655, "Seisme", "Jacanon"))
+        const lines = platineCreditsLines(l, true)
+        expect(lines[0]).toContain("SACRE")
+        expect(lines.join("\n")).toContain("Voltombre — Ultra-Foudre · 712 dégâts (ACE)")
+        expect(lines.join("\n")).toContain("Magnicogne — Seisme · 655 dégâts (Jacanon)")
+        expect(lines[lines.length - 1]).toContain("LE coup du parcours : Voltombre")
+    })
+
+    it("le titre change selon l'issue", () => {
+        const l = recordHit(emptyLedger(), "mine", hit("A", 10))
+        expect(platineCreditsLines(l, true)[0]).not.toBe(platineCreditsLines(l, false)[0])
+        expect(platineCreditsLines(l, false)[0]).toContain("TRÔNE")
+    })
+
+    it("un parcours sans le moindre coup ne produit pas un ecran vide", () => {
+        const lines = platineCreditsLines(emptyLedger(), false)
+        expect(lines.length).toBeGreaterThan(2)
+        expect(lines.filter((x) => x.includes("aucun coup porté"))).toHaveLength(2) // les deux camps
+        expect(lines.some((x) => x.startsWith("LE coup du parcours"))).toBe(false)
+    })
+
+    it("le recap est borne : on ne deroule pas 12 lignes par camp", () => {
+        let l = emptyLedger()
+        for (let i = 0; i < 8; i++) l = recordHit(l, "mine", hit(`M${i}`, 100 + i))
+        expect(platineCreditsLines(l, true, 3).filter((x) => x.startsWith("  M"))).toHaveLength(3)
     })
 })

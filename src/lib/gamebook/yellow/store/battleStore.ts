@@ -66,8 +66,9 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
-import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE } from "../data/platineLore"
+import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
+import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_SACRE_LINES, platineCreditsLines } from "../data/platineLore"
+import { recordHit } from "../data/platineLedger"
 import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
@@ -394,6 +395,8 @@ export function persistsDefeatOnWin(trainerId: string): boolean {
 }
 
 let platineKoAtStart = 0
+/** Nom de l'occupant du couloir qui vient de te battre, capturé AVANT la remise à zéro du parcours. */
+let platineFoeName: string | null = null
 
 export function startTrainerBattle(
     playerTeam: MonInstance[],
@@ -777,14 +780,46 @@ export function submitPlayerAction(action: PlayerAction) {
     }
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
-    if (next.phase === "ended") finishBattle(next, newEntry)
+    // Le tour qui TERMINE le combat porte souvent le plus gros coup : on le ramasse AVANT finishBattle,
+    //   qui peut remettre le parcours à zéro (défaite) ou effacer le miroir (sacre).
+    if (next.phase === "ended") { collectPlatineHits(next); finishBattle(next, newEntry) }
     else {
         persistBattleSnapshot() // #8 : on rafraîchit l'instantané anti-fuite tant que le combat dure
         // LIGUE DE FUSION — BUG SOIN/REFRESH : l'usure du gauntlet est persistée À CHAQUE TOUR (pas seulement à la
         //   victoire de salle) → un refresh en plein combat NE PEUT PLUS ressusciter/soigner les fusions K.O. (l'équipe
         //   est reprise avec son usure RÉELLE, cf. restoreFusionGauntletFromCarry). Scopé Ligue (pas l'épreuve Autel).
         if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) persistFusionGauntletWear(next.player.team)
+        collectPlatineHits(next) // couloir platine : matière du générique (no-op ailleurs)
     }
+}
+
+/** COULOIR PLATINE — RAMASSE LES MEILLEURS COUPS du tour, des DEUX camps, dans le registre du parcours.
+ *
+ *  On lit `battleBestDmg` (record DU COMBAT COURANT, runtime) et pas `bestDmg` (record à vie, persisté) :
+ *  le générique raconte CE couloir, pas la carrière des Daemons. Les chimères adverses sont de toute façon
+ *  éphémères — si on ne les note pas ici, elles disparaissent avec le combat.
+ *
+ *  Appelé à CHAQUE tour : recordHit ignore tout coup plus faible que celui déjà retenu, donc repasser
+ *  dessus ne coûte rien et évite de rater le dernier tour (celui qui met K.O., souvent le plus gros).
+ *  La cible est nommée au CAMP (« la salle », ton pseudo) : on retient le coup, pas le duel exact. */
+function collectPlatineHits(b: BattleState): void {
+    if (storeState.trainer?.trainerId !== PLATINE_TRAINER_ID) return
+    const room = currentPlatineOpponent()?.label ?? ""
+    let led = getPlatineLedger()
+    const note = (team: ReadonlyArray<BattleMon>, side: "mine" | "foes", target: string) => {
+        for (const m of team) {
+            const dmg = m.battleBestDmg ?? 0
+            if (dmg <= 0) continue
+            led = recordHit(led, side, {
+                name: getSpecies(m.speciesId)?.name ?? m.speciesId,
+                move: m.battleBestDmgMove ?? "—",
+                damage: dmg, target, room,
+            })
+        }
+    }
+    note(b.player.team, "mine", room || "la salle")
+    note(b.enemy.team, "foes", "ton équipe")
+    if (led !== getPlatineLedger()) setPlatineLedger(led) // n'écrit (et ne persiste) que si ça a bougé
 }
 
 /** LIGUE DE FUSION — persiste l'usure COURANTE du gauntlet (PV/statut/PP/K.O.) : miroir localStorage (INSTANTANÉ,
@@ -1487,7 +1522,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 ? [PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL.replace("{jc}", String(jc)).replace("{n}", String(koHere))]
                 : [PLATINE_BRIBE_NONE]
             if (jc > 0) void postFrontierGrant(jc) // le solde JC est SERVEUR : on credite la, le client le relira
-            rematchReward = { npcId: "y_fusion_platine", npcName: foeName, lines: [excuse, ...deal] }
+            // ACE est le PORTIER : sa défaite est la seule fois où il concède vraiment quelque chose. Ses
+            //   répliques passent AVANT l'excuse — il s'écarte, puis il monnaie son silence comme les autres.
+            const isAce = currentPlatineOpponent()?.kind === "ace"
+            const lines = [...(isAce ? PLATINE_ACE_LOSE_LINES : []), excuse, ...deal]
+            rematchReward = { npcId: "y_fusion_platine", npcName: foeName, lines }
             // DERNIÈRE salle : inutile de faire franchir une porte de plus pour tomber sur une salle vide —
             //   le couloir est bouclé, on prend la chaise. L'équipe gravée est le roster gauntlet VAINQUEUR,
             //   figé exactement comme au sacre de la Ligue (nom/sprite/types/stats/attaques + parents).
@@ -1514,11 +1553,23 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 //   au palmarès de sacre. Il dit « j'ai pris la chaise au moins une fois », PAS « je suis assis dessus »
                 //   — ça, seul le serveur le sait, et ça peut changer pendant qu'on dort.
                 markTrainerDefeated(FUSION_TIER_MARKER.platine)
+                // LE SACRE SE VOIT. Il ne s'affichait NULLE PART : `platineSacre` était écrit mais jamais lu,
+                //   et le joueur ne découvrait son titre qu'en allant au Palmarès. On le livre par le canal de
+                //   dialogue post-combat (rematchReward), qui est déjà monté et fiable — les lignes du sacre
+                //   suivent l'excuse du vaincu, puis le générique des meilleurs coups des deux camps.
+                rematchReward = {
+                    npcId: "y_fusion_platine", npcName: "LE TRÔNE",
+                    lines: [...lines, ...PLATINE_SACRE_LINES, ...platineCreditsLines(getPlatineLedger(), true)],
+                }
                 clearPlatineRunMirror() // couloir bouclé : plus rien à reprendre au prochain chargement
                 platineSacre = true
             }
         } else if (b.outcome === "lose") {
             // Tombé dans le couloir : le Maître en titre marque +1, et la tentative est perdue (pas de reprise).
+            // Le générique de défaite est construit PLUS BAS, après resetPlatineRun : on capture donc le nom
+            //   de l'occupant MAINTENANT, sinon il affiche « LE TRÔNE » (le nom statique du décor) au lieu du
+            //   pseudo de celui qui vient de te battre.
+            platineFoeName = currentPlatineOpponent()?.label ?? null
             reportPlatineFail()
             abandonPlatineRun() // tomber EST un abandon : le miroir part avec, on repartira d'ACE
             platineDefeat = true

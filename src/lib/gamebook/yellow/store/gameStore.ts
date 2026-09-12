@@ -32,7 +32,7 @@ import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun } from "./platineRun"
-import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES } from "../data/platineLore"
+import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -1011,7 +1011,26 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
 // RUN 2 — DIALOGUES d'arène re-typée : en NG+, un dresseur d'arène parle avec sa persona run 2 (type + nom +
 //   CADEAU exact) ; le BOSS clashe en plus l'équipe active du joueur. Hors NG+ (ou dresseur non-arène) → run 1.
 //   `effectiveRunWorld()` = même condition que le re-skin des PNJ (activeNpcs) → dialogue toujours cohérent avec le sprite.
+/** LE COULOIR PLATINE parle avec la voix de celui qui s'y tient : ACE au seuil, le souvenir d'un champion
+ *  ensuite, et le Maître en titre à la fin. Un seul dresseur, donc une seule liste `intro` statique — d'où
+ *  ce détour. ACE tourne sur 3 variantes selon le jour : on retente ce couloir souvent, autant qu'il ne
+ *  récite pas la même chose à chaque fois. */
+function platineOpponentIntro(): string[] | null {
+    const opp = currentPlatineOpponent()
+    if (!opp) return null
+    if (opp.kind === "ace") return [...PLATINE_ACE_INTRO_VARIANTS[new Date().getDate() % PLATINE_ACE_INTRO_VARIANTS.length]]
+    if (opp.kind === "room") {
+        const d = new Date(opp.champion.wonAt)
+        const date = Number.isFinite(d.getTime()) ? d.toLocaleDateString("fr-FR") : "?"
+        return [PLATINE_ROOM_INTRO.replace("{nick}", opp.champion.nickname).replace("{date}", date)]
+    }
+    const days = opp.holder.reignDays
+    const since = days <= 0 ? "ce matin" : days === 1 ? "1 jour" : `${days} jours`
+    return [PLATINE_THRONE_INTRO.replace("{nick}", opp.holder.nickname).replace("{days}", since)]
+}
+
 function arenaIntroLines(t: { id: string; intro: string[] }): string[] {
+    if (t.id === "y_fusion_platine") return platineOpponentIntro() ?? t.intro
     return (effectiveRunWorld() === "ngplus" ? run2ArenaIntro(t.id, getPlayerSave().team) : null) ?? t.intro
 }
 function arenaDefeatLines(t: { id: string; defeat: string[] }): string[] {
