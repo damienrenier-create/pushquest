@@ -28,7 +28,7 @@ import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarryJson, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
-import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
+import { previousFusionTier, isTopFusionTier, fusionRunBerriesActive } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
@@ -394,7 +394,10 @@ export function restoreFusionGauntletFromCarry(): boolean {
     //   Un carry d'AVANT cette version n'en a pas : on retombe alors sur le barème du palier pour les baies
     //   (au pire un adversaire en a alors qu'il n'aurait pas dû — bien moins grave que l'inverse) et sur le
     //   marqueur gravé dans la save pour le boss.
-    setGauntletBerries(typeof flags.berries === "boolean" ? flags.berries : isTopFusionTier(activeFusionTier((m) => isTrainerDefeated(m))))
+    //   Repli d'un carry d'AVANT les drapeaux : on ne sait pas si c'était la 1re traversée du jour, donc on
+    //   suppose OUI — se tromper en donnant des baies vaut mieux que se tromper en les retirant, et aux
+    //   paliers hauts (dont le PLATINE) la réponse est de toute façon « toujours ».
+    setGauntletBerries(typeof flags.berries === "boolean" ? flags.berries : fusionRunBerriesActive(activeFusionTier((m) => isTrainerDefeated(m)), true))
     setGauntletBossBeaten(typeof flags.bossBeaten === "boolean" ? flags.bossBeaten : isTrainerDefeated("y_fusion_miroir"))
     // …et le parcours du couloir platine, s'il vient d'un AUTRE appareil (rien en localStorage ici).
     seedPlatineMirrorFromSave((flags as { platine?: unknown }).platine)
@@ -418,7 +421,7 @@ export function restoreFusionGauntletFromCarry(): boolean {
 function initFusionLeagueRun(): void {
     const startTier = activeFusionTier((m) => isTrainerDefeated(m))
     const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
-    setGauntletBerries(isTopFusionTier(startTier) || (startTier === "argent" && firstTryToday))
+    setGauntletBerries(fusionRunBerriesActive(startTier, firstTryToday))
     setGauntletBossBeaten(false)
     // GÉNÉRATION DES SPRITES — filet de sécurité (normalement déjà lancée au prologue du dôme). Dé-doublonnée
     //   côté client ET serveur : les paires déjà prêtes sont ignorées, aucun coût en double.

@@ -433,6 +433,20 @@ export function isTopFusionTier(tier: FusionTier): boolean {
  *  ne s'ouvrira qu'une fois son contenu reel en place (ACE + salles des champions). */
 export const FUSION_PLATINE_OPEN_MARKER = "fusleague_platine_open"
 
+/** LES BAIES ENNEMIES sont-elles actives pour cette traversée ?
+ *
+ *  TOUJOURS aux paliers hauts (OR et PLATINE) — c'est ce qui rend leurs adversaires réellement dangereux,
+ *  Baie Phénix comprise, qui fait se relever une fois l'ACE de l'ACE. En ARGENT, seulement à la PREMIÈRE
+ *  traversée du jour : le palier reste apprenable en réessayant. Jamais en bronze.
+ *
+ *  ⚠️ Cette formule vivait en double (démarrage de run + reprise après rechargement) et c'est exactement
+ *  comme ça qu'elle a dérivé : un des deux appels était devenu mort, et les baies n'étaient plus posées
+ *  NULLE PART, à aucun palier. Un seul endroit, testé, et les deux appelants s'y réfèrent.
+ *  Décision Sartay : quoi qu'il arrive, ça doit marcher au PLATINE. */
+export function fusionRunBerriesActive(tier: FusionTier, firstTryToday: boolean): boolean {
+    return isTopFusionTier(tier) || (tier === "argent" && firstTryToday)
+}
+
 /** Palier actif (le plus haut débloqué mais pas encore bouclé). `isCleared(marker)` = a-t-on complété ce palier ? */
 export function activeFusionTier(isCleared: (marker: string) => boolean): FusionTier {
     if (!isCleared(FUSION_TIER_MARKER.bronze)) return "bronze"
