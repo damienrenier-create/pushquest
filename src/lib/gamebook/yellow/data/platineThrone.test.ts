@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest"
 import {
     PLATINE_THRONE_WORLD, encodeThrone, decodeThrone, claimThrone,
-    awardFailurePoint, reignDays, reignLabel, throneScore,
+    awardFailurePoint, reignDays, reignLabel, throneScore, renewThrone, rankThrones, throneTitle,
 } from "./platineThrone"
 import { emptyLedger, recordHit, topHits, bestHitOverall, ledgerTotals } from "./platineLedger"
+import { PLATINE_BRIBE_PER_KO, PLATINE_EXCUSES, PLATINE_BRIBE_DEAL } from "./platineLore"
 import type { FusionChampionMon } from "../storage/save"
 import { openPlatineIfOrCleared } from "../store/playerStore"
 
@@ -157,5 +158,94 @@ describe("platine — ouverture du palier", () => {
         const before = ["y_fusion_1", OR, "fusioball_owed"]
         const after = openPlatineIfOrCleared(before)
         for (const m of before) expect(after).toContain(m)
+    })
+})
+
+// LE CLASSEMENT DES EMPEREURS. Deux titres distincts et c'est VOLONTAIRE : la couronne va au dernier sacré
+//   (celui qu'on affronte), le titre d'Empereur au plus endurant. Les confondre viderait le palier de son sens.
+describe("platine — le classement des Empereurs", () => {
+    const entry = (userId: string, nickname: string, points: number, since = T0) => ({
+        userId, nickname,
+        slot: { v: 1 as const, team: [], avatar: undefined, points, sinceAt: since.toISOString(), reigns: 1 },
+    })
+
+    it("reprendre le trône CONSERVE les points acquis (compteur à vie) et relance le chrono", () => {
+        let s = claimThrone([mon("A")], "sk", T0)
+        for (const c of ["c1", "c2", "c3"]) s = awardFailurePoint(s, c, "moi")
+        expect(s.points).toBe(3)
+        const back = renewThrone(s, [mon("B")], "sk2", day(30))
+        expect(back.points).toBe(3)                       // ⚠️ le cœur de la règle : on ne repart PAS de zéro
+        expect(back.reigns).toBe(2)
+        expect(back.sinceAt).toBe(day(30).toISOString()) // mais l'ancienneté, elle, repart
+        expect(back.team[0].name).toBe("B")               // et l'équipe gravée est la NOUVELLE
+    })
+
+    it("un règne d'avant la feature (sans `reigns`) se relit en comptant 1", () => {
+        expect(decodeThrone('{"team":[],"points":2,"sinceAt":"2026-09-01T12:00:00.000Z"}')!.reigns).toBe(1)
+        expect(decodeThrone('{"team":[],"reigns":-4}')!.reigns).toBe(1)
+    })
+
+    it("c'est le nombre de POINTS qui fait l'Empereur, pas l'ancienneté", () => {
+        const r = rankThrones([
+            entry("u1", "Jacanon", 2),
+            entry("u2", "Mools", 9),
+            entry("u3", "Zyran", 5),
+        ], "u1", T0)
+        expect(r.map((x) => x.nickname)).toEqual(["Mools", "Zyran", "Jacanon"])
+        expect(r[0].rank).toBe(1)
+        expect(r[0].isEmperor).toBe(true)
+    })
+
+    it("la COURONNE et le titre d'EMPEREUR peuvent désigner deux joueurs différents", () => {
+        const r = rankThrones([entry("u1", "Jacanon", 9), entry("u2", "Mools", 1)], "u2", T0)
+        const jac = r.find((x) => x.userId === "u1")!
+        const moo = r.find((x) => x.userId === "u2")!
+        expect(jac.isEmperor).toBe(true); expect(jac.isHolder).toBe(false)  // ⭐ le plus endurant, mais détrôné
+        expect(moo.isHolder).toBe(true); expect(moo.isEmperor).toBe(false)  // 👑 assis, mais n'a rien défendu
+        expect(throneTitle(jac)).toBe("⭐ Empereur du Nexus")
+        expect(throneTitle(moo)).toBe("👑 Maître en titre")
+    })
+
+    it("personne n'est sacré Empereur sans avoir repoussé un seul challenger", () => {
+        const r = rankThrones([entry("u1", "Jacanon", 0), entry("u2", "Mools", 0)], "u1", T0)
+        expect(r.every((x) => !x.isEmperor)).toBe(true)
+        expect(throneTitle(r[1])).toBe("Ancien Maître")
+    })
+
+    it("à points égaux, le règne le plus ANCIEN passe devant ; à égalité totale, l'ordre reste STABLE", () => {
+        const r = rankThrones([entry("u1", "Bob", 3, day(1)), entry("u2", "Ana", 3, T0)], null, day(10))
+        expect(r.map((x) => x.nickname)).toEqual(["Ana", "Bob"]) // Ana règne depuis 10 j, Bob depuis 9
+        const tie = [entry("u1", "Zoe", 3), entry("u2", "Ana", 3)]
+        expect(rankThrones(tie, null, T0).map((x) => x.nickname))
+            .toEqual(rankThrones([...tie].reverse(), null, T0).map((x) => x.nickname))
+    })
+
+    it("classer ne MODIFIE pas la liste d'entrée", () => {
+        const src = [entry("u1", "Bob", 1), entry("u2", "Ana", 9)]
+        rankThrones(src, null, T0)
+        expect(src.map((x) => x.nickname)).toEqual(["Bob", "Ana"])
+    })
+})
+
+// LE POT-DE-VIN. Le vaincu achète ton silence au tarif de ses propres exploits : 50 JC par Daemon qu'il a mis
+//   K.O. Un adversaire qui n'a touché personne n'a rien à monnayer — et le dialogue le lui fait payer.
+describe("platine — l'excuse et le pot-de-vin", () => {
+    it("le tarif du silence est de 50 jetons par Daemon tombé", () => {
+        expect(PLATINE_BRIBE_PER_KO).toBe(50)
+        expect(3 * PLATINE_BRIBE_PER_KO).toBe(150)
+    })
+
+    it("il y a de quoi varier les excuses, et aucune n'est vide", () => {
+        expect(PLATINE_EXCUSES.length).toBeGreaterThanOrEqual(6)
+        expect(new Set(PLATINE_EXCUSES).size).toBe(PLATINE_EXCUSES.length)
+        for (const e of PLATINE_EXCUSES) expect(e.trim().length).toBeGreaterThan(10)
+    })
+
+    it("la phrase du marché sait accueillir le montant ET le nombre de K.O.", () => {
+        expect(PLATINE_BRIBE_DEAL).toContain("{jc}")
+        expect(PLATINE_BRIBE_DEAL).toContain("{n}")
+        const line = PLATINE_BRIBE_DEAL.replace("{jc}", "150").replace("{n}", "3")
+        expect(line).toContain("150")
+        expect(line).not.toContain("{")  // aucun trou laissé à l'écran
     })
 })

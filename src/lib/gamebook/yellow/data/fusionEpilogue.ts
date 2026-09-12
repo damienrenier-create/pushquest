@@ -47,6 +47,13 @@ export function fusionEpilogueQuests(i: EpilogueQuestInput): EpilogueQuest[] {
           hint: "Le Bronze n'était qu'une mise en bouche. Le Conseil de la Chimère te réclame à nouveau, plus aiguisé. Reviens leur montrer que tu as grandi." },
         { icon: "🥇", label: "Décrocher le palier OR de la Ligue de Fusion", done: mk(i, "fusleague_or"),
           hint: "Au sommet de la Ligue de Fusion t'attend l'épreuve ultime. Franchis-la, et un nouveau cycle s'ouvrira à toi — le pouvoir de tout recommencer." },
+        // LE TRÔNE (palier PLATINE). ANTI-SPOILER : la ligne n'apparaît QU'UNE FOIS L'OR BOUCLÉ. Un champion
+        //   bronze ne doit pas apprendre ici qu'un 4ᵉ palier existe — la ligne « palier OR » juste au-dessus
+        //   promet déjà « un nouveau cycle », c'est la dose de mystère voulue à ce stade.
+        ...(mk(i, "fusleague_or") ? [{
+            icon: "💎", label: "Prendre le TRÔNE — palier PLATINE", done: mk(i, "fusleague_platine"),
+            hint: "La porte à dragons de l'Autel ne mène plus au Conseil. Au bout du couloir t'attendent les équipes FIGÉES des autres champions — de vraies gens, au meilleur jour de leur vie — puis la chaise du Maître Ultime. On ne la gagne pas : on l'occupe, jusqu'à ce qu'on vienne t'en déloger.",
+        }] : []),
         { icon: "🕳️", label: "Atteindre le fond de la Grotte du Nexus (B2F)", done: mk(i, "y_pnj3_grotte_b2f"),
           hint: "La Grotte du Nexus cache bien plus de profondeurs qu'il n'y paraît. Ceux qui osent descendre jusqu'au tout dernier étage y trouvent ce que nul autre n'a vu." },
         { icon: "🐲", label: "Éveiller MÉGAMONARX (3ᵉ légendaire)", done: has(i, "megamonarx"),

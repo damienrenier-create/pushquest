@@ -8,7 +8,10 @@
 //
 // Stockage : LeagueChampion, AUCUNE migration.
 //   • les salles = world "fusion:or" (déjà gravées par fusion-hall-of-fame au sacre OR) ;
-//   • le trône   = world "platine" — ⚠️ SANS le préfixe "fusion:", sinon la route fusion-hall-of-fame le
+//   • le trône   = world "platine", UNE LIGNE PAR JOUEUR SACRÉ (et non plus une ligne unique écrasée) : le
+//     palier a un CLASSEMENT (Empereur = le plus de points), donc chaque Maître garde sa fiche même après
+//     avoir perdu la chaise. Le tenant du moment = la ligne au `wonAt` le plus récent.
+//     ⚠️ SANS le préfixe "fusion:", sinon la route fusion-hall-of-fame le
 //     ramasserait et ferait un JSON.parse en attendant un TABLEAU, alors que le trône est un OBJET.
 //
 // Comme partout dans ce chapitre, le client est autoritaire sur SON résultat de combat (les saves le sont déjà) ;
@@ -21,7 +24,8 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import {
-    PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, awardFailurePoint, reignDays,
+    PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, renewThrone, awardFailurePoint, reignDays,
+    rankThrones, throneTitle, type ThroneEntry,
 } from "@/lib/gamebook/yellow/data/platineThrone"
 import { buildPlatineCorridor, type PlatineChampion } from "@/lib/gamebook/yellow/data/platineArena"
 
@@ -35,13 +39,27 @@ async function requireYellow() {
     return { ok: true as const, userId }
 }
 
-/** La ligne du trône (au plus une). */
-async function readThroneRow(lc: any) {
-    return (await lc.findFirst({
+type ThroneRow = { id: string; userId: string; nickname: string; team: string; wonAt: Date }
+
+/** TOUTES les fiches de Maître, le dernier sacré en tête. `[0]` est donc le TENANT (celui qu'on affronte en
+ *  dernière salle) ; les suivants sont d'anciens Maîtres qui gardent leurs points. */
+async function readThroneRows(lc: any): Promise<ThroneRow[]> {
+    return (await lc.findMany({
         where: { world: PLATINE_THRONE_WORLD },
         orderBy: { wonAt: "desc" },
+        take: 50,
         select: { id: true, userId: true, nickname: true, team: true, wonAt: true },
-    })) as { id: string; userId: string; nickname: string; team: string; wonAt: Date } | null
+    })) as ThroneRow[]
+}
+
+/** Décode les fiches en entrées de classement, en jetant celles dont le payload est illisible. */
+function toEntries(rows: ThroneRow[]): ThroneEntry[] {
+    const out: ThroneEntry[] = []
+    for (const r of rows) {
+        const slot = decodeThrone(r.team)
+        if (slot) out.push({ userId: r.userId, nickname: r.nickname, slot })
+    }
+    return out
 }
 
 export async function GET() {
@@ -85,19 +103,29 @@ export async function GET() {
         })
         const rooms = buildPlatineCorridor(all)
 
-        const row = await readThroneRow(lc)
-        const slot = row ? decodeThrone(row.team) : null
-        const throne = row && slot
+        // LE TENANT = la fiche la plus récemment sacrée. C'est LUI qu'on affronte en dernière salle (👑), même
+        //   s'il n'est pas en tête du classement : l'Empereur, lui, est celui qui a repoussé le plus de monde.
+        const rows = await readThroneRows(lc)
+        const now = new Date()
+        const holder = rows[0] ?? null
+        const slot = holder ? decodeThrone(holder.team) : null
+        const throne = holder && slot
             ? {
-                userId: row.userId, nickname: row.nickname,
+                userId: holder.userId, nickname: holder.nickname,
                 points: slot.points, sinceAt: slot.sinceAt,
-                reignDays: reignDays(slot, new Date()),
+                reignDays: reignDays(slot, now),
                 team: slot.team, avatar: slot.avatar,
             }
             : null
-        return NextResponse.json({ ok: true, throne, rooms })
+        const ranking = rankThrones(toEntries(rows), holder?.userId ?? null, now).map((r) => ({
+            userId: r.userId, nickname: r.nickname, rank: r.rank,
+            points: r.slot.points, reigns: r.slot.reigns, days: r.days,
+            isHolder: r.isHolder, isEmperor: r.isEmperor, title: throneTitle(r),
+            avatar: r.slot.avatar,
+        }))
+        return NextResponse.json({ ok: true, throne, ranking, rooms })
     } catch {
-        return NextResponse.json({ ok: true, throne: null, rooms: [] }) // table absente → neutre
+        return NextResponse.json({ ok: true, throne: null, ranking: [], rooms: [] }) // table absente → neutre
     }
 }
 
@@ -112,7 +140,8 @@ export async function POST(req: NextRequest) {
 
     try {
         const lc = (prisma as any).leagueChampion
-        const row = await readThroneRow(lc)
+        const rows = await readThroneRows(lc)
+        const row = rows[0] ?? null                       // le TENANT (dernier sacré)
         const current = row ? decodeThrone(row.team) : null
 
         // ── ÉCHEC : le tenant marque +1. Rien à faire si le trône est vide, et JAMAIS de crédit à soi-même
@@ -132,14 +161,18 @@ export async function POST(req: NextRequest) {
         const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 200) : undefined
         const slot = claimThrone(team as any, avatar, new Date())
 
-        // UN SEUL trône : on remplace la ligne existante au lieu d'en empiler une nouvelle. `wonAt` est repassé
-        //   explicitement (il n'est pas @updatedAt) pour que l'ancienneté reparte du nouveau règne.
-        if (row) {
-            await lc.update({ where: { id: row.id }, data: { userId: auth.userId, nickname: me.nickname, team: encodeThrone(slot), wonAt: new Date() } })
+        // UNE FICHE PAR JOUEUR. Un ancien Maître qui reprend la chaise MET À JOUR la sienne et GARDE ses points
+        //   (renewThrone) : le classement des Empereurs a de la mémoire. `wonAt` est repassé explicitement (ce
+        //   n'est pas un @updatedAt) — c'est lui qui désigne le tenant et fait repartir l'ancienneté.
+        const mine = rows.find((r) => r.userId === auth.userId) ?? null
+        const prev = mine ? decodeThrone(mine.team) : null
+        const next = prev ? renewThrone(prev, team as any, avatar, new Date()) : slot
+        if (mine) {
+            await lc.update({ where: { id: mine.id }, data: { nickname: me.nickname, team: encodeThrone(next), wonAt: new Date() } })
         } else {
-            await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: encodeThrone(slot), world: PLATINE_THRONE_WORLD } })
+            await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: encodeThrone(next), world: PLATINE_THRONE_WORLD } })
         }
-        return NextResponse.json({ ok: true, throne: { nickname: me.nickname, points: 0, sinceAt: slot.sinceAt } })
+        return NextResponse.json({ ok: true, throne: { nickname: me.nickname, points: next.points, reigns: next.reigns, sinceAt: next.sinceAt } })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // table absente → neutre
     }

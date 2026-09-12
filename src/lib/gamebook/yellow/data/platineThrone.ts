@@ -26,10 +26,14 @@ export interface ThroneSlot {
     team: FusionChampionMon[]
     /** Le skin du tenant au moment du sacre (même logique que le reflet de la Ligue OR). */
     avatar?: string
-    /** +1 par challenger tombé dans le couloir. Remis à 0 à chaque changement de tenant. */
+    /** +1 par challenger tombé dans le couloir. CUMULÉ À VIE (décision Sartay 11/09) : perdre le trône ne
+     *  remet pas le compteur à zéro, sinon le classement des Empereurs n'aurait aucune mémoire et un règne
+     *  long mais ancien vaudrait zéro. On repart donc de son score quand on reprend la chaise. */
     points: number
-    /** ISO — début du règne EN COURS. */
+    /** ISO — début du règne EN COURS (remis à maintenant à chaque reprise du trône). */
     sinceAt: string
+    /** Nombre de fois où ce joueur a pris la chaise. 1 au premier sacre. */
+    reigns: number
 }
 
 /** Sérialise un trône pour la colonne `team` (String). */
@@ -52,13 +56,20 @@ export function decodeThrone(raw: string | null | undefined): ThroneSlot | null 
         avatar: typeof r.avatar === "string" ? r.avatar.slice(0, 200) : undefined,
         points: Number.isFinite(r.points) ? Math.max(0, Math.floor(r.points as number)) : 0,
         sinceAt: typeof r.sinceAt === "string" ? r.sinceAt : new Date(0).toISOString(),
+        reigns: Number.isFinite(r.reigns) ? Math.max(1, Math.floor(r.reigns as number)) : 1,
     }
 }
 
 /** Un NOUVEAU règne : l'équipe est figée, le compteur repart de zéro, le chrono démarre maintenant.
  *  `now` est injecté (jamais Date.now() implicite) → testable et déterministe. */
 export function claimThrone(team: FusionChampionMon[], avatar: string | undefined, now: Date): ThroneSlot {
-    return { v: 1, team: team.slice(0, 6), avatar, points: 0, sinceAt: now.toISOString() }
+    return { v: 1, team: team.slice(0, 6), avatar, points: 0, sinceAt: now.toISOString(), reigns: 1 }
+}
+
+/** RETOUR SUR LE TRÔNE. Un ancien Maître qui reprend la chaise GARDE son score (points à vie), grave sa
+ *  nouvelle équipe, et son chrono de règne repart de zéro. Sans ça, reprendre le trône COÛTERAIT des points. */
+export function renewThrone(prev: ThroneSlot, team: FusionChampionMon[], avatar: string | undefined, now: Date): ThroneSlot {
+    return { v: 1, team: team.slice(0, 6), avatar, points: prev.points, sinceAt: now.toISOString(), reigns: prev.reigns + 1 }
 }
 
 /** Un challenger vient d'échouer → +1 au tenant. Le tenant ne peut PAS se créditer lui-même (il lui suffirait
@@ -87,4 +98,47 @@ export function reignLabel(slot: ThroneSlot, now: Date): string {
  *  qu'un jour écoulé : tenir en repoussant du monde vaut mieux que tenir parce que personne n'est venu. */
 export function throneScore(slot: ThroneSlot, now: Date): number {
     return slot.points * 10 + reignDays(slot, now)
+}
+
+// ─────────── LE CLASSEMENT DES EMPEREURS (idée Sartay 11/09) ───────────
+// Deux titres, deux logiques, et c'est volontaire :
+//   • le MAÎTRE EN TITRE (👑) est celui qu'on affronte en dernière salle — le dernier à s'être assis ;
+//   • l'EMPEREUR est celui qui a repoussé le plus de challengers — il trône en tête du classement, qu'il
+//     soit encore sur la chaise ou non. Tenir, c'est bien ; résister, c'est mieux.
+// Un Maître en titre fraîchement sacré peut donc être dernier au classement : il n'a encore rien défendu.
+
+export interface ThroneEntry { userId: string; nickname: string; slot: ThroneSlot }
+export interface RankedThrone extends ThroneEntry {
+    rank: number
+    /** Assis sur la chaise en ce moment (celui qu'on affronte) — au plus un. */
+    isHolder: boolean
+    /** Tête du classement (le plus de points). Peut être quelqu'un d'autre que le Maître en titre. */
+    isEmperor: boolean
+    days: number
+}
+
+/** Range les Maîtres : POINTS d'abord (c'est le sens du palier : résister), puis l'ancienneté du règne en
+ *  cours, puis le pseudo pour que l'ordre soit STABLE (deux ex æquo ne doivent pas permuter d'un chargement
+ *  à l'autre). `holderUserId` ne change PAS l'ordre — il ne fait que poser la couronne. */
+export function rankThrones(entries: readonly ThroneEntry[], holderUserId: string | null, now: Date): RankedThrone[] {
+    return [...entries]
+        .sort((a, b) =>
+            b.slot.points - a.slot.points ||
+            reignDays(b.slot, now) - reignDays(a.slot, now) ||
+            a.nickname.localeCompare(b.nickname))
+        .map((e, i) => ({
+            ...e,
+            rank: i + 1,
+            isHolder: !!holderUserId && e.userId === holderUserId,
+            isEmperor: i === 0 && e.slot.points > 0, // personne n'est Empereur sans avoir repoussé quelqu'un
+            days: reignDays(e.slot, now),
+        }))
+}
+
+/** Le titre à afficher devant un nom, au Palmarès comme dans la salle. */
+export function throneTitle(r: RankedThrone): string {
+    if (r.isEmperor && r.isHolder) return "👑 EMPEREUR DU NEXUS"
+    if (r.isEmperor) return "⭐ Empereur du Nexus"
+    if (r.isHolder) return "👑 Maître en titre"
+    return "Ancien Maître"
 }

@@ -72,3 +72,17 @@ export async function postReplaySpend(): Promise<{ ok: boolean; jc: number; repl
         }
     } catch { return { ok: false, jc: 0, replaysUsed: 0, cost: 0, reason: "error" } }
 }
+
+/** DON de jetons (pot-de-vin des vaincus du couloir platine). Best-effort : un réseau muet ne doit pas gâcher
+ *  une victoire. Le montant est REPLAFONNÉ côté serveur — cet appel n'est pas une source de vérité. */
+export async function postFrontierGrant(amount: number): Promise<number | null> {
+    try {
+        const r = await fetch(BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "grant", amount }),
+        })
+        const j = await r.json()
+        return typeof j?.jc === "number" ? j.jc : null
+    } catch { return null }
+}

@@ -14,6 +14,10 @@ import PlayerBadgesModal from "./PlayerBadgesModal"
 
 interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number; fun?: boolean; energySpent?: number }
 interface FusionChamp { userId: string; nickname: string; wonAt: string; tier: string }
+/** Une fiche de MAÎTRE DU NEXUS (palier platine). `isHolder` = assis sur la chaise en ce moment (👑, c'est lui
+ *  qu'on affronte) ; `isEmperor` = tête du classement (le plus de challengers repoussés). Les deux peuvent
+ *  désigner deux joueurs DIFFÉRENTS, et c'est tout l'intérêt : tenir n'est pas résister. */
+interface EmperorRow { userId: string; nickname: string; rank: number; points: number; reigns: number; days: number; isHolder: boolean; isEmperor: boolean; title: string }
 type TabId = "run1" | "run2" | "run3" | "run3energy" | "duels" | "run4"
 type Data = { run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
@@ -23,7 +27,7 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
     { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
-    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier (Platine > Or > Argent > Bronze) puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
+    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les EMPEREURS DU NEXUS (palier platine) d'abord, classés au nombre de challengers repoussés ; puis les Maîtres de la Chimère par palier (Platine > Or > Argent > Bronze) et ancienneté du sacre. Personne encore ? Sois-le ! 🐉" },
 ]
 
 const TIER_RANK: Record<string, number> = { platine: 4, or: 3, argent: 2, bronze: 1 }
@@ -321,11 +325,48 @@ const FEAT_FIRST_META: { id: string; label: string }[] = [
 
 /** Onglet RUN 4 / LIGUE : 🥇 PREMIÈRES DU GROUPE (course au premier, gravé à vie) + Maîtres de la Chimère classés
  *  par palier (Platine>Or>Argent>Bronze) puis par ANCIENNETÉ du sacre (le 1er vainqueur en tête). */
+/** LE CLASSEMENT DES EMPEREURS (palier platine). Chargé À L'OUVERTURE DE L'ONGLET seulement : c'est un écran
+ *  de fin de jeu, inutile de payer la requête pour tous les autres onglets. Silencieux si personne n'a encore
+ *  pris la chaise — le palier reste alors invisible pour qui n'y est pas. */
+function EmperorsBoard() {
+    const [rows, setRows] = useState<EmperorRow[] | null>(null)
+    useEffect(() => {
+        let cancel = false
+        fetch("/api/gamebook/yellow/platine-throne")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (!cancel) setRows(Array.isArray(d?.ranking) ? d.ranking : []) })
+            .catch(() => { if (!cancel) setRows([]) })
+        return () => { cancel = true }
+    }, [])
+    if (!rows || rows.length === 0) return null
+    return (
+        <>
+            <div style={sectionTitle}>💎 EMPEREURS DU NEXUS</div>
+            <div style={{ fontSize: 10, opacity: 0.6, lineHeight: 1.45, margin: "0 0 6px" }}>
+                Palier PLATINE. <b>+1 point</b> par challenger qui tombe dans ton couloir — les points sont <b>gardés à vie</b>.
+                👑 = le <b>Maître en titre</b>, celui qu&apos;on affronte en dernière salle. ⭐ = l&apos;<b>Empereur</b>, celui qui a repoussé le plus de monde.
+            </div>
+            {rows.slice(0, 10).map((e) => (
+                <div key={e.userId} style={{ ...row, background: e.isEmperor ? "rgba(185,220,255,0.14)" : "rgba(255,255,255,0.05)", border: e.isHolder ? "1px solid rgba(255,213,74,0.55)" : "1px solid transparent" }}>
+                    <span style={rank}>{e.isEmperor ? "⭐" : `${e.rank}.`}</span>
+                    <span style={name}>{e.isHolder ? "👑 " : ""}{e.nickname}</span>
+                    <span style={{ fontSize: 10, opacity: 0.6, whiteSpace: "nowrap", marginRight: 6 }}>
+                        {e.days > 0 ? `${e.days} j` : "sacré ce jour"}{e.reigns > 1 ? ` · ${e.reigns} règnes` : ""}
+                    </span>
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "#b9dcff", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{e.points} pt{e.points > 1 ? "s" : ""}</span>
+                </div>
+            ))}
+            <div style={{ height: 10 }} />
+        </>
+    )
+}
+
 function Run4Tab({ champs, firsts }: { champs: FusionChamp[]; firsts: Record<string, { userId: string; nickname: string }> }) {
     const ranked = champs.slice().sort((a, b) =>
         (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0) || (Date.parse(a.wonAt) - Date.parse(b.wonAt)))
     return (
         <div style={scroll}>
+            <EmperorsBoard />
             <div style={sectionTitle}>🥇 PREMIÈRES DU GROUPE</div>
             <div style={{ marginBottom: 12 }}>
                 {FEAT_FIRST_META.map((f) => (

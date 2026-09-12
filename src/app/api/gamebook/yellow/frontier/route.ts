@@ -18,6 +18,8 @@ import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 export const dynamic = "force-dynamic"
 
 const DEFAULTS = { jc: 0, towerBest: 0, factoryBest: 0, domeBest: 0, symbols: [] as string[] }
+/** Plafond d'un DON de jetons (couloir platine : 6 Daemons × 50 JC). Empêche un client bricolé de se servir. */
+const GRANT_MAX = 300
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -71,6 +73,22 @@ export async function POST(req: NextRequest) {
     try {
         const fp = (prisma as any).frontierProfile
 
+        // DON DE JETONS hors Zone de Combat (pot-de-vin des vaincus du couloir platine) : crédite SANS toucher
+        //   au moindre record de salle — `recordRun` exige un mode connu et écrirait un meilleur score parasite.
+        //   Montant PLAFONNÉ côté serveur : le client ne peut pas s'auto-attribuer n'importe quoi.
+        if (action === "grant") {
+            const amount = Math.max(0, Math.min(GRANT_MAX, Math.floor(Number(body.amount) || 0)))
+            if (amount === 0) return NextResponse.json({ ok: true, jc: 0, skipped: "zero" })
+            const fp = (prisma as any).frontierProfile
+            const cur = await fp.findUnique({ where: { userId: auth.userId }, select: { jc: true } })
+            const next = (cur?.jc ?? 0) + amount
+            await fp.upsert({
+                where: { userId: auth.userId },
+                create: { userId: auth.userId, ...DEFAULTS, jc: amount },
+                update: { jc: next },
+            })
+            return NextResponse.json({ ok: true, jc: next })
+        }
         if (action === "recordRun") {
             const bestField = BEST_FIELD[String(body.mode)]
             if (!bestField) return NextResponse.json({ error: "Bad mode" }, { status: 400 })

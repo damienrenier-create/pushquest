@@ -10,6 +10,21 @@
 //   • DIEU SPAGHETTI : grandiloquent, chaleureux, solennel. Il vouvoie l'exploit, jamais le joueur.
 //   • ACE : nihiliste, blasé, drôle à froid. Il appelle le joueur « rival ». Il ne se vante jamais vraiment.
 
+/** ANNONCE D'OUVERTURE — posée à l'Autel, une seule fois. Le sacre OR d'un futur champion dit déjà « va au
+ *  trône » (cf. le REFLET dans trainers.ts), mais les champions OR d'AVANT la feature ne reverront jamais
+ *  ce texte : sans cette annonce, le palier leur serait ouvert en SILENCE et ils ne le sauraient jamais. */
+export const PLATINE_ANNOUNCE_MARKER = "platine_announce_seen"
+
+/** Le Dieu Spaghetti, sur le dôme de l'Autel, le jour où la dernière porte s'ouvre. */
+export const PLATINE_THRONE_OPEN_LINES = [
+    "*Le Dieu Spaghetti t'attend au pied de la porte à dragons. Il a l'air… nerveux.*",
+    "« Maître de la Chimère. Tu as bouclé mon OR, et j'ai longtemps cru que c'était la fin de l'histoire. »",
+    "« Je me trompais. Il restait une porte, derrière la mienne. Je viens de la descelller. »",
+    "« Derrière, il n'y a plus de Conseil, plus de boss, plus de moi. Il y a un COULOIR — et au bout, une CHAISE. »",
+    "« Celui qui l'occupe est le Maître Ultime du Nexus. Aujourd'hui, la chaise attend. Demain, quelqu'un d'autre y sera assis. »",
+    "« La porte à dragons ne mène plus au Conseil. Elle mène là-haut. Quand tu voudras. »",
+]
+
 /** Le grand discours n'est prononcé QU'UNE FOIS par joueur (marqueur dans defeatedTrainers) ; ensuite il
  *  s'efface et laisse passer (PLATINE_SPAGHETTI_SHORT). */
 export const PLATINE_INTRO_MARKER = "platine_intro_seen"
@@ -91,3 +106,33 @@ export const PLATINE_CREDITS_TITLE_LOSS = "🪑 LE TRÔNE RESTE OCCUPÉ"
 export const PLATINE_CREDITS_MINE = "Tes chimères — leur plus grand coup"
 export const PLATINE_CREDITS_FOES = "Ce qu'ils t'ont mis — leur plus grand coup"
 export const PLATINE_CREDITS_EMPTY = "— aucun coup porté —"
+
+// ─────────── L'EXCUSE ET LE POT-DE-VIN (idée Sartay) ───────────
+// Perdre, c'est humiliant. Alors le vaincu se justifie — mal — puis achète le silence du joueur en jetons de
+// combat. Le tarif est indexé sur les dégâts qu'il a causés : 50 JC par Daemon qu'il a mis K.O.
+// Personne n'est dupe, et c'est tout l'intérêt.
+
+/** Tarif du silence, par Daemon du joueur mis K.O. par le vaincu. */
+export const PLATINE_BRIBE_PER_KO = 50
+
+/** Excuses bidon. `{n}` = nombre de Daemons du joueur qu'il a mis K.O. (0 possible : il n'a rien touché). */
+export const PLATINE_EXCUSES: string[] = [
+    "« Le sol était glissant. Enfin — il l'aurait été, s'il y avait eu de l'eau. »",
+    "« J'ai un souci de synergie en ce moment. C'est mes parents. Enfin, les leurs. »",
+    "« Ma chimère a mal dormi. Les Spores Dodo, ça marche dans les deux sens, figure-toi. »",
+    "« Techniquement, j'ai gagné. C'est juste que toi aussi, et plus fort. »",
+    "« J'étais en train de compter mes points. On m'a déconcentré. »",
+    "« La lumière de cette salle écrase les couleurs. Mes types ne ressortaient pas. »",
+    "« Mon objet tenu était périmé. Je savais que j'aurais dû lire l'étiquette. »",
+    "« Ce n'était pas mon vrai moveset. C'était… un brouillon. Un moveset de répétition. »",
+    "« Le RNG. Je ne dirai rien de plus. Le RNG. »",
+    "« J'ai voulu te laisser une chance, au début. Après, c'était trop tard pour faire demi-tour. »",
+    "« Mes STAB étaient mal calibrées. Le Dieu Spaghetti me doit une révision. »",
+    "« Honnêtement ? J'avais la tête au prochain palier. Celui d'après le tien. »",
+]
+
+/** La phrase du pot-de-vin. `{jc}` = montant, `{n}` = Daemons mis K.O. */
+export const PLATINE_BRIBE_LINE = "*Il sort une poignée de jetons et te la fourre dans la main, sans te regarder.*"
+export const PLATINE_BRIBE_DEAL = "« Tiens. {jc} jetons — {n} des tiens sont tombés, c'est le tarif. On est d'accord que rien de tout ça n'est arrivé ? »"
+/** Cas où il n'a mis AUCUN Daemon K.O. : il n'a rien à monnayer, et c'est encore pire pour lui. */
+export const PLATINE_BRIBE_NONE = "« Je te donnerais bien quelque chose pour ton silence, mais je n'ai même pas touché un seul des tiens. Garde ta pitié. »"

@@ -66,7 +66,9 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { markPlatineOpponentBeaten, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun } from "./platineRun"
+import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun } from "./platineRun"
+import { PLATINE_BRIBE_PER_KO, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE } from "../data/platineLore"
+import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
 import { recordFusionLeagueDefeat, snapshotFusionChampionRoster, getFusionChampionRoster } from "./playerStore"
@@ -368,12 +370,35 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
 }
 
+/** Daemons DEJA a terre a l'ouverture du combat. Le couloir platine reporte les PV de salle en salle : sans
+ *  cette reference, un adversaire se verrait facturer les K.O. de ses predecesseurs. */
+/** L'unique dresseur du couloir platine. Toutes les salles le réutilisent — c'est le PNJ qui change de
+ *  visage, pas le dresseur. */
+export const PLATINE_TRAINER_ID = "y_fusion_platine"
+
+/** Faut-il GRAVER « ce dresseur est battu » dans la save après une victoire ?
+ *
+ *  OUI pour tout le monde — et les salles de la Ligue classique en DÉPENDENT : c'est ce marqueur qui
+ *  déverrouille leur porte de droite (cf. LIGUE_ROOM_TRAINER dans gameStore).
+ *
+ *  NON pour le couloir platine, et c'est la seule exception. Là-bas, une SEULE salle et un SEUL id de
+ *  dresseur servent à toutes les étapes : le marqueur ne dirait pas « j'ai battu ACE », il dirait « j'ai
+ *  battu le couloir », et interact() refuserait ensuite tout combat (réplique de défaite sans
+ *  pendingTrainerId). Résultat mesuré avant ce correctif : plus aucun adversaire au-delà d'ACE, sacre
+ *  inatteignable. La progression du couloir vit dans platineRun (étape + drapeau « battu »), pas dans la save. */
+export function persistsDefeatOnWin(trainerId: string): boolean {
+    return trainerId !== PLATINE_TRAINER_ID
+}
+
+let platineKoAtStart = 0
+
 export function startTrainerBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
     seed: number,
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
+    platineKoAtStart = playerTeam.filter((m) => m.currentHp <= 0).length
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
     const isDuel = !!opts?.trainerId?.startsWith("duel:") || !!opts?.trainerId?.startsWith("run2ghost:") // reflet / PNJ run-2 d'un autre joueur → XP DOUBLE
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
@@ -1251,6 +1276,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     `✨ Tu obtiens un ${nemesisRewardName(rewardSp)}${opts.shiny ? " ✨CHROMATIQUE✨" : ""} au potentiel PARFAIT (niv ${lvl}) ! Il grandira LENTEMENT — comme les légendaires.${bonusLine}`,
                 ] }
             }
+        } else if (!persistsDefeatOnWin(storeState.trainer.trainerId)) {
+            // ⚠️ LE COULOIR PLATINE NE SE MARQUE JAMAIS « BATTU ». Contrairement aux salles de la Ligue classique
+            //   (une carte + un dresseur chacune, où le marqueur EST le verrou de porte), le couloir platine
+            //   réutilise UNE salle et UN SEUL id de dresseur pour toutes ses étapes. Poser le marqueur ici
+            //   scellait le PNJ dès la victoire sur ACE : à l'étape suivante, interact() tombait sur
+            //   `isTrainerDefeated(trainer.id)` et servait une réplique de défaite SANS lancer de combat —
+            //   plus aucun adversaire au-delà d'ACE, sacre inatteignable, palier injouable.
+            //   La progression du couloir vit dans platineRun (étape + drapeau « battu »), nulle part ailleurs.
+            //   Pas de récompense générique non plus : le couloir a la sienne (l'excuse et le pot-de-vin).
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             recordTeamCompoAchievements(getPlayer().team) // HAUTS FAITS mono-stade + mono-type (victoire dresseur)
@@ -1405,7 +1439,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 🎰 RÉCOMPENSE CASINO — LIGUE DE FUSION (Conseil des Chimères + LANCE, hors boss miroir) : comme le Conseil 4, chaque
     //   dresseur vaincu file de l'énergie de casino selon le nb de TES Daemons K.O. (5 ⚡/K.O. ; sans-faute 0 K.O. → 50 ⚡
     //   « autographe »). grantRouletteCredit est no-op en run 3 (source d'énergie unique). Le boss miroir est exclu (son enjeu = le sacre).
-    if (b.outcome === "win" && lid && lid.startsWith("y_fusion_") && lid !== "y_fusion_miroir") {
+    if (b.outcome === "win" && lid && lid.startsWith("y_fusion_") && lid !== "y_fusion_miroir" && lid !== "y_fusion_platine") {
         const ko = b.player.team.filter((m) => m.currentHp <= 0).length
         const tName = getTrainer(lid)?.name ?? "Conseil des Chimères"
         if (ko === 0) {
@@ -1432,6 +1466,21 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (lid === "y_fusion_platine") {
         if (b.outcome === "win") {
             markPlatineOpponentBeaten()
+            // L'EXCUSE ET LE SILENCE (idee Sartay). Le vaincu se justifie — mal — puis achete ton silence :
+            //   50 JC par Daemon qu'IL a mis a terre. On facture le DELTA de K.O. de CE combat uniquement
+            //   (les PV sont reportes de salle en salle : le total de fin inclut les morts d'avant).
+            //   Excuse choisie de facon DETERMINISTE (nom + etape) : elle ne change pas si l'ecran se recharge.
+            const koHere = Math.max(0, b.player.team.filter((m) => m.currentHp <= 0).length - platineKoAtStart)
+            const jc = koHere * PLATINE_BRIBE_PER_KO
+            const foeName = currentPlatineOpponent()?.label ?? "LE MAITRE"
+            let h = getPlatineStep()
+            for (let i = 0; i < foeName.length; i++) h = (h * 31 + foeName.charCodeAt(i)) | 0
+            const excuse = PLATINE_EXCUSES[Math.abs(h) % PLATINE_EXCUSES.length]
+            const deal = jc > 0
+                ? [PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL.replace("{jc}", String(jc)).replace("{n}", String(koHere))]
+                : [PLATINE_BRIBE_NONE]
+            if (jc > 0) void postFrontierGrant(jc) // le solde JC est SERVEUR : on credite la, le client le relira
+            rematchReward = { npcId: "y_fusion_platine", npcName: foeName, lines: [excuse, ...deal] }
             // DERNIÈRE salle : inutile de faire franchir une porte de plus pour tomber sur une salle vide —
             //   le couloir est bouclé, on prend la chaise. L'équipe gravée est le roster gauntlet VAINQUEUR,
             //   figé exactement comme au sacre de la Ligue (nom/sprite/types/stats/attaques + parents).
@@ -1440,7 +1489,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const frozen = (gt ?? []).map((f) => {
                     const par = getSpecies(f.speciesId)?.fusionParents
                     return {
-                        name: f.result.name,
+                        // Le nom AFFICHE vient de l espece (curé → officiel → mélange) : `result.name` est toujours le mélange brut,
+
+                        //   et figerait « Goshe-gnos » la ou le joueur a vu « Ukognofy ».
+
+                        name: getSpecies(f.speciesId)?.name ?? f.result.name,
                         sprite: getSpecies(f.speciesId)?.sprite ?? "",
                         types: [...f.result.types],
                         level: f.result.level,
@@ -1450,6 +1503,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     }
                 })
                 reportPlatineClaim(frozen, getPlayer().chosenAvatar)
+                // Marqueur LOCAL du palier : il coche la ligne PLATINE de l'épilogue et fait apparaître « Platine »
+                //   au palmarès de sacre. Il dit « j'ai pris la chaise au moins une fois », PAS « je suis assis dessus »
+                //   — ça, seul le serveur le sait, et ça peut changer pendant qu'on dort.
+                markTrainerDefeated(FUSION_TIER_MARKER.platine)
                 platineSacre = true
             }
         } else if (b.outcome === "lose") {
@@ -1491,7 +1548,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     team: gt.map((f) => {
                         const par = getSpecies(f.speciesId)?.fusionParents // espèces parentes → re-résolution du sprite au Hall of Fame
                         return {
-                            name: f.result.name,
+                            // Le nom AFFICHE vient de l espece (curé → officiel → mélange) : `result.name` est toujours le mélange brut,
+
+                            //   et figerait « Goshe-gnos » la ou le joueur a vu « Ukognofy ».
+
+                            name: getSpecies(f.speciesId)?.name ?? f.result.name,
                             sprite: getSpecies(f.speciesId)?.sprite ?? "",
                             types: [...f.result.types],
                             level: f.result.level,

@@ -1560,10 +1560,17 @@ export const TRAINERS: TrainerData[] = [
             "« L'équipe EXACTE avec laquelle tu as forgé ta légende se tient devant toi. Pour être sacré, dépasse ton ancien toi. »",
             "« Bats ton reflet… ou renonce au titre. EN GARDE ! »",
         ],
+        // SACRE OR. Ces répliques sont le SEUL moment où le palier PLATINE est annoncé à chaud : boucler l'OR
+        //   pose `fusleague_platine_open` (cf. battleStore) et re-route la porte à dragons de l'Autel vers le
+        //   trône. Sans ces trois dernières lignes, le joueur serait sacré puis laissé sans la moindre idée
+        //   qu'un 4ᵉ palier vient de s'ouvrir dans son dos.
         defeat: [
             "*Ton reflet s'efface dans une gerbe d'étincelles dorées.*",
             "« Tu n'es plus celui qui a franchi ce seuil. Tu es DAVANTAGE. »",
             "« Le titre de MAÎTRE DE LA CHIMÈRE t'appartient, pour de bon. Le Nexus est à toi. »",
+            "*Au loin, une porte que personne n'avait jamais vue s'ouvre en grinçant.*",
+            "« …mais le Nexus, lui, n'a qu'un seul TRÔNE. Et tu n'y es pas encore assis. »",
+            "« Retourne à l'Autel. La porte à dragons ne mène plus à mon Conseil : elle mène au palier PLATINE, et à la chaise qui t'y attend. »",
         ],
     },
 ]

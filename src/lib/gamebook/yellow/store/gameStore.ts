@@ -32,7 +32,7 @@ import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep } from "./platineRun"
-import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES } from "../data/platineLore"
+import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -153,7 +153,10 @@ export function activeNpcs() {
         if (opp) {
             list = list.map((n) => {
                 if (n.id !== "y_fusion_platine") return n
-                const named = { ...n, name: opp.label }
+                // LA COURONNE : seul le MAÎTRE EN TITRE la porte — c'est lui qu'il faut détrôner, et elle le dit
+                //   sans texte d'explication. Elle ne suit PAS le classement : l'EMPEREUR (celui qui a repoussé le
+                //   plus de challengers, en tête du Palmarès) peut très bien ne plus être assis sur la chaise.
+                const named = { ...n, name: opp.kind === "throne" ? `👑 ${opp.label}` : opp.label }
                 return isValidAvatar(opp.avatar)
                     ? { ...named, gen3: { url: avatarSheet(opp.avatar), tint: avatarFilter(opp.avatar) } }
                     : named
@@ -796,6 +799,16 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         //   l'adversaire : ACE d'abord, puis chaque champion OR rejoué depuis la photo de son sacre, puis le
         //   MAÎTRE en titre. Le couloir vient du SERVEUR (route platine-throne) et a été déposé à l'entrée de la
         //   salle ; on le lit ici SYNCHRONEMENT, comme le reste du lancement de combat.
+        // DÉJÀ À TERRE : le marqueur `defeatedTrainers` ne verrouille plus rien ici (il scellait tout le
+        //   couloir, cf. battleStore), donc c'est CE garde-fou qui empêche de re-combattre le même adversaire
+        //   en boucle — et de re-encaisser son pot-de-vin — tant qu'on n'a pas franchi la porte.
+        if (isPlatineOpponentBeaten()) {
+            const down = currentPlatineOpponent()
+            return {
+                npcId: trainerId, npcName: down?.label ?? trainer.name, lineIndex: 0,
+                lines: ["*Il est déjà à terre, et il évite ton regard.*", "« C'est bon, tu as gagné. La porte de droite est ouverte — va-t'en. »"],
+            }
+        }
         const opp = currentPlatineOpponent()
         if (!opp) {
             // Couloir non chargé (réseau muet) ou déjà terminé : on ne lance JAMAIS un combat dans le vide.
@@ -1964,6 +1977,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const ukognofyAutoAmbush = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated)
                     && ukognofyFails === 0 && getPlayerSave().team.some((m) => m.currentHp > 0)
                 const ukognofyWarn = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated) && ukognofyFails >= 1
+                // OUVERTURE DU TRÔNE — une seule fois, en arrivant à l'Autel. Le sacre OR l'annonce déjà à chaud,
+                //   mais les champions OR d'AVANT la feature ont reçu le palier par migration au chargement : sans
+                //   ça, la porte changerait de destination dans leur dos, sans un mot. Volontairement placé APRÈS
+                //   la 1re visite du dôme dans la cascade (un joueur platine l'a forcément déjà faite).
+                const platineAnnounce = targetMapId === "yellow_combat_autel"
+                    && !isTrainerDefeated(PLATINE_ANNOUNCE_MARKER)
+                    && activeFusionTier((m) => isTrainerDefeated(m)) === "platine"
+                if (platineAnnounce) markTrainerDefeated(PLATINE_ANNOUNCE_MARKER)
                 set({
                     map: newMap, player: newPlayer, interiorReturn,
                     // SALLE DORÉE : annonce du « match surprise » ; sinon 1re ARRIVÉE AU DÔME : explication + Fusiodex.
@@ -1977,6 +1998,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         ],
                     } : firstDomeArrival ? {
                         npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...DOME_SPAGHETTI_LINES],
+                    } : platineAnnounce ? {
+                        npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...PLATINE_THRONE_OPEN_LINES],
                     } : ukognofyWarn ? {
                         // 2ᵉ visite+ : avertissement d'enjeu + rappel du choix APPROCHER / RESSORTIR (pas de combat auto).
                         npcId: UKOGNOFY_NPC_ID, npcName: "UKOGNOFY", lineIndex: 0, lines: ukognofyWarnLines(ukognofyRemainingTries(isTrainerDefeated)),
