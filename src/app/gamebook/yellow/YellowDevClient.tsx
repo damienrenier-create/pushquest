@@ -166,6 +166,7 @@ import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/type
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
 import { usePlatineCorridor } from "@/lib/gamebook/yellow/multiplayer/usePlatineCorridor"
+import { flushPendingPlatineClaim } from "@/lib/gamebook/yellow/store/platineRun"
 import { useArchiviste, type ArchivisteNpc } from "@/lib/gamebook/yellow/multiplayer/useArchiviste"
 import { ARCHIVISTE_ID, ARCHIVISTE_NAME, ARCHIVISTE_TRAINER_ID, ARCHIVISTE_INTRO_LINES, ARCHIVISTE_DAILY_LIMIT_LINES, ARCHIVISTE_MAX_MATCHES_PER_DAY, archivisteEscalation, buildArchivisteTeam, archivisteGreeting, archivisteBadgeLevelOffset } from "@/lib/gamebook/yellow/data/collectionneurNpc"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
@@ -501,6 +502,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // PALIER PLATINE : charge le couloir (ACE + salles des champions + Maître en titre) à l'entrée de la salle
     //   du trône, et l'oublie en sortant. Sans lui, la salle n'a aucun adversaire à présenter.
     usePlatineCorridor(mapPlayer.mapId) // appelé pour son EFFET (charge/oublie le couloir), pas pour sa valeur
+    // SACRE EN CARAFE : si le réseau a lâché pile au moment de graver un sacre platine, on le rejoue ici, une
+    //   fois par chargement. Silencieux : c'est du rattrapage, pas un événement de jeu.
+    useEffect(() => { void flushPendingPlatineClaim() }, [])
     const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
     const [ghostFight, setGhostFight] = useState<{ ghost: Run2Ghost; enemy: MonInstance[] } | null>(null)
     // L'ARCHIVISTE (Collectionneur du dex) — erre sur la Ville Jaune, ré-affrontable (pas de filtre defeatedTrainers).

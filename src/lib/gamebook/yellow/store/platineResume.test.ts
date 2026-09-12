@@ -25,8 +25,9 @@ const {
     setPlatineCorridor, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror,
     currentPlatineOpponent, advancePlatineStep, markPlatineOpponentBeaten, isPlatineOpponentBeaten,
     getPlatineStep, isPlatineFinalStep, getPlatineLedger, setPlatineLedger,
+    reportPlatineClaim, hasPendingPlatineClaim, flushPendingPlatineClaim,
 } = await import("./platineRun")
-const { PLATINE_RUN_LS_KEY, SESSION_LS_KEYS, clearRunSessionStorage } = await import("../storage/sessionKeys")
+const { PLATINE_RUN_LS_KEY, PLATINE_CLAIM_LS_KEY, SESSION_LS_KEYS, clearRunSessionStorage } = await import("../storage/sessionKeys")
 const { recordHit, topHits } = await import("../data/platineLedger")
 type Holder = import("./platineRun").PlatineThroneHolder | null
 
@@ -171,5 +172,71 @@ describe("couloir platine — ce qui DOIT effacer le parcours", () => {
         expect(SESSION_LS_KEYS).toContain(PLATINE_RUN_LS_KEY)
         clearRunSessionStorage()
         expect(_ls[PLATINE_RUN_LS_KEY]).toBeUndefined()
+    })
+})
+
+// LE SACRE NE DOIT PAS SE PERDRE EN SILENCE. Un couloir, c'est 20-30 min sans reprise. La route avalait ses
+//   erreurs en repondant 200, et le client ne relisait meme pas la reponse : on se croyait Maitre alors que
+//   rien n'etait grave. Le sacre est desormais mis en file AVANT l'envoi, retente, puis rejoue au chargement.
+describe("couloir platine — un sacre ne se perd pas sur un reseau muet", () => {
+    beforeEach(() => { for (const k of Object.keys(_ls)) delete _ls[k]; resetPlatineRun() })
+
+    const team = [mon("Voltombre") as any]
+
+    it("le sacre est mis en file AVANT l'envoi (un onglet tue pendant l'appel ne l'emporte pas)", async () => {
+        let calls = 0
+        vi.stubGlobal("fetch", async () => { calls++; throw new Error("reseau mort") })
+        reportPlatineClaim(team, "sk")
+        expect(hasPendingPlatineClaim()).toBe(true) // pose SYNCHRONEMENT, avant meme le 1er fetch
+        await new Promise((r) => setTimeout(r, 0))
+        expect(calls).toBeGreaterThanOrEqual(1)
+        expect(hasPendingPlatineClaim()).toBe(true) // toujours en carafe
+    })
+
+    it("un serveur qui repond 500 NE vide PAS la file (c'est tout le bug d'origine)", async () => {
+        vi.stubGlobal("fetch", async () => ({ ok: false, status: 500, json: async () => ({ ok: false }) }))
+        reportPlatineClaim(team)
+        await new Promise((r) => setTimeout(r, 0))
+        expect(hasPendingPlatineClaim()).toBe(true)
+    })
+
+    it("un serveur qui repond 200 mais { ok:false } ne compte pas non plus comme grave", async () => {
+        vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => ({ ok: false, reason: "write-failed" }) }))
+        reportPlatineClaim(team)
+        await new Promise((r) => setTimeout(r, 0))
+        expect(hasPendingPlatineClaim()).toBe(true)
+    })
+
+    it("grave -> la file se vide", async () => {
+        vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => ({ ok: true, throne: { nickname: "X" } }) }))
+        reportPlatineClaim(team)
+        await new Promise((r) => setTimeout(r, 0))
+        expect(hasPendingPlatineClaim()).toBe(false)
+    })
+
+    it("le rattrapage au chargement rejoue le sacre reste en carafe", async () => {
+        vi.stubGlobal("fetch", async () => ({ ok: false, status: 503, json: async () => ({ ok: false }) }))
+        reportPlatineClaim(team, "sk")
+        await new Promise((r) => setTimeout(r, 0))
+        expect(hasPendingPlatineClaim()).toBe(true)
+
+        let sent: any = null
+        vi.stubGlobal("fetch", async (_u: string, o: any) => { sent = JSON.parse(o.body); return { ok: true, json: async () => ({ ok: true }) } })
+        expect(await flushPendingPlatineClaim()).toBe(true)
+        expect(sent.action).toBe("claim")
+        expect(sent.team[0].name).toBe("Voltombre")
+        expect(sent.avatar).toBe("sk")               // le skin du sacre voyage avec
+        expect(hasPendingPlatineClaim()).toBe(false)
+    })
+
+    it("rien en file = rattrapage silencieux, et une file abimee se jette", async () => {
+        vi.stubGlobal("fetch", async () => { throw new Error("ne devrait pas etre appele") })
+        expect(await flushPendingPlatineClaim()).toBe(false)
+        _ls[PLATINE_CLAIM_LS_KEY] = "pas du json"
+        expect(await flushPendingPlatineClaim()).toBe(false)
+        expect(hasPendingPlatineClaim()).toBe(false) // nettoyee
+        _ls[PLATINE_CLAIM_LS_KEY] = JSON.stringify({ v: 1, team: [] })
+        expect(await flushPendingPlatineClaim()).toBe(false)
+        expect(hasPendingPlatineClaim()).toBe(false) // une equipe vide serait refusee par le serveur : on la jette
     })
 })

@@ -18,11 +18,15 @@ export const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
  *  d'une traite, mais il dure 20-30 minutes : sans ça, un onglet rechargé (PWA tuée sur mobile) reprenait le
  *  COMBAT et perdait l'ÉTAPE — on gagnait contre le Maître à l'étape 0, donc sans être sacré. */
 export const PLATINE_RUN_LS_KEY = "pq_yellow_platine_v1"
+/** SACRE PLATINE EN ATTENTE d'écriture serveur. Un couloir, c'est 20-30 min sans reprise : si le réseau
+ *  tombe pile au moment de graver, on met le sacre de côté et on le rejoue au prochain chargement plutôt
+ *  que de le perdre en silence. Purgée avec la session (une save écrasée n'a plus de sacre à revendiquer). */
+export const PLATINE_CLAIM_LS_KEY = "pq_yellow_platine_claim_v1"
 /** Dernier relevé de score du run 2 (affiché au récap de fin de run). */
 export const RUN2_SCORES_LS_KEY = "pq_yellow_run2scores_v1"
 
 /** Toutes les clés de la session en cours (ordre non significatif). */
-export const SESSION_LS_KEYS: readonly string[] = [BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY, PLATINE_RUN_LS_KEY]
+export const SESSION_LS_KEYS: readonly string[] = [BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY, PLATINE_RUN_LS_KEY, PLATINE_CLAIM_LS_KEY]
 
 /**
  * Purge l'état de session en cours : le joueur SORT de son combat et de sa série en cours.

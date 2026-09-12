@@ -39,6 +39,35 @@ async function requireYellow() {
     return { ok: true as const, userId }
 }
 
+/** BORNAGE DE L'ÉQUIPE DU TRÔNE. Ces chimères sont REJOUÉES telles quelles (frozenStats, aucun recalcul) par
+ *  tous les challengers : une équipe bricolée à 9999 en chaque stat rendrait le trône imprenable À VIE, et
+ *  c'est un abus qui touche les AUTRES joueurs, pas la save du tricheur. On borne donc à l'écriture — c'est
+ *  la seule occasion, ensuite plus personne ne repasse dessus. Renvoie [] si rien d'exploitable.
+ *  (Plafonds larges à dessein : une fusion dorée de palier platine tourne autour de 700-900 par stat.) */
+function sanitizeThroneTeam(raw: unknown): any[] {
+    if (!Array.isArray(raw)) return []
+    const num = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)))
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "")
+    const out: any[] = []
+    for (const m of raw.slice(0, 6)) {
+        if (!m || typeof m !== "object") continue
+        const o = m as Record<string, unknown>
+        const st = (o.stats ?? {}) as Record<string, unknown>
+        const name = str(o.name, 40)
+        if (!name) continue // sans nom, la salle ne peut rien afficher : on préfère l'écarter
+        out.push({
+            name, sprite: str(o.sprite, 300),
+            types: Array.isArray(o.types) ? o.types.slice(0, 2).map((t) => str(t, 20)) : [],
+            level: Math.max(1, Math.min(100, Math.floor(Number(o.level) || 1))),
+            stats: { hp: num(st.hp, 2000), atk: num(st.atk, 1500), def: num(st.def, 1500), spe: num(st.spe, 1500), spc: num(st.spc, 1500) },
+            moves: Array.isArray(o.moves) ? o.moves.slice(0, 4).map((x) => str(x, 40)) : [],
+            aId: o.aId ? str(o.aId, 40) : undefined,
+            bId: o.bId ? str(o.bId, 40) : undefined,
+        })
+    }
+    return out
+}
+
 type ThroneRow = { id: string; userId: string; nickname: string; team: string; wonAt: Date }
 
 /** TOUTES les fiches de Maître, le dernier sacré en tête. `[0]` est donc le TENANT (celui qu'on affronte en
@@ -109,7 +138,11 @@ export async function GET() {
         const now = new Date()
         const holder = rows[0] ?? null
         const slot = holder ? decodeThrone(holder.team) : null
-        const throne = holder && slot
+        // Un trône à l'ÉQUIPE VIDE est traité comme VACANT — même filtre que pour les salles (platineArena).
+        //   Sinon la dernière étape du couloir existe mais ne peut pas se construire : le joueur reçoit « le
+        //   souvenir vacille », son gauntlet est jeté, et PLUS PERSONNE du groupe ne peut boucler le palier
+        //   tant que la ligne n'est pas réparée à la main en base.
+        const throne = holder && slot && slot.team.length > 0
             ? {
                 userId: holder.userId, nickname: holder.nickname,
                 points: slot.points, sinceAt: slot.sinceAt,
@@ -125,7 +158,11 @@ export async function GET() {
         }))
         return NextResponse.json({ ok: true, throne, ranking, rooms })
     } catch {
-        return NextResponse.json({ ok: true, throne: null, ranking: [], rooms: [] }) // table absente → neutre
+        // ⚠️ NE JAMAIS répondre « ok » ici. Un hoquet de Neon (cold start, limite de connexions) rendait un
+        //   couloir VIDE que le client acceptait : le palier valait alors ACE tout seul, donc la victoire sur
+        //   ACE était la dernière étape → sacre en UN combat, et le vrai Maître se faisait détrôner sans
+        //   combat. Un échec doit se dire : le client sait déjà afficher « couloir indisponible ».
+        return NextResponse.json({ ok: false, reason: "unavailable" }, { status: 503 })
     }
 }
 
@@ -148,16 +185,31 @@ export async function POST(req: NextRequest) {
         //    (sinon il suffirait de perdre en boucle contre sa propre salle).
         if (action === "fail") {
             if (!row || !current) return NextResponse.json({ ok: true, skipped: "empty-throne" })
-            const next = awardFailurePoint(current, auth.userId, row.userId)
-            if (next === current) return NextResponse.json({ ok: true, skipped: "self" })
-            await lc.update({ where: { id: row.id }, data: { team: encodeThrone(next) } })
-            return NextResponse.json({ ok: true, points: next.points })
+            if (awardFailurePoint(current, auth.userId, row.userId) === current) return NextResponse.json({ ok: true, skipped: "self" })
+            // TRANSACTION. Le point vit dans un JSON : l'écriture REMPLACE l'objet entier. Sans relire dans la
+            //   même transaction, deux challengers qui tombent dans la même seconde en perdaient un — et pire,
+            //   un « fail » en vol pendant que le tenant reprend la chaise réécrivait l'équipe, la date de règne
+            //   et le compteur de règnes dans leur ANCIENNE valeur.
+            const points = await prisma.$transaction(async (tx: any) => {
+                const fresh = await tx.leagueChampion.findUnique({ where: { id: row.id }, select: { userId: true, team: true } })
+                const slot = fresh ? decodeThrone(fresh.team) : null
+                if (!fresh || !slot) return null
+                const bumped = awardFailurePoint(slot, auth.userId, fresh.userId)
+                if (bumped === slot) return null
+                await tx.leagueChampion.update({ where: { id: row.id }, data: { team: encodeThrone(bumped) } })
+                return bumped.points
+            })
+            if (points === null) return NextResponse.json({ ok: true, skipped: "self" })
+            return NextResponse.json({ ok: true, points })
         }
 
         // ── SACRE : le challenger prend la place. Le pseudo est relu EN BASE (jamais cru depuis le client).
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
-        const team = Array.isArray(body.team) ? body.team.slice(0, 6) : []
+        const team = sanitizeThroneTeam(body.team)
+        // Un sacre sans équipe exploitable n'est PAS écrit : il graverait une dernière salle infranchissable
+        //   pour tout le groupe. Mieux vaut refuser le sacre (le joueur refera le couloir) que bloquer le palier.
+        if (team.length === 0) return NextResponse.json({ ok: false, reason: "empty-team" }, { status: 400 })
         const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 200) : undefined
         const slot = claimThrone(team as any, avatar, new Date())
 
@@ -174,6 +226,9 @@ export async function POST(req: NextRequest) {
         }
         return NextResponse.json({ ok: true, throne: { nickname: me.nickname, points: next.points, reigns: next.reigns, sinceAt: next.sinceAt } })
     } catch {
-        return NextResponse.json({ ok: true, skipped: "no-table" }) // table absente → neutre
+        // ⚠️ NE JAMAIS répondre « ok » ici non plus. Un sacre, c'est 20-30 minutes de couloir SANS reprise :
+        //   avaler l'erreur laissait le joueur croire qu'il était Maître alors que rien n'était écrit. Le client
+        //   relit la réponse, retente, et met le sacre en attente pour le rejouer au prochain chargement.
+        return NextResponse.json({ ok: false, reason: "write-failed" }, { status: 500 })
     }
 }

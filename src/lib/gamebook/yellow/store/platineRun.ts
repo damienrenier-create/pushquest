@@ -20,7 +20,7 @@
 import type { PlatineChampion } from "../data/platineArena"
 import type { FusionChampionMon } from "../storage/save"
 import { emptyLedger, type PlatineLedger } from "../data/platineLedger"
-import { PLATINE_RUN_LS_KEY } from "../storage/sessionKeys"
+import { PLATINE_RUN_LS_KEY, PLATINE_CLAIM_LS_KEY } from "../storage/sessionKeys"
 
 /** Le Maître en titre, tel que le renvoie la route. */
 export interface PlatineThroneHolder {
@@ -194,13 +194,63 @@ export function abandonPlatineRun(): void {
 
 const THRONE_API = "/api/gamebook/yellow/platine-throne"
 
-/** SACRE : le joueur a traversé tout le couloir → il prend la place, avec son équipe figée et son skin. */
+interface PendingClaim { v: 1; team: FusionChampionMon[]; avatar?: string; at: string }
+
+/** Met le sacre de côté pour le rejouer au prochain chargement. */
+function queueClaim(team: FusionChampionMon[], avatar?: string): void {
+    if (typeof window === "undefined") return
+    const payload: PendingClaim = { v: 1, team: team.slice(0, 6), avatar, at: new Date().toISOString() }
+    try { window.localStorage.setItem(PLATINE_CLAIM_LS_KEY, JSON.stringify(payload)) } catch { /* ignoré */ }
+}
+function dropQueuedClaim(): void {
+    if (typeof window === "undefined") return
+    try { window.localStorage.removeItem(PLATINE_CLAIM_LS_KEY) } catch { /* ignoré */ }
+}
+
+/** Y a-t-il un sacre non encore gravé ? L'écran de sacre s'en sert pour le dire au joueur plutôt que de le
+ *  laisser croire qu'il est Maître alors que le serveur n'a rien reçu. */
+export function hasPendingPlatineClaim(): boolean {
+    if (typeof window === "undefined") return false
+    try { return !!window.localStorage.getItem(PLATINE_CLAIM_LS_KEY) } catch { return false }
+}
+
+/** Envoie un sacre et dit s'il a été GRAVÉ. La réponse est RELUE : la route renvoie désormais un vrai échec
+ *  (500/503) quand elle n'a rien pu écrire — l'avaler laissait le joueur croire qu'il régnait. */
+async function postClaim(team: FusionChampionMon[], avatar?: string): Promise<boolean> {
+    try {
+        const r = await fetch(THRONE_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "claim", team: team.slice(0, 6), avatar }),
+        })
+        if (!r.ok) return false
+        const j = await r.json()
+        return j?.ok === true
+    } catch { return false }
+}
+
+/** SACRE : le joueur a traversé tout le couloir → il prend la place, avec son équipe figée et son skin.
+ *  UNE retentative immédiate (un hoquet de Neon dure rarement deux appels), puis mise en file. */
 export function reportPlatineClaim(team: FusionChampionMon[], avatar?: string): void {
-    void fetch(THRONE_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "claim", team: team.slice(0, 6), avatar }),
-    }).catch(() => { /* best-effort */ })
+    queueClaim(team, avatar) // posé D'ABORD : si l'onglet meurt pendant l'envoi, le sacre survit quand même
+    void (async () => {
+        if (await postClaim(team, avatar)) { dropQueuedClaim(); return }
+        if (await postClaim(team, avatar)) { dropQueuedClaim(); return }
+        // Toujours rien : le sacre reste en file, rejoué au prochain chargement (cf. flushPendingPlatineClaim).
+    })()
+}
+
+/** À appeler AU CHARGEMENT du jeu : rejoue un sacre resté en carafe. No-op s'il n'y en a pas. */
+export async function flushPendingPlatineClaim(): Promise<boolean> {
+    if (typeof window === "undefined") return false
+    let raw: string | null = null
+    try { raw = window.localStorage.getItem(PLATINE_CLAIM_LS_KEY) } catch { return false }
+    if (!raw) return false
+    let p: PendingClaim
+    try { p = JSON.parse(raw) } catch { dropQueuedClaim(); return false }
+    if (p?.v !== 1 || !Array.isArray(p.team) || p.team.length === 0) { dropQueuedClaim(); return false }
+    if (await postClaim(p.team, p.avatar)) { dropQueuedClaim(); return true }
+    return false // on garde la file : on retentera au prochain chargement
 }
 
 /** ÉCHEC : le challenger est tombé → le Maître en titre marque +1. Le serveur ignore l'auto-crédit. */
