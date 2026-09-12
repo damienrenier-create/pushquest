@@ -395,6 +395,21 @@ export function persistsDefeatOnWin(trainerId: string): boolean {
 }
 
 let platineKoAtStart = 0
+/** LA PHOTO D'UN SACRE doit pouvoir être REJOUÉE à l'identique : ces trois champs manquaient, et la salle
+ *  d'un champion combattait donc plus faiblement que l'équipe dont elle se réclame. Les noms d'attaques sont
+ *  la clé (même vocabulaire que `moves` dans FusionChampionMon), pas les ids. */
+function freezeMoveTypes(inst: { moveTypeOverride?: Partial<Record<string, string>> }): Record<string, string> | undefined {
+    const ov = inst.moveTypeOverride
+    if (!ov) return undefined
+    const out: Record<string, string> = {}
+    for (const [id, t] of Object.entries(ov)) if (t) out[getMove(id)?.name ?? id] = t
+    return Object.keys(out).length ? out : undefined
+}
+function freezeItems(inst: { heldItem?: string; heldItem2?: string }): string[] | undefined {
+    const items = [inst.heldItem, inst.heldItem2].filter((x): x is string => !!x)
+    return items.length ? items : undefined
+}
+
 /** Nom de l'occupant du couloir qui vient de te battre, capturé AVANT la remise à zéro du parcours. */
 let platineFoeName: string | null = null
 
@@ -1544,6 +1559,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                         level: f.result.level,
                         stats: { ...f.result.stats },
                         moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                        moveTypes: freezeMoveTypes(f.instance),
+                        items: freezeItems(f.instance),
+                        shiny: f.instance.shiny === true,
                         aId: par?.[0], bId: par?.[1],
                     }
                 })
@@ -1624,6 +1642,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                             level: f.result.level,
                             stats: { ...f.result.stats },
                             moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
+                        moveTypes: freezeMoveTypes(f.instance),
+                        items: freezeItems(f.instance),
+                        shiny: f.instance.shiny === true,
                             aId: par?.[0], bId: par?.[1],
                         }
                     }),

@@ -354,6 +354,17 @@ export interface FusionChampionMon {
      *  le MissingNo figé au sacre (sprite pas encore chargé pour un combo non-officiel). Optionnel (legacy sans). */
     aId?: string
     bId?: string
+    /** TRANSMUTATION — type RÉELLEMENT joué de certaines attaques, par NOM d'attaque (même vocabulaire que
+     *  `moves`). Une fusion à type forcé convertit la 1re attaque offensive de chaque parent dans son propre
+     *  type : sans ce champ, la salle du couloir platine rejouait le Lance-Soleil d'un Cendrecerf en PLANTE et
+     *  sans STAB — 197 dégâts au lieu de 1180 — alors qu'elle est présentée comme « son équipe exacte ».
+     *  Optionnel : les sacres d'avant ce champ sont rattrapés à la reconstruction (cf. platineArena). */
+    moveTypes?: Record<string, string>
+    /** Objets tenus au jour du sacre (hérités des 2 parents). Sans eux, la salle combat les mains vides :
+     *  ni Restes, ni Baie Phénix, ni pièce SIGNATURE de l'Artisane — nettement plus douce que l'originale. */
+    items?: string[]
+    /** Fusion DORÉE (2 parents chromatiques) : sinon le souvenir perd ses couleurs. */
+    shiny?: boolean
 }
 
 // v2 (2026-06) : NERF ACE — migration one-time qui remet le CLIQUET d'ACE à zéro (acePeakLevel +

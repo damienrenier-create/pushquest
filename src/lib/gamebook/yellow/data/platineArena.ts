@@ -13,10 +13,12 @@
 // le registre d'espèces, et il a son dispose (même cycle de vie que fusionMon.buildFusion).
 
 import type { FusionChampionMon } from "../storage/save"
+import type { FusionResult } from "./fusionSpecies"
 import type { MonInstance, MoveSlot, PokeType, SpeciesData } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { registerCustomSpecies, unregisterCustomSpecies } from "./species"
-import { getMoveByName } from "./moves"
+import { getMove, getMoveByName } from "./moves"
+import { specialFusionForIds, recoloredMoveTypes } from "./fusionSpecies"
 import { MISSINGNO_SPRITE } from "./fusionSprite"
 import type { BuiltFusion } from "./fusionMon"
 
@@ -116,6 +118,34 @@ export interface BuiltPlatineRoom {
 /** Reconstruit la salle d'un champion : une espèce éphémère par chimère + son instance à stats figées.
  *  `roomKey` rend les ids déterministes et uniques entre salles (pas de collision si deux joueurs ont la même
  *  chimère). Les stats ne sont JAMAIS recalculées : on rejoue la photo, pas une fusion. */
+/** TYPES RÉELLEMENT JOUÉS par une chimère figée, indexés par ID d'attaque (ce qu'attend le moteur).
+ *
+ *  Deux sources, dans cet ordre :
+ *   1. `m.moveTypes`, gravé au sacre — la vérité ;
+ *   2. À défaut (sacres d'AVANT ce champ), on re-déduit : si la paire de parents forme une fusion à TYPE
+ *      FORCÉ, la 1re attaque offensive qui n'est pas déjà de ce type est transmutée — la même règle que
+ *      pour un moveset curé (cf. fusionMon). Sans ce rattrapage, les sacres OR déjà en base rejoueraient
+ *      leur coup signature au mauvais type, et ce sont précisément eux qui peuplent le couloir aujourd'hui.
+ *  Les attaques SIGNATURE recolorées (recoloredMoves) sont reprises dans les deux cas. */
+function roomMoveTypes(m: FusionChampionMon, slots: MoveSlot[]): Record<string, string> {
+    const out: Record<string, string> = {}
+    if (m.moveTypes) {
+        for (const s of slots) {
+            const t = m.moveTypes[getMove(s.moveId)?.name ?? ""]
+            if (t) out[s.moveId] = t
+        }
+        if (Object.keys(out).length) return out
+    }
+    const special = m.aId && m.bId ? specialFusionForIds(m.aId, m.bId) : null
+    const forced = special?.forcedType
+    if (!forced) return out
+    const ids = slots.map((s) => s.moveId)
+    Object.assign(out, recoloredMoveTypes(ids, special))
+    const lead = ids.find((id) => (getMove(id)?.power ?? 0) > 0 && getMove(id)?.type !== forced && !out[id])
+    if (lead) out[lead] = forced
+    return out
+}
+
 export function buildPlatineRoomTeam(champion: PlatineChampion, roomKey: string): BuiltPlatineRoom {
     const species: SpeciesData[] = []
     const team: BuiltFusion[] = []
@@ -149,15 +179,23 @@ export function buildPlatineRoomTeam(champion: PlatineChampion, roomKey: string)
             frozenStats: stats, // ← la photo : aucun recalcul IV/EV/Saiyan
             owned: false,
         }
+        // …et le reste de la photo, sans quoi la salle est plus douce que l'équipe dont elle se réclame :
+        //   le type réellement joué de ses attaques, ses objets tenus, et ses couleurs.
+        const mt = roomMoveTypes(m, moves)
+        if (Object.keys(mt).length) instance.moveTypeOverride = mt as MonInstance["moveTypeOverride"]
+        const items = (m.items ?? []).filter(Boolean).slice(0, 2)
+        if (items[0]) instance.heldItem = items[0]
+        if (items[1]) instance.heldItem2 = items[1]
+        if (m.shiny) instance.shiny = true
         // FusionResult SYNTHÉTIQUE : on n'a pas refait de fusion, on rejoue une photo — mais le reste du moteur
-        //   (nom affiché, démontage, journalisation) attend cette forme. Pas de transmutation ici : le moveset
-        //   gravé est déjà celui qui a servi le jour du sacre.
+        //   (nom affiché, démontage, journalisation) attend cette forme. La TRANSMUTATION, elle, est bien
+        //   rejouée (cf. roomMoveTypes) : les ids d'attaques gravés ne suffisent pas, leur type joué non plus.
         team.push({
             instance, speciesId: id,
             result: {
                 name: m.name, types, stats, level: m.level,
                 moves: moves.map((s2) => s2.moveId), heldItems: [],
-                parents: [m.aId ?? m.name, m.bId ?? m.name], moveTypes: {},
+                parents: [m.aId ?? m.name, m.bId ?? m.name], moveTypes: mt as FusionResult["moveTypes"],
             },
         })
     })
