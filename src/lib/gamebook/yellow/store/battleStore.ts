@@ -67,7 +67,7 @@ import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntlet
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun } from "./platineRun"
-import { PLATINE_BRIBE_PER_KO, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE } from "../data/platineLore"
+import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE } from "../data/platineLore"
 import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
 import { markGenieArcSeen, genesisCaptureLocked } from "./playerStore"
@@ -539,6 +539,11 @@ export function startFusionTrialBattle(fusionTeam: MonInstance[], enemyTeam: Mon
  *  enregistre/détruit les espèces éphémères (buildFusion/disposeFusion) des DEUX camps. */
 export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, trainerId: string, aiLevel: AiLevel = "hof"): boolean {
     if (fusionTeam.length === 0 || enemyTeam.length === 0 || !trainerId.startsWith("y_fusion_")) return false
+    // ⚠️ LE COULOIR PLATINE PASSE PAR ICI, PAS PAR startTrainerBattle. Le compteur de K.O. d'ouverture n'était
+    //   posé que là-bas : il gardait donc la valeur d'un combat précédent (ou 0), et le pot-de-vin refacturait
+    //   à chaque salle les morts des salles d'avant. On mesure le GAUNTLET (les chimères), qui est l'équipe
+    //   réellement engagée ici — et pas l'équipe du sac, que startTrainerBattle mesurait.
+    platineKoAtStart = fusionTeam.filter((m) => m.currentHp <= 0).length
     // expMult:1 → les fusionnés gagnent de l'XP → creditFusionParents en reverse la moitié aux 2 VRAIS parents
     //   (XP différé). Sans effet sur le fusionné lui-même (frozenStats figées, learnset à 1 niveau, pas d'évo).
     // aiLevel : "elite" (Conseil des Chimères = gauntlet, ne switch JAMAIS) vs "hof" (LANCE/Dieu Spaghetti = boss,
@@ -1470,8 +1475,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   50 JC par Daemon qu'IL a mis a terre. On facture le DELTA de K.O. de CE combat uniquement
             //   (les PV sont reportes de salle en salle : le total de fin inclut les morts d'avant).
             //   Excuse choisie de facon DETERMINISTE (nom + etape) : elle ne change pas si l'ecran se recharge.
-            const koHere = Math.max(0, b.player.team.filter((m) => m.currentHp <= 0).length - platineKoAtStart)
-            const jc = koHere * PLATINE_BRIBE_PER_KO
+            const { ko: koHere, jc } = platineBribe(b.player.team.filter((m) => m.currentHp <= 0).length, platineKoAtStart)
             const foeName = currentPlatineOpponent()?.label ?? "LE MAITRE"
             let h = getPlatineStep()
             for (let i = 0; i < foeName.length; i++) h = (h * 31 + foeName.charCodeAt(i)) | 0

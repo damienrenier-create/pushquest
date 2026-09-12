@@ -115,6 +115,18 @@ export const PLATINE_CREDITS_EMPTY = "— aucun coup porté —"
 /** Tarif du silence, par Daemon du joueur mis K.O. par le vaincu. */
 export const PLATINE_BRIBE_PER_KO = 50
 
+/** LE TARIF DU SILENCE, pour UNE salle.
+ *
+ *  ⚠️ Le couloir REPORTE les PV d'une salle à l'autre : en fin de combat, l'équipe contient aussi les morts
+ *  des salles précédentes. Facturer le total reviendrait à faire payer à chaque adversaire les victimes de
+ *  ses prédécesseurs (bug mesuré : ~1000-1500 JC sur un couloir complet au lieu de ~200). On ne facture donc
+ *  que le DELTA de cette salle-là. Le delta est borné à 0 : si le compteur d'ouverture est en avance sur la
+ *  réalité (équipe reconstruite, reprise de combat), on préfère ne rien facturer qu'inventer une dette. */
+export function platineBribe(koAtEnd: number, koAtStart: number): { ko: number; jc: number } {
+    const ko = Math.max(0, Math.floor(koAtEnd) - Math.floor(koAtStart))
+    return { ko, jc: ko * PLATINE_BRIBE_PER_KO }
+}
+
 /** Excuses bidon. `{n}` = nombre de Daemons du joueur qu'il a mis K.O. (0 possible : il n'a rien touché). */
 export const PLATINE_EXCUSES: string[] = [
     "« Le sol était glissant. Enfin — il l'aurait été, s'il y avait eu de l'eau. »",

@@ -4,6 +4,7 @@ import {
     setPlatineCorridor, resetPlatineRun, currentPlatineOpponent, advancePlatineStep,
     markPlatineOpponentBeaten, isPlatineOpponentBeaten, platineTotalSteps, type PlatineThroneHolder,
 } from "./platineRun"
+import { platineBribe, PLATINE_BRIBE_PER_KO } from "../data/platineLore"
 import type { PlatineChampion } from "../data/platineArena"
 import type { FusionChampionMon } from "../storage/save"
 
@@ -96,5 +97,26 @@ describe("couloir platine — un seul dresseur, plusieurs adversaires", () => {
         resetPlatineRun()
         expect(currentPlatineOpponent()).toBeNull()
         expect(isPlatineOpponentBeaten()).toBe(false)
+    })
+})
+
+// LE POT-DE-VIN. Le couloir REPORTE les PV de salle en salle : le total de morts en fin de combat inclut
+//   celles des salles precedentes. Facturer ce total revenait a faire payer a chaque adversaire les victimes
+//   de ses predecesseurs — ~1000-1500 JC sur un couloir complet au lieu de ~200.
+describe("couloir platine — le tarif du silence ne facture QUE sa propre salle", () => {
+    it("un adversaire paie pour les Daemons qu'IL a mis a terre, pas pour ceux d'avant", () => {
+        expect(platineBribe(2, 0)).toEqual({ ko: 2, jc: 100 })  // ACE en couche 2 : 100 JC
+        expect(platineBribe(2, 2)).toEqual({ ko: 0, jc: 0 })    // la salle suivante n'a touche personne : 0
+        expect(platineBribe(5, 2)).toEqual({ ko: 3, jc: 150 })  // celle d'apres en couche 3 de plus
+    })
+
+    it("le tarif est bien de 50 jetons par Daemon", () => {
+        for (let n = 0; n <= 6; n++) expect(platineBribe(n, 0).jc).toBe(n * PLATINE_BRIBE_PER_KO)
+        expect(platineBribe(6, 0).jc).toBe(300) // = le plafond serveur d'un don (GRANT_MAX)
+    })
+
+    it("un compteur d'ouverture en avance ne cree JAMAIS de dette negative", () => {
+        expect(platineBribe(1, 4)).toEqual({ ko: 0, jc: 0 })
+        expect(platineBribe(0, 0)).toEqual({ ko: 0, jc: 0 })
     })
 })
