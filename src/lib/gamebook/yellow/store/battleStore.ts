@@ -1549,7 +1549,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   répliques passent AVANT l'excuse — il s'écarte, puis il monnaie son silence comme les autres.
             const isAce = currentPlatineOpponent()?.kind === "ace"
             const lines = [...(isAce ? PLATINE_ACE_LOSE_LINES : []), excuse, ...deal]
-            rematchReward = { npcId: "y_fusion_platine", npcName: foeName, lines }
+            rematchReward = { npcId: isAce ? "y_ace" : "y_fusion_platine", npcName: foeName, lines } // portrait : ACE a le sien
             // DERNIÈRE salle : inutile de faire franchir une porte de plus pour tomber sur une salle vide —
             //   le couloir est bouclé, on prend la chaise. L'équipe gravée est le roster gauntlet VAINQUEUR,
             //   figé exactement comme au sacre de la Ligue (nom/sprite/types/stats/attaques + parents).

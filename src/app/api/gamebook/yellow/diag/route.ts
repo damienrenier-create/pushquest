@@ -1,6 +1,10 @@
 // src/app/api/gamebook/yellow/diag/route.ts
 //
-// Diagnostic SIMPLE de la config Pusher (multijoueur casino / PvP).
+// Diagnostic SIMPLE : quelle VERSION tourne en ligne, et l'état de la config Pusher (multijoueur casino / PvP).
+//
+// ⚠️ LE COMMIT DÉPLOYÉ EST LA PREMIÈRE CHOSE À VÉRIFIER quand un correctif « ne marche pas ». Vrai cas vécu :
+// deux bugs corrigés et poussés étaient toujours là en jeu — le build Vercel avait simplement plusieurs
+// commits de retard, et rien dans l'app ne permettait de s'en apercevoir. Maintenant si.
 // Ouvre /api/gamebook/yellow/diag en étant connecté → il dit en clair ce qui
 // manque. Ne révèle AUCUNE valeur secrète, seulement si chaque clé est définie.
 
@@ -10,6 +14,10 @@ import { authOptions } from "@/lib/auth"
 import { PUSHER_ENABLED } from "@/lib/pusher"
 
 export const dynamic = "force-dynamic"
+
+/** SHA du commit réellement bâti. Vercel l'injecte au build ; vide en local (`npm run dev`). */
+const DEPLOYED_SHA = process.env.VERCEL_GIT_COMMIT_SHA ?? ""
+const DEPLOYED_BRANCH = process.env.VERCEL_GIT_COMMIT_REF ?? ""
 
 export async function GET() {
     const session = await getServerSession(authOptions)
@@ -34,6 +42,11 @@ export async function GET() {
     }
 
     return NextResponse.json({
+        version: {
+            commit: DEPLOYED_SHA ? DEPLOYED_SHA.slice(0, 8) : "(local — pas un build Vercel)",
+            branche: DEPLOYED_BRANCH || "(local)",
+            aide: "Compare ce commit avec `git log --oneline -1` : s'ils diffèrent, le déploiement est EN RETARD et tes correctifs ne sont pas en ligne. Redéploie.",
+        },
         verdict,
         detail: {
             "serveur (PUSHER_* complet)": serveur,

@@ -11,6 +11,7 @@
 import { useSyncExternalStore, useState, useEffect } from "react"
 import { useGameStore, activeNpcs } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
+import { currentPlatineOpponent } from "@/lib/gamebook/yellow/store/platineRun"
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
@@ -644,7 +645,11 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
 
                 {npcsOnMap.map((npc) => (
                     <NpcSprite key={npc.id} npc={npc} screenPos={screenPos}
-                        overrideSprite={npc.id === "y_gekroc" && getPlayer().gekrocResolved ? { url: "/yellow/sprites/pierre_gekroc.png", frames: 1, h: 1.2 } : undefined} />
+                        overrideSprite={
+                            npc.id === "y_gekroc" && getPlayer().gekrocResolved ? { url: "/yellow/sprites/pierre_gekroc.png", frames: 1, h: 1.2 }
+                            : npc.id === "y_fusion_platine" && currentPlatineOpponent()?.kind === "ace" ? ACE_OVERWORLD_SPRITE
+                            : undefined
+                        } />
                 ))}
 
                 {/* « ! » du dresseur qui vient de repérer le joueur (avant son intro). */}
@@ -765,6 +770,12 @@ function npc40CellStyle(url: string, col: number, row: number): React.CSSPropert
 
 // frames > 1 : spritesheet vertical (frame 0). frames === 1 : portrait UNIQUE rendu
 // entier, ancré au sol, débordant vers le haut (h = hauteur en nb de tuiles).
+/** LE SPRITE D'ACE, celui de Ville Jaune. Le PNJ du couloir platine n'a qu'un id (`y_fusion_platine`) pour
+ *  trois occupants successifs : ACE, puis les champions, puis le Maître. Les deux derniers arrivent avec le
+ *  skin du joueur (npc.gen3), mais ACE n'a pas d'avatar de joueur — il tombait donc sur l'emoji de repli, et
+ *  le portier du trône s'affichait… en CHAISE. On lui rend son vrai sprite, le même qu'à l'entrée de la ville. */
+const ACE_OVERWORLD_SPRITE = { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 }
+
 const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | null> = {
     // PNJ 10 — Sentinelle de la Grotte du Nexus (bloqueur de couloir), portrait entier fourni.
     y_pnj10_grotte: { url: "/yellow/sprites/pnj10.png", frames: 1, h: 1.9 },

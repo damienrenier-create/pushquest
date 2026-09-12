@@ -1030,6 +1030,14 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
  *  ensuite, et le Maître en titre à la fin. Un seul dresseur, donc une seule liste `intro` statique — d'où
  *  ce détour. ACE tourne sur 3 variantes selon le jour : on retente ce couloir souvent, autant qu'il ne
  *  récite pas la même chose à chaque fois. */
+/** L'id de PNJ à utiliser pour un dialogue du couloir. Les portraits de dialogue sont indexés par id
+ *  (cf. DIALOGUE_PORTRAITS) : en parlant sous `y_fusion_platine`, ACE n'avait pas de portrait. On emprunte
+ *  donc son id le temps de la réplique — c'est bien lui qui parle. Les champions gardent l'id de la salle
+ *  (leur visage, c'est leur skin sur le PNJ, pas un portrait). */
+function platineDialogueNpcId(fallback: string): string {
+    return currentPlatineOpponent()?.kind === "ace" ? "y_ace" : fallback
+}
+
 function platineOpponentIntro(): string[] | null {
     const opp = currentPlatineOpponent()
     if (!opp) return null
@@ -3254,7 +3262,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // TON DOUBLE (salle dorée run 2) : le PNJ porte TON pseudo. Le boss de Ligue garde son nom (Dieu Spaghetti).
                 const dispName = (trainer.id === "y_ligue_double") ? (currentNickname || npc.name) : npc.name
                 set({
-                    dialogue: { npcId: npc.id, npcName: dispName, lines: arenaIntroLines(trainer), lineIndex: 0 },
+                    dialogue: { npcId: trainer.id === "y_fusion_platine" ? platineDialogueNpcId(npc.id) : npc.id, npcName: dispName, lines: arenaIntroLines(trainer), lineIndex: 0 },
                     pendingTrainerId: trainer.id, pendingRematch: false,
                 })
             }

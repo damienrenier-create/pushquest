@@ -17,7 +17,7 @@ import { getSpecies } from "./species"
 import { signatureStat } from "./evConfig"
 import { createMonInstance } from "../battle/factory"
 import { buildFusion, disposeFusion, type BuiltFusion } from "./fusionMon"
-import { fusionSpritePath } from "./fusionSprite"
+import { houseFusionSpritePath } from "./fusionSprite"
 
 export type FusionTier = "bronze" | "argent" | "or" | "platine"
 export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; label: string }> = {
@@ -236,7 +236,7 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier, leve
     const pairs = tierPairs(tr.key, tier, tr.pairs)
     const team = pairs.map((p) => {
         const role = CONSEIL_ROLES[p.name]
-        return buildFusion(buildParent(p.a, level, saiyan, role), buildParent(p.b, level, saiyan, role), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) })
+        return buildFusion(buildParent(p.a, level, saiyan, role), buildParent(p.b, level, saiyan, role), { name: p.name, moves: p.moves, sprite: p.sprite ?? houseFusionSpritePath(p.name) })
     })
     assignEnemyHeldItems(team, pairs.map((p) => CONSEIL_ROLES[p.name]), tier, berriesActive)
     return team
@@ -280,7 +280,7 @@ export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0, berriesAct
     const ultra = tier !== "bronze"
     const pairs = ultra ? FUSION_BOSS_ULTRA : FUSION_BOSS_PAIRS
     const team = pairs.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan, p.role, ultra), buildParent(p.b, level, saiyan, p.role, ultra), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
+        buildFusion(buildParent(p.a, level, saiyan, p.role, ultra), buildParent(p.b, level, saiyan, p.role, ultra), { name: p.name, moves: p.moves, sprite: p.sprite ?? houseFusionSpritePath(p.name) }),
     )
     assignEnemyHeldItems(team, pairs.map((p) => p.role), tier, berriesActive)
     return team
@@ -343,7 +343,7 @@ export function buildPlatineAceTeam(levelBonus = 0, berriesActive = false): Buil
         buildFusion(
             buildParent(p.a, level, saiyan, p.role, true, p.shiny),
             buildParent(p.b, level, saiyan, p.role, true, p.shiny),
-            { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) },
+            { name: p.name, moves: p.moves, sprite: p.sprite ?? houseFusionSpritePath(p.name) },
         ))
     assignEnemyHeldItems(team, PLATINE_ACE_PAIRS.map((p) => p.role), "platine", berriesActive)
     return team
