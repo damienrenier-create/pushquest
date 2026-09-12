@@ -66,7 +66,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarry, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun } from "./platineRun"
+import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
 import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE } from "../data/platineLore"
 import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
@@ -302,7 +302,9 @@ function persistBattleSnapshot(): void {
             }
             fusionSpecies = chain
         }
-        window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent, fusionSpecies }))
+        // platineKoAtStart voyage AVEC le combat : sans lui, un combat platine repris repartirait d'un compteur
+        //   à 0 et le pot-de-vin refacturerait les morts des salles précédentes (cf. platineBribe).
+        window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent, fusionSpecies, platineKoAtStart }))
     } catch { /* quota / sérialisation : on ignore (au pire = comportement d'avant) */ }
 }
 
@@ -320,7 +322,7 @@ export function resumeBattleFromStorage(): boolean {
     try { raw = window.localStorage.getItem(BATTLE_LS_KEY) } catch { return false }
     if (!raw) return false
     try {
-        const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number; fusionSpecies?: SpeciesData[] }
+        const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number; fusionSpecies?: SpeciesData[]; platineKoAtStart?: number }
         if (o.v !== 1 || !o.battle) { clearBattleSnapshot(); return false }
         if (typeof o.ts === "number" && Date.now() - o.ts > BATTLE_LS_MAX_AGE_MS) { clearBattleSnapshot(); return false }
         const b = o.battle
@@ -330,6 +332,7 @@ export function resumeBattleFromStorage(): boolean {
         // Validation défensive : combat en cours, équipes saines, espèces résolubles.
         if (b.phase === "ended" || b.pvp || !b.player?.team?.length || !b.enemy?.team?.length) { clearBattleSnapshot(); return false }
         for (const m of [...b.player.team, ...b.enemy.team]) if (!getSpecies(m.speciesId)) { clearBattleSnapshot(); return false }
+        platineKoAtStart = Math.max(0, Math.floor(o.platineKoAtStart ?? 0))
         setStore({ battle: b, trainer: o.trainer ?? null, energySpent: o.energySpent ?? 0, evolutions: [], whiteout: false, pvpCtx: null })
         return true
     } catch { clearBattleSnapshot(); return false }
@@ -1511,12 +1514,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 //   au palmarès de sacre. Il dit « j'ai pris la chaise au moins une fois », PAS « je suis assis dessus »
                 //   — ça, seul le serveur le sait, et ça peut changer pendant qu'on dort.
                 markTrainerDefeated(FUSION_TIER_MARKER.platine)
+                clearPlatineRunMirror() // couloir bouclé : plus rien à reprendre au prochain chargement
                 platineSacre = true
             }
         } else if (b.outcome === "lose") {
             // Tombé dans le couloir : le Maître en titre marque +1, et la tentative est perdue (pas de reprise).
             reportPlatineFail()
-            resetPlatineRun()
+            abandonPlatineRun() // tomber EST un abandon : le miroir part avec, on repartira d'ACE
             platineDefeat = true
         }
     }

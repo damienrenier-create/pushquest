@@ -14,11 +14,15 @@
 export const BATTLE_LS_KEY = "pq_yellow_battle_v1"
 /** Série de la Zone de Combat (Tour/Usine : run + équipe louée) ou bracket du Dôme. */
 export const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
+/** Parcours du couloir PLATINE en cours (étape + adversaire tombé + meilleurs coups). Le couloir se traverse
+ *  d'une traite, mais il dure 20-30 minutes : sans ça, un onglet rechargé (PWA tuée sur mobile) reprenait le
+ *  COMBAT et perdait l'ÉTAPE — on gagnait contre le Maître à l'étape 0, donc sans être sacré. */
+export const PLATINE_RUN_LS_KEY = "pq_yellow_platine_v1"
 /** Dernier relevé de score du run 2 (affiché au récap de fin de run). */
 export const RUN2_SCORES_LS_KEY = "pq_yellow_run2scores_v1"
 
 /** Toutes les clés de la session en cours (ordre non significatif). */
-export const SESSION_LS_KEYS: readonly string[] = [BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY]
+export const SESSION_LS_KEYS: readonly string[] = [BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY, PLATINE_RUN_LS_KEY]
 
 /**
  * Purge l'état de session en cours : le joueur SORT de son combat et de sa série en cours.

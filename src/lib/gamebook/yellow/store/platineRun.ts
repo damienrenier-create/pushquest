@@ -7,9 +7,12 @@
 // Si personne ne tient encore le trône, le couloir s'arrête après les champions : le joueur devient le PREMIER
 // Maître Ultime.
 //
-// ÉTAT TRANSIENT, JAMAIS PERSISTÉ — exactement comme le gauntlet de la Ligue (fusionGauntlet) : on traverse le
-// couloir d'une traite, et quitter la salle par la gauche abandonne la tentative. Ça évite tout un système de
-// reprise à mi-parcours, et ça rend l'échec réel (c'est ce qui donne sa valeur au trône).
+// ON TRAVERSE D'UNE TRAITE — mais le parcours SURVIT À UN RECHARGEMENT (choix Sartay). Quitter la salle par la
+// gauche abandonne toujours la tentative, et tomber au combat aussi : c'est ce qui donne sa valeur au trône.
+// En revanche un onglet tué (PWA mobile) n'est pas un abandon. Le combat, lui, était déjà reprenable : sans
+// parcours persisté, on reprenait le combat contre le Maître à l'ÉTAPE 0 — on le battait sans être sacré, puis
+// la porte renvoyait sur ACE. Le parcours est donc miroité en localStorage, et n'est restauré QUE si le couloir
+// rendu par le serveur est le MÊME (signature) : si le trône a changé de main entre-temps, on repart de zéro.
 //
 // Le couloir lui-même vient du SERVEUR (route platine-throne) : on le dépose ici une fois à l'entrée, puis
 // gameStore le lit SYNCHRONEMENT au moment de lancer chaque combat.
@@ -17,6 +20,7 @@
 import type { PlatineChampion } from "../data/platineArena"
 import type { FusionChampionMon } from "../storage/save"
 import { emptyLedger, type PlatineLedger } from "../data/platineLedger"
+import { PLATINE_RUN_LS_KEY } from "../storage/sessionKeys"
 
 /** Le Maître en titre, tel que le renvoie la route. */
 export interface PlatineThroneHolder {
@@ -45,6 +49,48 @@ let step = 0
 let beaten = false
 let ledger: PlatineLedger = emptyLedger()
 
+// ─────────── MIROIR LOCALSTORAGE (anti-rechargement) ───────────
+
+interface PersistedRun { v: 1; sig: string; step: number; beaten: boolean; ledger: PlatineLedger }
+
+/** SIGNATURE du couloir : qui on affronte, dans quel ordre, et depuis quand. Elle change dès qu'un champion
+ *  s'ajoute ou que le trône passe de main — auquel cas un parcours sauvegardé ne veut plus rien dire et on
+ *  repart d'ACE. C'est la garde qui empêche de restaurer une étape dans un couloir qui n'est plus le même. */
+function corridorSignature(rs: readonly PlatineChampion[], h: PlatineThroneHolder | null): string {
+    const r = rs.map((c) => `${c.userId}@${c.wonAt}`).join(",")
+    return `${r}|${h ? `${h.userId}@${h.sinceAt}` : "-"}`
+}
+
+/** Écrit le parcours courant. Fail-safe (quota, mode privé, SSR) : perdre le miroir n'est jamais fatal. */
+function writeRun(): void {
+    if (typeof window === "undefined" || !loaded) return
+    const payload: PersistedRun = { v: 1, sig: corridorSignature(rooms, holder), step, beaten, ledger }
+    try { window.localStorage.setItem(PLATINE_RUN_LS_KEY, JSON.stringify(payload)) } catch { /* ignoré */ }
+}
+
+/** Lit le parcours sauvegardé. Défensif : un payload abîmé vaut « pas de parcours », jamais une exception. */
+function readRun(): PersistedRun | null {
+    if (typeof window === "undefined") return null
+    try {
+        const raw = window.localStorage.getItem(PLATINE_RUN_LS_KEY)
+        if (!raw) return null
+        const o = JSON.parse(raw) as Partial<PersistedRun>
+        if (o.v !== 1 || typeof o.sig !== "string" || typeof o.step !== "number") return null
+        return {
+            v: 1, sig: o.sig,
+            step: Math.max(0, Math.floor(o.step)),
+            beaten: o.beaten === true,
+            ledger: o.ledger && typeof o.ledger === "object" ? o.ledger : emptyLedger(),
+        }
+    } catch { return null }
+}
+
+/** Efface le miroir. Réservé aux VRAIES fins de parcours : abandon, défaite, sacre. */
+function clearRun(): void {
+    if (typeof window === "undefined") return
+    try { window.localStorage.removeItem(PLATINE_RUN_LS_KEY) } catch { /* ignoré */ }
+}
+
 /** Dépose le couloir récupéré au serveur (à l'entrée de la salle). Remet le parcours à zéro. */
 export function setPlatineCorridor(nextRooms: PlatineChampion[], nextHolder: PlatineThroneHolder | null): void {
     rooms = [...nextRooms]
@@ -53,6 +99,18 @@ export function setPlatineCorridor(nextRooms: PlatineChampion[], nextHolder: Pla
     step = 0
     beaten = false
     ledger = emptyLedger()
+    // REPRISE : on ne restaure que si le couloir est BIT POUR BIT le même (mêmes salles, même tenant, même
+    //   date de règne) ET que l'étape sauvegardée existe encore. Sinon on efface : mieux vaut refaire le
+    //   couloir que de se retrouver à affronter quelqu'un d'autre que celui que le compteur annonce.
+    const saved = readRun()
+    if (saved && saved.sig === corridorSignature(rooms, holder) && saved.step < platineTotalSteps()) {
+        step = saved.step
+        beaten = saved.beaten
+        ledger = saved.ledger
+    } else if (saved) {
+        clearRun()
+    }
+    writeRun()
 }
 
 /** Le couloir a-t-il été chargé ? Sert à afficher un message plutôt que de lancer un combat dans le vide. */
@@ -86,11 +144,11 @@ export function currentPlatineOpponent(): PlatineOpponent | null {
 }
 
 /** VICTOIRE dans la salle : on NE change PAS encore d'adversaire — on déverrouille la porte. */
-export function markPlatineOpponentBeaten(): void { beaten = true }
+export function markPlatineOpponentBeaten(): void { beaten = true; writeRun() }
 /** L'adversaire du moment est-il tombé ? (= la porte droite est-elle ouverte ?) */
 export function isPlatineOpponentBeaten(): boolean { return beaten }
 /** FRANCHISSEMENT de la porte : c'est LÀ que le suivant prend place dans la salle. */
-export function advancePlatineStep(): void { step += 1; beaten = false }
+export function advancePlatineStep(): void { step += 1; beaten = false; writeRun() }
 
 /** L'adversaire du moment est-il le DERNIER du couloir ? Le battre déclenche le sacre : on ne fait pas franchir
  *  une porte de plus pour trouver une salle vide. */
@@ -105,9 +163,11 @@ export function isPlatineCorridorCleared(): boolean {
 
 /** Le registre des meilleurs coups du parcours (matière du générique). */
 export function getPlatineLedger(): PlatineLedger { return ledger }
-export function setPlatineLedger(next: PlatineLedger): void { ledger = next }
+export function setPlatineLedger(next: PlatineLedger): void { ledger = next; writeRun() }
 
-/** Abandon / échec / sortie par la gauche : on oublie tout. Le couloir se refait d'une traite. */
+/** Oublie le parcours EN MÉMOIRE seulement. ⚠️ N'efface PAS le miroir : ce reset est aussi appelé au montage
+ *  du hook (avant l'hydratation, la carte courante n'est pas encore la salle du trône) — l'effacer là
+ *  détruirait le parcours à chaque chargement de page, c'est-à-dire précisément le cas qu'on veut sauver. */
 export function resetPlatineRun(): void {
     rooms = []
     holder = null
@@ -115,6 +175,17 @@ export function resetPlatineRun(): void {
     step = 0
     beaten = false
     ledger = emptyLedger()
+}
+
+/** SACRE : le couloir est bouclé. On efface le miroir (il n'y a plus rien à reprendre) mais on GARDE l'état
+ *  en mémoire — le joueur est encore dans la salle, et le PNJ doit pouvoir finir de s'afficher proprement. */
+export function clearPlatineRunMirror(): void { clearRun() }
+
+/** VRAIE fin de parcours — abandon par la porte gauche, défaite, ou sacre. Oublie tout, miroir compris :
+ *  au prochain passage on repart d'ACE. C'est ce qui garde l'échec réel. */
+export function abandonPlatineRun(): void {
+    resetPlatineRun()
+    clearRun()
 }
 
 // ─────────── REMONTÉE AU SERVEUR ───────────

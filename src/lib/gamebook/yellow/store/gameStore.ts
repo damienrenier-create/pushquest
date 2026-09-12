@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
-import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep } from "./platineRun"
+import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun } from "./platineRun"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
@@ -1658,6 +1658,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     return
                 }
                 advancePlatineStep()
+            } else if (map.id === "yellow_fusion_platine") {
+                // On QUITTE la salle du trône (porte gauche → l'Autel) : c'est un ABANDON DÉLIBÉRÉ, donc le
+                //   parcours part pour de bon, miroir localStorage compris. À distinguer du simple
+                //   rechargement de page, qui n'est pas un choix du joueur et que le miroir rattrape.
+                abandonPlatineRun()
             }
             if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten()) {
                 set({ player: { ...player, direction: next.direction } }) // reste sur place, face à la porte murée

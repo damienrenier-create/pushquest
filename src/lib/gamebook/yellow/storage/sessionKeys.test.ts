@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest"
-import { BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY, SESSION_LS_KEYS, clearRunSessionStorage } from "./sessionKeys"
+import { BATTLE_LS_KEY, FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY, PLATINE_RUN_LS_KEY, SESSION_LS_KEYS, clearRunSessionStorage } from "./sessionKeys"
 
 /** localStorage minimal (l'environnement de test est "node" → pas de window). */
 function fakeWindow(store: Record<string, string>, opts: { throws?: boolean } = {}) {
@@ -53,6 +53,7 @@ describe("clearRunSessionStorage", () => {
         expect(BATTLE_LS_KEY).toBe("pq_yellow_battle_v1")
         expect(FRONTIER_LS_KEY).toBe("pq_yellow_frontier_v1")
         expect(RUN2_SCORES_LS_KEY).toBe("pq_yellow_run2scores_v1")
-        expect(SESSION_LS_KEYS).toHaveLength(3)
+        expect(PLATINE_RUN_LS_KEY).toBe("pq_yellow_platine_v1")
+        expect(SESSION_LS_KEYS).toHaveLength(4)
     })
 })
