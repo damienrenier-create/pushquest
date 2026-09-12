@@ -67,7 +67,7 @@ import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGaun
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
-import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_SACRE_LINES, platineCreditsLines } from "../data/platineLore"
+import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, PLATINE_DEFEAT_LINES, platineCreditsLines } from "../data/platineLore"
 import { recordHit } from "../data/platineLedger"
 import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
@@ -155,7 +155,7 @@ interface BattleStoreState {
     loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     fusionSacre: { tier: string; team: FusionChampionMon[] } | null // LIGUE DE FUSION : roster vainqueur à graver au Hall of Fame (au sacre du Dieu Spaghetti ; transitoire, POST côté client)
-    fusionDefeat: { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null
+    fusionDefeat: { trainerName: string; koLog: { victim: string; move: string; by: string }[]; epilogue?: string[] } | null
     /** LE TRÔNE — le joueur vient de boucler le couloir platine : déclenche le GÉNÉRIQUE de sacre (transitoire). */
     platineSacre: boolean
     /** LE TRÔNE — le joueur est tombé dans le couloir : générique de défaite, le Maître en titre a marqué (transitoire). */
@@ -412,6 +412,8 @@ function freezeItems(inst: { heldItem?: string; heldItem2?: string }): string[] 
 
 /** Nom de l'occupant du couloir qui vient de te battre, capturé AVANT la remise à zéro du parcours. */
 let platineFoeName: string | null = null
+/** Épilogue de l'écran de défaite du couloir, composé AVANT que l'abandon n'efface le registre. */
+let platineDefeatLines: string[] | null = null
 
 export function startTrainerBattle(
     playerTeam: MonInstance[],
@@ -420,6 +422,8 @@ export function startTrainerBattle(
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     platineKoAtStart = playerTeam.filter((m) => m.currentHp <= 0).length
+    platineFoeName = null
+    platineDefeatLines = null
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
     const isDuel = !!opts?.trainerId?.startsWith("duel:") || !!opts?.trainerId?.startsWith("run2ghost:") // reflet / PNJ run-2 d'un autre joueur → XP DOUBLE
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
@@ -565,6 +569,11 @@ export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: Mo
     //   à chaque salle les morts des salles d'avant. On mesure le GAUNTLET (les chimères), qui est l'équipe
     //   réellement engagée ici — et pas l'équipe du sac, que startTrainerBattle mesurait.
     platineKoAtStart = fusionTeam.filter((m) => m.currentHp <= 0).length
+    // …et on OUBLIE le combat precedent : ces deux variables de module alimentent l ecran de defaite, et une
+    //   valeur restee de la salle d avant afficherait le mauvais vainqueur (« vaincu par Jacanon » apres une
+    //   chute contre WILL) et un epilogue platine sur une defaite de Ligue classique.
+    platineFoeName = null
+    platineDefeatLines = null
     // expMult:1 → les fusionnés gagnent de l'XP → creditFusionParents en reverse la moitié aux 2 VRAIS parents
     //   (XP différé). Sans effet sur le fusionné lui-même (frozenStats figées, learnset à 1 niveau, pas d'évo).
     // aiLevel : "elite" (Conseil des Chimères = gauntlet, ne switch JAMAIS) vs "hof" (LANCE/Dieu Spaghetti = boss,
@@ -1587,6 +1596,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   de l'occupant MAINTENANT, sinon il affiche « LE TRÔNE » (le nom statique du décor) au lieu du
             //   pseudo de celui qui vient de te battre.
             platineFoeName = currentPlatineOpponent()?.label ?? null
+            // TOUT LE VERSANT DÉFAITE ÉTAIT MUET. Le joueur voyait l'écran générique de Ligue puis repartait,
+            //   sans jamais apprendre ce que sa chute venait de coûter — or « échouer NOURRIT le tenant » est
+            //   l'argument central du palier, celui qui fait le classement des Empereurs. On capture le
+            //   registre AVANT l'abandon (qui l'efface) et on nourrit l'épilogue de l'écran de défaite.
+            const wasAce = currentPlatineOpponent()?.kind === "ace"
+            platineDefeatLines = [
+                ...(wasAce ? PLATINE_ACE_WIN_LINES : []),
+                ...PLATINE_DEFEAT_LINES,
+                ...platineCreditsLines(getPlatineLedger(), false),
+            ]
             reportPlatineFail()
             abandonPlatineRun() // tomber EST un abandon : le miroir part avec, on repartira d'ACE
             platineDefeat = true
@@ -2402,7 +2421,7 @@ export function clearFusionSacre() {
 }
 
 /** LIGUE DE FUSION — DÉFAITE : récap des attaques fatales (générique 5s), ou null. Cleared après l'overlay → whiteout. */
-export function useFusionDefeat(): { trainerName: string; koLog: { victim: string; move: string; by: string }[] } | null {
+export function useFusionDefeat(): { trainerName: string; koLog: { victim: string; move: string; by: string }[]; epilogue?: string[] } | null {
     return useSyncExternalStore(
         subscribe,
         () => getSnapshot().fusionDefeat,

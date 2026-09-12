@@ -16,7 +16,15 @@ const TAUNTS_BY_TRAINER: Record<string, string> = {
 }
 const DEFAULT_TAUNT = "« La Ligue de Fusion ne pardonne pas. Retourne à l'Autel plus AFFÛTÉ. »"
 
-export function FusionDefeatOverlay({ trainerName, koLog, onDone }: { trainerName: string; koLog: { victim: string; move: string; by: string }[]; onDone: () => void }) {
+export function FusionDefeatOverlay({ trainerName, koLog, epilogue, onDone }: {
+    trainerName: string
+    koLog: { victim: string; move: string; by: string }[]
+    /** Lignes SUPPLÉMENTAIRES, sous le récap. Le palier PLATINE s'en sert pour dire ce que cette chute
+     *  vient de coûter — le Maître en titre marque un point — et pour dérouler les meilleurs coups des
+     *  deux camps. Vide ailleurs : la Ligue classique garde son écran tel quel. */
+    epilogue?: string[]
+    onDone: () => void
+}) {
     const taunt = TAUNTS_BY_TRAINER[trainerName] ?? DEFAULT_TAUNT
     return (
         <div className="fdef">
@@ -41,6 +49,9 @@ export function FusionDefeatOverlay({ trainerName, koLog, onDone }: { trainerNam
                 .fdef .skipbtn{margin-top:26px;padding:13px 26px;border:2px solid #e0b23d;border-radius:12px;background:rgba(224,178,61,.12);color:#ffe9b8;font-weight:800;font-size:15px;letter-spacing:1px;cursor:pointer;
                     animation:fdefUp .5s ${0.9 + koLog.length * 0.32}s ease both,fdefPulse 2s ${1.4 + koLog.length * 0.32}s ease-in-out infinite}
                 .fdef .skipbtn:hover{background:rgba(224,178,61,.22)}
+                .fdef .epi{margin:14px 0 4px;max-width:min(520px,92vw);display:flex;flex-direction:column;gap:3px;animation:fdefUp .5s .7s both}
+                .fdef .epiTop{font-size:12.5px;font-weight:800;opacity:.95;line-height:1.5}
+                .fdef .epiSub{font-size:11.5px;opacity:.75;line-height:1.45;font-variant-numeric:tabular-nums}
                 @media(prefers-reduced-motion:reduce){.fdef,.fdef *{animation-duration:.01ms!important}}
             `}</style>
             <div className="pasta" />
@@ -58,6 +69,11 @@ export function FusionDefeatOverlay({ trainerName, koLog, onDone }: { trainerNam
                             {k.by && k.by !== "—" && <span className="b">de {k.by}</span>}
                         </div>
                     ))}
+                </div>
+            )}
+            {epilogue && epilogue.length > 0 && (
+                <div className="epi">
+                    {epilogue.map((line, i) => <div key={i} className={line.startsWith("  ") ? "epiSub" : "epiTop"}>{line.trim()}</div>)}
                 </div>
             )}
             <button className="skipbtn" onClick={onDone}>▸ RETOURNER À L'AUTEL</button>

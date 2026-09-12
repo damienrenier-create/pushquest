@@ -5862,7 +5862,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
             {fusionDefeat && !battle && (
-                <FusionDefeatOverlay trainerName={fusionDefeat.trainerName} koLog={fusionDefeat.koLog} onDone={clearFusionDefeat} />
+                <FusionDefeatOverlay trainerName={fusionDefeat.trainerName} koLog={fusionDefeat.koLog} epilogue={fusionDefeat.epilogue} onDone={clearFusionDefeat} />
             )}
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en
