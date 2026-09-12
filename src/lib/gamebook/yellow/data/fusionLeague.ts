@@ -293,29 +293,34 @@ export function buildFusionBossTeam(tier: FusionTier, levelBonus = 0, berriesAct
 //
 // SHINY partout SAUF MegamonarX (retire) et Galijah x Flamarokto : ces exceptions creent d'elles-memes une
 // COURBE MONTANTE 1778 -> 2480, donc un ordre d'arrivee evident et un vrai crescendo, au lieu d'un mur plat.
-export const PLATINE_ACE_PAIRS: FusionPairDef[] = [
+export // ⚠️ AU PALIER TRONE, ACE NE SE MET PAS EN PLACE — IL FRAPPE (decision Sartay, apres l'avoir vu jouer).
+//   Plus de Focalisation ni de Danse-Lames (tours de mise en place), plus de Repos (soin qui fait trainer le
+//   combat), plus de Cage-Eclair (statut). Les 24 slots portent des degats, et restent tous LEGAUX chez au
+//   moins un parent — aucune attaque plaquee. Deux exceptions assumees, parce qu'elles infligent des degats :
+//   Vampigraine (drain par tour, demande explicitement par Sartay) et Apotheose (CT universelle).
+const PLATINE_ACE_PAIRS: FusionPairDef[] = [
     // 1771 — la double-legendaire ouvre. NON-shiny : construite en FUSION (et non comme l'espece Ukognofy, BST 597),
     //   le shiny la propulsait a 2594, au-dessus de l'ACE lui-meme — elle aurait ecrase la fin du couloir.
     //   La paire goshendofy x ukognos EST Ukognofy : nom et sprite sont reconnus via officialFusions.
     { a: "goshendofy", b: "ukognos", name: "Ukognofy", role: "tank_spc",
-      moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] },
+      moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "souffle_polaire"] },
     // 1778 — double STAB special (Fee 115 + Glace 110). Non-shiny : c'est la 2e marche d'entree.
     { a: "galijah", b: "flamarokto", name: "Galirokto", role: "sweep_spc",
-      moves: ["cataclysme_lunaire", "blizzard", "eveil_divin", "repos"] },
+      moves: ["cataclysme_lunaire", "blizzard", "eveil_divin", "lance_flammes"] },
     // 2245 — le marteau. atk 756 : double STAB PHYSIQUE (Metal 90 + Combat 100) + Seisme + Danse-Lames.
     { a: "magnetor", b: "lievrocogne", name: "Magnicogne", role: "sweep_atk", shiny: true,
-      moves: ["poing_meteore", "coup_de_boutoir", "seisme", "danse_lames"] },
+      moves: ["poing_meteore", "coup_de_boutoir", "seisme", "lame_roche"] },
     // 2349 — synergie des GECKOS. ROLE tank_atk et pas sweep_atk : en sweep, Gekraise apportait FEU au lieu de
     //   ROCHE et la fusion sortait en [FEU/ROCHE], Deferlante n'etait alors plus STAB. tank_atk donne [ROCHE/EAU]
     //   ET garde atk 826. Les degats passent par le PHYSIQUE (Roche/Sol) ; l'Eau porte surtout l'identite.
     { a: "gekraise", b: "geaucke", name: "Gékaucké", role: "tank_atk", shiny: true,
-      moves: ["roc_titanesque", "seisme", "deferlante", "cage_eclair"] },
+      moves: ["roc_titanesque", "seisme", "lame_roche", "vive_attaque"] },
     // 2422 — fusion INEDITE a type FORCE : Lance-Soleil est TRANSMUTE en TENEBRES (cf. transmutedMoveTypes),
     //   donc 120 de puissance en STAB sur 756 de Speciale. Vampigraine est RECOLOREE en TENEBRES (choix Sartay) :
     //   ce n'est plus une graine mais une braise noire qui s'enracine — usure passive, la ou Focalisation ne
     //   servait qu'a se gonfler. Schema : endort, seme, efface.
     { a: "sylvapuce", b: "pyrokoss", name: "Cendrecerf", role: "sweep_spc", shiny: true,
-      moves: ["lance_soleil", "lance_flammes", "spores_dodo", "vampigraine"] },
+      moves: ["lance_soleil", "lance_flammes", "tempete_verte", "vampigraine"] },
     // 2479 — ACE de l'ACE, et sa SIGNATURE (les pantheres, cf. ACE_PANTHERS_EVOLVED). vit 628 / spc 748.
     //
     //   LE PROBLEME DU SOL. Tout l'arsenal de cette paire est ELECTRIK (special) ou SPECTRE (physique, regle
@@ -331,7 +336,7 @@ export const PLATINE_ACE_PAIRS: FusionPairDef[] = [
     //   serait sortie en Electrik, donc a nouveau immunisee par le SOL. Verifie : l'inversion ne change NI
     //   le BST (2479) NI le profil de stats (atk 314 / spc 748) — seul l'ordre des types bascule.
     { a: "ombrapanthe", b: "voltapanthe", name: "Voltombre", role: "sweep_spc", shiny: true,
-      moves: ["ultra_foudre", "apotheose", "focalisation", "cage_eclair"] },
+      moves: ["ultra_foudre", "apotheose", "fulgurance", "frappe_audela"] },
 ]
 
 /** L'equipe d'ACE au palier PLATINE. Parents niveau 100, IV parfaits, spreads par role, et chromatiques la ou

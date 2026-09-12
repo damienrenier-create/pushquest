@@ -91,7 +91,10 @@ describe("IA — Apotheose est evaluee comme le moteur la joue", () => {
             const v = team.find((f) => getSpecies(f.speciesId)?.name === "Voltombre")!
             const self = toBattleMon(v.instance)
             const eau = firstSpeciesTyped(["EAU"])
-            if (eau) expect(pick(self, eau.id)).toBe("ultra_foudre")
+            // Lequel des deux ELEC importe peu — et l'IA a raison de les departager a l'ESPERANCE :
+            // Ultra-Foudre (110 a 80 %) vaut 88, Fulgurance (90 a 100 %) vaut 90. Ce qui compte ici,
+            // c'est qu'elle frappe en ELEC plutot que de sortir Apotheose par defaut.
+            if (eau) expect(["ultra_foudre", "fulgurance"]).toContain(pick(self, eau.id))
         } finally { disposeFusionLeagueTeam(team) }
     })
 
