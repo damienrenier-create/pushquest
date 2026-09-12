@@ -85,6 +85,28 @@ function readRun(): PersistedRun | null {
     } catch { return null }
 }
 
+/** LE PARCOURS, prêt à voyager AILLEURS que dans ce navigateur.
+ *
+ *  ⚠️ Le miroir localStorage ne suit pas le joueur d'un appareil à l'autre, alors que sa POSITION et
+ *  l'USURE de son équipe, elles, sont dans la save serveur. Reprendre le couloir sur le téléphone après
+ *  l'avoir commencé sur le PC rendait donc le pire des deux mondes : réapparaître dans la salle du trône
+ *  avec une équipe déjà amochée par trois salles gagnées… et le compteur remis à ACE. Le parcours part
+ *  donc AUSSI dans le carry (déjà persisté côté serveur, cf. serializeGauntletCarryJson). */
+export function snapshotPlatineRun(): PersistedRun | null {
+    if (!loaded) return null
+    return { v: 1, sig: corridorSignature(rooms, holder), step, beaten, ledger }
+}
+
+/** AMORCE le miroir depuis un parcours venu de la save — uniquement s'il n'y a rien en local.
+ *  Le miroir local est TOUJOURS prioritaire : il est écrit à chaque tour, donc plus frais que la save. */
+export function seedPlatineMirrorFromSave(raw: unknown): void {
+    if (typeof window === "undefined" || !raw || typeof raw !== "object") return
+    const r = raw as Partial<PersistedRun>
+    if (r.v !== 1 || typeof r.sig !== "string" || typeof r.step !== "number") return
+    if (readRun()) return // déjà un parcours local, plus récent par construction
+    try { window.localStorage.setItem(PLATINE_RUN_LS_KEY, JSON.stringify(r)) } catch { /* ignoré */ }
+}
+
 /** Efface le miroir. Réservé aux VRAIES fins de parcours : abandon, défaite, sacre. */
 function clearRun(): void {
     if (typeof window === "undefined") return

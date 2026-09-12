@@ -66,7 +66,7 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc } from "./playerStore"
-import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
+import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
 import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_SACRE_LINES, platineCreditsLines } from "../data/platineLore"
 import { recordHit } from "../data/platineLedger"
 import { postFrontierGrant } from "../frontier/frontierApi"
@@ -841,7 +841,7 @@ function collectPlatineHits(b: BattleState): void {
  *  anti-refresh) + save serveur (durable, débouncé). Appelé À CHAQUE TOUR + à la fin de chaque salle. */
 function persistFusionGauntletWear(finalTeam: ReadonlyArray<BattleMon>): void {
     writeBackGauntlet(finalTeam)
-    const json = serializeGauntletCarryJson()
+    const json = serializeGauntletCarryJson({ platine: snapshotPlatineRun() })
     setFusionLeagueCarry(json)   // save serveur (durable, cross-device)
     writeGauntletCarryLs(json)   // miroir localStorage (instantané → repris tel quel au refresh)
     persistYellowSave()          // POST débouncé (durabilité serveur)

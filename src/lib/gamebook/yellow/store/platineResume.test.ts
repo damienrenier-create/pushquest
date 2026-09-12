@@ -26,6 +26,7 @@ const {
     currentPlatineOpponent, advancePlatineStep, markPlatineOpponentBeaten, isPlatineOpponentBeaten,
     getPlatineStep, isPlatineFinalStep, getPlatineLedger, setPlatineLedger,
     reportPlatineClaim, hasPendingPlatineClaim, flushPendingPlatineClaim,
+    snapshotPlatineRun, seedPlatineMirrorFromSave,
 } = await import("./platineRun")
 const { PLATINE_RUN_LS_KEY, PLATINE_CLAIM_LS_KEY, SESSION_LS_KEYS, clearRunSessionStorage } = await import("../storage/sessionKeys")
 const { recordHit, topHits } = await import("../data/platineLedger")
@@ -268,5 +269,72 @@ describe("Ligue de Fusion — le carry transporte les drapeaux de la traversee",
         expect(Array.isArray(legacy.team)).toBe(true)
         expect(typeof legacy.berries).toBe("undefined")
         expect(typeof legacy.bossBeaten).toBe("undefined")
+    })
+})
+
+// CROSS-DEVICE. Le miroir localStorage ne suit pas le joueur d'une machine a l'autre, alors que sa POSITION et
+//   l'USURE de son equipe, elles, sont dans la save serveur. Commencer le couloir sur PC puis reprendre sur
+//   telephone donnait le pire des deux mondes : reapparaitre dans la salle du trone avec une equipe amochee par
+//   trois salles gagnees, et le compteur remis a ACE. Le parcours voyage donc AUSSI dans le carry.
+describe("couloir platine — reprise sur un AUTRE appareil", () => {
+    beforeEach(() => { for (const k of Object.keys(_ls)) delete _ls[k]; resetPlatineRun() })
+
+    it("le parcours s'expose sous une forme transportable, et seulement s'il y a un couloir", () => {
+        expect(snapshotPlatineRun()).toBeNull() // rien de charge -> rien a transporter
+        const rooms = [champ("Jacanon")], h = holder("Zyran")
+        setPlatineCorridor(rooms, h)
+        markPlatineOpponentBeaten(); advancePlatineStep()
+        const snap = snapshotPlatineRun()!
+        expect(snap).toMatchObject({ v: 1, step: 1, beaten: false })
+        expect(typeof snap.sig).toBe("string")
+    })
+
+    it("arriver sur une machine VIERGE avec le parcours venu de la save le reprend a la bonne etape", () => {
+        const rooms = [champ("Jacanon"), champ("Mools")], h = holder("Zyran")
+        setPlatineCorridor(rooms, h)
+        for (let i = 0; i < 2; i++) { markPlatineOpponentBeaten(); advancePlatineStep() }
+        const fromSave = snapshotPlatineRun()
+        expect(getPlatineStep()).toBe(2)
+
+        // AUTRE APPAREIL : localStorage vide, memoire vide — seule la save a voyage.
+        for (const k of Object.keys(_ls)) delete _ls[k]
+        resetPlatineRun()
+        seedPlatineMirrorFromSave(fromSave)
+        setPlatineCorridor(rooms, h)
+        expect(getPlatineStep()).toBe(2)
+        expect(currentPlatineOpponent()!.label).toBe("Mools")
+    })
+
+    it("le miroir LOCAL reste prioritaire : il est ecrit a chaque tour, donc plus frais que la save", () => {
+        const rooms = [champ("Jacanon"), champ("Mools")], h = holder("Zyran")
+        setPlatineCorridor(rooms, h)
+        markPlatineOpponentBeaten(); advancePlatineStep()          // local = etape 1
+        const stale = { ...snapshotPlatineRun()!, step: 0 }        // la save, elle, est en retard
+        seedPlatineMirrorFromSave(stale)                           // ne doit RIEN ecraser
+        resetPlatineRun(); setPlatineCorridor(rooms, h)
+        expect(getPlatineStep()).toBe(1)
+    })
+
+    it("un parcours de save abime ou d'une autre version est ignore sans bruit", () => {
+        const rooms = [champ("Jacanon")], h = null
+        for (const junk of [null, undefined, "texte", 42, {}, { v: 2, sig: "x", step: 1 }, { v: 1, step: 1 }]) {
+            for (const k of Object.keys(_ls)) delete _ls[k]
+            resetPlatineRun()
+            expect(() => seedPlatineMirrorFromSave(junk)).not.toThrow()
+            setPlatineCorridor(rooms, h)
+            expect(getPlatineStep()).toBe(0)
+        }
+    })
+
+    it("un parcours venu de la save d'un couloir DIFFERENT est jete comme les autres", () => {
+        const rooms = [champ("Jacanon")]
+        setPlatineCorridor(rooms, holder("Zyran"))
+        markPlatineOpponentBeaten(); advancePlatineStep()
+        const fromSave = snapshotPlatineRun()
+        for (const k of Object.keys(_ls)) delete _ls[k]
+        resetPlatineRun()
+        seedPlatineMirrorFromSave(fromSave)
+        setPlatineCorridor(rooms, holder("Mools")) // le trone a change de main entre-temps
+        expect(getPlatineStep()).toBe(0)
     })
 })

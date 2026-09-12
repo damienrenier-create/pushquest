@@ -31,7 +31,7 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
-import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun } from "./platineRun"
+import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
@@ -396,6 +396,8 @@ export function restoreFusionGauntletFromCarry(): boolean {
     //   marqueur gravé dans la save pour le boss.
     setGauntletBerries(typeof flags.berries === "boolean" ? flags.berries : isTopFusionTier(activeFusionTier((m) => isTrainerDefeated(m))))
     setGauntletBossBeaten(typeof flags.bossBeaten === "boolean" ? flags.bossBeaten : isTrainerDefeated("y_fusion_miroir"))
+    // …et le parcours du couloir platine, s'il vient d'un AUTRE appareil (rien en localStorage ici).
+    seedPlatineMirrorFromSave((flags as { platine?: unknown }).platine)
     return true
 }
 
@@ -434,13 +436,13 @@ function ensureFusionGauntletBuilt(): boolean {
         .filter((x): x is BuiltFusion => x !== null)
     if (built.length === 0) return false
     setGauntletTeam(built)
-    setGauntletCarry(serializeGauntletCarryJson())
+    setGauntletCarry(serializeGauntletCarryJson({ platine: snapshotPlatineRun() }))
     return true
 }
 
 /** LIGUE DE FUSION (onglet Équipe) — persiste l'usure COURANTE du gauntlet dans la save (après réordonnancement). */
 function persistGauntletCarry() {
-    setGauntletCarry(serializeGauntletCarryJson())
+    setGauntletCarry(serializeGauntletCarryJson({ platine: snapshotPlatineRun() }))
 }
 /** Réordonne l'ÉQUIPE de fusionnés (échange 2 positions) : gauntlet + roster (pour la reprise) + carry + save. */
 export function reorderFusionGauntletTeam(uidA: string, uidB: string): boolean {
@@ -772,7 +774,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
-        setGauntletCarry(serializeGauntletCarryJson()) // REPRISE reload : usure initiale (PV pleins)
+        setGauntletCarry(serializeGauntletCarryJson({ platine: snapshotPlatineRun() })) // REPRISE reload : usure initiale (PV pleins)
         // FILET DE SÉCURITÉ : on n'arrive ici que si le joueur a atteint un combat SANS passer par l'entrée
         //   (l'entrée construit déjà l'équipe). La run n'a alors jamais été initialisée : on le fait maintenant.
         initFusionLeagueRun()
@@ -1705,6 +1707,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     return
                 }
                 advancePlatineStep()
+                // La porte franchie est un point de progression : on le grave TOUT DE SUITE dans le carry
+                //   (donc dans la save), sinon l'étape ne survivrait qu'en local jusqu'au prochain combat.
+                setGauntletCarry(serializeGauntletCarryJson({ platine: snapshotPlatineRun() }))
             } else if (map.id === "yellow_fusion_platine") {
                 // On QUITTE la salle du trône (porte gauche → l'Autel) : c'est un ABANDON DÉLIBÉRÉ, donc le
                 //   parcours part pour de bon, miroir localStorage compris. À distinguer du simple

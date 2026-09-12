@@ -65,10 +65,12 @@ export interface GauntletCarryMon { a: string; b: string; hp: number; status: st
  *  adversaires leurs baies, Baie Phénix comprise, sur toute la moitié haute de la Ligue.
  *  Les faire voyager DANS le carry est exact — contrairement à un recalcul depuis la save, qui ne sait pas
  *  distinguer la 1re run du jour de la seconde — et ça marche aussi d'un appareil à l'autre. */
-export function serializeGauntletCarryJson(): string | null {
+export function serializeGauntletCarryJson(extra?: Record<string, unknown>): string | null {
     const team = serializeGauntletCarry()
     if (!team) return null
-    return JSON.stringify({ team, berries: gauntletBerries, bossBeaten: gauntletBossBeaten })
+    // `extra` : ce que ce module LEAF ne peut pas aller chercher lui-même sans créer de cycle (le parcours du
+    //   couloir platine, par exemple). Les appelants le fournissent ; les clés absentes sont simplement omises.
+    return JSON.stringify({ team, berries: gauntletBerries, bossBeaten: gauntletBossBeaten, ...(extra ?? {}) })
 }
 
 export function serializeGauntletCarry(): GauntletCarryMon[] | null {
