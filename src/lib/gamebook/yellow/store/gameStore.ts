@@ -25,7 +25,7 @@ import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion 
 import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
 import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
-import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarry, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
+import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarryJson, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
@@ -354,7 +354,12 @@ export function restoreFusionGauntletFromCarry(): boolean {
     const rawCarry = readGauntletCarryLs() ?? save.fusionLeagueCarry
     if (!rawCarry) return false
     let carry: GauntletCarryMon[]
-    try { const parsed = JSON.parse(rawCarry); carry = Array.isArray(parsed?.team) ? parsed.team : (Array.isArray(parsed) ? parsed : []) } catch { return false }
+    let flags: { berries?: unknown; bossBeaten?: unknown } = {}
+    try {
+        const parsed = JSON.parse(rawCarry)
+        carry = Array.isArray(parsed?.team) ? parsed.team : (Array.isArray(parsed) ? parsed : [])
+        if (parsed && !Array.isArray(parsed)) flags = parsed
+    } catch { return false }
     if (!carry.length) return false
     const all = [...save.team, ...save.pc]
     const byU = (uid: string) => all.find((m) => m.uid === uid)
@@ -385,6 +390,12 @@ export function restoreFusionGauntletFromCarry(): boolean {
     }
     if (!rebuilt.some((f) => f.instance.currentHp > 0)) { rebuilt.forEach((f) => disposeFusion(f.speciesId)); return false } // tous K.O. → fail-safe
     setGauntletTeam(rebuilt)
+    // LES DRAPEAUX DE LA TRAVERSÉE, que le carry transporte désormais (cf. serializeGauntletCarryJson).
+    //   Un carry d'AVANT cette version n'en a pas : on retombe alors sur le barème du palier pour les baies
+    //   (au pire un adversaire en a alors qu'il n'aurait pas dû — bien moins grave que l'inverse) et sur le
+    //   marqueur gravé dans la save pour le boss.
+    setGauntletBerries(typeof flags.berries === "boolean" ? flags.berries : isTopFusionTier(activeFusionTier((m) => isTrainerDefeated(m))))
+    setGauntletBossBeaten(typeof flags.bossBeaten === "boolean" ? flags.bossBeaten : isTrainerDefeated("y_fusion_miroir"))
     return true
 }
 
@@ -423,14 +434,13 @@ function ensureFusionGauntletBuilt(): boolean {
         .filter((x): x is BuiltFusion => x !== null)
     if (built.length === 0) return false
     setGauntletTeam(built)
-    const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null)
+    setGauntletCarry(serializeGauntletCarryJson())
     return true
 }
 
 /** LIGUE DE FUSION (onglet Équipe) — persiste l'usure COURANTE du gauntlet dans la save (après réordonnancement). */
 function persistGauntletCarry() {
-    const c = serializeGauntletCarry()
-    setGauntletCarry(c ? JSON.stringify({ team: c }) : null)
+    setGauntletCarry(serializeGauntletCarryJson())
 }
 /** Réordonne l'ÉQUIPE de fusionnés (échange 2 positions) : gauntlet + roster (pour la reprise) + carry + save. */
 export function reorderFusionGauntletTeam(uidA: string, uidB: string): boolean {
@@ -762,7 +772,7 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
-        const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
+        setGauntletCarry(serializeGauntletCarryJson()) // REPRISE reload : usure initiale (PV pleins)
         // FILET DE SÉCURITÉ : on n'arrive ici que si le joueur a atteint un combat SANS passer par l'entrée
         //   (l'entrée construit déjà l'équipe). La run n'a alors jamais été initialisée : on le fait maintenant.
         initFusionLeagueRun()
@@ -1697,7 +1707,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 //   rechargement de page, qui n'est pas un choix du joueur et que le miroir rattrape.
                 abandonPlatineRun()
             }
-            if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten()) {
+            // CEINTURE ET BRETELLES : la porte accepte le drapeau de run OU le marqueur gravé dans la save.
+            //   Si un chemin de reprise oubliait de rétablir le drapeau, le joueur serait enfermé dans la
+            //   salle du miroir — porte refusée en silence, boss non re-combattable, six combats à refaire.
+            if (targetMapId === "yellow_fusion_ultime" && !getGauntletBossBeaten() && !isTrainerDefeated("y_fusion_miroir")) {
                 set({ player: { ...player, direction: next.direction } }) // reste sur place, face à la porte murée
                 return
             }

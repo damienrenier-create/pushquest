@@ -55,6 +55,22 @@ export function gauntletHasAlive(): boolean { return !!team && team.some((f) => 
 export interface GauntletCarryMon { a: string; b: string; hp: number; status: string; statusCounter: number; pp: Record<string, number>; moves: string[]; heldItem?: string | null; heldItem2?: string | null }
 /** Sérialise l'usure de l'équipe-gauntlet courante (pour persistance → REPRISE au reload). null = pas de gauntlet.
  *  `moves` = ordre COURANT des attaques (le joueur peut le réordonner) → restauré tel quel au reload. */
+/** LE CARRY COMPLET, tel qu'il part en localStorage ET dans la save : l'usure de l'équipe, PLUS les deux
+ *  drapeaux de la traversée.
+ *
+ *  ⚠️ Ces drapeaux vivaient en mémoire de module et étaient donc perdus au rechargement, alors que l'usure,
+ *  elle, survivait — le joueur reprenait sa Ligue exactement là où il l'avait laissée, mais avec des réglages
+ *  remis à zéro. `bossBeaten` perdu ENFERMAIT le joueur au palier OR (porte de la salle ultime refusée en
+ *  silence, boss non re-combattable, sacre à refaire depuis le début) ; `berries` perdu retirait aux
+ *  adversaires leurs baies, Baie Phénix comprise, sur toute la moitié haute de la Ligue.
+ *  Les faire voyager DANS le carry est exact — contrairement à un recalcul depuis la save, qui ne sait pas
+ *  distinguer la 1re run du jour de la seconde — et ça marche aussi d'un appareil à l'autre. */
+export function serializeGauntletCarryJson(): string | null {
+    const team = serializeGauntletCarry()
+    if (!team) return null
+    return JSON.stringify({ team, berries: gauntletBerries, bossBeaten: gauntletBossBeaten })
+}
+
 export function serializeGauntletCarry(): GauntletCarryMon[] | null {
     if (!team) return null
     return team.map((f) => {

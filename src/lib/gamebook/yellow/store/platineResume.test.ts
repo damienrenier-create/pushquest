@@ -240,3 +240,33 @@ describe("couloir platine — un sacre ne se perd pas sur un reseau muet", () =>
         expect(hasPendingPlatineClaim()).toBe(false) // une equipe vide serait refusee par le serveur : on la jette
     })
 })
+
+// LES DRAPEAUX DE LA TRAVERSEE voyagent DANS le carry. Ils vivaient en memoire de module : un rechargement les
+//   remettait a zero alors que l'usure de l'equipe, elle, survivait. `bossBeaten` perdu ENFERMAIT le joueur au
+//   palier OR (porte de la salle ultime refusee en silence, boss non re-combattable) ; `berries` perdu retirait
+//   aux adversaires leurs baies, Baie Phenix comprise.
+describe("Ligue de Fusion — le carry transporte les drapeaux de la traversee", () => {
+    it("le JSON du carry embarque l'usure ET les deux drapeaux", async () => {
+        const g = await import("./fusionGauntlet")
+        g.setGauntletBerries(true)
+        g.setGauntletBossBeaten(true)
+        // Sans equipe montee, le helper doit rendre null plutot qu'un JSON bancal.
+        expect(g.serializeGauntletCarryJson()).toBeNull()
+    })
+
+    it("les drapeaux sont bien lus/ecrits par leur paire d'accesseurs", async () => {
+        const g = await import("./fusionGauntlet")
+        g.setGauntletBerries(false); expect(g.getGauntletBerries()).toBe(false)
+        g.setGauntletBerries(true); expect(g.getGauntletBerries()).toBe(true)
+        g.setGauntletBossBeaten(false); expect(g.getGauntletBossBeaten()).toBe(false)
+        g.setGauntletBossBeaten(true); expect(g.getGauntletBossBeaten()).toBe(true)
+    })
+
+    it("un carry d'AVANT cette version (sans drapeaux) reste lisible", () => {
+        // Forme historique : { team: [...] }. La reprise doit retomber sur ses replis, pas planter.
+        const legacy = JSON.parse(JSON.stringify({ team: [{ a: "u1", b: "u2", hp: 10, status: "NONE", statusCounter: 0, pp: {}, moves: [] }] }))
+        expect(Array.isArray(legacy.team)).toBe(true)
+        expect(typeof legacy.berries).toBe("undefined")
+        expect(typeof legacy.bossBeaten).toBe("undefined")
+    })
+})
