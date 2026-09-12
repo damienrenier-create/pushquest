@@ -27,8 +27,14 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
     { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
-    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les EMPEREURS DU NEXUS (palier platine) d'abord, classés au nombre de challengers repoussés ; puis les Maîtres de la Chimère par palier (Platine > Or > Argent > Bronze) et ancienneté du sacre. Personne encore ? Sois-le ! 🐉" },
+    { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
 ]
+
+/** ANTI-SPOILER. Le palier PLATINE ne doit pas exister pour qui n'a pas bouclé l'OR — même règle que la ligne
+ *  d'épilogue (data/fusionEpilogue). Sans ça, n'importe quel joueur arrivé au run 3 ouvrait le Palmarès et y
+ *  lisait l'existence du 4e palier, sa mécanique de couloir, son système de points et qui occupe la chaise. */
+const OR_MARKER = "fusleague_or"
+const RUN4_HINT_OR = "LIGUE DE FUSION — l'ULTIME épreuve. Les EMPEREURS DU NEXUS (palier platine) d'abord, classés au nombre de challengers repoussés ; puis les Maîtres de la Chimère par palier (Platine > Or > Argent > Bronze) et ancienneté du sacre."
 
 const TIER_RANK: Record<string, number> = { platine: 4, or: 3, argent: 2, bronze: 1 }
 const TIER_LABEL: Record<string, string> = { platine: "💎 PLATINE", or: "🥇 OR", argent: "🥈 ARGENT", bronze: "🥉 BRONZE" }
@@ -46,6 +52,8 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
     const [fusion, setFusion] = useState<FusionChamp[]>([]) // RUN 4 / LIGUE : sacres de la Ligue de Fusion (Hall of Fame partagé)
     const [firsts, setFirsts] = useState<Record<string, { userId: string; nickname: string }>>({}) // 🥇 1ers du groupe (feat-first)
+    // ANTI-SPOILER : seul un champion OR voit le palier platine (classement + libellé d'onglet).
+    const hasOr = getPlayer().defeatedTrainers.includes(OR_MARKER)
     const [tab, setTab] = useState<TabId>("run1")
     const [expanded, setExpanded] = useState<string | null>(null) // RUN 2 : userId de l'entrée dépliée (détail des axes)
     const [showRules, setShowRules] = useState(false) // RUN 1 fun : carrousel Classement ↔ Règles (allège l'écran)
@@ -83,7 +91,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
     const dispUnit = meta.unit // run 2 = note /1000 (fun ET non-fun)
     const dispHint = isFunRun2
         ? "REMIX (Run 2) — PERFORMANCE /1000 : Pokédex ×500 + % de victoire ×300 + niveaux d'équipe ×200, MULTIPLIÉE par ton bonus « rang-à-finir » (1ᵉʳ fun à boucler le Remix ×1,5 … 5ᵉ ×1,1). En prime, tes hauts faits du Remix te versent de l'énergie ⚡. Clique une ligne pour le détail des axes."
-        : meta.hint
+        : (tab === "run4" && hasOr) ? RUN4_HINT_OR : meta.hint
     const rulesTab = (tab === "run1" || tab === "run2") && funMode // carrousel Classement ↔ Règles (fun)
     const showingRules = rulesTab && showRules
 
@@ -202,7 +210,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                 {state === "ok" && tab === "duels" && <DuelsTab duels={data.duels} />}
 
                 {/* Onglet RUN 4 / LIGUE : 🥇 premières du groupe + Maîtres de la Chimère (Hall of Fame Fusion) */}
-                {state === "ok" && tab === "run4" && <Run4Tab champs={fusion} firsts={firsts} />}
+                {state === "ok" && tab === "run4" && <Run4Tab champs={fusion} firsts={firsts} hasOr={hasOr} />}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
             </div>
@@ -361,12 +369,12 @@ function EmperorsBoard() {
     )
 }
 
-function Run4Tab({ champs, firsts }: { champs: FusionChamp[]; firsts: Record<string, { userId: string; nickname: string }> }) {
+function Run4Tab({ champs, firsts, hasOr }: { champs: FusionChamp[]; firsts: Record<string, { userId: string; nickname: string }>; hasOr: boolean }) {
     const ranked = champs.slice().sort((a, b) =>
         (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0) || (Date.parse(a.wonAt) - Date.parse(b.wonAt)))
     return (
         <div style={scroll}>
-            <EmperorsBoard />
+            {hasOr && <EmperorsBoard />}
             <div style={sectionTitle}>🥇 PREMIÈRES DU GROUPE</div>
             <div style={{ marginBottom: 12 }}>
                 {FEAT_FIRST_META.map((f) => (

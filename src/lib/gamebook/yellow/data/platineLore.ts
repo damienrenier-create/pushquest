@@ -42,6 +42,10 @@ export const PLATINE_SPAGHETTI_LINES = [
     "« Et tant qu'il la tient… chaque challenger qui échoue le rend plus grand. Y compris toi, si tu tombes. »",
 ]
 
+/** La version courte a-t-elle déjà été servie ? Au-delà, il laisse passer sans un mot : deux lignes à chaque
+ *  entrée deviendraient un péage, et on retente ce couloir souvent. */
+export const PLATINE_SHORT_SEEN_MARKER = "platine_short_seen"
+
 /** Deuxième visite et suivantes : il ne refait pas tout le laïus. */
 export const PLATINE_SPAGHETTI_SHORT = [
     "*Le Dieu Spaghetti s'écarte sans un mot, et désigne la porte.*",

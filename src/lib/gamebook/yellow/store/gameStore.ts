@@ -32,7 +32,7 @@ import { previousFusionTier, isTopFusionTier } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun } from "./platineRun"
-import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
+import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -1028,6 +1028,10 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
 function platineOpponentIntro(): string[] | null {
     const opp = currentPlatineOpponent()
     if (!opp) return null
+    // DÉJÀ TOMBÉ : on ne rejoue pas son discours d'arrivée. Re-parler au PNJ après l'avoir battu est un
+    //   réflexe (on cherche la porte, ou une récompense) — et ACE reservait ses quatre lignes de menace,
+    //   les fantômes se « dressaient » une seconde fois, avant qu'on enchaîne sur « il est déjà à terre ».
+    if (isPlatineOpponentBeaten()) return null
     if (opp.kind === "ace") return [...PLATINE_ACE_INTRO_VARIANTS[new Date().getDate() % PLATINE_ACE_INTRO_VARIANTS.length]]
     if (opp.kind === "room") {
         const d = new Date(opp.champion.wonAt)
@@ -1843,9 +1847,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     // Le Dieu Spaghetti pose la règle UNE SEULE FOIS : il ouvre la dernière porte et prévient que
                     //   derrière, ce ne sont plus ses créatures. On interrompt AVANT de franchir (comme l'intro
                     //   des synergies) ; le pas suivant fait entrer.
-                    if (!isTrainerDefeated(PLATINE_INTRO_MARKER)) {
-                        markTrainerDefeated(PLATINE_INTRO_MARKER)
-                        set({ player: next, dialogue: { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...PLATINE_SPAGHETTI_LINES] } })
+                    // Le grand discours UNE fois ; ensuite il s'écarte en deux lignes. Les deux interrompent
+                    //   AVANT de franchir : le pas suivant fait entrer.
+                    const firstTime = !isTrainerDefeated(PLATINE_INTRO_MARKER)
+                    if (firstTime) markTrainerDefeated(PLATINE_INTRO_MARKER)
+                    if (firstTime || !isTrainerDefeated(PLATINE_SHORT_SEEN_MARKER)) {
+                        if (!firstTime) markTrainerDefeated(PLATINE_SHORT_SEEN_MARKER)
+                        set({ player: next, dialogue: { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: firstTime ? [...PLATINE_SPAGHETTI_LINES] : [...PLATINE_SPAGHETTI_SHORT] } })
                         scheduleSave(next)
                         return
                     }
