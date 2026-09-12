@@ -7,7 +7,7 @@
 import type { BattleMon, PokeType } from "./types"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
-import { typeEffectiveness, moveCategory } from "./typeChart"
+import { typeEffectiveness, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import { computeDamage } from "./damage"
 import { fullStats } from "./stats"
 import type { Rng } from "./rng"
@@ -55,7 +55,7 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
         const isStatus = mv.power <= 0
-        const mt = effMoveType(self, mv)
+        const { type: mt } = effMoveProfile(self, selfSp?.types ?? [], selfSp ? fullStats(self, selfSp) : null, mv)
         const eff = isStatus ? 1 : typeEffectiveness(mt, foeTypes)
         const power = mv.power || 0
         let score: number
@@ -100,7 +100,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
         const isStatus = mv.power <= 0
-        const mt = effMoveType(self, mv)
+        const prof = effMoveProfile(self, selfTypes, sStats, mv)
+        const mt = prof.type
         const eff = isStatus ? 1 : typeEffectiveness(mt, foeTypes)
         let score: number
         if (isStatus) {
@@ -134,7 +135,7 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             }
         } else {
             const stab = selfTypes.includes(mt) ? 1.5 : 1
-            const phys = moveCategory(mt) === "PHYSICAL"
+            const phys = prof.phys
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
             const def = fStats ? (phys ? fStats.def : (foe.frozenSpd ?? fStats.spc)) : 1 // FUSION : SpD séparée si présente
             const acc = mv.accuracy > 0 ? mv.accuracy / 100 : 1 // PRÉCISION : un coup peu fiable vaut moins (n'enchaîne pas un move à 70 %)
@@ -250,17 +251,39 @@ function effMoveType(self: BattleMon, mv: { id: string; type: PokeType }): PokeT
     return (self.moveTypeOverride?.[mv.id] as PokeType | undefined) ?? mv.type
 }
 
+/** PROFIL EFFECTIF d'une attaque : le type ET la catégorie que le moteur appliquera.
+ *
+ *  Même ordre de résolution que engine.ts, et il compte : la TRANSMUTATION ne change que le type (pour ne pas
+ *  basculer un rayon spécial sur l'Attaque), tandis qu'APOTHÉOSE — la CT adaptative — impose les DEUX, en
+ *  s'alignant sur la meilleure stat offensive.
+ *
+ *  ⚠️ Sans ça, l'IA jugeait Apothéose sur sa fiche brute : type NORMAL, donc catégorie PHYSIQUE. Sur un
+ *  sweeper spécial comme le Voltombre d'ACE (atk 314 / spc 748), elle l'estimait à moins de la moitié de sa
+ *  vraie force et ne la jouait donc jamais — alors que c'est précisément sa réponse aux types SOL. */
+function effMoveProfile(
+    self: BattleMon,
+    selfTypes: readonly PokeType[],
+    stats: { atk: number; spc: number } | null,
+    mv: { id: string; type: PokeType; category?: string; effect?: { adaptiveStab?: boolean } },
+): { type: PokeType; phys: boolean } {
+    const type = effMoveType(self, mv)
+    const phys = (mv.category ?? moveCategory(type)) === "PHYSICAL"
+    if (!mv.effect?.adaptiveStab || !selfTypes.length || !stats) return { type, phys }
+    const a = resolveAdaptiveStab(selfTypes as PokeType[], stats.atk, stats.spc)
+    return { type: a.type, phys: a.isPhysical }
+}
+
 function estMoveDamage(self: BattleMon, foe: BattleMon, moveId: string): number {
     const mv = getMove(moveId); if (!mv) return 0
     const power = effPower(self, moveId)
     if (power <= 0) return 0
     const selfSp = getSpecies(self.speciesId), foeSp = getSpecies(foe.speciesId)
     if (!selfSp || !foeSp) return 0
-    const mt = effMoveType(self, mv)
+    const selfStats = fullStats(self, selfSp)
+    const { type: mt, phys } = effMoveProfile(self, selfSp.types, selfStats, mv)
     const eff = typeEffectiveness(mt, foeSp.types)
     if (eff === 0) return 0
-    const phys = moveCategory(mt) === "PHYSICAL"
-    const off = phys ? fullStats(self, selfSp).atk : fullStats(self, selfSp).spc
+    const off = phys ? selfStats.atk : selfStats.spc
     const fs = fullStats(foe, foeSp)
     const def = phys ? fs.def : (foe.frozenSpd ?? fs.spc)
     return computeDamage({ level: self.level, power, attack: off, defense: def, stab: selfSp.types.includes(mt), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage

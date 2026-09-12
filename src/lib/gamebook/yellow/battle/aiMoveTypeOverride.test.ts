@@ -64,3 +64,43 @@ describe("IA — le type transmuté d'une fusion est pris en compte", () => {
         } finally { disposeFusionLeagueTeam(team) }
     })
 })
+
+// APOTHEOSE (CT52, la CT-trophee du blackjack) prend le type du parent TETE et frappe sur la MEILLEURE stat
+//   offensive. Le moteur l'applique ; l'IA, elle, la jugeait sur sa fiche brute — type NORMAL, donc categorie
+//   PHYSIQUE. Sur le Voltombre d'ACE (atk 314 / spc 748) elle l'estimait a moins de la moitie de sa force et ne
+//   la jouait donc jamais, alors que c'est precisement sa reponse aux types SOL (qui immunisent tout son ELEC).
+describe("IA — Apotheose est evaluee comme le moteur la joue", () => {
+    it("le Voltombre d'ACE sort Apotheose contre un SOL, qui mure tout son arsenal ELEC", () => {
+        const team = buildPlatineAceTeam()
+        try {
+            const v = team.find((f) => getSpecies(f.speciesId)?.name === "Voltombre")!
+            const self = toBattleMon(v.instance)
+
+            // Le parent TETE doit etre ombrapanthe : sinon Apotheose sortirait en ELEC, donc a nouveau immunisee.
+            expect(v.result.types[0]).toBe("SPECTRE")
+            expect(self.moves.some((m) => m.moveId === "apotheose")).toBe(true)
+
+            const sol = firstSpeciesTyped(["SOL"])
+            if (sol) expect(pick(self, sol.id)).toBe("apotheose")
+        } finally { disposeFusionLeagueTeam(team) }
+    })
+
+    it("…et garde son ELEC quand il est super-efficace (elle ne devient pas le coup par defaut)", () => {
+        const team = buildPlatineAceTeam()
+        try {
+            const v = team.find((f) => getSpecies(f.speciesId)?.name === "Voltombre")!
+            const self = toBattleMon(v.instance)
+            const eau = firstSpeciesTyped(["EAU"])
+            if (eau) expect(pick(self, eau.id)).toBe("ultra_foudre")
+        } finally { disposeFusionLeagueTeam(team) }
+    })
+
+    it("l'equipe d'ACE garde son crescendo de puissance apres l'inversion des parents", () => {
+        const team = buildPlatineAceTeam()
+        try {
+            const bst = team.map((f) => Object.values(f.result.stats).reduce((a, b) => a + b, 0))
+            expect(bst).toEqual([...bst].sort((a, b) => a - b)) // strictement croissant
+            expect(bst[bst.length - 1]).toBe(2479)              // Voltombre reste l'ACE de l'ACE
+        } finally { disposeFusionLeagueTeam(team) }
+    })
+})

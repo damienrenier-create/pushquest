@@ -317,9 +317,21 @@ export const PLATINE_ACE_PAIRS: FusionPairDef[] = [
     { a: "sylvapuce", b: "pyrokoss", name: "Cendrecerf", role: "sweep_spc", shiny: true,
       moves: ["lance_soleil", "lance_flammes", "spores_dodo", "vampigraine"] },
     // 2479 — ACE de l'ACE, et sa SIGNATURE (les pantheres, cf. ACE_PANTHERS_EVOLVED). vit 628 / spc 748.
-    //   Ball'Ombre repond aux SOL, immunises a l'Electrik — sans elle, un seul Sol murait toute la salle.
-    { a: "voltapanthe", b: "ombrapanthe", name: "Voltombre", role: "sweep_spc", shiny: true,
-      moves: ["ultra_foudre", "ball_ombre", "focalisation", "cage_eclair"] },
+    //
+    //   LE PROBLEME DU SOL. Tout l'arsenal de cette paire est ELECTRIK (special) ou SPECTRE (physique, regle
+    //   Gen 1 : la categorie decoule du TYPE). Un type SOL est immunise a l'Electrik, et Voltombre n'a que
+    //   314 d'Attaque contre 748 de Speciale : sa reponse fantome tapait donc a moins de la moitie de sa
+    //   force. Un seul Sol murait la salle — il lui fallait juste 7 tours. Et aucune attaque SPECTRE ou
+    //   TENEBRES *speciale* n'est legale chez ses parents : le moveset seul ne pouvait pas s'en sortir.
+    //
+    //   LA REPONSE (idee Sartay) : APOTHEOSE, la CT-trophee du blackjack (ct52, `universal` — donc legalement
+    //   enseignable a n'importe qui, aucune triche de learnset). Elle prend le type du parent TETE et frappe
+    //   sur la MEILLEURE stat offensive : ici SPECTRE, en SPECIALE, a 748 — avec STAB par construction.
+    //   D'ou l'INVERSION des parents (ombrapanthe en tete) : sans elle, types[0] valait ELEC et Apotheose
+    //   serait sortie en Electrik, donc a nouveau immunisee par le SOL. Verifie : l'inversion ne change NI
+    //   le BST (2479) NI le profil de stats (atk 314 / spc 748) — seul l'ordre des types bascule.
+    { a: "ombrapanthe", b: "voltapanthe", name: "Voltombre", role: "sweep_spc", shiny: true,
+      moves: ["ultra_foudre", "apotheose", "focalisation", "cage_eclair"] },
 ]
 
 /** L'equipe d'ACE au palier PLATINE. Parents niveau 100, IV parfaits, spreads par role, et chromatiques la ou
