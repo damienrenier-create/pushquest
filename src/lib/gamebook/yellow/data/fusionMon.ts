@@ -7,7 +7,7 @@
 // Cycle de vie : buildFusion() enregistre l'espèce → à la fin du combat, unregisterCustomSpecies([speciesId]).
 // Les 2 Daemons parents ne sont PAS mutés (l'instance fusionnée est neuve).
 
-import { computeFusion, specialFusionForIds, type FusionParent, type FusionResult } from "./fusionSpecies"
+import { computeFusion, specialFusionForIds, recoloredMoveTypes, type FusionParent, type FusionResult } from "./fusionSpecies"
 import { getSpecies, registerCustomSpecies, unregisterCustomSpecies } from "./species"
 import { officialFusionForParents } from "./officialFusions"
 import { MISSINGNO_SPRITE } from "./fusionSprite"
@@ -109,13 +109,16 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     //   Moveset CURÉ (opts.moves — fusions de Ligue/boss) : la provenance parentale n'a plus de sens, donc on
     //   convertit la 1re attaque OFFENSIVE de la liste curée. Sans ça, une fusion à type FORCÉ dotée d'un moveset
     //   choisi à la main (ex. le Cendrecerf d'ACE) se retrouverait SANS le moindre STAB.
-    const forcedType = specialFusionForIds(a.speciesId, b.speciesId)?.forcedType
+    const special = specialFusionForIds(a.speciesId, b.speciesId)
+    const forcedType = special?.forcedType
     const curedTypes: Record<string, string> = {}
     if (opts?.moves && forcedType) {
         const lead = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && getMove(m)?.type !== forcedType)
         if (lead) curedTypes[lead] = forcedType
     }
-    const moveTypes = opts?.moves ? curedTypes : result.moveTypes
+    // La RECOLORATION s'applique dans les deux cas : une attaque signature garde son type quelle que soit
+    //   la provenance du moveset (curé pour ACE, dérivé pour la fusion d'un joueur).
+    const moveTypes = { ...(opts?.moves ? curedTypes : result.moveTypes), ...recoloredMoveTypes(moves, special) }
     if (Object.keys(moveTypes).length) instance.moveTypeOverride = { ...moveTypes } as MonInstance["moveTypeOverride"]
     instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
     // Objets tenus : le fusionné hérite des 2 objets de ses parents (heldItem + heldItem2). Les helpers de

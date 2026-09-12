@@ -326,7 +326,10 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
     // 5) VAMPIGRAINE (drain passif) — EN OUVERTURE seulement : pas déjà posée, cible non-Plante, ET on ÉVITE de semer à
     //    bas PV quand on porte une win-con « bas PV » (Patience) : à bas PV, Patience frappe fort (étape 9) → il serait
     //    absurde de poser une graine plutôt que de lâcher Patience (bug Glouta-maki : Vampigraine à quelques PV).
-    if (iSeed >= 0 && !foe.volatiles?.SEEDED && !foeTypes.includes("PLANTE") && !(hasLowHpNuke && frac < 0.5)) return iSeed
+    //   Le type de la graine peut avoir ete RECOLORE par une fusion (Cendrecerf la seme en TENEBRES) : on regarde
+    //   donc le type EFFECTIF, pas « PLANTE » en dur — sinon une graine de tenebres refuserait de viser une Plante.
+    const seedType = iSeed >= 0 ? (self.moveTypeOverride?.[self.moves[iSeed]?.moveId ?? ""] ?? getMove(self.moves[iSeed]?.moveId ?? "")?.type) : undefined
+    if (iSeed >= 0 && !foe.volatiles?.SEEDED && !(seedType && foeTypes.includes(seedType)) && !(hasLowHpNuke && frac < 0.5)) return iSeed
     // 6) NEUTRALISER un physique : débuff (Voile) puis +DÉF.
     if (iDebuff >= 0 && foePhys && foeFresh) return iDebuff
     if (iDef >= 0 && foePhys && (self.stages?.def ?? 0) < 2) return iDef

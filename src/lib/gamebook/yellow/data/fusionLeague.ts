@@ -311,9 +311,11 @@ export const PLATINE_ACE_PAIRS: FusionPairDef[] = [
     { a: "gekraise", b: "geaucke", name: "Gékaucké", role: "tank_atk", shiny: true,
       moves: ["roc_titanesque", "seisme", "deferlante", "cage_eclair"] },
     // 2422 — fusion INEDITE a type FORCE : Lance-Soleil est TRANSMUTE en TENEBRES (cf. transmutedMoveTypes),
-    //   donc 120 de puissance en STAB sur 756 de Speciale. Schema : endort, se booste, efface.
+    //   donc 120 de puissance en STAB sur 756 de Speciale. Vampigraine est RECOLOREE en TENEBRES (choix Sartay) :
+    //   ce n'est plus une graine mais une braise noire qui s'enracine — usure passive, la ou Focalisation ne
+    //   servait qu'a se gonfler. Schema : endort, seme, efface.
     { a: "sylvapuce", b: "pyrokoss", name: "Cendrecerf", role: "sweep_spc", shiny: true,
-      moves: ["lance_soleil", "lance_flammes", "spores_dodo", "focalisation"] },
+      moves: ["lance_soleil", "lance_flammes", "spores_dodo", "vampigraine"] },
     // 2479 — ACE de l'ACE, et sa SIGNATURE (les pantheres, cf. ACE_PANTHERS_EVOLVED). vit 628 / spc 748.
     //   Ball'Ombre repond aux SOL, immunises a l'Electrik — sans elle, un seul Sol murait toute la salle.
     { a: "voltapanthe", b: "ombrapanthe", name: "Voltombre", role: "sweep_spc", shiny: true,

@@ -107,10 +107,15 @@ interface SpecialFusion {
      *  attaque est injectée en slot 1 si le moveset naturel ne contient rien du type forcé. Vaut pour les
      *  fusions du JOUEUR comme pour celles des PNJ (computeFusion est la source unique). */
     stabMove?: string
+    /** RECOLORATION. Attaques que la fusion lance dans SON type, quelle que soit leur puissance — y compris
+     *  les STATUTS, que la transmutation laisse de côté (retyper un statut ne rapporte aucun STAB). Sert quand
+     *  une attaque fait partie de l'identité de la chimère : la Vampigraine de Cendrecerf n'est pas une graine,
+     *  c'est une braise noire qui s'enracine. Vaut pour les fusions du JOUEUR comme pour celles des PNJ. */
+    recoloredMoves?: readonly string[]
 }
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
 const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
-    [pairKey("sylvapuce", "pyrokoss")]: { name: "Cendrecerf", forcedType: "TENEBRES", stabMove: "reflet_fatal", concept: "un cerf sombre au corps de CHARBON noir craquelé, bois et sabots incandescents comme des braises, volutes de fumée âcre s'échappant de son pelage carbonisé" }, // plante × feu → charbon
+    [pairKey("sylvapuce", "pyrokoss")]: { name: "Cendrecerf", forcedType: "TENEBRES", stabMove: "reflet_fatal", recoloredMoves: ["vampigraine"], concept: "un cerf sombre au corps de CHARBON noir craquelé, bois et sabots incandescents comme des braises, volutes de fumée âcre s'échappant de son pelage carbonisé" }, // plante × feu → charbon
     [pairKey("sylvapuce", "razmaree")]: { name: "Bourbicerf", forcedType: "SOL", stabMove: "sables_voraces", concept: "un cerf trapu fait de BOUE et d'argile terreuse dégoulinante, bois de racines et de vase séchée, sabots enfoncés dans la fange, coulures brunes" }, // plante × eau → boue
     [pairKey("pyrokoss", "razmaree")]: { name: "Vaporêve", forcedType: "SPECTRE", stabMove: "ball_ombre", concept: "un spectre vaporeux fait de NUAGE et de brume bouillonnante née de la rencontre du feu et de l'eau, silhouette fantomatique aux volutes de vapeur, yeux luisants dans la brume" }, // feu × eau → nuage
     [pairKey("crocavern", "alirocaillus")]: { name: "Crocaroc", concept: "un crocodile massif cuirassé de ROCHE, plaques rocheuses et ailes membraneuses repliées, gueule minérale hérissée de cristaux" }, // croisement des crocos (type calculé)
@@ -309,6 +314,16 @@ export function transmutedMoveTypes(a: FusionParent, b: FusionParent, moves: rea
     return out
 }
 
+/** RECOLORATION : les attaques SIGNATURE d'une fusion reprennent son type, statuts compris (cf. recoloredMoves).
+ *  Distinct de la transmutation, qui ne touche qu'aux attaques offensives héritées des parents. */
+export function recoloredMoveTypes(moves: readonly string[], special?: { forcedType?: PokeType; recoloredMoves?: readonly string[] } | null): Record<string, PokeType> {
+    const forced = special?.forcedType
+    if (!forced || !special?.recoloredMoves?.length) return {}
+    const out: Record<string, PokeType> = {}
+    for (const m of special.recoloredMoves) if (moves.includes(m) && getMove(m)?.type !== forced) out[m] = forced
+    return out
+}
+
 export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const stats = fuseStats(a, b)
     const special = specialFusionFor(a, b)
@@ -316,7 +331,7 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const natural = fuseMoves(a, b)
     // La transmutation suffit à donner un STAB : on ne plaque `stabMove` QUE si elle n'a rien pu convertir
     //   (parent sans la moindre attaque offensive — possible pour une fusion tentée par un joueur).
-    const moveTypes = transmutedMoveTypes(a, b, natural, special?.forcedType)
+    const moveTypes = { ...transmutedMoveTypes(a, b, natural, special?.forcedType), ...recoloredMoveTypes(natural, special) }
     const moves = Object.keys(moveTypes).length > 0 ? natural : withGuaranteedStab(natural, types, special?.stabMove)
     return {
         name: special?.name ?? fusionName(a, b),
