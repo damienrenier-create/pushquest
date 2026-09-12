@@ -391,6 +391,28 @@ export function restoreFusionGauntletFromCarry(): boolean {
 /** Construit l'équipe-gauntlet depuis le roster si elle n'existe pas ENCORE (entrée dans la Ligue) + persiste le carry.
  *  → l'onglet ÉQUIPE montre les fusionnés ET la reprise au reload marche DÈS l'entrée (avant même le 1er combat).
  *  Idempotent (ne reconstruit pas si déjà là). Renvoie true si une équipe (≥1 fusion) est en place. */
+/** CE QUI SE DÉCIDE UNE FOIS PAR TRAVERSÉE de la Ligue de Fusion : baies ennemies, boss pas encore battu,
+ *  génération des sprites manquants.
+ *
+ *  ⚠️ Ce code vivait dans launchFusionLeague, sous `if (!playerFusions)` — et il était MORT depuis que
+ *  l'entrée par la porte à dragons construit l'équipe tout de suite (ensureFusionGauntletBuilt) : au premier
+ *  combat, l'équipe existait déjà, donc on sautait tout le bloc. Conséquences, à TOUS les paliers :
+ *    • getGauntletBerries() restait à `false` → les adversaires n'ont JAMAIS eu leurs baies, alors que l'or
+ *      et le platine sont censés en porter (dont la Baie Phénix, qui fait se relever une fois) ;
+ *    • setGauntletBossBeaten(false) n'était jamais rejoué → un joueur ayant déjà battu le Dieu Spaghetti
+ *      dans la session retrouvait la porte de la salle ultime DÉJÀ OUVERTE en re-rentrant.
+ *  On l'appelle donc depuis l'ENTRÉE, là où la run commence vraiment. */
+function initFusionLeagueRun(): void {
+    const startTier = activeFusionTier((m) => isTrainerDefeated(m))
+    const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
+    setGauntletBerries(isTopFusionTier(startTier) || (startTier === "argent" && firstTryToday))
+    setGauntletBossBeaten(false)
+    // GÉNÉRATION DES SPRITES — filet de sécurité (normalement déjà lancée au prologue du dôme). Dé-doublonnée
+    //   côté client ET serveur : les paires déjà prêtes sont ignorées, aucun coût en double.
+    const spriteItems = [...fusionSpriteItemsFromRoster(), ...enemyFusionSpriteItems()]
+    if (spriteItems.length) void requestFusionSprites(spriteItems)
+}
+
 function ensureFusionGauntletBuilt(): boolean {
     if (getGauntletTeam()) return true
     const save = getPlayerSave()
@@ -740,18 +762,10 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
         }
         setGauntletTeam(playerFusions)
-        // OBJETS TENUS ENNEMIS — décide UNE fois pour CETTE run si les BAIES ennemies sont actives : toujours en OR,
-        //   seulement à la 1re run du jour en ARGENT (les objets passifs, eux, sont toujours là). Cf. assignEnemyHeldItems.
-        const startTier = activeFusionTier((m) => isTrainerDefeated(m))
-        const firstTryToday = beginFusionLeagueTry(new Date().toISOString().slice(0, 10))
-        setGauntletBerries(isTopFusionTier(startTier) || (startTier === "argent" && firstTryToday))
-        setGauntletBossBeaten(false) // SALLE ULTIME : nouvelle run → le Dieu Spaghetti n'est pas encore vaincu (porte ultime fermée)
         const c0 = serializeGauntletCarry(); setGauntletCarry(c0 ? JSON.stringify({ team: c0 }) : null) // REPRISE reload : usure initiale (PV pleins)
-        // GÉNÉRATION DES SPRITES — FILET DE SÉCURITÉ : normalement déjà lancée au dôme (prologue Dieu Spaghetti,
-        //   cf. action move). On la (re)lance ici au cas où le joueur aurait contourné les tuiles du prologue.
-        //   Dé-doublonné côté client + serveur (paires déjà READY/en mémoire ignorées) → aucun coût en double.
-        const spriteItems = [...fusionSpriteItemsFromRoster(), ...enemyFusionSpriteItems()]
-        if (spriteItems.length) void requestFusionSprites(spriteItems)
+        // FILET DE SÉCURITÉ : on n'arrive ici que si le joueur a atteint un combat SANS passer par l'entrée
+        //   (l'entrée construit déjà l'équipe). La run n'a alors jamais été initialisée : on le fait maintenant.
+        initFusionLeagueRun()
     }
     // Wipe défensif : si toutes les fusions sont K.O. (état incohérent post-reload), on renvoie à l'Autel.
     if (!gauntletHasAlive()) {
@@ -1809,6 +1823,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 disposeFusionLeagueSpecies()
                 disposeFusionGauntlet() // GAUNTLET : entrée fraîche → on repart d'une équipe neuve (PV/PP pleins)…
                 ensureFusionGauntletBuilt() // …et on la CONSTRUIT tout de suite → onglet Équipe = fusionnés + reprise reload dès l'entrée (avant le 1er combat)
+                // …et c'est ICI que la run commence : baies ennemies du palier, boss à re-battre, sprites
+                //   manquants. Seulement si une équipe a pu être bâtie — sinon on consommerait l'essai du
+                //   jour (barème des baies en argent) pour une entrée qui ne mènera à aucun combat.
+                if (getGauntletTeam()) initFusionLeagueRun()
             }
             // GAUNTLET : revenir à l'Autel (retraite / complétion / après un wipe) libère l'équipe-gauntlet → la
             //   prochaine Ligue repart d'une équipe fraîche. (No-op si aucun gauntlet en cours.)
