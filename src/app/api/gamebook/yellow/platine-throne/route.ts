@@ -68,6 +68,22 @@ function sanitizeThroneTeam(raw: unknown): any[] {
     return out
 }
 
+/** Sans ce marqueur dans la save, le joueur n'a jamais mis les pieds dans le couloir. */
+const PLATINE_OPEN_MARKER = "fusleague_platine_open"
+
+/** Le joueur a-t-il le droit de faire bouger le trône ? La save est cliente-autoritaire, donc ce n'est pas
+ *  un rempart — c'est une porte, et elle ferme le cas du compte qui n'a rien à voir avec ce palier. */
+async function platineEligible(userId: string): Promise<boolean> {
+    try {
+        const prog = await (prisma as any).gamebookProgress.findFirst({
+            where: { chapterId: YELLOW_CHAPTER_ID, userId },
+            select: { flags: true },
+        })
+        const markers = (prog?.flags as { defeatedTrainers?: unknown })?.defeatedTrainers
+        return Array.isArray(markers) && markers.includes(PLATINE_OPEN_MARKER)
+    } catch { return false }
+}
+
 type ThroneRow = { id: string; userId: string; nickname: string; team: string; wonAt: Date }
 
 /** TOUTES les fiches de Maître, le dernier sacré en tête. `[0]` est donc le TENANT (celui qu'on affronte en
@@ -187,6 +203,13 @@ export async function POST(req: NextRequest) {
 
         // ── ÉCHEC : le tenant marque +1. Rien à faire si le trône est vide, et JAMAIS de crédit à soi-même
         //    (sinon il suffirait de perdre en boucle contre sa propre salle).
+        // ⚠️ Les points sont CUMULÉS À VIE et décident du titre d'Empereur affiché au Palmarès. Sans porte,
+        //   n'importe quel compte du chapitre — y compris un joueur encore en run 1 qui n'a jamais vu la Ligue
+        //   de Fusion — pouvait POSTer « fail » en boucle et offrir autant de points qu'il voulait à
+        //   l'occupant. Même porte que le don de jetons.
+        if (action === "fail" || action === "claim") {
+            if (!(await platineEligible(auth.userId))) return NextResponse.json({ ok: false, reason: "not-eligible" }, { status: 403 })
+        }
         if (action === "fail") {
             if (!row || !current) return NextResponse.json({ ok: true, skipped: "empty-throne" })
             if (awardFailurePoint(current, auth.userId, row.userId) === current) return NextResponse.json({ ok: true, skipped: "self" })

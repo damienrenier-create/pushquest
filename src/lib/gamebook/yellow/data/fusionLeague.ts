@@ -370,6 +370,10 @@ export function enemyFusionSpriteItems(): Array<{ aId: string; bId: string; name
     const defs: FusionPairDef[] = [
         ...FUSION_BOSS_ULTRA,
         ...Object.values(ANTITRIO_ARGENT_OR).flatMap((ovs) => ovs.map((o) => o.with)),
+        // L'ÉQUIPE D'ACE au palier platine. Sans elle, cinq des six chimères du clou du palier pointaient vers
+        //   un PNG inexistant : l'image échouait et le combat se rabattait sur le placeholder COMPOSITE (les
+        //   sprites des deux parents côte à côte) — qui divulgue au passage la recette de chaque fusion.
+        ...PLATINE_ACE_PAIRS,
     ]
     const seen = new Set<string>()
     const out: Array<{ aId: string; bId: string; name: string }> = []
