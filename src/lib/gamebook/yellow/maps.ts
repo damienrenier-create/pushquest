@@ -1729,7 +1729,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_fusion_platine: {
         id: "yellow_fusion_platine", name: "LIGUE FUSION — LE TRÔNE", tiles: buildLigueRoom(), width: 22, height: 12,
         exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_platine", targetSpawnX: 3, targetSpawnY: 6 }))
-            .concat([{ x: 2, y: 6, targetMapId: "yellow_fusion_miroir", targetSpawnX: 18, targetSpawnY: 6 }]),
+            // PORTE GAUCHE = ABANDON, et elle ramène DROIT À L'AUTEL. Elle débouchait avant dans la salle du
+            //   Dieu Spaghetti, qui n'a aucun rôle dans ce palier : on s'y retrouvait devant un boss battable
+            //   dont la victoire volait le titre PLATINE. Court-circuiter la salle supprime le cas tordu
+            //   plutôt que de le rattraper, et le retour à l'Autel est de toute façon ce que le joueur veut.
+            .concat([{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }]),
         backgroundImage: "/yellow/sprites/fusion_room_platine.png", backgroundImageWidth: 2816, backgroundImageHeight: 1536, backgroundImageTileSize: 128,
     },
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====

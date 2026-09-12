@@ -1520,8 +1520,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             platineDefeat = true
         }
     }
-    const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir"
-    const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet"
+    // ⚠️ AU PALIER TRÔNE, LE TITRE NE S'ACHETE PAS CHEZ LE DIEU SPAGHETTI. Sa salle reste physiquement
+    //   accessible (la porte gauche du trône y débouchait), et son boss reste battable — mais le sacre
+    //   PLATINE ne s'obtient QUE par le couloir. Sans ce garde-fou : entrer dans la salle du trône, se
+    //   dégonfler, ressortir par la gauche, battre le Dieu Spaghetti (équipe de palier OR, très jouable)
+    //   posait `fusleague_platine` — titre, ligne d'épilogue et mention au palmarès — sans avoir croisé
+    //   un seul champion ni le Maître en titre. Le vrai Maître, lui, ne perdait rien : deux vérités
+    //   contradictoires cohabitaient. Le marqueur platine n'a qu'une source : la fin de couloir.
+    const atThroneTier = activeFusionTier((m) => isTrainerDefeated(m)) === "platine"
+    const wonFusionBoss = b.outcome === "win" && lid === "y_fusion_miroir" && !atThroneTier
+    const wonFusionReflet = b.outcome === "win" && lid === "y_fusion_reflet" && !atThroneTier
     if (wonFusionBoss || wonFusionReflet) {
         // Palier SACRÉ = le palier actif AVANT de poser son marqueur (sinon activeFusionTier renverrait le suivant).
         const sacredTier = activeFusionTier((m) => isTrainerDefeated(m))
