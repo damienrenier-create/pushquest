@@ -4,7 +4,7 @@
 // 3 niveaux : "wild" (erratique), "trainer" (cherche le meilleur coup),
 // "ace" (anticipe : KO probable, efficacité de type, change si mauvais matchup).
 
-import type { BattleMon } from "./types"
+import type { BattleMon, PokeType } from "./types"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { typeEffectiveness, moveCategory } from "./typeChart"
@@ -55,7 +55,8 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
         const isStatus = mv.power <= 0
-        const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
+        const mt = effMoveType(self, mv)
+        const eff = isStatus ? 1 : typeEffectiveness(mt, foeTypes)
         const power = mv.power || 0
         let score: number
         if (isStatus) {
@@ -99,7 +100,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
         const isStatus = mv.power <= 0
-        const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
+        const mt = effMoveType(self, mv)
+        const eff = isStatus ? 1 : typeEffectiveness(mt, foeTypes)
         let score: number
         if (isStatus) {
             // INUTILE ce tour (stat déjà au plafond / statut déjà posé) → ne JAMAIS le spammer (anti-softlock).
@@ -131,8 +133,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
                 else score = foeFresh ? 60 : 25 // POISON / BURN / TOXIC (usure)
             }
         } else {
-            const stab = selfTypes.includes(mv.type) ? 1.5 : 1
-            const phys = moveCategory(mv.type) === "PHYSICAL"
+            const stab = selfTypes.includes(mt) ? 1.5 : 1
+            const phys = moveCategory(mt) === "PHYSICAL"
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
             const def = fStats ? (phys ? fStats.def : (foe.frozenSpd ?? fStats.spc)) : 1 // FUSION : SpD séparée si présente
             const acc = mv.accuracy > 0 ? mv.accuracy / 100 : 1 // PRÉCISION : un coup peu fiable vaut moins (n'enchaîne pas un move à 70 %)
@@ -236,19 +238,32 @@ function effPower(self: BattleMon, moveId: string): number {
     return mv.power
 }
 /** Dégâts estimés (conservateurs, sans crit) du move `moveId` de `self` sur `foe`. 0 si non-offensif/immunisé. */
+/** TYPE EFFECTIF d'une attaque pour CE combattant — celui que le moteur appliquera vraiment (engine.ts).
+ *
+ *  ⚠️ Une fusion à TYPE FORCÉ TRANSMUTE la 1re attaque offensive de chaque parent dans son propre type
+ *  (cf. data/fusionSpecies). L'IA lisait `mv.type`, c'est-à-dire le type d'ORIGINE : le Cendrecerf d'ACE
+ *  évaluait son Lance-Soleil comme une attaque PLANTE — ×0,5 sur une cible Plante et sans STAB — et lui
+ *  préférait un coup deux fois plus faible. Elle sabotait donc la fusion la plus chère du couloir, et
+ *  pouvait rater un K.O. qu'elle avait en main (bestKoMove partage cette estimation).
+ *  Sans override, renvoie le type déclaré : aucun changement pour les Daemons ordinaires. */
+function effMoveType(self: BattleMon, mv: { id: string; type: PokeType }): PokeType {
+    return (self.moveTypeOverride?.[mv.id] as PokeType | undefined) ?? mv.type
+}
+
 function estMoveDamage(self: BattleMon, foe: BattleMon, moveId: string): number {
     const mv = getMove(moveId); if (!mv) return 0
     const power = effPower(self, moveId)
     if (power <= 0) return 0
     const selfSp = getSpecies(self.speciesId), foeSp = getSpecies(foe.speciesId)
     if (!selfSp || !foeSp) return 0
-    const eff = typeEffectiveness(mv.type, foeSp.types)
+    const mt = effMoveType(self, mv)
+    const eff = typeEffectiveness(mt, foeSp.types)
     if (eff === 0) return 0
-    const phys = moveCategory(mv.type) === "PHYSICAL"
+    const phys = moveCategory(mt) === "PHYSICAL"
     const off = phys ? fullStats(self, selfSp).atk : fullStats(self, selfSp).spc
     const fs = fullStats(foe, foeSp)
     const def = phys ? fs.def : (foe.frozenSpd ?? fs.spc)
-    return computeDamage({ level: self.level, power, attack: off, defense: def, stab: selfSp.types.includes(mv.type), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
+    return computeDamage({ level: self.level, power, attack: off, defense: def, stab: selfSp.types.includes(mt), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
 }
 /** Index du meilleur coup (PP > 0) qui MET KO le foe ce tour, ou -1. */
 function bestKoMove(self: BattleMon, foe: BattleMon): number {
@@ -326,9 +341,11 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
     // 5) VAMPIGRAINE (drain passif) — EN OUVERTURE seulement : pas déjà posée, cible non-Plante, ET on ÉVITE de semer à
     //    bas PV quand on porte une win-con « bas PV » (Patience) : à bas PV, Patience frappe fort (étape 9) → il serait
     //    absurde de poser une graine plutôt que de lâcher Patience (bug Glouta-maki : Vampigraine à quelques PV).
-    //   Le type de la graine peut avoir ete RECOLORE par une fusion (Cendrecerf la seme en TENEBRES) : on regarde
-    //   donc le type EFFECTIF, pas « PLANTE » en dur — sinon une graine de tenebres refuserait de viser une Plante.
-    const seedType = iSeed >= 0 ? (self.moveTypeOverride?.[self.moves[iSeed]?.moveId ?? ""] ?? getMove(self.moves[iSeed]?.moveId ?? "")?.type) : undefined
+    //   La garde porte sur le type NATUREL de la graine, pas sur son type recoloré. Une fusion peut la semer
+    //   en Ténèbres (Cendrecerf) : c'est une intention de fiction, et le moteur n'implémente AUCUNE immunité
+    //   sur les moves de statut. Regarder le type recoloré faisait donc sauter l'étape « sème » devant toute
+    //   cible Ténèbres — un typage très répandu en fin de partie — pour une règle qui n'existe pas.
+    const seedType = iSeed >= 0 ? getMove(self.moves[iSeed]?.moveId ?? "")?.type : undefined
     if (iSeed >= 0 && !foe.volatiles?.SEEDED && !(seedType && foeTypes.includes(seedType)) && !(hasLowHpNuke && frac < 0.5)) return iSeed
     // 6) NEUTRALISER un physique : débuff (Voile) puis +DÉF.
     if (iDebuff >= 0 && foePhys && foeFresh) return iDebuff
