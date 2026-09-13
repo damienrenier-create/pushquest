@@ -5,6 +5,8 @@
 // Sprites = chemins /yellow/sprites/dex/* (à fournir dans public/).
 
 import type { SpeciesData } from "../battle/types"
+import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
+import { UKOGNOFY_SPECIES } from "./ukognofySpecies"
 
 export const SPECIES: Record<string, SpeciesData> = {
     // ============================================================
@@ -3567,8 +3569,30 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
     custom_cmsvywl6u0001xka_possyl_s3: "necrossum",      // Zyran
 }
 
+// ESPÈCES RÉSOLVABLES CÔTÉ SERVEUR mais HORS DEX : les fusions de base « stabilisées » (Mottelave, Basaltor,
+//   Sidéralithe, Draconvolt… cf. fusionBaseSpecies) et le légendaire UKOGNOFY.
+//   Elles sont VOLONTAIREMENT hors de SPECIES pour l'anti-spoiler : visibleDexSpecies n'itère que SPECIES,
+//   donc les y mettre les ferait apparaître au Pokédex de tout le monde. Côté CLIENT elles sont enregistrées
+//   comme espèces custom au chargement (playerStore.reregisterCustomDaemons) — mais un SERVEUR n'exécute
+//   jamais ce code, et CUSTOM_SPECIES y est donc vide.
+//
+//   ⚠️ Conséquence mesurée : la génération de sprite de fusion (server/fusionSpriteGen) résout ses deux
+//   parents via getSpecies, et échouait en `unknown-species` dès qu'une fusion de base était parente.
+//   Trois paires en base l'ont appris à leurs dépens (Sidéra-nofy, Sidéra-nvolt, Draco-ltor), bloquées
+//   après 3 essais. On les rend donc RÉSOLVABLES côté serveur — sans les mettre au dex.
+//   UKOGNOFY est dans le même cas : espèce PERMANENTE (dex 505) mais enregistrée en custom à la rencontre,
+//   donc introuvable côté serveur — et elle est parente de fusions (Sidéra-nofy, en base, bloquée pour ça).
+const SERVER_FALLBACK_SPECIES: ReadonlyMap<string, SpeciesData> = new Map(
+    [...FUSION_BASE_SPECIES, UKOGNOFY_SPECIES].map((sp) => [sp.id, sp]),
+)
+
 export function getSpecies(id: string): SpeciesData | null {
-    return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? SPECIES[CANONIZED_CUSTOM_ALIAS[id] ?? ""] ?? null // statique → custom runtime → alias canonisé (repli serveur/spectateur)
+    // statique → custom runtime → FUSION DE BASE (repli serveur : le client les a déjà en custom) → alias canonisé.
+    return SPECIES[id]
+        ?? CUSTOM_SPECIES.get(id)
+        ?? SERVER_FALLBACK_SPECIES.get(id)
+        ?? SPECIES[CANONIZED_CUSTOM_ALIAS[id] ?? ""]
+        ?? null
 }
 
 /** LÉGENDAIRES ULTRA-SECRETS : ne se révèlent au Pokédex QUE par CAPTURE RÉELLE — JAMAIS par « vu », ni par le

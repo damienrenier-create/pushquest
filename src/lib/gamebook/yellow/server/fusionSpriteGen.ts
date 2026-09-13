@@ -15,6 +15,8 @@ import { put } from "@vercel/blob"
 import { GoogleGenAI } from "@google/genai"
 import { getSpecies } from "../data/species"
 import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
+import { evoSpriteKey } from "../data/fusionEvoSprites"
+import prisma from "@/lib/prisma"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
 const MODEL = process.env.FUSION_GEN_MODEL ?? "gemini-3.1-flash-image" // Nano Banana 2 ; 0,5K ≈ 0,045 $/image
@@ -89,6 +91,32 @@ function floodRemoveBackground(data: Buffer, w: number, h: number, tol = CHROMA_
     }
 }
 
+/** L'IMAGE DE RÉFÉRENCE d'un parent, pour la génération.
+ *
+ *  Le chemin déclaré dans l'espèce suffit… sauf pour les FUSIONS DE BASE et leurs stades évolués : 28 des 38
+ *  n'ont aucun PNG committé et sont déclarées avec MissingNo, parce que LEUR PROPRE sprite est lui aussi
+ *  généré (route fusion-evo-sprite → table FusionSprite, clé `fusevo:<id>`).
+ *
+ *  ⚠️ Sans ce détour, deux choses arrivaient — les deux mauvaises. Avant que ces espèces soient résolvables
+ *  côté serveur : `unknown-species`, échec net (c'est le cas des 3 paires bloquées en base). Et une fois
+ *  résolvables : pire encore, on aurait envoyé MISSINGNO comme référence au modèle et facturé la génération
+ *  d'une chimère bâtie sur une image vide. On va donc chercher le sprite GÉNÉRÉ du parent, et on refuse
+ *  proprement s'il n'existe pas encore.
+ *
+ *  Renvoie une URL absolue (Blob) ou relative-préfixée (public/), ou null si le parent n'a aucune image utilisable. */
+async function parentRefUrl(sp: { id: string; sprite?: string }, origin: string): Promise<string | null> {
+    const declared = sp.sprite
+    if (declared && !declared.includes("missingno")) return `${origin}${declared}`
+    try {
+        const row = await (prisma as any).fusionSprite.findUnique({
+            where: { pairKey: evoSpriteKey(sp.id) },
+            select: { status: true, blobUrl: true },
+        })
+        if (row?.status === "READY" && row.blobUrl) return row.blobUrl as string // URL Blob absolue
+    } catch { /* table absente / base muette → on refuse plutôt que d'inventer */ }
+    return null
+}
+
 /** Génère + poste le sprite. Renvoie l'URL Blob (succès) ou une erreur. NE LÈVE JAMAIS (défensif). */
 export async function generateFusionSprite(opts: {
     origin: string
@@ -102,11 +130,12 @@ export async function generateFusionSprite(opts: {
     const [aId, bId] = canonicalPair(opts.aId, opts.bId)
     const spA = getSpecies(aId), spB = getSpecies(bId)
     if (!spA || !spB) return { ok: false, error: "unknown-species" }
-    if (!spA.sprite || !spB.sprite) return { ok: false, error: "no-parent-sprite" }
+    // (la garde « sprite déclaré non vide » est remplacée par parentRefUrl : MissingNo est non-vide mais inutilisable)
 
     // Références : sprites ORIGINAUX des 2 PARENTS puis ANCRES de style (STYLE_ANCHORS = chemins sous dex/),
     //   normalisés à la volée. Ordre : parent A, parent B, puis ancres.
-    const parentUrls = [spA.sprite, spB.sprite].map((s) => `${opts.origin}${s}`)
+    const parentUrls = (await Promise.all([spA, spB].map((sp) => parentRefUrl(sp, opts.origin)))).filter((u): u is string => !!u)
+    if (parentUrls.length < 2) return { ok: false, error: "parent-sprite-not-generated" } // un parent attend encore SON sprite
     const anchorUrls = STYLE_ANCHORS.map((p) => `${opts.origin}/yellow/sprites/dex/${p}`)
     const parentRefs = (await Promise.all(parentUrls.map(fetchNormalizedB64))).filter((x): x is string => !!x)
     if (parentRefs.length < 2) return { ok: false, error: "no-refs" } // il FAUT les 2 parents (sprites originaux introuvables ?)

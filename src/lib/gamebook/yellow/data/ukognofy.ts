@@ -12,10 +12,10 @@
 
 import { createMonInstance } from "../battle/factory"
 import { registerCustomSpecies } from "./species"
-import { fusionSpritePath } from "./fusionSprite"
+import { UKOGNOFY_ID, UKOGNOFY_SPECIES } from "./ukognofySpecies"
 import type { MonInstance, SpeciesData } from "../battle/types"
 
-export const UKOGNOFY_ID = "ukognofy"
+
 export const UKOGNOFY_LEVEL = 100
 export const UKOGNOFY_MOVES = ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] as const
 
@@ -55,23 +55,10 @@ export const UKOGNOFY_VOLATILISED_LINES = [
 /** Ukognofy a DISPARU à jamais (capturé ou 3 échecs) — défensif (le détour vers la chambre est déjà gated). */
 export const UKOGNOFY_GONE_LINES = ["*Le sanctuaire est silencieux. UKOGNOFY a disparu à jamais.*"]
 
-/** Espèce PERMANENTE d'Ukognofy (enregistrée custom → résolvable, hors Pokédex principal). baseStats = profil
- *  légendaire « collapsé » (Spé unique) de l'exemplaire capturé ; la Spé scindée du fusionné vit dans frozenStats
- *  côté rencontre. hiddenUntilCaught (anti-spoiler) ; catchRate 3 (légendaire, mais capture régie par la Fusio-Ball). */
-export const UKOGNOFY_SPECIES: SpeciesData = {
-    id: UKOGNOFY_ID, dexNo: 505, name: "Ukognofy", types: ["DRAGON", "FEE"],
-    baseStats: { hp: 156, atk: 98, def: 82, spe: 111, spc: 150 }, // BST 597 — mur-nuke spécial, rapide, Déf physique molle
-    learnset: [
-        { level: 1, moveId: "draco_souffle" }, { level: 1, moveId: "bourrasque_feerique" },
-        { level: 1, moveId: "fulgurance" }, { level: 1, moveId: "repos" },
-        { level: 30, moveId: "draco_charge" }, { level: 45, moveId: "eclat_lunaire" },
-        { level: 60, moveId: "souffle_primordial" }, { level: 75, moveId: "cataclysme_lunaire" },
-        { level: 90, moveId: "cage_eclair" },
-    ],
-    catchRate: 3, baseExp: 250, rarity: "LEGENDARY", growthRate: "slow",
-    description: "Le mythe des mythes : les deux légendes, Dragon et Fée, fondues en une seule entité aux flammes féeriques.",
-    sprite: fusionSpritePath("Ukognofy"), hiddenUntilCaught: true,
-}
+// L'ESPÈCE elle-même vit dans ./ukognofySpecies (module FEUILLE) : species.ts doit pouvoir la résoudre côté
+//   SERVEUR, et l'importer d'ici créerait un cycle (ce fichier importe species.ts). Re-exportée pour que
+//   tous les appelants existants continuent de la lire ici.
+export { UKOGNOFY_ID, UKOGNOFY_SPECIES } from "./ukognofySpecies"
 
 /** Condition NUIT : heure RÉELLE locale entre 21h et 3h du matin. */
 export function isUkognofyNight(now = new Date()): boolean {
