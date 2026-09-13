@@ -249,6 +249,8 @@ interface PlayerState {
     mimimoyReturned: boolean
     mimimoyAppearances: number
     /** VŒU DU GÉNIE (LIVE) — ⚡ restant à dépenser avant de pouvoir réutiliser/acheter une Ball (verrou si > 0). Défaut 0. */
+    /** VŒU DU GÉNIE (Zyran) — charges de remise à zéro des EV restantes. Absent/0 = vœu inactif. */
+    evResetCharges?: number
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
@@ -705,6 +707,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         run3LavapetitCaught: p.run3LavapetitCaught ?? st.run3LavapetitCaught ?? false,
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
+        evResetCharges: p.evResetCharges ?? st.evResetCharges,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
@@ -1622,10 +1625,31 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
+        case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
         default: return false                                                                              // type non géré → non appliqué
     }
 }
+// ═══════ VŒU « REMISE À ZÉRO DES EV » (Zyran) ═══════
+// Le vœu demandait de pouvoir remettre les EV à zéro. La contrepartie posée par Sartay : on ne choisit PAS
+// qui. Les N prochains K.O. portés par ses Daemons remettent à zéro CELUI QUI FRAPPE, au lieu de le faire
+// progresser — et une charge part même si le Daemon était déjà vierge. Il faut donc viser avec son équipe,
+// et accepter d'en gâcher sur des Daemons qu'on ne voulait pas toucher.
+
+/** Charges restantes (0 = vœu inactif ou épuisé). Lu à la création de chaque combat. */
+export function getEvResetCharges(): number { return Math.max(0, st.evResetCharges ?? 0) }
+
+/** Débite les charges RÉELLEMENT consommées pendant un combat. Appelé à la fin, en même temps que l'équipe
+ *  est réécrite — donc un combat abandonné ne consomme rien, exactement comme les EV gagnés qui ne sont
+ *  écrits qu'à ce moment-là. Borné : jamais sous zéro, no-op si rien n'a été consommé. */
+export function consumeEvResetCharges(n: number): void {
+    const used = Math.max(0, Math.floor(n))
+    if (used === 0 || !st.evResetCharges) return
+    const left = Math.max(0, st.evResetCharges - used)
+    st = { ...st, evResetCharges: left || undefined }
+    emit()
+}
+
 /** VŒU DU GÉNIE — consomme la rencontre forcée (appelé par le moteur quand elle se produit : one-shot). */
 export function clearForcedEncounter() { if (st.forcedEncounter) { st = { ...st, forcedEncounter: undefined }; emit() } }
 

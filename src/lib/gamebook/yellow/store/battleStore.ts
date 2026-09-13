@@ -65,7 +65,7 @@ import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
-import { setTeamAndPc } from "./playerStore"
+import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
 import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, PLATINE_DEFEAT_LINES, platineCreditsLines } from "../data/platineLore"
 import { recordHit } from "../data/platineLedger"
@@ -368,7 +368,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
         const avgIV = iv ? (iv.hp + iv.atk + iv.def + iv.spe + iv.spc) / 5 : 0
         captureModifier = funCaptureFactor(avgIV)
     }
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length, evResetCharges: getEvResetCharges() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
@@ -426,7 +426,9 @@ export function startTrainerBattle(
     platineDefeatLines = null
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
     const isDuel = !!opts?.trainerId?.startsWith("duel:") || !!opts?.trainerId?.startsWith("run2ghost:") // reflet / PNJ run-2 d'un autre joueur → XP DOUBLE
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
+    // VŒU DE ZYRAN : armé sur les combats qui engagent sa VRAIE équipe (sauvage + dresseur), pas sur la Zone
+    //   de Combat (équipes louées, EV non persistés) ni sur la Ligue de Fusion (chimères éphémères).
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length, evResetCharges: isFrontier ? 0 : getEvResetCharges() })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -911,6 +913,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 📟 stripMinitelReserve : le 7e RENFORT MINITEL (éphémère, uid préfixé) est RETIRÉ avant l'écriture → il ne
     //   rejoint jamais l'équipe réelle (sinon setTeam grave une 7e slot permanente). No-op sans renfort.
     if (!isFactory && !isRun2GhostLoss) setTeam(stripMinitelReserve(b.player.team).map(toMonInstance))
+    // …et on débite les charges du vœu de Zyran DANS LE MÊME SOUFFLE : les EV remis à zéro viennent d'être
+    //   gravés, donc les charges doivent l'être aussi. Si l'équipe n'est pas réécrite (Zone de Combat, PNJ
+    //   run 2), rien n'est consommé — cohérent, puisque le reset n'a pas été gravé non plus.
+    if (!isFactory && !isRun2GhostLoss) consumeEvResetCharges(b.evResetUsed ?? 0)
 
     // HAUT FAIT « KO du starter » (run 1) : grave le NIVEAU du starter à sa 1ʳᵉ chute (plus il tombe tard/haut, plus le
     //   badge vaut de points). UID mémorisé à l'intro (marqueur starter_uid:), 1 seule fois (marqueur starter_ko:). Combats

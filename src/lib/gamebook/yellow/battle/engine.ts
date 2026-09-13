@@ -5,7 +5,7 @@
 // exécution des actions (précision, dégâts, effets) → fin de tour (résiduels) →
 // KO / changement forcé / issue. Produit une FILE D'ÉVÉNEMENTS que l'UI rejoue.
 
-import type { BattleMon, MonInstance, MajorStatus, MoveData, StageKey, PokeType } from "./types"
+import type { StatKey, BattleMon, MonInstance, MajorStatus, MoveData, StageKey, PokeType } from "./types"
 import { neutralStages } from "./types"
 import { Rng } from "./rng"
 import { getSpecies } from "../data/species"
@@ -26,7 +26,7 @@ import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/c
 import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
-import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
+import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
 // ============================================================
@@ -128,6 +128,11 @@ export interface BattleState {
     /** OBÉISSANCE : nb de badges du joueur, injecté par le store à la création (PvE). Pilote le cap de
      *  niveau au-dessus duquel un Daemon ÉCHANGÉ peut DÉSOBÉIR. Absent → obéissance totale (aucun gate). */
     playerBadgeCount?: number
+    /** VŒU DU GÉNIE (Zyran) — charges de réinitialisation d'EV encore disponibles DANS CE COMBAT. Décrémentées
+     *  à chaque K.O. porté par le joueur ; le solde durable vit dans la save (evResetCharges). */
+    evResetLeft?: number
+    /** Charges réellement consommées ce combat → le store en débite autant à la fin. */
+    evResetUsed?: number
 }
 
 export type PlayerAction =
@@ -181,6 +186,27 @@ function firstAliveIndex(side: BattleSide): number {
 }
 
 /** Transforme une instance persistante en combattant runtime (stages neutres). */
+/** GAIN D'EV, ou RÉINITIALISATION si le vœu de Zyran est armé.
+ *
+ *  Le vœu : « remettre à 0 les EV de mes Daemons ». La contrepartie posée par Sartay est qu'on ne choisit PAS
+ *  qui : les N prochains K.O. portés par le joueur remettent à zéro le Daemon qui frappe, au lieu de le faire
+ *  progresser. Une charge part même si le Daemon était déjà vierge — c'est le prix de l'imprécision.
+ *
+ *  Réservé au camp JOUEUR (l'appelant le garantit) : en PvP l'adversaire n'a rien demandé.
+ *  Le solde durable est dans la save ; ici on ne touche qu'au compteur DU COMBAT, et le store débite
+ *  `evResetUsed` à la fin — donc un combat abandonné ne consomme rien, exactement comme les EV gagnés
+ *  qui ne sont écrits qu'à la fin eux aussi. */
+function gainOrResetEv(state: BattleState, winner: BattleMon, stat: StatKey, events: BattleEvent[]): void {
+    if ((state.evResetLeft ?? 0) <= 0) { gainEv(winner, stat, EV_YIELD_PER_WIN); return }
+    state.evResetLeft = (state.evResetLeft ?? 0) - 1
+    state.evResetUsed = (state.evResetUsed ?? 0) + 1
+    const avait = evTotal(winner.ev ?? {}) > 0
+    winner.ev = {}
+    events.push({ kind: "message", text: avait
+        ? `✨ Le génie efface l'entraînement de ${displayName(winner)} — ses EV repartent de zéro. (${state.evResetLeft} restantes)`
+        : `✨ Le génie souffle sur ${displayName(winner)}… il n'avait aucun EV à effacer. (${state.evResetLeft} restantes)` })
+}
+
 export function toBattleMon(inst: MonInstance): BattleMon {
     return { ...inst, stages: neutralStages(), volatiles: {} }
 }
@@ -192,7 +218,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; costMult?: number; playerBadgeCount?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; costMult?: number; playerBadgeCount?: number; evResetCharges?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -223,6 +249,7 @@ export function createBattle(
         expMult: opts.expMult ?? 1,
         costMult: opts.costMult ?? 1,
         playerBadgeCount: opts.playerBadgeCount,
+        evResetLeft: Math.max(0, Math.floor(opts.evResetCharges ?? 0)) || undefined,
     }
 }
 
@@ -1435,8 +1462,9 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const rawXp = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) // XP « pleine » AVANT expMult — sert au reversement aux parents (Ligue Fusion) où expMult=0
     const gain = Math.round(rawXp * (state.expMult ?? 1))
 
+    // VŒU DU GÉNIE (Zyran) : tant qu'il reste des charges, le vainqueur REMET SES EV À ZÉRO au lieu d'en gagner.
     // EV uniquement au Daemon actif s'il est encore debout.
-    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    if (winner.currentHp > 0) gainOrResetEv(state, winner, signatureStat(faintedSp), events)
 
     // Daemons ayant affronté CET ennemi (pas l'XP d'ennemis jamais vus → évite les évos trop
     // rapides) ET ENCORE DEBOUT, dans l'ordre de participation → pilote le rang du partage.
@@ -1488,7 +1516,9 @@ function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent
     const fainted = active(state[other(winnerSide)])
     const faintedSp = speciesOf(fainted)
     const gain = Math.max(1, Math.floor(xpForDefeat(faintedSp.baseExp, fainted.level, false) * multiplier))
-    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    // PvP : le vœu ne vaut QUE pour le camp du joueur — l'adversaire n'a rien demandé.
+    if (winnerSide === "player") gainOrResetEv(state, winner, signatureStat(faintedSp), events)
+    else gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
     const beforeMax = maxHpOf(winner)
     const res = applyExp(winner, gain)
     events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })

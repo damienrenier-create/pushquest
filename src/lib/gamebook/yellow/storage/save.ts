@@ -266,6 +266,11 @@ export interface YellowSave {
     mimimoyAppearances: number
     /** VŒU DU GÉNIE (monde LIVE) — ⚡ restant à dépenser avant de pouvoir RÉUTILISER/ACHETER une Ball.
      *  Verrou actif tant que > 0 ; chaque dépense de reps le réduit ; à 0 le verrou se lève. Défaut 0. */
+    /** VŒU DU GÉNIE (Zyran) — charges de RÉINITIALISATION d'EV restantes. Tant qu'il en reste, un Daemon du
+     *  joueur qui met un adversaire K.O. voit ses EV REMIS À ZÉRO au lieu d'en gagner, et une charge part.
+     *  C'est la contrepartie : on ne choisit pas QUI est réinitialisé, et une charge se consomme même sur un
+     *  Daemon déjà vierge. 0/absent = vœu inactif. */
+    evResetCharges?: number
     ballLockRemaining: number
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
@@ -891,6 +896,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         run3LavapetitCaught: o.run3LavapetitCaught === true,
         mimimoyReturned: o.mimimoyReturned === true,
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
+        evResetCharges: Math.max(0, Math.floor(Number((o as { evResetCharges?: unknown }).evResetCharges) || 0)) || undefined,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         luxeOutcomeQueue: Array.isArray(o.luxeOutcomeQueue) ? (o.luxeOutcomeQueue as unknown[]).filter((v): v is string => v === "perfect" || v === "min" || v === "shiny_perfect").slice(0, 100) : [],
         bertieOutcomeQueue: Array.isArray(o.bertieOutcomeQueue) ? (o.bertieOutcomeQueue as unknown[]).filter((v): v is string => v === "good" || v === "bad").slice(0, 100) : [],
