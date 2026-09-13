@@ -16,6 +16,7 @@ import { GoogleGenAI } from "@google/genai"
 import { getSpecies } from "../data/species"
 import { canonicalPair, fusionPairKey } from "../data/fusionSpriteCache"
 import { evoSpriteKey } from "../data/fusionEvoSprites"
+import { FUSION_BASE_PARENTS } from "../data/fusionBaseSpecies"
 import prisma from "@/lib/prisma"
 import { STYLE_BIBLE, STYLE_ANCHORS } from "./fusionStyleBible"
 
@@ -107,13 +108,18 @@ function floodRemoveBackground(data: Buffer, w: number, h: number, tol = CHROMA_
 async function parentRefUrl(sp: { id: string; sprite?: string }, origin: string): Promise<string | null> {
     const declared = sp.sprite
     if (declared && !declared.includes("missingno")) return `${origin}${declared}`
-    try {
-        const row = await (prisma as any).fusionSprite.findUnique({
-            where: { pairKey: evoSpriteKey(sp.id) },
-            select: { status: true, blobUrl: true },
-        })
-        if (row?.status === "READY" && row.blobUrl) return row.blobUrl as string // URL Blob absolue
-    } catch { /* table absente / base muette → on refuse plutôt que d'inventer */ }
+    // DEUX clés possibles, selon la nature du parent :
+    //   • stade ÉVOLUÉ d'une lignée de fusion  → `fusevo:<id>` (la génération est chaînée depuis le stade d'avant) ;
+    //   • fusion de BASE (stade 1)             → la clé de PAIRE de ses deux parents, comme n'importe quelle fusion.
+    //   Ne chercher que la première laissait les 6 fusions de base sans référence — trou repéré par le test.
+    const parents = FUSION_BASE_PARENTS[sp.id]
+    const keys = [evoSpriteKey(sp.id), ...(parents ? [fusionPairKey(parents[0], parents[1])] : [])]
+    for (const pairKey of keys) {
+        try {
+            const row = await (prisma as any).fusionSprite.findUnique({ where: { pairKey }, select: { status: true, blobUrl: true } })
+            if (row?.status === "READY" && row.blobUrl) return row.blobUrl as string // URL Blob absolue
+        } catch { /* table absente / base muette → on essaie la clé suivante, puis on refuse */ }
+    }
     return null
 }
 

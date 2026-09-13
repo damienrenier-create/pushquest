@@ -3582,8 +3582,22 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
 //   après 3 essais. On les rend donc RÉSOLVABLES côté serveur — sans les mettre au dex.
 //   UKOGNOFY est dans le même cas : espèce PERMANENTE (dex 505) mais enregistrée en custom à la rencontre,
 //   donc introuvable côté serveur — et elle est parente de fusions (Sidéra-nofy, en base, bloquée pour ça).
+/** ⚠️ LA LISTE UNIQUE des espèces PERMANENTES et POSSÉDABLES qui vivent hors du Pokédex.
+ *
+ *  Deux consommateurs, et c'est tout l'intérêt :
+ *    • playerStore les enregistre en custom au chargement (résolution en jeu, rencontres, équipe, PC) ;
+ *    • getSpecies les résout en repli CÔTÉ SERVEUR (génération de sprite de fusion).
+ *
+ *  Avant, chaque camp avait sa propre énumération — et Ukognofy, ajouté d'un seul côté, a fait échouer
+ *  en silence toutes les fusions dont il était parent. UNE créature ajoutée ICI est désormais couverte
+ *  des deux côtés, automatiquement. C'est le seul endroit à toucher.
+ *
+ *  (Les fiches de fusions de Ligue, elles, restent hors de cette liste : elles sont affichées au Fusiodex
+ *  mais jamais POSSÉDÉES, donc jamais parentes d'une fusion.) */
+export const PERMANENT_OFF_DEX_SPECIES: readonly SpeciesData[] = [...FUSION_BASE_SPECIES, UKOGNOFY_SPECIES]
+
 const SERVER_FALLBACK_SPECIES: ReadonlyMap<string, SpeciesData> = new Map(
-    [...FUSION_BASE_SPECIES, UKOGNOFY_SPECIES].map((sp) => [sp.id, sp]),
+    PERMANENT_OFF_DEX_SPECIES.map((sp) => [sp.id, sp]),
 )
 
 export function getSpecies(id: string): SpeciesData | null {

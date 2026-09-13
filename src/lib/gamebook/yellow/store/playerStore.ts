@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
-import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
+import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -536,8 +536,10 @@ export function reregisterCustomDaemons(): void {
     //   n'itère que SPECIES, jamais le registre custom) → anti-spoiler par construction. Le Fusiodex les listera à part.
     // Injecte le sprite GÉNÉRÉ des stades évolués (auto-gen chaîné) s'il est déjà résolu en mémoire → getSpecies().sprite
     //   le renvoie partout (combat/équipe/PC/fiche). Sinon on garde le sprite déclaré (maison ou MissingNo placeholder).
-    registerCustomSpecies(FUSION_BASE_SPECIES.map((s) => { const u = getEvoSpriteFromMemory(s.id); return u ? { ...s, sprite: u } : s }))
-    registerCustomSpecies([UKOGNOFY_SPECIES]) // légendaire ultime : espèce permanente (capture keepable, hors dex principal)
+    // UNE SEULE LISTE, partagée avec le repli serveur de getSpecies (cf. PERMANENT_OFF_DEX_SPECIES) : une
+    //   créature ajoutée là-bas est couverte ici automatiquement, et réciproquement. Les deux énumérations
+    //   séparées d'avant, c'est ce qui avait rendu Ukognofy introuvable côté serveur.
+    registerCustomSpecies(PERMANENT_OFF_DEX_SPECIES.map((s) => { const u = getEvoSpriteFromMemory(s.id); return u ? { ...s, sprite: u } : s }))
     registerCustomSpecies(leagueFusionSpecies()) // FICHES des fusions de la Ligue → résolvables (getSpecies) pour le FUSIODEX (affichées à la rencontre)
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
 }
