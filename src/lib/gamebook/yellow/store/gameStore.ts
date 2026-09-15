@@ -32,11 +32,12 @@ import { previousFusionTier, isTopFusionTier, fusionRunBerriesActive } from "../
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
+import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getFusionChampionAvatar } from "./playerStore"
 import { avatarFilter } from "../data/avatars"
@@ -757,6 +758,7 @@ function fusionSpriteItemsFromRoster(): Array<{ aId: string; bId: string; name: 
  *  dresseur (buildFusionLeagueTeam au palier actif), ou le REFLET du roster (miroir). Toutes les espèces éphémères
  *  sont enregistrées ici et détruites au lancement suivant (disposeFusionLeagueSpecies). */
 const SYNERGY_INTRO_MARKER = "synergy_intro_seen" // 🔮 le Dieu Spaghetti a déjà félicité ce joueur pour ses fusions synergiques (one-time)
+
 function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDialogue | null {
     // GAUNTLET : on ne dispose QUE les espèces ENNEMIES de la salle précédente. L'équipe du joueur (le gauntlet)
     //   est CONSERVÉE d'une salle à l'autre (mêmes instances → PV/PP/K.O. entamés) : ne PAS la disposer ici.
@@ -2254,6 +2256,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     connectedCount: getOnlineCount(),     // FUN : joueurs en ligne (hors soi) → bonus de groupe d'IV excellent
                 })
                 if (wild) {
+                    // VŒU DE TASK1 — SHINY ÉPHÉMÈRE : chaque jour de chance, le N-ième pop est shiny et tient N K.O.
+                    //   La règle entière vit dans data/ephemeralShiny (pure) ; ici on ne fait que compter ce pop,
+                    //   et transformer la rencontre si c'est la bonne. Tous les pops comptent, même ceux qui fuient.
+                    const sw = getShinyWish()
+                    if (sw && shinyWishActive(sw)) {
+                        const { state: swNext, shinyKo } = onWildPop(sw, new Date().toISOString().slice(0, 10), Math.random)
+                        setShinyWish(swNext)
+                        if (shinyKo) {
+                            Object.assign(wild, makeEphemeralShiny(wild, shinyKo))
+                            setShinyPopMessage(shinyPopMessage(shinyKo, swNext.charges))
+                        }
+                    }
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
                     //   décompte N∈[8,20] COMBATS (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
                     //   est FRAÎCHE (>90% PV), cette rencontre devient son combat (intro → dresseur). Perdre → re-tente

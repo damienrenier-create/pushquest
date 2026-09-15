@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
+import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -251,6 +252,8 @@ interface PlayerState {
     /** VŒU DU GÉNIE (LIVE) — ⚡ restant à dépenser avant de pouvoir réutiliser/acheter une Ball (verrou si > 0). Défaut 0. */
     /** VŒU DU GÉNIE (Zyran) — charges de remise à zéro des EV restantes. Absent/0 = vœu inactif. */
     evResetCharges?: number
+    /** VŒU DU GÉNIE (Task1) — shiny éphémères (cf. data/ephemeralShiny). Absent = vœu inactif. */
+    shinyWish?: ShinyWishState
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
@@ -708,6 +711,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
         evResetCharges: p.evResetCharges ?? st.evResetCharges,
+        shinyWish: p.shinyWish ?? st.shinyWish,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
@@ -1625,11 +1629,26 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
+        case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
         default: return false                                                                              // type non géré → non appliqué
     }
 }
+// ═══════ VŒU « SHINY ÉPHÉMÈRES » (Task1) — accesseurs, la règle vit dans data/ephemeralShiny ═══════
+/** BOÎTE AUX LETTRES du pop shiny : gameStore y dépose le message du génie au moment du pop, battleStore le lit
+ *  en ouvrant le combat. Vit ICI (et pas dans gameStore) parce que battleStore ne peut pas importer gameStore
+ *  sans créer un cycle — playerStore, lui, est importé des deux côtés. */
+let pendingShinyPopMessage: string | null = null
+export function setShinyPopMessage(m: string): void { pendingShinyPopMessage = m }
+export function consumeShinyPopMessage(): string | null { const m = pendingShinyPopMessage; pendingShinyPopMessage = null; return m }
+
+export function getShinyWish(): ShinyWishState | undefined { return st.shinyWish }
+export function setShinyWish(next: ShinyWishState | undefined): void {
+    st = { ...st, shinyWish: next && next.charges > 0 ? next : undefined }
+    emit()
+}
+
 // ═══════ VŒU « REMISE À ZÉRO DES EV » (Zyran) ═══════
 // Le vœu demandait de pouvoir remettre les EV à zéro. La contrepartie posée par Sartay : on ne choisit PAS
 // qui. Les N prochains K.O. portés par ses Daemons remettent à zéro CELUI QUI FRAPPE, au lieu de le faire

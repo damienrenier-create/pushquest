@@ -271,6 +271,8 @@ export interface YellowSave {
      *  C'est la contrepartie : on ne choisit pas QUI est réinitialisé, et une charge se consomme même sur un
      *  Daemon déjà vierge. 0/absent = vœu inactif. */
     evResetCharges?: number
+    /** VŒU DU GÉNIE (Task1) — shiny ÉPHÉMÈRES : charges restantes + tirage du jour. Cf. data/ephemeralShiny. */
+    shinyWish?: { charges: number; day: string; target: number; pops: number }
     ballLockRemaining: number
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
@@ -434,6 +436,7 @@ function parseMon(raw: unknown): MonInstance | null {
         moves,
         owned: o.owned === true,
         shiny: o.shiny === true ? true : undefined,
+        shinyKoLeft: typeof o.shinyKoLeft === "number" && o.shinyKoLeft > 0 ? Math.floor(o.shinyKoLeft) : undefined, // shiny EPHEMERE (voeu Task1) : sans ca, le compteur saute au reload et le shiny devient permanent
         growthMult: typeof o.growthMult === "number" && o.growthMult > 0 ? o.growthMult : undefined, // courbe d'XP forcée (cadeau « lent »)
         heldItem: typeof o.heldItem === "string" && isHeldItem(o.heldItem) ? o.heldItem : undefined, // sanitize : ignore un id inconnu/corrompu
         statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
@@ -896,6 +899,13 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         run3LavapetitCaught: o.run3LavapetitCaught === true,
         mimimoyReturned: o.mimimoyReturned === true,
         mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
+        shinyWish: (() => {
+            const w = (o as { shinyWish?: unknown }).shinyWish as Record<string, unknown> | undefined
+            if (!w || typeof w !== "object") return undefined
+            const n = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0))
+            const charges = n(w.charges)
+            return charges > 0 ? { charges, day: typeof w.day === "string" ? w.day : "", target: n(w.target), pops: n(w.pops) } : undefined
+        })(),
         evResetCharges: Math.max(0, Math.floor(Number((o as { evResetCharges?: unknown }).evResetCharges) || 0)) || undefined,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         luxeOutcomeQueue: Array.isArray(o.luxeOutcomeQueue) ? (o.luxeOutcomeQueue as unknown[]).filter((v): v is string => v === "perfect" || v === "min" || v === "shiny_perfect").slice(0, 100) : [],
@@ -951,6 +961,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         ivs: { ...m.ivs }, currentHp: m.currentHp, status: m.status, statusCounter: m.statusCounter,
         moves: m.moves.map((mv) => ({ ...mv })), owned: m.owned,
         shiny: m.shiny ? true : undefined,
+        shinyKoLeft: m.shinyKoLeft && m.shinyKoLeft > 0 ? m.shinyKoLeft : undefined, // shiny EPHEMERE : persiste a chaque fin de combat
         growthMult: m.growthMult && m.growthMult > 0 ? m.growthMult : undefined, // courbe d'XP forcée (cadeau « lent ») — persistée
         heldItem: m.heldItem,
         pendingMoves: m.pendingMoves && m.pendingMoves.length ? [...m.pendingMoves] : undefined,

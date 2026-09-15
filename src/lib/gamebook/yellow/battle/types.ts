@@ -256,6 +256,9 @@ export interface MonInstance {
     /** CHROMATIQUE (shiny) : tiré ~1/512 au spawn sauvage. IV parfaits + **+10% sur chaque stat**
      *  (cf. fullStats — "un peu plus que parfait"). Cosmétique : rendu avec un filtre + ✨. */
     shiny?: boolean
+    /** SHINY ÉPHÉMÈRE (vœu de Task1) : K.O. qu'il peut encore encaisser avant de redevenir ordinaire. Absent/0 =
+     *  shiny naturel (ou pas shiny du tout) : ce mécanisme ne le touche jamais. */
+    shinyKoLeft?: number
     /** STATS FIGÉES (Hall of Fame uniquement) : si présent, fullStats renvoie ces valeurs telles quelles
      *  (le champion combat avec ses stats exactes du sacre, sans recalcul IV/EV/Saiyan). Jamais persisté. */
     frozenStats?: Record<StatKey, number>

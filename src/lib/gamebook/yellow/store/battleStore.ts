@@ -52,7 +52,7 @@ import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
-import { DUEL_EXP_MULT } from "../data/duel"
+import { DUEL_EXP_MULT, DUEL_DREAM_NPC } from "../data/duel"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
@@ -66,6 +66,8 @@ import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
 import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges } from "./playerStore"
+import { isEphemeralShiny, takeShinyKo, shinyKoMessage } from "../data/ephemeralShiny"
+import { consumeShinyPopMessage } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
 import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, PLATINE_DEFEAT_LINES, platineCreditsLines } from "../data/platineLore"
 import { recordHit } from "../data/platineLedger"
@@ -368,7 +370,10 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
         const avgIV = iv ? (iv.hp + iv.atk + iv.def + iv.spe + iv.spc) / 5 : 0
         captureModifier = funCaptureFactor(avgIV)
     }
+    shinyKoAtStart = new Set(playerTeam.filter((m) => m.currentHp <= 0).map((m) => m.uid))
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length, evResetCharges: getEvResetCharges() })
+    // VŒU DE TASK1 : le génie annonce le shiny du jour en OUVERTURE du combat — c'est là qu'on le voit briller.
+    { const m = consumeShinyPopMessage(); if (m) battle.events.unshift({ kind: "message", text: m }) }
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
@@ -395,6 +400,9 @@ export function persistsDefeatOnWin(trainerId: string): boolean {
 }
 
 let platineKoAtStart = 0
+/** uids DÉJÀ à terre à l'ouverture d'un combat sauvage/dresseur : un Daemon K.O. avant le combat n'a pas
+ *  « encaissé » un K.O. pendant. Sert au vœu de Task1 (shiny éphémères), qui use une charge par K.O. SUBI. */
+let shinyKoAtStart = new Set<string>()
 /** LA PHOTO D'UN SACRE doit pouvoir être REJOUÉE à l'identique : ces trois champs manquaient, et la salle
  *  d'un champion combattait donc plus faiblement que l'équipe dont elle se réclame. Les noms d'attaques sont
  *  la clé (même vocabulaire que `moves` dans FusionChampionMon), pas les ids. */
@@ -422,6 +430,7 @@ export function startTrainerBattle(
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     platineKoAtStart = playerTeam.filter((m) => m.currentHp <= 0).length
+    shinyKoAtStart = new Set(playerTeam.filter((m) => m.currentHp <= 0).map((m) => m.uid))
     platineFoeName = null
     platineDefeatLines = null
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
@@ -912,7 +921,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const isRun2GhostLoss = storeState.trainer?.trainerId?.startsWith("run2ghost:") === true && b.outcome !== "win"
     // 📟 stripMinitelReserve : le 7e RENFORT MINITEL (éphémère, uid préfixé) est RETIRÉ avant l'écriture → il ne
     //   rejoint jamais l'équipe réelle (sinon setTeam grave une 7e slot permanente). No-op sans renfort.
-    if (!isFactory && !isRun2GhostLoss) setTeam(stripMinitelReserve(b.player.team).map(toMonInstance))
+    // VŒU DE TASK1 — SHINY ÉPHÉMÈRES : un shiny en sursis qui est TOMBÉ pendant ce combat use une charge, et
+    //   s'éteint à zéro (IV re-tirés, décision Sartay). Portée : sauvage + dresseur, PAS le PvP (décision
+    //   Sartay) — et la Zone de Combat / Ligue de Fusion sont déjà hors de ce chemin (isFactory).
+    //   On ne compte que les K.O. de CE combat : un Daemon déjà à terre à l'ouverture n'a rien encaissé.
+    const shinyFadeLines: string[] = []
+    const koCountsForShiny = !isFactory && !isRun2GhostLoss && !b.pvp && !storeState.trainer?.trainerId?.startsWith("duel:")
+    const teamOut = koCountsForShiny
+        ? b.player.team.map((m) => {
+            if (!isEphemeralShiny(m) || m.currentHp > 0 || shinyKoAtStart.has(m.uid)) return m
+            const r = takeShinyKo(m, Math.random)
+            shinyFadeLines.push(shinyKoMessage(getSpecies(m.speciesId)?.name ?? m.speciesId, r.left, r.faded))
+            return { ...m, ...r.mon }
+        })
+        : b.player.team
+    if (!isFactory && !isRun2GhostLoss) setTeam(stripMinitelReserve(teamOut).map(toMonInstance))
+
     // …et on débite les charges du vœu de Zyran DANS LE MÊME SOUFFLE : les EV remis à zéro viennent d'être
     //   gravés, donc les charges doivent l'être aussi. Si l'équipe n'est pas réécrite (Zone de Combat, PNJ
     //   run 2), rien n'est consommé — cohérent, puisque le reset n'a pas été gravé non plus.
@@ -1806,6 +1830,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }) }
         : null
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
+    // VŒU DE TASK1 : le génie prévient qu'un shiny éphémère a usé une charge (ou s'est éteint). Sur le canal
+    //   d'après-combat, APRÈS que toutes les branches ont posé leur récompense — on complète, on n'écrase pas.
+    if (shinyFadeLines.length) rematchReward = rematchReward
+        ? { ...rematchReward, lines: [...rematchReward.lines, ...shinyFadeLines] }
+        : { npcId: DUEL_DREAM_NPC, npcName: "🧞 LE GÉNIE", lines: shinyFadeLines }
     setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, platineSacre, platineDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
