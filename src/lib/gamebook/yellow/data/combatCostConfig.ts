@@ -18,6 +18,14 @@ export const LEVEL_STD = 60         // niveau étalon du Daemon (coût plein à 
 export const MAX_COST = 10          // coût maximum d'une attaque
 export const STATUS_DEFAULT_CP = 30 // cp d'un statut non tagué (palier « notable » → coût max 3)
 
+// ─────────── COURBE ÉTENDUE (vœu du génie — Laura) ───────────
+// Le facteur NIVEAU sature à 1 dès le niveau 60 : passé ce cap, monter ses Daemons ne coûte plus rien de plus.
+// La courbe étendue prolonge LA MÊME PENTE jusqu'au niveau 80 — donc jusqu'à 80/60 = 1,333× — et relève le
+// plafond à 13 en conséquence (10 × 1,333 = 13,3). Au-delà du niveau 80, plus rien ne monte.
+// C'est la contrepartie d'une jauge remplie à ras bord : l'énergie donnée revient par le prix des coups.
+export const EXTENDED_LEVEL_CEIL = 80  // la pente continue jusque-là (au lieu de s'arrêter à LEVEL_STD)
+export const EXTENDED_MAX_COST = 13    // = round(MAX_COST × EXTENDED_LEVEL_CEIL / LEVEL_STD)
+
 /** Quota effectif pour le coût : valeur brute si plausible (>1), sinon l'étalon 150 (hors-ligne / indispo). */
 export function effectiveQuota(rawQuota: number | undefined | null): number {
     return rawQuota && rawQuota > 1 ? rawQuota : QUOTA_STD
@@ -64,14 +72,19 @@ function costPowerOf(move: MoveData, hpFrac?: number): number {
 
 /** Coût en reps d'une attaque, scalé par le QUOTA IRL du joueur ET le NIVEAU du Daemon (cf. en-tête).
  *  `hpFrac` (optionnel) = fraction de PV de l'attaquant, pour les moves à puissance dynamique (Patience). */
-export function attackCost(move: MoveData | null, level: number, quota: number, hpFrac?: number): number {
+export function attackCost(move: MoveData | null, level: number, quota: number, hpFrac?: number, extended = false): number {
     if (!move) return 1
     const cp = costPowerOf(move, hpFrac)
+    // `extended` : la pente du facteur NIVEAU continue jusqu'à EXTENDED_LEVEL_CEIL au lieu de saturer à
+    //   LEVEL_STD, et le plafond suit. Les deux autres facteurs (puissance, quota) sont inchangés — donc un
+    //   Daemon sous le niveau 60 paie EXACTEMENT le même prix qu'avant, et un petit quota reste protégé.
+    const levelCap = extended ? EXTENDED_LEVEL_CEIL / LEVEL_STD : 1
+    const cap = extended ? EXTENDED_MAX_COST : MAX_COST
     const f =
         Math.min(1, cp / 100) *
         Math.min(1, Math.max(0, quota) / QUOTA_STD) *
-        Math.min(1, Math.max(0, level) / LEVEL_STD)
-    return Math.max(1, Math.min(MAX_COST, Math.round(MAX_COST * f)))
+        Math.min(levelCap, Math.max(0, level) / LEVEL_STD)
+    return Math.max(1, Math.min(cap, Math.round(MAX_COST * f)))
 }
 
 /** Id de l'attaque de secours gratuite (anti soft-lock : faible + dégâts à soi). */

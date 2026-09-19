@@ -1629,6 +1629,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
+        case "attack_cost_extended": if (!st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ATTACK_COST_EXTENDED_MARKER] }; return true // vœu « jauge pleine » (Laura) : coûts jusqu'au niv 80, plafond 13
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
@@ -1642,6 +1643,12 @@ function runGenieEffect(e: GenieEffect): boolean {
 let pendingShinyPopMessage: string | null = null
 export function setShinyPopMessage(m: string): void { pendingShinyPopMessage = m }
 export function consumeShinyPopMessage(): string | null { const m = pendingShinyPopMessage; pendingShinyPopMessage = null; return m }
+
+// ═══════ VŒU « JAUGE PLEINE » (Laura) — la contrepartie : des coups plus chers en fin de partie ═══════
+/** Marqueur du vœu : la courbe de coût des attaques monte jusqu'au niveau 80 (plafond 13) au lieu de 60/10. */
+export const ATTACK_COST_EXTENDED_MARKER = "attack_cost_extended"
+/** Ce joueur paie-t-il ses attaques sur la courbe ÉTENDUE ? (vœu one-shot, marqueur dans la save) */
+export function isAttackCostExtended(): boolean { return st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER) }
 
 export function getShinyWish(): ShinyWishState | undefined { return st.shinyWish }
 export function setShinyWish(next: ShinyWishState | undefined): void {

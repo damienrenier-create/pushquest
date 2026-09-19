@@ -65,7 +65,7 @@ import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
-import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges } from "./playerStore"
+import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges, isAttackCostExtended } from "./playerStore"
 import { isEphemeralShiny, takeShinyKo, shinyKoMessage } from "../data/ephemeralShiny"
 import { consumeShinyPopMessage } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
@@ -733,7 +733,10 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInsta
         : getGameMode() === "fun"
             ? playerAttackQuota(getPlayer().badges.length)
             : effectiveQuota(getPlayer().wildCtx?.quota)
-    const base = attackCost(getMove(slot.moveId), me.level, quota, hpFrac)
+    // VŒU DE LAURA : sa courbe de coût monte jusqu'au niveau 80 (plafond 13) au lieu de saturer à 60/10.
+    //   Ce site est le SEUL qui facture le joueur, et moveCostForDisplay en est le miroir — l'affichage suit
+    //   donc automatiquement. L'ennemi, lui, ne paie pas de reps : son estimation côté IA reste intacte.
+    const base = attackCost(getMove(slot.moveId), me.level, quota, hpFrac, isAttackCostExtended())
     // VŒU MAUDIT (Jacanon) : ×10 ; ENTRAÎNEMENT clan RIVAL : ×3 (b.costMult) — composés si les deux sont actifs.
     return base * (isAbundanceCurseActive() ? 10 : 1) * (b.costMult ?? 1)
 }
