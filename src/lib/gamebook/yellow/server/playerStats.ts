@@ -139,9 +139,13 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
     //   dette existe (rare). Une seule lecture FrontierProfile pour les deux.
     let pushupDebt = 0
     let energyGrantPending = 0
+    let energyGrantNote = ""
     try {
-        const fp = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { pushupDebtOwed: true, pushupDebtBaseline: true, energyGrantPending: true } })
+        const fp = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { pushupDebtOwed: true, pushupDebtBaseline: true, energyGrantPending: true, energyGrantNote: true } })
         energyGrantPending = Math.max(0, fp?.energyGrantPending ?? 0)
+        // 🍝 LE PETIT MOT du Dieu Spaghetti. Servi TEL QUEL (pas retravaillé) : le client le renvoie à l'identique
+        //   pour le consommer par compare-and-swap. Indépendant du montant → un mot survit à un don déjà crédité.
+        energyGrantNote = typeof fp?.energyGrantNote === "string" ? fp.energyGrantNote : ""
         const owed = fp?.pushupDebtOwed ?? 0
         if (owed > 0) {
             const agg = await (prisma as any).exerciseSet.aggregate({ where: { userId, exercise: "PUSHUP" }, _sum: { reps: true } })
@@ -159,5 +163,6 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
         quota, // valeur brute → scale le coût des attaques en combat
         ...(pushupDebt > 0 ? { pushupDebt } : {}),
         ...(energyGrantPending > 0 ? { energyGrantPending } : {}),
+        ...(energyGrantNote.trim() ? { energyGrantNote } : {}),
     }
 }

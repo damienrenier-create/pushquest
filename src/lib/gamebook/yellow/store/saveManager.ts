@@ -11,6 +11,7 @@ import type { StoredCustomDaemon } from "../create/customSpecies"
 import type { MonInstance } from "../battle/types"
 import type { BadgeId } from "../data/cts"
 import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
+import { giftNoteLines } from "../data/energyGiftNote"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
@@ -161,6 +162,31 @@ export function shouldCreditEnergyGrant(pending: number | undefined, activeWorld
     return (pending ?? 0) > 0 && (activeWorld === "live" || activeWorld === "ngplus")
 }
 
+// ═══════ 🍝 LE PETIT MOT DU DIEU SPAGHETTI (accompagne un cadeau d'énergie) ═══════
+// Rempli au chargement depuis le ctx serveur, AFFICHÉ par le client tout à la fin de sa séquence de démarrage (pour
+// ne couper la parole à personne). On garde le texte BRUT en plus des répliques : c'est lui qu'on renvoie au serveur
+// pour le compare-and-swap, jamais la version découpée/nettoyée — sinon le CAS ne matcherait plus et le mot
+// ressortirait à chaque chargement.
+let pendingGiftNote: { raw: string; lines: string[] } = { raw: "", lines: [] }
+
+/** Le mot en attente d'affichage (sans le consommer — le client décide s'il peut parler maintenant). */
+export function peekEnergyGiftNote(): { raw: string; lines: string[] } { return pendingGiftNote }
+
+/** Oublie le mot en mémoire (après affichage). N'enlève RIEN côté serveur : cf. consumeEnergyGiftNoteOnServer. */
+export function clearEnergyGiftNote(): void { pendingGiftNote = { raw: "", lines: [] } }
+
+/** Acquitte le mot côté serveur — à n'appeler QU'APRÈS l'avoir réellement mis à l'écran. Échec réseau → le mot reste
+ *  en attente et revient au prochain chargement : un cadeau ne se perd pas. */
+export async function consumeEnergyGiftNoteOnServer(raw: string): Promise<void> {
+    if (!raw) return
+    try {
+        await fetch("/api/gamebook/yellow/energy-grant", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ note: raw }),
+        })
+    } catch { /* ratée : mot NON effacé → re-proposé au prochain chargement */ }
+}
+
 /** 🥇 « 1er du groupe » : revendique (idempotent, fire-and-forget) les FAITS phares accomplis dans le monde ACTIF.
  *  Le serveur ne grave que le PREMIER joueur (featId @unique). Se relance à chaque chargement, sans effet si déjà
  *  revendiqué. Non bloquant : les erreurs réseau sont ignorées (réessai au prochain chargement). */
@@ -218,6 +244,12 @@ export async function loadYellowSave(): Promise<void> {
             //   reste en attente serveur, re-crédité au prochain chargement. Uniquement en LIVE/NG+ (run3 = source
             //   unique ; replay = bulle jetable).
             const grantAmt = Math.max(0, Math.floor(j?.ctx?.energyGrantPending ?? 0))
+            // 🍝 LE PETIT MOT qui accompagne le don. Mis en file ICI, affiché par le client en fin de démarrage.
+            //   INDÉPENDANT du montant, volontairement : si un don a déjà été crédité par un build antérieur (montant
+            //   retombé à 0), le mot est toujours là et sortira quand même. Un monde run3/replay ne l'efface pas non
+            //   plus — le client ne l'acquitte qu'après l'avoir affiché, donc il attendra le retour en live.
+            { const raw = typeof j?.ctx?.energyGrantNote === "string" ? j.ctx.energyGrantNote : ""
+              pendingGiftNote = { raw, lines: giftNoteLines(raw) } }
             if (shouldCreditEnergyGrant(grantAmt, getActiveWorld())) {
                 const pBefore = getPlayer()
                 const prevReps = pBefore.reps, prevCap = pBefore.repsCap // capturé AVANT crédit → rollback exact (reps+cap)

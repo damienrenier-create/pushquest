@@ -16,10 +16,13 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { getTodayISO } from "@/lib/challenge"
+import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
 
 export const dynamic = "force-dynamic"
 
-const GIFT_ENERGY = 30
+// Montant partagé avec les actualités du Nexus (data/ambientNews), qui déposent la MÊME consolation : une seule
+// source de vérité, sinon les deux montants dériveraient en silence le jour où l'un des deux change.
+const GIFT_ENERGY = MIRROR_GIFT_ENERGY
 
 // 🎂 Cadeau d'anniversaire de Gg : +360 énergie pour ses 36 ans, le 26/06, une seule fois.
 // On réutilise la table DuelGift (montant d'énergie fixe + claim côté client) : la sentinelle

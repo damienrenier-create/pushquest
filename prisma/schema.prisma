@@ -337,6 +337,7 @@ model DuelGift {
   fromNickname String   // pseudo du vainqueur (pour le rêve du Dieu Spaghetti)
   energy       Int      @default(30)
   claimed      Boolean  @default(false)
+  ambient      Boolean  @default(false) // 📰 ACTUALITÉ DU NEXUS : consolation d'ambiance générée à la connexion. ⚠️ EXCLUE du vivier de « vrais » vainqueurs de reflet, sinon les faux s'auto-alimenteraient. Cf. server/ambientNews.
   createdAt    DateTime @default(now())
 
   @@index([toUserId, claimed])
@@ -419,6 +420,7 @@ model LeagueEnergyGrant {
   fromUserId   String   // nouveau champion (anti-stacking)
   fromNickname String   // pseudo du champion (notif au bénéficiaire)
   claimed      Boolean  @default(false)
+  ambient      Boolean  @default(false) // 📰 ACTUALITÉ DU NEXUS : don d'ambiance généré à la connexion (le sacre annoncé n'a pas eu lieu MAINTENANT — le champion cité en a bien remporté un avant). Marqué pour rester auditable et pour ne jamais servir de source à un autre calcul. Cf. server/ambientNews.
   createdAt    DateTime @default(now())
 
   @@index([toUserId, claimed])
@@ -584,6 +586,12 @@ model FrontierProfile {
   pushupDebtOwed     Int @default(0)  // VŒU GÉNIE (Mools) : total de POMPES dues (100 × nb de refus). 0 = aucune dette.
   pushupDebtBaseline Int @default(0)  // cumul de pompes (all-time PUSHUP) figé quand la dette a été posée → dette restante = owed − (cumul_actuel − baseline).
   energyGrantPending Int @default(0)  // CADEAU / VŒU GÉNIE : énergie à créditer UNE FOIS au chargement. Canal serveur→client ANTI-ÉCRASEMENT (comme pushupDebt) : vit hors de la save, donc un autosave ne peut pas l'effacer. Le client la consomme via /energy-grant (atomique) puis crédite. 0 = rien.
+  energyGrantNote    String?           // 🍝 LE PETIT MOT qui accompagne le cadeau : le Dieu Spaghetti le dit au joueur au chargement (une réplique par ligne). Même canal hors-save que le montant, consommé par CAS sur le texte EXACT. null = don muet. Indépendant du montant (un mot peut survivre à un don déjà crédité par un build antérieur).
+  // 📰 ACTUALITÉS DU NEXUS (cf. server/ambientNews) : créneaux déjà servis, pour ne pas ré-annoncer à chaque
+  //   rechargement. Clé de période : semaine ISO ("2026-W39") pour la Ligue, jour ("2026-09-26") pour le reflet.
+  //   Réservés par updateMany conditionnel → atomique, à l'épreuve de dix F5 et de deux onglets.
+  ambientLeagueWeek  String?
+  ambientMirrorDay   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

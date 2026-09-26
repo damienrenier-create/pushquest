@@ -105,6 +105,7 @@ export interface WildPlayerCtx {
     quota?: number       // VALEUR BRUTE du quota du jour (cible reps IRL) → scale le coût des attaques (absent → étalon 150)
     pushupDebt?: number  // DETTE DE POMPES encore due (vœu génie Mools) — server-authoritative. >0 ⇒ combats VERROUILLÉS. Absent/0 = libre.
     energyGrantPending?: number // CADEAU d'énergie en attente (vœu génie / admin) à créditer 1× au chargement — server-authoritative, anti-écrasement. Absent/0 = rien.
+    energyGrantNote?: string    // 🍝 LE PETIT MOT du Dieu Spaghetti qui accompagne ce cadeau (une réplique par ligne). Absent = don muet. Cf. data/energyGiftNote.
 }
 
 export interface EncounterCtx {

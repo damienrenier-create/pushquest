@@ -79,7 +79,8 @@ import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
+import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
@@ -1148,6 +1149,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             // Cadeau du DIEU SPAG crédité au chargement (saveManager) → on affiche son message une fois.
             if (!cancelled) { const gift = consumeGiftMessage(); if (gift) setToast(gift) }
+            // 📰 ACTUALITÉS DU NEXUS — la vie du groupe : le serveur dépose ici les cadeaux d'ambiance dus (sacre de
+            //   Ligue 1×/semaine, reflet battu 1×/jour, cf. server/ambientNews). VOLONTAIREMENT AVANT les deux blocs
+            //   de réclamation ci-dessous, et AWAITÉ : ainsi les lignes fraîches sont ramassées par les chemins
+            //   habituels dans la même connexion, sans une ligne d'UX en plus. La cadence est arbitrée serveur, donc
+            //   recharger ne rapporte rien. Non bloquant, et jamais en run 3 (énergie source unique).
+            if (!cancelled && getActiveWorld() !== "run3") {
+                try { await fetch("/api/gamebook/yellow/ambient", { method: "POST" }) } catch { /* neutre */ }
+            }
             // CADEAUX CROISÉS de duel (Partie C) : un autre joueur a battu MON reflet → le Dieu Spaghetti
             // me console (+énergie) à cette connexion. Énergie appliquée APRÈS loadYellowSave → pas de race.
             // RUN 3 : on ne réclame PAS (le don serait consommé serveur mais grantReps est no-op → perdu). En attente.
@@ -1349,6 +1358,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // 🍝 VŒU MAUDIT (Jacanon) : à l'EXPIRATION de la semaine, N Daemons du PC deviennent désobéissants (login,
             //   one-shot ; no-op ailleurs car le marqueur est per-monde). Non-destructif (flag réversible par le créateur).
             if (!cancelled) { const n = resolveAbundanceCurse(); if (n > 0) { persistYellowSave(); setToast(`😈 L'abondance a un prix : ${n} de tes Daemons refusent désormais de t'obéir…`) } }
+            // 🍝 LE PETIT MOT DU DIEU SPAGHETTI (cadeau d'énergie du créateur) — VOLONTAIREMENT LE DERNIER de la
+            //   séquence : showDialogue ÉCRASE la réplique en cours, donc plus rien ne peut écraser le mot après.
+            //   S'il tombe sur un AUTRE PNJ qui parle (génie, parrainage), on DIFFÈRE : on ne lui coupe pas la parole
+            //   et on n'acquitte PAS le mot côté serveur → il revient au prochain chargement. Un cadeau ne se perd pas.
+            //   Si c'est le Dieu Spaghetti lui-même (drip des hauts faits), on AJOUTE à sa réplique : même personnage.
+            if (!cancelled) {
+                const note = peekEnergyGiftNote()
+                if (note.lines.length) {
+                    const cur = useGameStore.getState().dialogue
+                    const where = giftNotePlacement(cur?.npcId)
+                    if (where !== "defer") {
+                        if (where === "append" && cur) showDialogue(cur.npcId, cur.npcName, [...cur.lines, ...note.lines])
+                        else showDialogue(GIFT_NOTE_NPC, GIFT_NOTE_NAME, note.lines)
+                        clearEnergyGiftNote()
+                        void consumeEnergyGiftNoteOnServer(note.raw) // acquitté SEULEMENT après affichage
+                    }
+                }
+            }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)
