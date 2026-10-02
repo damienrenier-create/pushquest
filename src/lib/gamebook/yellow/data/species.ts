@@ -7,6 +7,7 @@
 import type { SpeciesData } from "../battle/types"
 import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
 import { UKOGNOFY_SPECIES } from "./ukognofySpecies"
+import { MISSINGNO_SPECIES } from "./missingnoSpecies"
 
 export const SPECIES: Record<string, SpeciesData> = {
     // ============================================================
@@ -3600,11 +3601,18 @@ const SERVER_FALLBACK_SPECIES: ReadonlyMap<string, SpeciesData> = new Map(
     PERMANENT_OFF_DEX_SPECIES.map((sp) => [sp.id, sp]),
 )
 
+/** 👻 MISSINGNO — résolvable, mais DÉLIBÉRÉMENT hors de PERMANENT_OFF_DEX_SPECIES : cette liste-là est celle des
+ *  créatures POSSÉDABLES qui peuvent être parentes d'une fusion (et doivent donc fournir une référence visuelle).
+ *  MissingNo, lui, n'est qu'une punition : capture bloquée, aucun sprite de référence, jamais parent de rien.
+ *  Il a seulement besoin que getSpecies le trouve, pour que buildForcedSpawn sache le fabriquer. Cf. data/dexWish. */
+const PUNITION_SPECIES: ReadonlyMap<string, SpeciesData> = new Map([[MISSINGNO_SPECIES.id, MISSINGNO_SPECIES]])
+
 export function getSpecies(id: string): SpeciesData | null {
     // statique → custom runtime → FUSION DE BASE (repli serveur : le client les a déjà en custom) → alias canonisé.
     return SPECIES[id]
         ?? CUSTOM_SPECIES.get(id)
         ?? SERVER_FALLBACK_SPECIES.get(id)
+        ?? PUNITION_SPECIES.get(id)
         ?? SPECIES[CANONIZED_CUSTOM_ALIAS[id] ?? ""]
         ?? null
 }

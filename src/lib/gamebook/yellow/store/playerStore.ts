@@ -1658,7 +1658,9 @@ export function isAttackCostExtended(): boolean { return st.defeatedTrainers.inc
 // ═══════ VŒU « JE CHOISIS LE NUMÉRO » (Guillaume) — accesseurs ; la règle vit dans data/dexWish ═══════
 export function getDexWish(): DexWishState | undefined { return st.dexWish }
 export function setDexWish(next: DexWishState | undefined): void {
-    st = { ...st, dexWish: next && next.charges > 0 ? next : undefined }
+    // ⚠️ On garde l'état tant qu'une ANNONCE est en attente, même à 0 charge : la 7e annonce vide les charges,
+    //   et la jeter ici perdrait le Daemon promis pour ce jour-là.
+    st = { ...st, dexWish: next && (next.charges > 0 || !!next.speciesId) ? next : undefined }
     emit()
 }
 

@@ -274,7 +274,7 @@ export interface YellowSave {
     /** VŒU DU GÉNIE (Task1) — shiny ÉPHÉMÈRES : charges restantes + tirage du jour. Cf. data/ephemeralShiny. */
     shinyWish?: { charges: number; day: string; target: number; pops: number }
     /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » : journées restantes + annonce du jour. Cf. data/dexWish. */
-    dexWish?: { charges: number; day: string; dex: number; speciesId: string; pops: number }
+    dexWish?: { charges: number; day: string; dex: number; speciesId: string; level: number; pops: number }
     ballLockRemaining: number
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
@@ -914,8 +914,10 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             const n = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0))
             const charges = n(w.charges)
             // charges à 0 → vœu épuisé, on laisse tomber le bloc entier (comme shinyWish) : rien à traîner dans la save.
-            return charges > 0
-                ? { charges, day: typeof w.day === "string" ? w.day : "", dex: n(w.dex), speciesId: typeof w.speciesId === "string" ? w.speciesId : "", pops: n(w.pops) }
+            const speciesId = typeof w.speciesId === "string" ? w.speciesId : ""
+            // On garde le bloc tant qu'une ANNONCE est en attente, meme a 0 charge (la 7e annonce vide les charges).
+            return charges > 0 || speciesId
+                ? { charges, day: typeof w.day === "string" ? w.day : "", dex: n(w.dex), speciesId, level: n(w.level), pops: n(w.pops) }
                 : undefined
         })(),
         evResetCharges: Math.max(0, Math.floor(Number((o as { evResetCharges?: unknown }).evResetCharges) || 0)) || undefined,

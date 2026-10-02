@@ -3,17 +3,18 @@
 // LA RÈGLE (Sartay, 02/10/2026). À sa PREMIÈRE connexion de la journée, le joueur annonce un NUMÉRO de Pokédex :
 // ce sera le 10ᵉ Daemon sauvage qui popera ce jour-là. Sept fois en tout.
 //
-// Trois bornes, non négociables :
-//   • seules les espèces qui peuvent VRAIMENT apparaître dans son run sont acceptées (runSpawnableSpecies) ;
-//   • aucun LÉGENDAIRE (rarity "LEGENDARY") ;
-//   • un numéro refusé ne coûte RIEN — il annonce autre chose, la journée n'est pas perdue.
+// ⚠️ CHAQUE JOURNÉE ANNONCÉE EST CONSOMMÉE — y compris sur un numéro INTERDIT. Le génie ne refuse rien et ne
+// corrige personne : il tient parole à la lettre. Numéro inexistant, LÉGENDAIRE, ou espèce absente de son run ?
+// Il enverra quand même quelque chose au 10ᵉ pop… un MISSINGNO niveau 5, BST 100. Super nul, et la journée est
+// passée. C'est au joueur de connaître son Pokédex : le marché énonce les trois limites, à lui de les respecter.
 //
-// La charge n'est consommée QUE lorsque le Daemon est réellement ARMÉ (après le 9ᵉ pop : la rencontre forcée est
-// consommée par le pop SUIVANT, donc armer à 9 fait sortir le choix au 10ᵉ). S'arrêter à 4 pops ne coûte donc rien,
-// et si le canal de rencontre forcée est déjà occupé par un autre vœu, on patiente au lieu de brûler la charge.
-// Même philosophie que les shiny éphémères de Task1 : une charge se paie en résultat, pas en intention.
+// Ce que ça change par rapport à un refus : le choix n'est plus validé « devant » lui (rien ne clignote en rouge),
+// il est RÉSOLU en silence, et la sanction se découvre sur le terrain. La charge part donc à l'ANNONCE, pas à la
+// livraison. S'arrêter avant le 10ᵉ pop, c'est perdre sa journée aussi : annoncer, c'est s'engager.
 //
 // Ce module est PUR (tout est injecté : le jour, le vivier). Les accès au jeu vivent dans gameStore / playerStore.
+
+import { MISSINGNO_ID, MISSINGNO_LEVEL } from "./missingnoSpecies"
 
 /** Nombre de journées « sur commande » offertes par le vœu. */
 export const DEX_WISH_DEFAULT_CHARGES = 7
@@ -23,18 +24,20 @@ export const DEX_WISH_POP_INDEX = 10
 export interface DexWishState {
     /** Journées encore disponibles. 0 = vœu épuisé. */
     charges: number
-    /** Jour du choix EN COURS (YYYY-MM-DD). "" = aucun choix posé. */
+    /** Jour de l'annonce EN COURS (YYYY-MM-DD). "" = aucune annonce posée. */
     day: string
-    /** Numéro de Pokédex annoncé (affichage / message). 0 = pas de choix en cours. */
+    /** Numéro annoncé (affichage / message). 0 = pas d'annonce en cours. */
     dex: number
-    /** Espèce résolue depuis le numéro, au moment du choix. "" = pas de choix en cours. */
+    /** Espèce à faire apparaître — la vraie, ou MissingNo si le numéro était interdit. "" = rien en attente. */
     speciesId: string
-    /** Pops sauvages comptés depuis le choix. */
+    /** Niveau d'apparition, FIGÉ à l'annonce (plafond des badges pour une vraie espèce, 5 pour la punition). */
+    level: number
+    /** Pops sauvages comptés depuis l'annonce. */
     pops: number
 }
 
 export function freshDexWish(charges: number = DEX_WISH_DEFAULT_CHARGES): DexWishState {
-    return { charges: Math.max(0, Math.floor(charges)), day: "", dex: 0, speciesId: "", pops: 0 }
+    return { charges: Math.max(0, Math.floor(charges)), day: "", dex: 0, speciesId: "", level: 0, pops: 0 }
 }
 
 /** Le vœu a-t-il encore des journées devant lui ? */
@@ -47,58 +50,78 @@ export function canAnnounceToday(st: DexWishState | null | undefined, today: str
     return dexWishActive(st) && st!.day !== today
 }
 
-export type DexChoice =
-    | { ok: true; speciesId: string; dexNo: number; name: string }
-    | { ok: false; reason: string }
+/** Issue d'une annonce. `dud` = numéro interdit → le génie enverra MissingNo. `why` sert aux tests et au journal,
+ *  JAMAIS à l'écran : la sanction se découvre au 10ᵉ pop, pas au moment de l'annonce. */
+export type DexOutcome = {
+    speciesId: string
+    dexNo: number
+    name: string
+    dud: boolean
+    why?: "inconnu" | "legendaire" | "hors_run"
+}
 
-/** Valide un numéro annoncé. `candidates` = toutes les espèces connues ; `spawnable` = celles qui peuvent
- *  apparaître dans SON run. Tout refus est expliqué, et ne coûte aucune charge (le joueur retente). */
-export function validateDexChoice(
+/** Résout un numéro annoncé — sans jamais REFUSER. `candidates` = toutes les espèces du Pokédex ;
+ *  `spawnable` = celles qui apparaissent vraiment dans SON run. Tout écart donne MissingNo. */
+export function resolveDexChoice(
     dex: unknown,
     candidates: readonly { id: string; dexNo: number; name: string; rarity: string }[],
     spawnable: ReadonlySet<string>,
-): DexChoice {
+): DexOutcome {
+    const dud = (dexNo: number, why: DexOutcome["why"]): DexOutcome =>
+        ({ speciesId: MISSINGNO_ID, dexNo, name: "MissingNo.", dud: true, why })
+
     const n = Math.floor(Number(dex))
-    if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: "Ce n'est pas un numéro de Pokédex." }
+    if (!Number.isFinite(n) || n <= 0) return dud(Number.isFinite(n) ? n : 0, "inconnu")
     const sp = candidates.find((c) => c.dexNo === n)
-    if (!sp) return { ok: false, reason: `Aucun Daemon ne porte le numéro ${n}.` }
-    if (sp.rarity === "LEGENDARY") return { ok: false, reason: `${sp.name} est un LÉGENDAIRE — ceux-là ne se commandent pas.` }
-    if (!spawnable.has(sp.id)) return { ok: false, reason: `${sp.name} n'apparaît pas à l'état sauvage dans ton run.` }
-    return { ok: true, speciesId: sp.id, dexNo: n, name: sp.name }
+    if (!sp) return dud(n, "inconnu")
+    if (sp.rarity === "LEGENDARY") return dud(n, "legendaire")
+    if (!spawnable.has(sp.id)) return dud(n, "hors_run")
+    return { speciesId: sp.id, dexNo: n, name: sp.name, dud: false }
 }
 
-/** Enregistre l'annonce du jour (après validation). Ne touche PAS aux charges : elles se paient à l'arrivée. */
-export function announceDex(st: DexWishState, today: string, choice: { speciesId: string; dexNo: number }): DexWishState {
-    return { ...st, day: today, dex: choice.dexNo, speciesId: choice.speciesId, pops: 0 }
+/** Enregistre l'annonce du jour et CONSOMME la journée (règle Sartay : annoncer, c'est s'engager).
+ *  `wildLevel` = niveau d'apparition d'une vraie espèce (plafond des badges) ; ignoré pour la punition, qui
+ *  sort toujours au niveau 5. */
+export function announceDex(st: DexWishState, today: string, outcome: DexOutcome, wildLevel: number): DexWishState {
+    return {
+        ...st,
+        charges: Math.max(0, st.charges - 1),
+        day: today,
+        dex: outcome.dexNo,
+        speciesId: outcome.speciesId,
+        level: outcome.dud ? MISSINGNO_LEVEL : Math.max(2, Math.min(100, Math.floor(wildLevel))),
+        pops: 0,
+    }
 }
 
 /** Compte un pop sauvage et dit s'il faut ARMER la rencontre forcée maintenant.
  *
- *  `slotFree` = le canal de rencontre forcée est-il libre ? (un autre vœu peut l'occuper → on patiente, sans
- *  consommer la charge : le prochain pop réessaiera).
+ *  `slotFree` = le canal de rencontre forcée est-il libre ? (un autre vœu peut l'occuper → on patiente et on
+ *  retente au pop suivant ; la journée est DÉJÀ payée, retenter ne coûte donc rien).
  *
  *  On arme au pop n°(DEX_WISH_POP_INDEX − 1), car la rencontre forcée est consommée par le pop SUIVANT. */
 export function countPopForDexWish(
     st: DexWishState,
     today: string,
     slotFree: boolean,
-): { state: DexWishState; armSpeciesId?: string } {
-    if (!dexWishActive(st)) return { state: st }
-    // Changement de jour : l'annonce de la veille est périmée, le compteur repart à zéro.
-    if (st.day !== today) return { state: { ...st, day: st.day, dex: 0, speciesId: "", pops: 0 } }
-    if (!st.speciesId) return { state: { ...st, pops: st.pops + 1 } } // aucune annonce en cours : on compte, c'est tout
+): { state: DexWishState; arm?: { speciesId: string; level: number } } {
+    if (!dexWishActive(st) && !st.speciesId) return { state: st } // épuisé ET rien en attente → plus rien à faire
+    // Changement de jour : l'annonce de la veille est périmée (journée déjà débitée, elle ne se reporte pas).
+    if (st.day !== today) return { state: { ...st, dex: 0, speciesId: "", level: 0, pops: 0 } }
+    if (!st.speciesId) return { state: { ...st, pops: st.pops + 1 } } // pas d'annonce en cours : on compte, c'est tout
 
     const pops = st.pops + 1
     if (pops < DEX_WISH_POP_INDEX - 1) return { state: { ...st, pops } }
-    if (!slotFree) return { state: { ...st, pops: DEX_WISH_POP_INDEX - 2 } } // canal occupé : on reste au seuil et on retentera
+    if (!slotFree) return { state: { ...st, pops: DEX_WISH_POP_INDEX - 2 } } // canal occupé : on reste au seuil
     return {
-        state: { ...st, pops, dex: 0, speciesId: "", charges: Math.max(0, st.charges - 1) },
-        armSpeciesId: st.speciesId,
+        state: { ...st, pops, dex: 0, speciesId: "", level: 0 },
+        arm: { speciesId: st.speciesId, level: st.level },
     }
 }
 
-/** Message d'annonce, au moment où le joueur a choisi. */
-export function dexAnnounceMessage(name: string, dexNo: number, chargesLeft: number): string {
-    return `« ${name} (n°${dexNo}) ? Soit. Il sera le ${DEX_WISH_POP_INDEX}ᵉ Daemon sauvage que tu croiseras aujourd'hui. »`
-        + ` — ${chargesLeft} journée${chargesLeft > 1 ? "s" : ""} encore à ta disposition.`
+/** Message d'annonce. Volontairement IDENTIQUE pour une vraie espèce et pour la punition : le génie accepte,
+ *  point. Il ne nomme pas l'espèce — sinon la sanction serait éventée avant même la chasse. */
+export function dexAnnounceMessage(dexNo: number, chargesLeft: number): string {
+    return `« Le numéro ${dexNo} ? C'est noté. Le ${DEX_WISH_POP_INDEX}ᵉ Daemon sauvage que tu croiseras aujourd'hui sera à toi. »`
+        + ` — ${chargesLeft} journée${chargesLeft > 1 ? "s" : ""} restante${chargesLeft > 1 ? "s" : ""}.`
 }

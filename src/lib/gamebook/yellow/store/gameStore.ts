@@ -34,6 +34,7 @@ import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
 import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
 import { countPopForDexWish, dexWishActive } from "../data/dexWish"
+import { MISSINGNO_ID } from "../data/missingnoSpecies"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
@@ -2278,7 +2279,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     if (dw && dexWishActive(dw)) {
                         const r = countPopForDexWish(dw, new Date().toISOString().slice(0, 10), forcedEncounterSlotFree())
                         setDexWish(r.state)
-                        if (r.armSpeciesId) armForcedEncounter(r.armSpeciesId, wildLevelCap(getPlayerSave().badges))
+                        if (r.arm) armForcedEncounter(r.arm.speciesId, r.arm.level)
                     }
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
                     //   décompte N∈[8,20] COMBATS (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe
@@ -2375,7 +2376,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             //   on NE consomme PAS (sinon il popperait sur l'herbe de la plage) → on le garde pour l'île.
                             //   Spécifique à galijah : les vœux du génie (partagent ce chemin) doivent, eux, se déclencher partout.
                             if (fe?.speciesId === "galijah" && next.mapId !== "yellow_ile_emeraude") keepForced = true
-                            else if (fe?.speciesId && getSpecies(fe.speciesId)) spawn = buildForcedSpawn(fe.speciesId, fe.level ?? 50, !!fe.hard)
+                            else if (fe?.speciesId && getSpecies(fe.speciesId)) {
+                                spawn = buildForcedSpawn(fe.speciesId, fe.level ?? 50, !!fe.hard)
+                                // PUNITION du vœu « je choisis le numéro » : MissingNo ne se CAPTURE pas. Le score de run
+                                //   compte caughtThisRun.length sans filtre — une sanction ne doit pas rapporter un point.
+                                if (fe.speciesId === MISSINGNO_ID) Object.assign(spawn, { captureBlockedOwned: true })
+                            }
                         } catch { /* JSON invalide → ignoré, mais on consomme quand même pour ne pas rester bloqué */ }
                         if (!keepForced) { clearForcedEncounter(); persistYellowSave() }
                     }

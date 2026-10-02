@@ -1,171 +1,175 @@
 import { describe, it, expect } from "vitest"
 import {
-    freshDexWish, dexWishActive, canAnnounceToday, validateDexChoice, announceDex,
+    freshDexWish, dexWishActive, canAnnounceToday, resolveDexChoice, announceDex,
     countPopForDexWish, DEX_WISH_POP_INDEX, DEX_WISH_DEFAULT_CHARGES,
 } from "./dexWish"
+import { MISSINGNO_ID, MISSINGNO_LEVEL, MISSINGNO_SPECIES } from "./missingnoSpecies"
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 // VŒU « JE CHOISIS LE NUMÉRO » (Guillaume)
 //
-// Ce qui doit tenir : le 10ᵉ pop obéit (et pas le 9ᵉ ni le 11ᵉ), une seule annonce par jour, 7 journées en tout,
-// et une charge ne se perd JAMAIS pour rien — ni sur un numéro refusé, ni sur une journée écourtée, ni si le canal
-// de rencontre forcée est déjà pris par un autre vœu.
+// Règle de Sartay : CHAQUE journée annoncée est consommée, et un numéro interdit n'est pas refusé — il donne un
+// MissingNo niveau 5 (BST 100). Le génie tient parole à la lettre, c'est tout.
+//
+// Ce qui doit tenir : le 10ᵉ pop obéit (et pas le 9ᵉ), une seule annonce par jour, 7 journées, la punition tombe
+// bien sur les trois cas interdits, et une annonce ne peut JAMAIS être silencieusement perdue.
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const DEX = [
     { id: "gekroc", dexNo: 7, name: "Gékroc", rarity: "COMMON" },
     { id: "galijah", dexNo: 204, name: "Galijah", rarity: "LEGENDARY" },
-    { id: "spectre_run3", dexNo: 160, name: "Karmaki", rarity: "RARE" },
+    { id: "karmaki", dexNo: 160, name: "Karmaki", rarity: "RARE" },
 ]
 const DISPO = new Set(["gekroc"]) // seul Gékroc apparaît dans son run
+const J = "2026-10-02"
+const NIV = 45
 
-describe("valider le numéro annoncé", () => {
-    it("un numéro valide et présent dans son run est accepté", () => {
-        expect(validateDexChoice(7, DEX, DISPO)).toEqual({ ok: true, speciesId: "gekroc", dexNo: 7, name: "Gékroc" })
-        expect(validateDexChoice("7", DEX, DISPO)).toMatchObject({ ok: true })
+describe("la punition : MissingNo, et BST 100", () => {
+    it("l'espèce de punition est bien minable — BST 100, niveau 5", () => {
+        const bst = Object.values(MISSINGNO_SPECIES.baseStats).reduce((a, b) => a + b, 0)
+        expect(bst).toBe(100)
+        expect(MISSINGNO_LEVEL).toBe(5)
+        expect(MISSINGNO_SPECIES.rarity).not.toBe("LEGENDARY")
     })
 
-    it("⚠️ un LÉGENDAIRE est refusé, et on dit pourquoi", () => {
-        const r = validateDexChoice(204, DEX, new Set(["galijah"]))
-        expect(r.ok).toBe(false)
-        expect((r as { reason: string }).reason).toMatch(/LÉGENDAIRE/)
+    it("un numéro VALIDE et présent dans son run donne la vraie espèce", () => {
+        expect(resolveDexChoice(7, DEX, DISPO)).toEqual({ speciesId: "gekroc", dexNo: 7, name: "Gékroc", dud: false })
     })
 
-    it("⚠️ une espèce ABSENTE de son run est refusée", () => {
-        const r = validateDexChoice(160, DEX, DISPO)
-        expect(r.ok).toBe(false)
-        expect((r as { reason: string }).reason).toMatch(/n'apparaît pas/)
+    it("⚠️ un LÉGENDAIRE n'est pas refusé : il donne MissingNo", () => {
+        const r = resolveDexChoice(204, DEX, new Set(["galijah"]))
+        expect(r.speciesId).toBe(MISSINGNO_ID)
+        expect(r.dud).toBe(true)
+        expect(r.why).toBe("legendaire")
     })
 
-    it("un numéro qui n'existe pas, ou pas un nombre, est refusé proprement", () => {
-        for (const bad of [999, 0, -3, "abc", null, undefined, NaN]) {
-            expect(validateDexChoice(bad, DEX, DISPO).ok, String(bad)).toBe(false)
+    it("⚠️ une espèce HORS de son run donne MissingNo", () => {
+        const r = resolveDexChoice(160, DEX, DISPO)
+        expect(r.speciesId).toBe(MISSINGNO_ID)
+        expect(r.why).toBe("hors_run")
+    })
+
+    it("⚠️ un numéro inexistant ou absurde donne MissingNo (jamais de plantage, jamais de refus)", () => {
+        for (const bad of [999, 0, -3, "abc", null, undefined, NaN, {}]) {
+            const r = resolveDexChoice(bad, DEX, DISPO)
+            expect(r.speciesId, String(bad)).toBe(MISSINGNO_ID)
+            expect(r.why, String(bad)).toBe("inconnu")
         }
     })
 
-    it("⚠️ un refus ne consomme RIEN : l'état n'est pas touché (c'est l'appelant qui l'atteste)", () => {
-        const st = freshDexWish()
-        validateDexChoice(204, DEX, DISPO)
-        expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES) // la validation est pure, elle ne touche pas l'état
+    it("la punition sort au niveau 5, la vraie espèce au niveau des badges", () => {
+        const puni = announceDex(freshDexWish(), J, resolveDexChoice(204, DEX, new Set(["galijah"])), NIV)
+        expect(puni.speciesId).toBe(MISSINGNO_ID)
+        expect(puni.level).toBe(MISSINGNO_LEVEL)
+
+        const vrai = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)
+        expect(vrai.level).toBe(NIV)
     })
 })
 
-describe("une seule annonce par jour", () => {
-    it("au départ : 7 journées, et il peut annoncer", () => {
-        const st = freshDexWish()
-        expect(st.charges).toBe(7)
-        expect(dexWishActive(st)).toBe(true)
-        expect(canAnnounceToday(st, "2026-10-02")).toBe(true)
+describe("chaque journée annoncée est consommée", () => {
+    it("⚠️ annoncer DÉBITE immédiatement — même pour un numéro interdit", () => {
+        const bon = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)
+        expect(bon.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1)
+
+        const puni = announceDex(freshDexWish(), J, resolveDexChoice(204, DEX, new Set(["galijah"])), NIV)
+        expect(puni.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1) // la bêtise coûte exactement le même prix
     })
 
-    it("⚠️ après l'annonce du jour, plus d'annonce AVANT demain", () => {
-        const st = announceDex(freshDexWish(), "2026-10-02", { speciesId: "gekroc", dexNo: 7 })
-        expect(canAnnounceToday(st, "2026-10-02")).toBe(false)
-        expect(canAnnounceToday(st, "2026-10-03")).toBe(true)
+    it("⚠️ s'arrêter avant le 10e pop ne rend PAS la journée (annoncer, c'est s'engager)", () => {
+        let st = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)
+        for (let i = 0; i < 4; i++) st = countPopForDexWish(st, J, true).state
+        expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1)
     })
 
-    it("vœu épuisé → plus aucune annonce", () => {
-        expect(canAnnounceToday(freshDexWish(0), "2026-10-02")).toBe(false)
-        expect(dexWishActive(freshDexWish(0))).toBe(false)
-        expect(dexWishActive(null)).toBe(false)
-    })
-
-    it("annoncer ne coûte pas encore la charge (elle se paie à l'arrivée)", () => {
-        const st = announceDex(freshDexWish(), "2026-10-02", { speciesId: "gekroc", dexNo: 7 })
-        expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES)
+    it("une seule annonce par jour, et plus rien quand les 7 sont passées", () => {
+        let st = freshDexWish()
+        for (let d = 1; d <= 7; d++) {
+            const jour = `2026-10-0${d}`
+            expect(canAnnounceToday(st, jour), `jour ${d}`).toBe(true)
+            st = announceDex(st, jour, resolveDexChoice(7, DEX, DISPO), NIV)
+            expect(canAnnounceToday(st, jour), `re-annonce jour ${d}`).toBe(false)
+        }
+        expect(st.charges).toBe(0)
+        expect(dexWishActive(st)).toBe(false)
+        expect(canAnnounceToday(st, "2026-10-08")).toBe(false)
     })
 })
 
 describe("le 10e pop obéit", () => {
-    const J = "2026-10-02"
-    /** Joue n pops, canal toujours libre. */
-    function pops(n: number, from = announceDex(freshDexWish(), J, { speciesId: "gekroc", dexNo: 7 })) {
+    function pops(n: number, from = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)) {
         let st = from
         const armes: (string | undefined)[] = []
         for (let i = 0; i < n; i++) {
             const r = countPopForDexWish(st, J, true)
-            st = r.state; armes.push(r.armSpeciesId)
+            st = r.state; armes.push(r.arm?.speciesId)
         }
         return { st, armes }
     }
 
-    it(`l'armement tombe au pop n°${DEX_WISH_POP_INDEX - 1} — car la rencontre forcée sort au pop SUIVANT`, () => {
+    it(`l'armement tombe au pop n°${DEX_WISH_POP_INDEX - 1} — la rencontre forcée sort au pop SUIVANT`, () => {
         const { armes } = pops(DEX_WISH_POP_INDEX)
-        const quand = armes.findIndex((a) => a === "gekroc") + 1
-        expect(quand).toBe(DEX_WISH_POP_INDEX - 1)
+        expect(armes.findIndex((a) => a === "gekroc") + 1).toBe(DEX_WISH_POP_INDEX - 1)
     })
 
-    it("⚠️ rien n'est armé AVANT le seuil (le joueur ne doit pas voir son choix sortir au 3e pop)", () => {
-        const { armes } = pops(DEX_WISH_POP_INDEX - 2)
-        expect(armes.every((a) => a === undefined)).toBe(true)
+    it("⚠️ rien avant le seuil, et une seule fois", () => {
+        expect(pops(DEX_WISH_POP_INDEX - 2).armes.every((a) => a === undefined)).toBe(true)
+        expect(pops(DEX_WISH_POP_INDEX + 8).armes.filter(Boolean)).toHaveLength(1)
     })
 
-    it("une seule fois : les pops suivants n'arment plus rien", () => {
-        const { armes } = pops(DEX_WISH_POP_INDEX + 8)
-        expect(armes.filter((a) => a === "gekroc")).toHaveLength(1)
-    })
-
-    it("la charge est débitée à l'armement, une seule fois", () => {
-        const { st } = pops(DEX_WISH_POP_INDEX + 5)
-        expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1)
-        expect(st.speciesId).toBe("") // annonce consommée
+    it("l'armement porte le NIVEAU figé à l'annonce", () => {
+        let st = announceDex(freshDexWish(), J, resolveDexChoice(204, DEX, new Set(["galijah"])), NIV)
+        let arm: { speciesId: string; level: number } | undefined
+        for (let i = 0; i < DEX_WISH_POP_INDEX; i++) {
+            const r = countPopForDexWish(st, J, true); st = r.state
+            if (r.arm) arm = r.arm
+        }
+        expect(arm).toEqual({ speciesId: MISSINGNO_ID, level: MISSINGNO_LEVEL })
     })
 })
 
-describe("ce qui ne doit JAMAIS coûter une charge", () => {
-    const J = "2026-10-02"
-
-    it("⚠️ s'arrêter avant le seuil : journée écourtée, charge intacte", () => {
-        let st = announceDex(freshDexWish(), J, { speciesId: "gekroc", dexNo: 7 })
-        for (let i = 0; i < 4; i++) st = countPopForDexWish(st, J, true).state
-        expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES)
-    })
-
-    it("⚠️ canal de rencontre forcée OCCUPÉ : on patiente, et on retente au pop suivant", () => {
-        let st = announceDex(freshDexWish(), J, { speciesId: "gekroc", dexNo: 7 })
+describe("une annonce ne se perd jamais en silence", () => {
+    it("⚠️ canal de rencontre forcée OCCUPÉ : on patiente et on retente (la journée est déjà payée)", () => {
+        let st = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)
         for (let i = 0; i < DEX_WISH_POP_INDEX - 2; i++) st = countPopForDexWish(st, J, true).state
 
-        const bloque = countPopForDexWish(st, J, false) // un autre vœu occupe le canal
-        expect(bloque.armSpeciesId).toBeUndefined()
-        expect(bloque.state.charges).toBe(DEX_WISH_DEFAULT_CHARGES) // rien débité
-        expect(bloque.state.speciesId).toBe("gekroc")               // annonce TOUJOURS en attente
+        const bloque = countPopForDexWish(st, J, false)
+        expect(bloque.arm).toBeUndefined()
+        expect(bloque.state.speciesId).toBe("gekroc") // TOUJOURS en attente
 
-        const libre = countPopForDexWish(bloque.state, J, true)     // canal libéré
-        expect(libre.armSpeciesId).toBe("gekroc")
-        expect(libre.state.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1)
+        const libre = countPopForDexWish(bloque.state, J, true)
+        expect(libre.arm?.speciesId).toBe("gekroc")
+    })
+
+    it("⚠️ la 7e annonce vide les charges mais DOIT encore être honorée", () => {
+        let st = freshDexWish(1) // dernière journée
+        st = announceDex(st, J, resolveDexChoice(7, DEX, DISPO), NIV)
+        expect(st.charges).toBe(0)
+        expect(dexWishActive(st)).toBe(false) // plus de journée…
+        let arm: string | undefined
+        for (let i = 0; i < DEX_WISH_POP_INDEX; i++) {
+            const r = countPopForDexWish(st, J, true); st = r.state
+            if (r.arm) arm = r.arm.speciesId
+        }
+        expect(arm).toBe("gekroc") // …mais la promesse du jour est tenue
+    })
+
+    it("changement de jour : l'annonce périme (la journée reste débitée, elle ne se reporte pas)", () => {
+        let st = announceDex(freshDexWish(), J, resolveDexChoice(7, DEX, DISPO), NIV)
+        for (let i = 0; i < 5; i++) st = countPopForDexWish(st, J, true).state
+        const demain = countPopForDexWish(st, "2026-10-03", true)
+        expect(demain.arm).toBeUndefined()
+        expect(demain.state.speciesId).toBe("")
+        expect(demain.state.charges).toBe(DEX_WISH_DEFAULT_CHARGES - 1)
+        expect(canAnnounceToday(demain.state, "2026-10-03")).toBe(true)
     })
 
     it("sans annonce en cours, les pops sont comptés mais rien n'est armé", () => {
         let st = freshDexWish()
         for (let i = 0; i < 20; i++) {
             const r = countPopForDexWish(st, J, true); st = r.state
-            expect(r.armSpeciesId).toBeUndefined()
+            expect(r.arm).toBeUndefined()
         }
         expect(st.charges).toBe(DEX_WISH_DEFAULT_CHARGES)
-    })
-
-    it("changement de jour : l'annonce de la veille est périmée, et il peut re-annoncer", () => {
-        let st = announceDex(freshDexWish(), J, { speciesId: "gekroc", dexNo: 7 })
-        for (let i = 0; i < 5; i++) st = countPopForDexWish(st, J, true).state
-        const demain = countPopForDexWish(st, "2026-10-03", true)
-        expect(demain.armSpeciesId).toBeUndefined()
-        expect(demain.state.speciesId).toBe("")
-        expect(demain.state.charges).toBe(DEX_WISH_DEFAULT_CHARGES)
-        expect(canAnnounceToday(demain.state, "2026-10-03")).toBe(true)
-    })
-
-    it("les 7 journées donnent 7 Daemons sur commande, pas un de plus", () => {
-        let st = freshDexWish()
-        let sortis = 0
-        for (let d = 1; d <= 10; d++) {
-            const jour = `2026-10-${String(d).padStart(2, "0")}`
-            st = announceDex(st, jour, { speciesId: "gekroc", dexNo: 7 })
-            for (let i = 0; i < DEX_WISH_POP_INDEX; i++) {
-                const r = countPopForDexWish(st, jour, true); st = r.state
-                if (r.armSpeciesId) sortis++
-            }
-        }
-        expect(sortis).toBe(DEX_WISH_DEFAULT_CHARGES)
-        expect(st.charges).toBe(0)
     })
 })
