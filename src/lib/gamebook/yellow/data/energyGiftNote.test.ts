@@ -40,16 +40,29 @@ describe("placement : à qui le mot a-t-il le droit de couper la parole ?", () =
     it("personne ne parle → il s'affiche", () => {
         expect(giftNotePlacement(null)).toBe("show")
         expect(giftNotePlacement(undefined)).toBe("show")
-        expect(giftNotePlacement("")).toBe("show")
+        expect(giftNotePlacement("", "")).toBe("show")
     })
 
     it("le Dieu Spaghetti parle déjà (drip des hauts faits) → on AJOUTE, même personnage", () => {
-        expect(giftNotePlacement(GIFT_NOTE_NPC)).toBe("append")
+        expect(giftNotePlacement(GIFT_NOTE_NPC, "DIEU SPAGHETTI")).toBe("append")
     })
 
-    it("⚠️ un AUTRE PNJ parle → on DIFFÈRE : ni écrasement de sa réplique, ni mot perdu", () => {
-        for (const other of ["spaghetti_dream", "y_ligue_lance", "y_sbire", "n'importe_qui"]) {
-            expect(giftNotePlacement(other), other).toBe("defer")
+    // ⚠️ LE BUG DU 29/09 : le Dieu Spaghetti parle aussi sous l'identifiant des RÊVES (`spaghetti_dream`), qu'utilisent
+    //   également le génie et le parrainage. En se fiant à l'IDENTIFIANT, le mot différait derrière chaque rêve — et
+    //   comme les actualités du Nexus annoncent un reflet battu TOUS LES JOURS, il ne sortait plus jamais.
+    it("⚠️ même personnage sous l'identifiant des rêves (annonce de reflet) → on AJOUTE, pas différer", () => {
+        expect(giftNotePlacement("spaghetti_dream", "DIEU SPAGHETTI")).toBe("append")
+        expect(giftNotePlacement("spaghetti_dream", "Dieu Spaghetti")).toBe("append")
+    })
+
+    it("⚠️ une AUTRE voix sous le MÊME identifiant de rêve → on DIFFÈRE (c'est le nom qui décide)", () => {
+        expect(giftNotePlacement("spaghetti_dream", "🧞 LE GÉNIE")).toBe("defer")
+        expect(giftNotePlacement("spaghetti_dream", "🎁 Parrainage")).toBe("defer")
+    })
+
+    it("un autre PNJ parle → on DIFFÈRE : ni écrasement de sa réplique, ni mot perdu", () => {
+        for (const other of ["y_ligue_lance", "y_sbire", "n'importe_qui"]) {
+            expect(giftNotePlacement(other, "LANCE"), other).toBe("defer")
         }
     })
 })

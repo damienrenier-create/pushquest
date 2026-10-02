@@ -1367,7 +1367,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const note = peekEnergyGiftNote()
                 if (note.lines.length) {
                     const cur = useGameStore.getState().dialogue
-                    const where = giftNotePlacement(cur?.npcId)
+                    const where = giftNotePlacement(cur?.npcId, cur?.npcName)
                     if (where !== "defer") {
                         if (where === "append" && cur) showDialogue(cur.npcId, cur.npcName, [...cur.lines, ...note.lines])
                         else showDialogue(GIFT_NOTE_NPC, GIFT_NOTE_NAME, note.lines)

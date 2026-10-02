@@ -25,10 +25,20 @@ export function giftNoteLines(note: unknown): string[] {
 
 /** Où placer le mot, sachant que showDialogue ÉCRASE la réplique en cours :
  *  - `show`   : personne ne parle → on affiche le mot seul ;
- *  - `append` : le Dieu Spaghetti parle déjà (drip des hauts faits) → même personnage, on AJOUTE à sa réplique ;
+ *  - `append` : le Dieu Spaghetti parle déjà → même personnage, on AJOUTE à sa réplique ;
  *  - `defer`  : un AUTRE PNJ parle (le génie, le parrainage) → on refuse de lui couper la parole. Le mot n'est alors
- *               PAS consommé côté serveur : il revient au prochain chargement. Un cadeau ne se perd pas. */
-export function giftNotePlacement(currentNpcId: string | null | undefined): "show" | "append" | "defer" {
-    if (!currentNpcId) return "show"
-    return currentNpcId === GIFT_NOTE_NPC ? "append" : "defer"
+ *               PAS consommé côté serveur : il revient au prochain chargement. Un cadeau ne se perd pas.
+ *
+ *  ⚠️ C'est le NOM qui identifie le personnage, PAS l'identifiant de sprite. Le Dieu Spaghetti parle sous deux
+ *  identifiants (`y_dome_spaghetti` pour le drip des hauts faits, `spaghetti_dream` pour les rêves, dont l'annonce
+ *  de reflet), tandis que ce second identifiant sert AUSSI au génie et au parrainage — qui sont d'autres voix.
+ *  Se fier à l'identifiant faisait différer le mot derrière chaque rêve : depuis que les actualités du Nexus
+ *  annoncent un reflet battu tous les jours, le mot ne sortait plus JAMAIS (constaté sur TomGotrails le 29/09). */
+export function giftNotePlacement(
+    currentNpcId: string | null | undefined,
+    currentNpcName?: string | null,
+): "show" | "append" | "defer" {
+    if (!currentNpcId && !currentNpcName) return "show"
+    if (currentNpcId === GIFT_NOTE_NPC) return "append"
+    return /dieu\s*spaghetti/i.test(currentNpcName ?? "") ? "append" : "defer"
 }

@@ -11,6 +11,7 @@ import { typeEffectiveness, moveCategory, resolveAdaptiveStab } from "./typeChar
 import { computeDamage } from "./damage"
 import { fullStats } from "./stats"
 import type { Rng } from "./rng"
+import { healAllowed } from "../data/healCap"
 
 // "hof" = boss ultimes / miroirs (le plus malin, PEUT changer de Daemon) ; "elite" = gauntlet de Ligue (Conseil des
 // Chimères) — MÊME intelligence de coup que "hof" mais ne CHANGE JAMAIS de Daemon (combat jusqu'au KO, choix de Sartay).
@@ -64,7 +65,9 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
             if (statusMoveWasted(mv, self, foe)) score = -2
             // SOIN (Repos/Linceul/Reprise d'Ailes…) : ne vaut RIEN à pleine vie, précieux à basse vie → on
             // l'échelonne sur les PV MANQUANTS (fini le « Repos en premier alors qu'il a toute sa vie »).
-            else if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            // 🩹 Soin ÉPUISÉ (3 régénérations déjà consommées, cf. data/healCap) : le moteur le refuserait → l'IA
+            //   ne doit pas y gâcher ses tours. Score de rejet, comme un statut déjà posé.
+            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) ? mv.effect.healPct * missingFrac : -2
             // AUTO-BOOST (Focalisation, Danse-Lames…) : ne JAMAIS se mettre en place sous 50 % PV (on tombe avant d'en
             //   profiter — plainte joueur : « focalisation alors qu'il va se faire tuer ») ; sinon score TRÈS bas → une
             //   vraie attaque passe presque toujours devant. On ne « focalise » qu'en dernier recours (aucun coup utile).
@@ -108,7 +111,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             // INUTILE ce tour (stat déjà au plafond / statut déjà posé) → ne JAMAIS le spammer (anti-softlock).
             if (statusMoveWasted(mv, self, foe)) score = -2
             // SOIN : inutile à pleine vie, précieux à basse vie → échelonné sur les PV MANQUANTS (anti « Repos à full »).
-            else if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            //   ÉPUISÉ (3 régénérations consommées, cf. data/healCap) → rejet : le moteur le refuserait de toute façon.
+            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) ? mv.effect.healPct * missingFrac : -2
             // BUFF de stat sur SOI (Danse-Lames…) : à ÉVITER à bas PV (on meurt avant d'en profiter) ET si le boost
             //   OFFENSIF ne matche pas notre stat d'attaque dominante (ex. +Atk sur un attaquant SPÉCIAL = quasi
             //   inutile). Sinon, mise en place raisonnable (sous un bon coup). Corrige « Danse-Lames à bas PV / spé ».
@@ -322,7 +326,9 @@ const findMove = (self: BattleMon, pred: (moveId: string) => boolean): number =>
  *  Échelle : finir > soin d'urgence > esquive > usure/statut > graine > neutraliser un physique > setup offensif >
  *  soin d'entretien > snowball. NE renvoie JAMAIS de switch. */
 function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
-    const iHeal = findMove(self, (m) => (getMove(m)?.effect?.healPct ?? 0) > 0)
+    // 🩹 -1 si les 3 régénérations sont consommées (data/healCap) : le pilote d'archétype doit alors passer au
+    //   coup suivant de son échelle au lieu de relancer un soin que le moteur refusera.
+    const iHeal = healAllowed(self.healsUsed, true) ? findMove(self, (m) => (getMove(m)?.effect?.healPct ?? 0) > 0) : -1
     const iEva = findMove(self, (m) => boostsSelf(m, "eva"))
     const iAtk = findMove(self, (m) => boostsSelf(m, "atk"))
     const iSpc = findMove(self, (m) => boostsSelf(m, "spc"))

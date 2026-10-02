@@ -13,6 +13,7 @@ import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
 import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/heldItems"
+import { healCapApplies, healAllowed } from "../data/healCap"
 import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./talentEffects"
 import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
@@ -990,12 +991,24 @@ function applyStatusMove(state: BattleState, side: SideId, move: MoveData, event
     const selfMon = active(state[side])
     const foeMon = active(state[other(side)])
 
+    // 🩹 PLAFOND DE RÉGÉNÉRATION (cf. data/healCap) : un Daemon de DRESSEUR ne se soigne que 3 fois par combat.
+    //   Au-delà, trois attaques à 10 PP rendaient un combat de dresseur inépuisable, et comme on ne fuit pas un
+    //   dresseur, le joueur s'y retrouvait enfermé une fois son énergie à sec. Le joueur, lui, n'est pas plafonné.
+    let healBlocked = false
     if (fx.healPct) {
-        const heal = Math.floor((maxHpOf(selfMon) * fx.healPct) / 100)
-        applyHeal(state, side, heal, events)
-        events.push({ kind: "message", text: `${displayName(selfMon)} récupère des PV !` })
+        const capped = healCapApplies(side, state.pvp)
+        if (!healAllowed(selfMon.healsUsed, capped)) {
+            healBlocked = true
+            events.push({ kind: "message", text: `${displayName(selfMon)} est à bout de forces : il n'arrive plus à récupérer !` })
+        } else {
+            if (capped) selfMon.healsUsed = (selfMon.healsUsed ?? 0) + 1
+            const heal = Math.floor((maxHpOf(selfMon) * fx.healPct) / 100)
+            applyHeal(state, side, heal, events)
+            events.push({ kind: "message", text: `${displayName(selfMon)} récupère des PV !` })
+        }
     }
-    if (fx.restSleep) {
+    // Soin refusé → REPOS ne doit pas endormir pour rien : l'attaque échoue en entier.
+    if (fx.restSleep && !healBlocked) {
         // REPOS : le LANCEUR s'endort volontairement pour EXACTEMENT 1 tour (compteur 2 → rate 1 tour,
         // se réveille et agit au tour suivant). Écrase tout statut existant (on « dort » son mal).
         selfMon.status = "SLEEP"

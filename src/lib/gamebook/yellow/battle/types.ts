@@ -360,6 +360,11 @@ export interface BattleMon extends MonInstance {
     talentStatGuardUsed?: boolean
     /** TALENT Cuirasse mentale : le crit garanti du combat a-t-il déjà été consommé ? (one-shot, runtime, non persisté). */
     talentCritUsed?: boolean
+    /** 🩹 Nb de fois que ce Daemon a RÉGÉNÉRÉ ses PV dans CE combat. Plafonné à ENEMY_MAX_HEALS côté dresseur
+     *  (cf. data/healCap) : sans ça, Repos/Linceul/Reprise d'Ailes à 10 PP rendaient un combat de dresseur
+     *  inépuisable et le joueur s'y retrouvait enfermé. Survit au rechargement (l'instantané de combat sérialise
+     *  l'état entier), donc le plafond ne se remet pas à zéro en rafraîchissant la page. */
+    healsUsed?: number
     /** IA — nb d'attaques de STATUT jouées D'AFFILÉE par ce combattant (0 = le dernier coup était offensif). Anti-softlock :
      *  au-delà de 6, l'IA FORCE un coup offensif (≥ 1 coup / 7 tours). Mis à jour par chooseAiAction. Runtime, non persisté. */
     aiStatusStreak?: number
