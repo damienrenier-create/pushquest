@@ -9,6 +9,7 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
+import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -254,6 +255,8 @@ interface PlayerState {
     evResetCharges?: number
     /** VŒU DU GÉNIE (Task1) — shiny éphémères (cf. data/ephemeralShiny). Absent = vœu inactif. */
     shinyWish?: ShinyWishState
+    /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » (cf. data/dexWish). Absent = vœu inactif. */
+    dexWish?: DexWishState
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
@@ -712,6 +715,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
         evResetCharges: p.evResetCharges ?? st.evResetCharges,
         shinyWish: p.shinyWish ?? st.shinyWish,
+        dexWish: p.dexWish ?? st.dexWish,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
@@ -1630,6 +1634,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
         case "attack_cost_extended": if (!st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ATTACK_COST_EXTENDED_MARKER] }; return true // vœu « jauge pleine » (Laura) : coûts jusqu'au niv 80, plafond 13
+        case "dex_wish_days": st = { ...st, dexWish: freshDexWish(amt || DEX_WISH_DEFAULT_CHARGES) }; return true // voeu « je choisis le numero » (Guillaume) : N journees sur commande
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
@@ -1649,6 +1654,13 @@ export function consumeShinyPopMessage(): string | null { const m = pendingShiny
 export const ATTACK_COST_EXTENDED_MARKER = "attack_cost_extended"
 /** Ce joueur paie-t-il ses attaques sur la courbe ÉTENDUE ? (vœu one-shot, marqueur dans la save) */
 export function isAttackCostExtended(): boolean { return st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER) }
+
+// ═══════ VŒU « JE CHOISIS LE NUMÉRO » (Guillaume) — accesseurs ; la règle vit dans data/dexWish ═══════
+export function getDexWish(): DexWishState | undefined { return st.dexWish }
+export function setDexWish(next: DexWishState | undefined): void {
+    st = { ...st, dexWish: next && next.charges > 0 ? next : undefined }
+    emit()
+}
 
 export function getShinyWish(): ShinyWishState | undefined { return st.shinyWish }
 export function setShinyWish(next: ShinyWishState | undefined): void {
@@ -1899,6 +1911,20 @@ export function disarmGalijah() {
     if (!st.defeatedTrainers.includes(GALIJAH_ARMED_MARKER)) return
     st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== GALIJAH_ARMED_MARKER) }; emit()
 }
+/** Le canal de rencontre forcée est-il LIBRE ? (un vœu one-shot peut l'occuper → on patiente plutôt qu'écraser) */
+export function forcedEncounterSlotFree(): boolean { return !st.forcedEncounter }
+
+/** Pose une rencontre FORCÉE générique (consommée par le prochain sauvage). Renvoie false si le canal est déjà
+ *  occupé : on n'ÉCRASE JAMAIS une rencontre posée par un autre vœu — l'appelant retentera.
+ *  Sert au vœu « je choisis le numéro » (Guillaume) ; les légendaires ont leurs propres poseurs dédiés. */
+export function armForcedEncounter(speciesId: string, level: number, hard = false): boolean {
+    if (st.forcedEncounter) return false
+    const lvl = Math.max(2, Math.min(100, Math.floor(level)))
+    st = { ...st, forcedEncounter: JSON.stringify({ speciesId, level: lvl, hard }) }
+    emit()
+    return true
+}
+
 /** GALIJAH — pose la rencontre FORCÉE (one-shot, capture légendaire `hard`) au niveau donné + DÉSARME la chasse.
  *  Consommée par le moteur au prochain sauvage (gameStore) → Galijah apparaît dans les hautes herbes. */
 export function poseGalijahEncounter(level: number) {

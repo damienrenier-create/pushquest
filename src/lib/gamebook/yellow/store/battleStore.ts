@@ -87,7 +87,8 @@ import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
 import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
-import { BATTLE_LS_KEY } from "../storage/sessionKeys"
+import { BATTLE_LS_KEY, BATTLE_SESSION_KEY } from "../storage/sessionKeys"
+import { battleResumeDecision } from "../data/battleResumePolicy"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
 function enemyActiveSpeciesId(b: BattleState): string | null {
@@ -283,7 +284,7 @@ function persistBattleSnapshot(): void {
     if (typeof window === "undefined") return
     try {
         const { battle, trainer, energySpent } = storeState
-        if (!battlePersistable(battle, trainer) || !battle) { window.localStorage.removeItem(BATTLE_LS_KEY); return } // `|| !battle` : narrow TS (battlePersistable garantit déjà non-null)
+        if (!battlePersistable(battle, trainer) || !battle) { clearBattleSnapshot(); return } // `|| !battle` : narrow TS (battlePersistable garantit déjà non-null). clearBattleSnapshot retire AUSSI le témoin de session.
         // events = file de playback UI du DERNIER tour (déjà vue par le joueur) → on la VIDE dans
         // l'instantané pour reprendre DIRECTEMENT au point de décision (sinon le tour se rejoue).
         const snap = { ...battle, events: [] }
@@ -308,6 +309,10 @@ function persistBattleSnapshot(): void {
         // platineKoAtStart voyage AVEC le combat : sans lui, un combat platine repris repartirait d'un compteur
         //   à 0 et le pot-de-vin refacturerait les morts des salles précédentes (cf. platineBribe).
         window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent, fusionSpecies, platineKoAtStart }))
+        // TÉMOIN DE SESSION : posé dans sessionStorage, qui survit à un F5 mais meurt avec l'onglet / la PWA.
+        //   C'est lui qui fait la différence entre « rechargé » (on reprend) et « appli fermée puis rouverte »
+        //   (on lâche le combat). Cf. data/battleResumePolicy.
+        window.sessionStorage.setItem(BATTLE_SESSION_KEY, "1")
     } catch { /* quota / sérialisation : on ignore (au pire = comportement d'avant) */ }
 }
 
@@ -315,6 +320,7 @@ function persistBattleSnapshot(): void {
 function clearBattleSnapshot(): void {
     if (typeof window === "undefined") return
     try { window.localStorage.removeItem(BATTLE_LS_KEY) } catch { /* ignore */ }
+    try { window.sessionStorage.removeItem(BATTLE_SESSION_KEY) } catch { /* ignore */ }
 }
 
 /** REPREND un combat sauvegardé après un refresh. Renvoie true si un combat a été restauré.
@@ -323,7 +329,14 @@ export function resumeBattleFromStorage(): boolean {
     if (typeof window === "undefined" || storeState.battle) return false
     let raw: string | null = null
     try { raw = window.localStorage.getItem(BATTLE_LS_KEY) } catch { return false }
+    // PORTE DE SORTIE (Sartay, 02/10) : si l'appli a été FERMÉE depuis l'instantané, on ne remet pas le joueur
+    //   dans son combat — on le lâche sur la carte. Le témoin de sessionStorage survit à un F5 et meurt avec
+    //   l'onglet, donc un simple rechargement reprend toujours le combat (pas de fuite gratuite au boss).
+    //   Sans ça, un combat ni gagnable ni fuyable enfermait le joueur 24 h (vécu par Kingme).
     if (!raw) return false
+    let sameSession = false
+    try { sameSession = window.sessionStorage.getItem(BATTLE_SESSION_KEY) === "1" } catch { sameSession = false }
+    if (battleResumeDecision(true, sameSession) === "release") { clearBattleSnapshot(); return false }
     try {
         const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number; fusionSpecies?: SpeciesData[]; platineKoAtStart?: number }
         if (o.v !== 1 || !o.battle) { clearBattleSnapshot(); return false }

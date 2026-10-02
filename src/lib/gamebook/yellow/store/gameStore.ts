@@ -33,11 +33,12 @@ import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
 import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
 import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
+import { countPopForDexWish, dexWishActive } from "../data/dexWish"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getFusionChampionAvatar } from "./playerStore"
 import { avatarFilter } from "../data/avatars"
@@ -2267,6 +2268,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             Object.assign(wild, makeEphemeralShiny(wild, shinyKo))
                             setShinyPopMessage(shinyPopMessage(shinyKo, swNext.charges))
                         }
+                    }
+                    // VŒU DE GUILLAUME — « JE CHOISIS LE NUMÉRO » : il annonce un numéro de Pokédex le matin, et le
+                    //   10ᵉ sauvage de la journée est CELUI-LÀ. On arme au 9ᵉ, car une rencontre forcée est consommée
+                    //   par le pop SUIVANT. Le canal est partagé avec les autres vœux : s'il est occupé on patiente,
+                    //   sans débiter la journée (cf. data/dexWish). Niveau = plafond sauvage de ses badges : aucun
+                    //   cadeau de niveau, juste l'espèce choisie.
+                    const dw = getDexWish()
+                    if (dw && dexWishActive(dw)) {
+                        const r = countPopForDexWish(dw, new Date().toISOString().slice(0, 10), forcedEncounterSlotFree())
+                        setDexWish(r.state)
+                        if (r.armSpeciesId) armForcedEncounter(r.armSpeciesId, wildLevelCap(getPlayerSave().badges))
                     }
                     // ARC LAMPE & GÉNIE — embuscade one-shot : tant que le colporteur-génie n'est pas battu, on
                     //   décompte N∈[8,20] COMBATS (tiré une fois) sur les rencontres sauvages QUI FIRENT ; à 0, si l'équipe

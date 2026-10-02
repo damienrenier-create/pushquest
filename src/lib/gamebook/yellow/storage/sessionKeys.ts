@@ -12,6 +12,15 @@
 
 /** Instantané du combat en cours (battleStore) — repris au refresh. */
 export const BATTLE_LS_KEY = "pq_yellow_battle_v1"
+/** ⚠️ Celle-ci vit dans sessionStorage, PAS dans localStorage, et c'est tout l'intérêt : le sessionStorage
+ *  survit à un RECHARGEMENT de page mais est effacé quand l'onglet (ou la PWA) se FERME. C'est donc le seul
+ *  moyen de distinguer « le joueur a fait F5 » de « le joueur a quitté l'appli et y revient ».
+ *  → F5 : le témoin est là, on REPREND le combat (pas de fuite gratuite, c'était le but de l'instantané).
+ *  → appli fermée puis rouverte : le témoin a disparu, on LÂCHE le combat et le joueur repart sur la carte.
+ *  Décision de Sartay (02/10) après que Kingme s'est retrouvé ENFERMÉ dans un combat qu'il ne pouvait ni
+ *  gagner ni fuir : il faut toujours une porte de sortie, et fermer l'appli est le geste que tout le monde
+ *  trouve tout seul. Cf. data/battleResumePolicy. */
+export const BATTLE_SESSION_KEY = "pq_yellow_battle_session_v1"
 /** Série de la Zone de Combat (Tour/Usine : run + équipe louée) ou bracket du Dôme. */
 export const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
 /** Parcours du couloir PLATINE en cours (étape + adversaire tombé + meilleurs coups). Le couloir se traverse
@@ -38,4 +47,7 @@ export function clearRunSessionStorage(): void {
     for (const k of SESSION_LS_KEYS) {
         try { window.localStorage.removeItem(k) } catch { /* indisponible : rien à purger */ }
     }
+    // Le témoin de session vit dans sessionStorage : à retirer AUSSI, sinon un instantané réécrit juste après
+    // une purge serait jugé « même session » à tort.
+    try { window.sessionStorage.removeItem(BATTLE_SESSION_KEY) } catch { /* indisponible */ }
 }

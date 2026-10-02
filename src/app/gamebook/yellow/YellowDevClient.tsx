@@ -41,6 +41,7 @@ import FusionEpiloguePanel from "./FusionEpiloguePanel"
 import UltimateChampionSacre, { type SacreRosterMon, type SacrePalmares } from "./UltimateChampionSacre"
 import { FusionDefeatOverlay } from "./FusionDefeatOverlay"
 import RustyLampModal from "./RustyLampModal"
+import DexWishModal from "./DexWishModal"
 import GeniePanel from "./GeniePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
@@ -81,6 +82,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
+import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
@@ -100,7 +102,7 @@ import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuratio
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { nemesisRewardBlockedMarker } from "@/lib/gamebook/yellow/data/nemesisChallenge"
-import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost, getDexWish } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -632,7 +634,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pcSort, setPcSort] = useState<"recent" | "lvl" | "hp" | "spc" | "atk" | "def" | "spe" | "alpha">("recent")
     const [pcSortDir, setPcSortDir] = useState(-1) // -1 = décroissant · 1 = croissant
     const [ctShop, setCtShop] = useState(false)
-    const [lampOpen, setLampOpen] = useState(false) // ARC LAMPE & GÉNIE : modal de la lampe rouillée (clic depuis le sac)
+    const [lampOpen, setLampOpen] = useState(false)
+    // 🔢 VŒU DE GUILLAUME : l'appel du matin (1 annonce/jour tant qu'il reste des journées). Cf. data/dexWish.
+    const [dexWishOpen, setDexWishOpen] = useState(false) // ARC LAMPE & GÉNIE : modal de la lampe rouillée (clic depuis le sac)
     const [ctPick, setCtPick] = useState<string | null>(null)
     // RESET « Recommencer le Nexus » — TRIPLE confirmation : 0 idle · 1 avertissement · 2 « c'est définitif » · 3 maintien 1,5 s.
     const [resetStep, setResetStep] = useState(0)
@@ -1375,6 +1379,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         void consumeEnergyGiftNoteOnServer(note.raw) // acquitté SEULEMENT après affichage
                     }
                 }
+            }
+            // 🔢 VŒU DE GUILLAUME — L'APPEL DU MATIN : s'il n'a pas encore annoncé son numéro AUJOURD'HUI et qu'il
+            //   lui reste des journées, on lui demande. Jamais en run 3 (pools figés) ni pendant l'intro.
+            if (!cancelled && getActiveWorld() !== "run3" && canAnnounceToday(getDexWish(), new Date().toISOString().slice(0, 10))) {
+                setDexWishOpen(true)
             }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
@@ -3426,6 +3435,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "badges" && <RunBadgesPanel close={() => setMenu("palmares")} />}
             {menu === "genie" && <GeniePanel close={() => setMenu("pause")} />}
             {lampOpen && <RustyLampModal onClose={() => setLampOpen(false)} />}
+            {dexWishOpen && <DexWishModal onClose={() => setDexWishOpen(false)} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
