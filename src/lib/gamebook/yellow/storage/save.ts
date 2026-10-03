@@ -444,6 +444,7 @@ function parseMon(raw: unknown): MonInstance | null {
         statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
         allocated: parseAllocated(o.allocated),
         ev: parseAllocated(o.ev),
+        evCandy: Math.max(0, Math.floor(Number((o as { evCandy?: unknown }).evCandy) || 0)) || undefined, // 🍬 bonbons en joue (voeu Zyran)
         evCapBoost: o.evCapBoost === true ? true : undefined,
         evCurveV2: o.evCurveV2 === true ? true : undefined,
         luxeUsed: o.luxeUsed === true ? true : undefined,
@@ -982,6 +983,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         statPoints: m.statPoints && m.statPoints > 0 ? m.statPoints : undefined,
         allocated: m.allocated && Object.keys(m.allocated).length ? { ...m.allocated } : undefined,
         ev: m.ev && Object.keys(m.ev).length ? { ...m.ev } : undefined,
+        evCandy: Math.max(0, Math.floor(Number(m.evCandy) || 0)) || undefined, // 🍬 doit traverser les DEUX serialiseurs, sinon le bonbon disparait en silence
         evCapBoost: m.evCapBoost ? true : undefined,
         evCurveV2: m.evCurveV2 ? true : undefined,
         pendingSaiyanLevels: m.pendingSaiyanLevels && m.pendingSaiyanLevels > 0 ? m.pendingSaiyanLevels : undefined,

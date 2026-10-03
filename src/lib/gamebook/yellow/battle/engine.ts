@@ -27,7 +27,7 @@ import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/c
 import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
-import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN } from "../data/evConfig"
+import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN, EV_STAT_CAP } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
 // ============================================================
@@ -198,6 +198,23 @@ function firstAliveIndex(side: BattleSide): number {
  *  `evResetUsed` à la fin — donc un combat abandonné ne consomme rien, exactement comme les EV gagnés
  *  qui ne sont écrits qu'à la fin eux aussi. */
 function gainOrResetEv(state: BattleState, winner: BattleMon, stat: StatKey, events: BattleEvent[]): void {
+    // 🍬 BON BONBON EV (vœu de Zyran) — il se DONNE à un Daemon précis avant le combat, et c'est ce Daemon-là
+    //   qui le porte (winner.evCandy). PRIORITAIRE sur la remise à zéro : donner un bonbon est un geste
+    //   DÉLIBÉRÉ, la remise à zéro est une contrepartie passive.
+    //   On pousse la stat-signature du VAINCU à son maximum : gainEv borne déjà au plafond par stat (252) ET au
+    //   budget total de l'individu, donc le « si possible » est gratuit.
+    //   Un bonbon qui ne trouve AUCUNE place n'est PAS consommé : il reste dans la joue du Daemon et servira sur
+    //   un autre adversaire — la stat visée dépend du vaincu, jamais du joueur.
+    if ((winner.evCandy ?? 0) > 0) {
+        const gagne = gainEv(winner, stat, EV_STAT_CAP)
+        if (gagne > 0) {
+            winner.evCandy = (winner.evCandy ?? 0) - 1 || undefined
+            events.push({ kind: "message", text: `🍬 Le Bon Bonbon fond sur la langue de ${displayName(winner)} : +${gagne} EV d'un coup !` })
+        } else {
+            events.push({ kind: "message", text: `🍬 ${displayName(winner)} n'a plus la moindre place pour cet entraînement — il garde son bonbon en joue.` })
+        }
+        return
+    }
     if ((state.evResetLeft ?? 0) <= 0) { gainEv(winner, stat, EV_YIELD_PER_WIN); return }
     state.evResetLeft = (state.evResetLeft ?? 0) - 1
     state.evResetUsed = (state.evResetUsed ?? 0) + 1

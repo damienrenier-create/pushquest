@@ -26,7 +26,7 @@ import { LAMP_ITEM_ID } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "../data/items"
 import { IV_MAX } from "../data/ivConfig"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
@@ -2776,6 +2776,30 @@ export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "int
     st = inTeam ? { ...st, team: arr, items, luxeOutcomeQueue: nextQueue } : { ...st, pc: arr, items, luxeOutcomeQueue: nextQueue }
     emit()
     return { ok: true, outcome }
+}
+
+/** 🍬 BON BONBON EV (vœu de Zyran) — donne un bonbon à UN Daemon (équipe ou PC). Au prochain K.O. qu'il portera,
+ *  la stat-signature du vaincu grimpe à son MAXIMUM d'EV (cf. battle/engine.gainOrResetEv) : c'est le joueur qui
+ *  choisit la bouche, et l'adversaire qui choisit la stat.
+ *
+ *  Pas de verrou par Daemon (≠ Pâte de Luxe) : il peut en empiler plusieurs sur le même, ils se consommeront un
+ *  par un. Refuse si le Daemon est introuvable ou s'il n'a plus de bonbon — jamais d'objet consommé sans effet. */
+export function giveEvCandy(uid: string): { ok: boolean; reason?: "none" | "introuvable"; candies?: number } {
+    if ((st.items[BONBON_EV_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
+    let inTeam = true
+    let idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) { idx = st.pc.findIndex((m) => m.uid === uid); inTeam = false }
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const arr = (inTeam ? st.team : st.pc).slice()
+    const candies = (arr[idx].evCandy ?? 0) + 1
+    arr[idx] = { ...arr[idx], evCandy: candies }
+    const items: Record<string, number> = {}
+    for (const [k, v] of Object.entries(st.items)) {
+        if (k === BONBON_EV_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
+    }
+    st = inTeam ? { ...st, team: arr, items } : { ...st, pc: arr, items }
+    emit()
+    return { ok: true, candies }
 }
 
 /** TIRAMISU — seconde chance sur un Daemon DÉJÀ pâté (luxeUsed). `mode="restore"` : remet ses IV d'ORIGINE

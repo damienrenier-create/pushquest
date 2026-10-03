@@ -102,7 +102,7 @@ import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuratio
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { nemesisRewardBlockedMarker } from "@/lib/gamebook/yellow/data/nemesisChallenge"
-import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost, getDexWish } from "@/lib/gamebook/yellow/store/playerStore"
+import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost, getDexWish, giveEvCandy } from "@/lib/gamebook/yellow/store/playerStore"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -153,7 +153,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
 import { pateDeLuxeGodLines, pateDeLuxeRestoreLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
 import { bertieCrochueLines, BERTIE_NPC, BERTIE_NAME } from "@/lib/gamebook/yellow/data/bertieCrochue"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
@@ -619,6 +619,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pastaPick, setPastaPick] = useState(false)
     const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
     const [luxePick, setLuxePick] = useState(false) // sélecteur Pâte de Luxe (loterie IV) ouvert
+    const [candyPick, setCandyPick] = useState(false) // 🍬 sélecteur Bon Bonbon EV (vœu Zyran) ouvert
     const [tiramisuPick, setTiramisuPick] = useState(false) // sélecteur Tiramisu (restaurer / re-tenter) ouvert
     const [bertiePick, setBertiePick] = useState(false) // sélecteur Pâtes de Bertie Crochue (pari d'évolution) ouvert
     const [toast, setToast] = useState<string | null>(null)
@@ -2544,6 +2545,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
         if (luxePick) { setLuxePick(false); return true }
+        if (candyPick) { setCandyPick(false); return true }
         if (tiramisuPick) { setTiramisuPick(false); return true }
         if (bertiePick) { setBertiePick(false); return true }
         if (buyConfirm) { setBuyConfirm(null); return true }
@@ -3165,6 +3167,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                     <span>Tiramisu 🍮</span><span>×{player.items[TIRAMISU_ITEM_ID]}</span>
                                                 </span>
                                                 <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Seconde chance pour un Daemon déjà pâté : RESTAURER ses IV d'origine, ou RE-TENTER la loterie.</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* 🍬 Poche Bon Bonbon EV (vœu Zyran) : un clic ouvre le sélecteur → le Daemon garde le bonbon en joue. */}
+                                    {(player.items[BONBON_EV_ITEM_ID] ?? 0) > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🍬 Bons Bonbons EV</div>
+                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#9ad8a0", color: "#d6f5da" }}
+                                                onClick={() => { setMenu("none"); setBagItem(null); setCandyPick(true) }}>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>Bon Bonbon EV 🍬</span><span>×{player.items[BONBON_EV_ITEM_ID]}</span>
+                                                </span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Donne-le à un Daemon AVANT de combattre : à son prochain K.O., la meilleure stat du vaincu grimpe au MAX d&apos;EV.</span>
                                             </button>
                                         </div>
                                     )}
@@ -4988,6 +5003,45 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => setLuxePick(false)}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 🍬 Bon Bonbon EV : se donne à un Daemon AVANT le combat. C'est le joueur qui choisit la bouche,
+                et l'adversaire vaincu qui choisira la stat (sa stat-signature). */}
+            {!battle && candyPick && (
+                <div style={menuOverlayStyle} onClick={() => setCandyPick(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>🍬 QUI CROQUE ?</span><span>🍬 ×{player.items[BONBON_EV_ITEM_ID] ?? 0}</span>
+                        </div>
+                        <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
+                            Il le garde en joue jusqu&apos;à son prochain K.O. : la stat la plus FORTE du Daemon vaincu grimpera
+                            alors d&apos;un coup à son MAXIMUM d&apos;EV. Tu choisis la bouche — l&apos;adversaire choisit la stat.
+                        </div>
+                        {[...player.team, ...player.pc].map((m) => (
+                            <button
+                                key={m.uid}
+                                style={menuBtnStyle}
+                                onClick={() => {
+                                    const nm = displayName(m)
+                                    const r = giveEvCandy(m.uid)
+                                    if (r.ok) {
+                                        persistYellowSave()
+                                        setCandyPick(false)
+                                        setToast(`🍬 ${nm} garde ${r.candies === 1 ? "un bonbon" : `${r.candies} bonbons`} en joue. À son prochain K.O. !`)
+                                    } else if (r.reason === "none") {
+                                        setToast("Tu n'as plus de Bon Bonbon EV.")
+                                        setCandyPick(false)
+                                    }
+                                }}
+                            >
+                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{displayName(m)}{m.shiny ? " ✨" : ""}{(m.evCandy ?? 0) > 0 ? ` 🍬×${m.evCandy}` : ""}</span><span>N.{m.level}</span>
+                                </span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setCandyPick(false)}>← ANNULER</button>
                     </div>
                 </div>
             )}

@@ -291,6 +291,10 @@ export interface MonInstance {
     pendingMoves?: string[]
     /** EXPÉRIENCE DE COMBAT (EV) — effort accumulé par stat au fil des victoires (plafonné, additif). */
     ev?: Partial<Record<StatKey, number>>
+    /** 🍬 BON BONBON EV (vœu de Zyran) — bonbons DONNÉS à CE Daemon, en attente. Au prochain K.O. qu'il porte, la
+     *  stat-signature du vaincu est poussée à son MAXIMUM d'EV au lieu du gain habituel de 3. Un bonbon qui ne
+     *  trouve aucune place n'est pas consommé. Se donne hors combat, depuis le sac. Cf. battle/engine.gainOrResetEv. */
+    evCandy?: number
     /** EV : capturé APRÈS la 1ʳᵉ Ligue → plafond d'EV modulé (voir evTotalCap). Estampillé à la capture,
      *  NON rétroactif : absent sur les Daemons capturés avant le déblocage → plafond de base 510. */
     evCapBoost?: boolean

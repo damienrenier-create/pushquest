@@ -21,6 +21,8 @@ export interface ItemData {
     guaranteed?: boolean
     /** Pour les soins : PV restaurés (0 = full). */
     healHp?: number
+    /** 🍬 BON BONBON EV : se donne à un Daemon ; son prochain K.O. pousse la stat-signature du vaincu au MAX d'EV. */
+    evCandy?: boolean
     /** REVIVE (Rappel) : ranime un Daemon K.O. en lui rendant cette FRACTION de ses PV max (ex. 0.1 = 1/10). */
     reviveFrac?: number
     /** STATUS_HEAL : statuts guéris. */
@@ -223,6 +225,10 @@ export const ITEMS: Record<string, ItemData> = {
         id: "tiramisu", name: "Tiramisu", category: "MISC",
         description: "Dessert du remords. Sur un Daemon qui a déjà goûté une Pâte de Luxe : au choix, RESTAURER ses IV d'origine… ou RE-TENTER la loterie (PARFAIT/rang D). La seconde chance des cuisiniers repentis.", price: 0, tiramisu: true,
     },
+    bon_bonbon_ev: {
+        id: "bon_bonbon_ev", name: "Bon Bonbon EV", category: "MISC",
+        description: "Un bonbon d'entraînement concentré. Donné à un Daemon, il attend son prochain K.O. : la stat la plus FORTE du Daemon vaincu grimpe alors d'un coup à son MAXIMUM d'EV. Tu choisis qui le mange — mais c'est l'adversaire qui choisit la stat.", price: 0, evCandy: true,
+    },
     bertie_crochue: {
         id: "bertie_crochue", name: "Pâtes de Bertie Crochue", category: "MISC",
         description: "De drôles de pâtes au goût imprévisible. Le plus souvent, elles font GAGNER UN NIVEAU et ÉVOLUER le Daemon sur-le-champ (même hors palier) ! Mais une bouchée sur trois le fait RÉGRESSER d'un stade… et il refusera d'évoluer pendant plusieurs niveaux. À tes risques et périls !", price: 0, bertiePasta: true,
@@ -234,6 +240,9 @@ export const SUPER_PASTA_ITEM_ID = "super_pasta"
 
 /** Id de l'objet Pâte de Luxe (loterie génétique : IV re-tirés → PARFAIT ou rang D). */
 export const PATE_LUXE_ITEM_ID = "pate_de_luxe"
+
+/** Id du Bon Bonbon EV (voeu de Zyran) : max d'EV dans la stat-signature du prochain vaincu. */
+export const BONBON_EV_ITEM_ID = "bon_bonbon_ev"
 
 /** Id de l'objet Tiramisu (seconde chance : restaurer les IV d'origine OU re-tenter la loterie). */
 export const TIRAMISU_ITEM_ID = "tiramisu"
