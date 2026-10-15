@@ -27,7 +27,7 @@ import { reportSynergyDiscovery } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarryJson, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, fusionTierHasReflet, FUSION_UNLOCK_MARKER, FUSION_TIER_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, isFusionChampion, fusionTierHasReflet, FUSION_UNLOCK_MARKER, FUSION_TIER_MARKER, leagueLevelBonus, enemyFusionSpriteItems } from "../data/fusionLeague"
 import { previousFusionTier, isTopFusionTier, fusionRunBerriesActive } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
@@ -2252,7 +2252,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     fusionGoldCleared: isTrainerDefeated(FUSION_TIER_MARKER.or), // 🏅 PERK OR : Grotte du Nexus → rares ×2 / communs ×½ (cf. data/fusionLeaguePerks)
                     shinyChance: shinyFrenzyChance(getShinyFrenzy(), Date.now()), // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : 50 % tant qu'elle est active, sinon taux normal
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
-                    fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
+                    // CRÉATURES ANCIENNES B2F : débloquées « après la 1re victoire à la Ligue de Fusion ». ⚠️ Lire les marqueurs des
+                    //   BOSS (y_fusion_maitre/miroir) était FAUX : resetFusionLeagueProgress() les efface au palier suivant → le gate
+                    //   restait FERMÉ pour tous les champions (Jacanon, Mools — constaté le 15/10/2026). isFusionChampion = bronze bouclé, durable.
+                    fusionLeagueWon: isFusionChampion((m) => isTrainerDefeated(m)),
                     // némésis-récompense scellée (défi perdu) + TA création-némésis (ex. Charolyx pour Zyran) jamais en sauvage…
                     //   SAUF au SANCTUAIRE Grotte du Nexus, où l'on capture TOUT — y compris son propre némésis (choix Sartay).
                     //   + MODE FUN : lignées « meme » (plumiot/maitrezenc/mottoche) tant que le clan du type n'a pas été rejoint À VIE (soustractif : bloque là où elles poppaient, n'ajoute rien).
