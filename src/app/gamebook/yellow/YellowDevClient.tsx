@@ -82,6 +82,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
+import { fusioBallInShop, FUSIO_BALL_SHOP_PRICE } from "@/lib/gamebook/yellow/data/fusionLeaguePerks"
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
@@ -158,7 +159,7 @@ import { pateDeLuxeGodLines, pateDeLuxeRestoreLines, PATE_LUXE_GOD_NPC, PATE_LUX
 import { bertieCrochueLines, BERTIE_NPC, BERTIE_NAME } from "@/lib/gamebook/yellow/data/bertieCrochue"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
-import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import { attackCost, effectiveQuota, playerAttackQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
@@ -4613,11 +4614,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         )}
                         {(() => {
                             const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
-                            const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
+                            // 🏅 PERK OR (Ligue de Fusion bouclée en or) : la Fusio-Ball entre en rayon, à prix FIXE (hors Bourse).
+                            //   Décision Sartay 15/10/2026 — récompenser l'assiduité. Pour les autres, rien ne change (price 0 = hors rayon).
+                            const goldCleared = player.defeatedTrainers.includes(FUSION_TIER_MARKER.or)
+                            const sellable = [
+                                ...Object.values(ITEMS).filter((it) => it.price > 0),
+                                ...(fusioBallInShop(goldCleared) && ITEMS.fusio_ball ? [{ ...ITEMS.fusio_ball, price: FUSIO_BALL_SHOP_PRICE }] : []),
+                            ]
                             // BOURSE : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Active dès le run 3
                             //   (endgame), ET dès le DÉBUT en mode FUN (le marché évolue aussi en fun run 1 & 2). Sinon = prix de base.
                             const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
-                            const priceOf = (it: { price: number; category: string }) => shopPrice(it.price, it.category, bourseCtx)
+                            const priceOf = (it: { id?: string; price: number; category: string }) => it.id === "fusio_ball" ? FUSIO_BALL_SHOP_PRICE : shopPrice(it.price, it.category, bourseCtx) // Fusio-Ball : 1000 FLAT, hors Bourse
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
                             const SECOND_TOWN_BALLS = new Set(["super_ball_plus", "hyper_ball", "hyper_ball_plus"])
@@ -4892,7 +4899,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     <div style={menuTitleStyle}>{mv?.name} — QUEL DAEMON ?</div>
                                     {mv && (
                                         <div style={{ fontSize: 11, opacity: 0.78, marginBottom: 8, lineHeight: 1.45, padding: "6px 8px", background: "#f3efd6", borderRadius: 6 }}>
-                                            {mv.type} · {mv.power > 0 ? (moveCategory(mv.type) === "PHYSICAL" ? "Physique" : "Spécial") : "Statut"}
+                                            {mv.type} · {mv.power > 0 ? (moveCategoryOf(mv) === "PHYSICAL" ? "Physique" : "Spécial") : "Statut"}
                                             {mv.power > 0 ? ` · Puissance ${mv.power}` : ""}{mv.accuracy > 0 ? ` · Précision ${mv.accuracy}%` : ""}
                                             {mv.description ? <><br />{mv.description}</> : null}
                                         </div>
@@ -5262,7 +5269,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {inst.moves.map((mv, i) => {
                                 const m = getMove(mv.moveId)
                                 const cat = !m || m.power <= 0 ? { label: "STATUT", color: "#8868c0" }
-                                    : moveCategory(m.type) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+                                    : moveCategoryOf(m) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
                                         : { label: "SPÉ", color: "#3a7ae0" }
                                 const up = i > 0, down = i < inst.moves.length - 1
                                 const btn: React.CSSProperties = { width: 18, height: 18, fontSize: 9, lineHeight: 1, padding: 0, border: "1px solid #1c1408", borderRadius: 3, background: "#f8f8e8", flexShrink: 0 }
@@ -5414,9 +5421,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (▲▼ = ordre en combat)</div>
                             {live.moves.map((mv, i) => {
                                 const m = getMove(mv.moveId)
-                                // Gen 1 : la catégorie dépend du TYPE (cf. moveCategory) ; puissance 0 = move de statut.
+                                // Catégorie RÉELLE via moveCategoryOf (Gen 1 = par type, SAUF surcharge : Crocs de Feu & co frappent physique) ; puissance 0 = statut.
                                 const cat = !m || m.power <= 0 ? { label: "STATUT", color: "#8868c0" }
-                                    : moveCategory(m.type) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+                                    : moveCategoryOf(m) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
                                         : { label: "SPÉ", color: "#3a7ae0" }
                                 const up = i > 0, down = i < live.moves.length - 1
                                 const btn: React.CSSProperties = { width: 18, height: 18, fontSize: 9, lineHeight: 1, padding: 0, border: "1px solid #1c1408", borderRadius: 3, background: "#f8f8e8", flexShrink: 0 }

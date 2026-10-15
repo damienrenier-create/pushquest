@@ -9,7 +9,7 @@ import { useState } from "react"
 import type { MonInstance, MoveData, PokeType } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { TYPE_COLORS } from "./dex/dexShared"
 
@@ -49,7 +49,7 @@ function lineFor(moveId: string, types: PokeType[], atk: number, spc: number): L
     if (!mv) return null
     const isStatus = mv.power <= 0
     let effType = mv.type
-    let isPhysical = (mv.category ?? moveCategory(mv.type)) === "PHYSICAL"
+    let isPhysical = moveCategoryOf(mv) === "PHYSICAL"
     const adaptive = !!mv.effect?.adaptiveStab && !isStatus
     if (adaptive) { const r = resolveAdaptiveStab(types, atk, spc); effType = r.type; isPhysical = r.isPhysical }
     const bestIsPhysical = atk >= spc

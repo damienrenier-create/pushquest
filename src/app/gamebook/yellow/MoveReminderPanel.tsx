@@ -12,7 +12,7 @@ import { usePlayer, relearnableMoves, moveReminderPrice, relearnMove } from "@/l
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
-import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { PokeType } from "@/lib/gamebook/yellow/battle/types"
 import MoveCompare from "./MoveCompare"
 
@@ -106,7 +106,7 @@ export default function MoveReminderPanel() {
                                 {relearn.map((mv) => {
                                     const mo = MOVES[mv]
                                     if (!mo) return null
-                                    const cat = mo.power <= 0 ? "Statut" : moveCategory(mo.type) === "PHYSICAL" ? "Physique" : "Spécial"
+                                    const cat = mo.power <= 0 ? "Statut" : moveCategoryOf(mo) === "PHYSICAL" ? "Physique" : "Spécial"
                                     return (
                                         <div key={mv} style={{ ...card, cursor: "pointer" }} role="button" tabIndex={0} onClick={() => tryLearn(mv)}
                                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tryLearn(mv) } }}>

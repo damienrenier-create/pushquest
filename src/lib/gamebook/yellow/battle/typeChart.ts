@@ -41,9 +41,24 @@ const CHART: Record<PokeType, ChartRow> = {
 // Gen 1 : la catégorie d'un move offensif est déterminée par son TYPE. MÉTAL = physique (frappe à l'ATQ).
 const PHYSICAL_TYPES = new Set<PokeType>(["NORMAL", "COMBAT", "VOL", "POISON", "SOL", "ROCHE", "INSECTE", "SPECTRE", "METAL"])
 
-/** "PHYSICAL" → utilise Attaque/Défense ; "SPECIAL" → utilise Spécial/Spécial. */
+/** "PHYSICAL" → utilise Attaque/Défense ; "SPECIAL" → utilise Spécial/Spécial.
+ *  ⚠️ Raisonne sur un TYPE SEUL : à n'utiliser que pour parler des types eux-mêmes (table des types).
+ *  Pour une ATTAQUE, passer par `moveCategoryOf` — sinon on ignore les surcharges. */
 export function moveCategory(type: PokeType): "PHYSICAL" | "SPECIAL" {
     return PHYSICAL_TYPES.has(type) ? "PHYSICAL" : "SPECIAL"
+}
+
+/** Catégorie RÉELLE d'une attaque — LA source de vérité, celle que suit le calcul de dégâts.
+ *
+ *  Quelques attaques CONTREDISENT leur type : Crocs de Feu (FEU), Griffe Draconique (DRAGON) et Frappe
+ *  Cavitation (EAU) portent `category: "PHYSICAL"` alors que leur type est spécial en Gen 1 — une morsure
+ *  ou une griffade frappe sur l'Attaque, pas sur le Spécial.
+ *
+ *  Le moteur respectait cette surcharge, mais six AFFICHAGES redérivaient la catégorie depuis le seul type
+ *  et annonçaient donc « Spécial » pour une attaque qui frappe physiquement (signalé par Sartay le 15/10/2026).
+ *  Tout code qui affiche ou raisonne sur une attaque doit passer par ici. */
+export function moveCategoryOf(move: { type: PokeType; category?: "PHYSICAL" | "SPECIAL" }): "PHYSICAL" | "SPECIAL" {
+    return move.category ?? moveCategory(move.type)
 }
 
 /**

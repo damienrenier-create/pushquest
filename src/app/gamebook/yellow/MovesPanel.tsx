@@ -14,7 +14,7 @@ import { SPECIES, DEX_ULTRA_SECRET, visibleDexSpecies } from "@/lib/gamebook/yel
 import { knownMoveIds } from "@/lib/gamebook/yellow/data/moveDexReveal"
 import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
@@ -71,7 +71,7 @@ function LearnerIcon({ sp, secret }: { sp: Learner; secret?: boolean }) {
 function category(m: MoveData): "Statut" | "Physique" | "Spécial" | "Adaptatif" {
     if (m.power <= 0) return "Statut"
     if (m.effect?.adaptiveStab) return "Adaptatif" // type/catégorie dépendent du Daemon → pas de valeur fixe ici
-    return moveCategory(m.type) === "PHYSICAL" ? "Physique" : "Spécial"
+    return moveCategoryOf(m) === "PHYSICAL" ? "Physique" : "Spécial"
 }
 
 /** Résumé d'effet CLAIR, construit depuis les données structurées (la source de vérité). */

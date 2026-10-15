@@ -140,12 +140,15 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
     let pushupDebt = 0
     let energyGrantPending = 0
     let energyGrantNote = ""
+    let pendingEffects = ""
     try {
-        const fp = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { pushupDebtOwed: true, pushupDebtBaseline: true, energyGrantPending: true, energyGrantNote: true } })
+        const fp = await (prisma as any).frontierProfile.findUnique({ where: { userId }, select: { pushupDebtOwed: true, pushupDebtBaseline: true, energyGrantPending: true, energyGrantNote: true, pendingEffects: true } })
         energyGrantPending = Math.max(0, fp?.energyGrantPending ?? 0)
         // 🍝 LE PETIT MOT du Dieu Spaghetti. Servi TEL QUEL (pas retravaillé) : le client le renvoie à l'identique
         //   pour le consommer par compare-and-swap. Indépendant du montant → un mot survit à un don déjà crédité.
         energyGrantNote = typeof fp?.energyGrantNote === "string" ? fp.energyGrantNote : ""
+        // 🧞 EFFETS MACHINE EN ATTENTE : servis TELS QUELS (le client les renvoie à l'identique pour l'acquittement par CAS).
+        pendingEffects = typeof fp?.pendingEffects === "string" ? fp.pendingEffects : ""
         const owed = fp?.pushupDebtOwed ?? 0
         if (owed > 0) {
             const agg = await (prisma as any).exerciseSet.aggregate({ where: { userId, exercise: "PUSHUP" }, _sum: { reps: true } })
@@ -164,5 +167,6 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
         ...(pushupDebt > 0 ? { pushupDebt } : {}),
         ...(energyGrantPending > 0 ? { energyGrantPending } : {}),
         ...(energyGrantNote.trim() ? { energyGrantNote } : {}),
+        ...(pendingEffects.trim() ? { pendingEffects } : {}),
     }
 }

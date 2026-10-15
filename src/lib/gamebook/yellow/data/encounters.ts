@@ -5,6 +5,7 @@
 // Niveau corrélé au 1er Daemon de l'équipe. Tout est pur/déterministe (RNG injecté).
 
 import { createMonInstance } from "../battle/factory"
+import { grotteGoldWeightMult } from "./fusionLeaguePerks"
 import { getMove } from "./moves"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
@@ -106,6 +107,7 @@ export interface WildPlayerCtx {
     pushupDebt?: number  // DETTE DE POMPES encore due (vœu génie Mools) — server-authoritative. >0 ⇒ combats VERROUILLÉS. Absent/0 = libre.
     energyGrantPending?: number // CADEAU d'énergie en attente (vœu génie / admin) à créditer 1× au chargement — server-authoritative, anti-écrasement. Absent/0 = rien.
     energyGrantNote?: string    // 🍝 LE PETIT MOT du Dieu Spaghetti qui accompagne ce cadeau (une réplique par ligne). Absent = don muet. Cf. data/energyGiftNote.
+    pendingEffects?: string     // 🧞 EFFETS MACHINE EN ATTENTE (JSON GenieEffect[]) : canal générique serveur→client, appliqués au chargement puis acquittés par CAS. Absent = rien.
 }
 
 export interface EncounterCtx {
@@ -133,6 +135,8 @@ export interface EncounterCtx {
     funMode?: boolean          // MODE FUN uniquement : boost de pop par CRÉNEAU HORAIRE (×1.5) + IV à PALIERS (funRollIvs). Absent/false = modes normal/easy/debutant INCHANGÉS
     connectedCount?: number    // joueurs EN LIGNE (hors soi) → bonus de groupe d'IV excellent (fun)
     sylvebarbeAwake?: boolean  // RUN 1 : Sylvebarbe vaincu (endgame ouvert) → lève les entrées `postSylvebarbe` (ex. TÉNÈBRES de la Plage). En run 2/3 (ngplus/run3), le gate est ignoré (pools dédiés).
+    fusionGoldCleared?: boolean // 🏅 PERK OR (Ligue de Fusion bouclée en or) : Grotte du Nexus → rares ×2, communs ×½ (cf. data/fusionLeaguePerks)
+    shinyChance?: number        // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : probabilité de shiny FORCÉE au pop (0.5). Absent = taux normal ~1/512
 }
 
 /** Le gate `postSylvebarbe` est-il levé pour ce contexte ? → OUI en run 2/3 (pools dédiés, TÉNÈBRES assumées) ou une
@@ -1061,13 +1065,14 @@ function playerMult(entry: WildEntry, p?: WildPlayerCtx): number {
 }
 
 /** Poids final d'une entrée à une position donnée. `hour`/`fun` (fun only) → boost de type par créneau horaire. */
-function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: WildPlayerCtx, hour?: number, fun?: boolean): number {
+function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: WildPlayerCtx, hour?: number, fun?: boolean, goldCleared?: boolean): number {
     let w = entry.base
     for (const b of entry.affinity ?? []) w *= affinityMult(biomeDistance(mapId, x, y, b))
     for (const b of entry.repulsion ?? []) w *= repulsionMult(biomeDistance(mapId, x, y, b))
     // Boost d'apparition lié au quota (ex. Bélunode ×3 quand le quota du jour est atteint).
     if (entry.quotaRateMult && p?.quotaReached) w *= entry.quotaRateMult
-    return w * playerMult(entry, p) * timeTypeMult(entry.speciesId, hour, fun)
+    // 🏅 PERK OR : dans la Grotte, un champion OR voit ses rares ×2 et ses communs ×½ (facteur 1 partout ailleurs).
+    return w * playerMult(entry, p) * timeTypeMult(entry.speciesId, hour, fun) * grotteGoldWeightMult(entry.base, mapId, !!goldCleared)
 }
 
 const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(rng() * (max - min + 1))
@@ -1114,7 +1119,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
         : (e.postSylvebarbe && !tenebresGateOff(ctx)) ? 0 // TÉNÈBRES de la Plage (Obscurène/Sépulcru) : hors run 1 pré-Sylvebarbe
-        : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode))
+        : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode, ctx.fusionGoldCleared))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
 
@@ -1309,7 +1314,7 @@ function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: 
         ? funRollIvs(rng, ctx.connectedCount ?? 0)
         : rollIvs(rng, quotaRatio, overshoot)
     const finalSpecies = entry.noEvolve ? entry.speciesId : speciesAtLevel(entry.speciesId, level)
-    const shiny = rng() < 1 / 512 // CHROMATIQUE (~1/512) : IV parfaits + +10% stats (cf. createMonInstance/fullStats)
+    const shiny = rng() < (ctx.shinyChance ?? 1 / 512) // CHROMATIQUE (~1/512 ; ✨ FRÉNÉSIE SHINY : taux forcé, cf. data/shinyFrenzy) : IV parfaits + +10% stats
     const mon = createMonInstance(finalSpecies, level, { ivsByStat, shiny })
 
     // COMPORTEMENTS SAUVAGES attachés à l'instance (runtime) → transportés par toBattleMon, inertes

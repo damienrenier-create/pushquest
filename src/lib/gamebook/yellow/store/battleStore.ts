@@ -65,8 +65,9 @@ import { GENIE_TRAINER_ID, LAMP_ITEM_ID } from "../data/genieLamp"
 import { creditFusionParents } from "../battle/fusionXp"
 import { writeBackGauntlet, getGauntletTeam, serializeGauntletCarryJson, setGauntletBossBeaten, writeGauntletCarryLs } from "./fusionGauntlet"
 import type { FusionChampionMon } from "../storage/save"
-import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges, isAttackCostExtended } from "./playerStore"
+import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges, isAttackCostExtended , recordShinyFrenzyCapture } from "./playerStore"
 import { isEphemeralShiny, takeShinyKo, shinyKoMessage } from "../data/ephemeralShiny"
+import { shinyFrenzyCaptureMessage } from "../data/shinyFrenzy"
 import { consumeShinyPopMessage } from "./playerStore"
 import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
 import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, PLATINE_DEFEAT_LINES, platineCreditsLines } from "../data/platineLore"
@@ -1846,6 +1847,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }) }
         : null
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
+    // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : un shiny CAPTURÉ pendant la fenêtre décompte une des captures de la
+    //   fête. Ce sont les CAPTURES qui comptent, jamais les rencontres (cf. data/shinyFrenzy). Le Dieu Spaghetti
+    //   commente sur le canal d'après-combat, sans écraser une récompense déjà posée.
+    if (b.outcome === "caught" && !isFactory && !isRun2GhostLoss) {
+        const foe = b.enemy.team[b.enemy.activeIndex]
+        if (foe?.shiny) {
+            const fz = recordShinyFrenzyCapture()
+            if (fz) rematchReward = rematchReward
+                ? { ...rematchReward, lines: [...rematchReward.lines, shinyFrenzyCaptureMessage(fz.left)] }
+                : { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lines: [shinyFrenzyCaptureMessage(fz.left)] }
+        }
+    }
     // VŒU DE TASK1 : le génie prévient qu'un shiny éphémère a usé une charge (ou s'est éteint). Sur le canal
     //   d'après-combat, APRÈS que toutes les branches ont posé leur récompense — on complète, on n'écrase pas.
     if (shinyFadeLines.length) rematchReward = rematchReward

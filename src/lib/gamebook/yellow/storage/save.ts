@@ -275,6 +275,8 @@ export interface YellowSave {
     shinyWish?: { charges: number; day: string; target: number; pops: number }
     /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » : journées restantes + annonce du jour. Cf. data/dexWish. */
     dexWish?: { charges: number; day: string; dex: number; speciesId: string; level: number; pops: number }
+    /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : fin de fenêtre (epoch ms) + captures restantes. Cf. data/shinyFrenzy. */
+    shinyFrenzy?: { until: number; left: number }
     ballLockRemaining: number
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
@@ -920,6 +922,12 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             return charges > 0 || speciesId
                 ? { charges, day: typeof w.day === "string" ? w.day : "", dex: n(w.dex), speciesId, level: n(w.level), pops: n(w.pops) }
                 : undefined
+        })(),
+        shinyFrenzy: (() => {
+            const w = (o as { shinyFrenzy?: unknown }).shinyFrenzy as Record<string, unknown> | undefined
+            if (!w || typeof w !== "object") return undefined
+            const until = Number(w.until) || 0, left = Math.max(0, Math.floor(Number(w.left) || 0))
+            return until > 0 && left > 0 ? { until, left } : undefined // fête finie (0 capture) → on ne traîne rien
         })(),
         evResetCharges: Math.max(0, Math.floor(Number((o as { evResetCharges?: unknown }).evResetCharges) || 0)) || undefined,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,

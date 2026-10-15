@@ -15,7 +15,7 @@ import { usePlayer, galijahCountdown } from "@/lib/gamebook/yellow/store/playerS
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
-import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
 import {
@@ -291,7 +291,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                     {learnset.map((entry, i) => {
                         const mv = MOVES[entry.moveId]
                         if (!mv) return null
-                        const cat = moveCategory(mv.type)
+                        const cat = moveCategoryOf(mv)
                         return (
                             <div key={`${entry.moveId}-${i}`} style={S.moveRow}>
                                 <span style={S.colLv}>{entry.level}</span>

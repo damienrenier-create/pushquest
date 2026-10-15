@@ -13,7 +13,7 @@
 // Aucune dépendance UI/combat : lisible par un script dev (cf. scripts/_nemesis-architect.ts) comme par buildNemesis.
 
 import { POKE_TYPES, type PokeType, type StatKey, type SpeciesData } from "../battle/types"
-import { typeEffectiveness, moveCategory } from "../battle/typeChart"
+import { typeEffectiveness, moveCategory, moveCategoryOf } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
 import { MOVES } from "../data/moves"
 
@@ -146,7 +146,8 @@ export function counterStatSpread(p: DaemonProfile, offenseCat: Cat): Record<Sta
 interface MoveLite { id: string; type: PokeType; power: number; cat: Cat; status: boolean; effect: any }
 function moveLite(id: string): MoveLite | null {
     const m = MOVES[id]; if (!m) return null
-    return { id, type: m.type, power: m.power ?? 0, cat: (m as any).category ?? moveCategory(m.type), status: (m.power ?? 0) === 0, effect: (m as any).effect ?? null }
+    // Catégorie via moveCategoryOf : respecte les surcharges (Crocs de Feu & co, physiques malgré un type spécial).
+    return { id, type: m.type, power: m.power ?? 0, cat: moveCategoryOf(m), status: (m.power ?? 0) === 0, effect: (m as any).effect ?? null }
 }
 const allMovesOfType = (t: PokeType): MoveLite[] =>
     Object.keys(MOVES).map(moveLite).filter((m): m is MoveLite => !!m && m.type === t)

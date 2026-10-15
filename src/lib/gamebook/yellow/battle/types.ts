@@ -3,8 +3,10 @@
 // Nexus Jaune Éclair — TYPES FONDAMENTAUX (moteur de combat STRICT Gen 1).
 // 100% React-free. Spécificités Gen 1 :
 //   - 5 stats : HP, Attaque, Défense, Vitesse, SPÉCIAL (unifié, pas de split).
-//   - la catégorie physique/spéciale d'un move dépend de son TYPE (cf. typeChart),
-//     PAS du move → MoveData n'a donc PAS de champ "category".
+//   - la catégorie physique/spéciale d'un move dépend de son TYPE (cf. typeChart) — SAUF quelques
+//     exceptions assumées qui portent une surcharge `category` (Crocs de Feu, Griffe Draconique,
+//     Frappe Cavitation : une morsure frappe à l'Attaque, pas au Spécial). Toujours lire la catégorie
+//     via `moveCategoryOf(move)`, jamais `moveCategory(move.type)` : sinon on ignore la surcharge.
 //   - 17 types (15 Gen 1 + FÉE réservée à Ukognos + MÉTAL introduit au run 3, forteresse
 //     de Magnetor), 4 moves max.
 

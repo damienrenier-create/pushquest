@@ -10,6 +10,7 @@ import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
 import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
+import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -257,6 +258,8 @@ interface PlayerState {
     shinyWish?: ShinyWishState
     /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » (cf. data/dexWish). Absent = vœu inactif. */
     dexWish?: DexWishState
+    /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) — fenêtre + captures restantes (cf. data/shinyFrenzy). Absent = inactif. */
+    shinyFrenzy?: ShinyFrenzyState
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
@@ -716,6 +719,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         evResetCharges: p.evResetCharges ?? st.evResetCharges,
         shinyWish: p.shinyWish ?? st.shinyWish,
         dexWish: p.dexWish ?? st.dexWish,
+        shinyFrenzy: p.shinyFrenzy ?? st.shinyFrenzy,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
@@ -1577,7 +1581,7 @@ export function spendCasinoBet(bet: number): { ok: boolean; reason?: string } {
 
 /** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
  *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
-export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean }
+export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean; hours?: number; captures?: number }
 /** VŒU DU GÉNIE — retire `levels` niveaux EFFECTIFS à un Daemon (cherché dans l'équipe puis dans le PC), désigné par
  *  son `speciesId`. Plancher au niveau 1. L'espèce n'est PAS touchée : un Divinpâte ramené sous son palier reste un
  *  Divinpâte (pas de dé-évolution). Les PV courants sont re-clampés au nouveau max. Renvoie false si la cible est
@@ -1635,6 +1639,8 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
         case "attack_cost_extended": if (!st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ATTACK_COST_EXTENDED_MARKER] }; return true // vœu « jauge pleine » (Laura) : coûts jusqu'au niv 80, plafond 13
         case "dex_wish_days": st = { ...st, dexWish: freshDexWish(amt || DEX_WISH_DEFAULT_CHARGES) }; return true // voeu « je choisis le numero » (Guillaume) : N journees sur commande
+        case "casino_uncap": st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== CASINO_RESTRICTED_MARKER) }; return true // lève le plafond casino (ex-vœu de Jacanon, décision Sartay 15/10/2026)
+        case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
@@ -1654,6 +1660,19 @@ export function consumeShinyPopMessage(): string | null { const m = pendingShiny
 export const ATTACK_COST_EXTENDED_MARKER = "attack_cost_extended"
 /** Ce joueur paie-t-il ses attaques sur la courbe ÉTENDUE ? (vœu one-shot, marqueur dans la save) */
 export function isAttackCostExtended(): boolean { return st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER) }
+
+// ═══════ ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) — accesseurs ; la règle vit dans data/shinyFrenzy ═══════
+export function getShinyFrenzy(): ShinyFrenzyState | undefined { return st.shinyFrenzy }
+/** Un shiny vient d'être CAPTURÉ : décompte une des captures de la fête. null si aucune frénésie active. */
+export function recordShinyFrenzyCapture(): { left: number; done: boolean } | null {
+    const cur = st.shinyFrenzy
+    if (!cur) return null
+    const r = onShinyCaptured(cur, Date.now())
+    if (r.state === cur) return null // fenêtre close : la fête était déjà finie, rien à décompter
+    st = { ...st, shinyFrenzy: r.done ? undefined : r.state } // à 0 capture restante, on ne traîne plus l'état
+    emit()
+    return { left: r.left, done: r.done }
+}
 
 // ═══════ VŒU « JE CHOISIS LE NUMÉRO » (Guillaume) — accesseurs ; la règle vit dans data/dexWish ═══════
 export function getDexWish(): DexWishState | undefined { return st.dexWish }
@@ -1699,6 +1718,20 @@ export function clearFusionLeagueCarry() { if (st.fusionLeagueCarry) { st = { ..
 /** Applique les effets des vœux ACCEPTÉS pas encore appliqués (1 marker save par vœu → IDEMPOTENT). Appliqué en
  *  LIVE **et en NG+** (run 2) ; SEUL le run 3 est différé (l'énergie y a une source unique → les dons d'⚡ no-op,
  *  auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
+/** 🧞 EFFETS EXTERNES — le canal GÉNÉRIQUE (FrontierProfile.pendingEffects) : applique un tableau de GenieEffect
+ *  déposé par le créateur, sans passer par un slot de vœu. Renvoie true seulement si TOUS les effets sont reconnus :
+ *  un effet inconnu (build antérieur) laisse le lot NON acquitté côté serveur → retenté après déploiement. Les
+ *  effets concernés sont idempotents ou ré-armables, donc une ré-application est inoffensive. Jamais en run 3 (l'appelant). */
+export function applyExternalEffects(raw: string): boolean {
+    let effects: GenieEffect[]
+    try { const parsed = JSON.parse(raw); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { return false }
+    if (!effects.length) return false
+    let all = true
+    for (const e of effects) { if (!e || typeof e.kind !== "string" || !runGenieEffect(e)) all = false }
+    emit()
+    return all
+}
+
 export function applyAcceptedGenieWishEffects(row: {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null

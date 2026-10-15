@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react"
 import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, getBattleTrainerId, getMinitelState, armMinitel, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
-import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -923,7 +923,7 @@ function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
     // NORMAL/PHYS figé du move stocké) → l'affichage colle à ce que le combat fera vraiment.
     const adaptive = !!mv.effect?.adaptiveStab && mv.power > 0
     let dispType = mv.type
-    let isPhys = (mv.category ?? moveCategory(mv.type)) === "PHYSICAL"
+    let isPhys = moveCategoryOf(mv) === "PHYSICAL"
     // FUSION — TRANSMUTATION : une fusion à type FORCÉ convertit dans son essence la 1re attaque offensive héritée
     //   de chaque parent. Seul le TYPE change (la catégorie reste celle du move) → l'affichage doit le refléter.
     const transmuted = mon.moveTypeOverride?.[mv.id]

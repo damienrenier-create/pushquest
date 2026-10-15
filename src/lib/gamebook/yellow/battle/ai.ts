@@ -7,7 +7,7 @@
 import type { BattleMon, PokeType } from "./types"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
-import { typeEffectiveness, moveCategory, resolveAdaptiveStab } from "./typeChart"
+import { typeEffectiveness, moveCategoryOf, resolveAdaptiveStab } from "./typeChart"
 import { computeDamage } from "./damage"
 import { fullStats } from "./stats"
 import type { Rng } from "./rng"
@@ -268,10 +268,10 @@ function effMoveProfile(
     self: BattleMon,
     selfTypes: readonly PokeType[],
     stats: { atk: number; spc: number } | null,
-    mv: { id: string; type: PokeType; category?: string; effect?: { adaptiveStab?: boolean } },
+    mv: { id: string; type: PokeType; category?: "PHYSICAL" | "SPECIAL"; effect?: { adaptiveStab?: boolean } },
 ): { type: PokeType; phys: boolean } {
     const type = effMoveType(self, mv)
-    const phys = (mv.category ?? moveCategory(type)) === "PHYSICAL"
+    const phys = moveCategoryOf({ type, category: mv.category }) === "PHYSICAL"
     if (!mv.effect?.adaptiveStab || !selfTypes.length || !stats) return { type, phys }
     const a = resolveAdaptiveStab(selfTypes as PokeType[], stats.atk, stats.spc)
     return { type: a.type, phys: a.isPhysical }

@@ -31,14 +31,17 @@ export async function POST(req: Request) {
 
     let amount = 0
     let note = ""
+    let effects = ""
     try {
         const b = await req.json()
         amount = Math.max(0, Math.floor(b?.amount ?? 0))
         // 🍝 LE PETIT MOT : le client renvoie le texte EXACT qu'il vient d'afficher (cf. data/energyGiftNote). Il ne
         //   l'envoie QUE s'il l'a réellement mis à l'écran → un mot jamais montré n'est jamais effacé.
         note = typeof b?.note === "string" ? b.note : ""
+        // 🧞 EFFETS MACHINE : même discipline que le mot — renvoyés tels quels, acquittés par CAS sur le texte exact.
+        effects = typeof b?.effects === "string" ? b.effects : ""
     } catch { /* corps absent */ }
-    if (amount <= 0 && !note) return NextResponse.json({ ok: true, consumed: false })
+    if (amount <= 0 && !note && !effects) return NextResponse.json({ ok: true, consumed: false })
 
     try {
         // Deux cadeaux INDÉPENDANTS, donc deux compare-and-swap séparés : un mot peut accompagner un don déjà
@@ -60,7 +63,15 @@ export async function POST(req: Request) {
             })
             noteConsumed = res.count === 1
         }
-        return NextResponse.json({ ok: true, consumed, noteConsumed })
+        let effectsConsumed = false
+        if (effects) {
+            const res = await (prisma as any).frontierProfile.updateMany({
+                where: { userId, pendingEffects: effects },
+                data: { pendingEffects: null },
+            })
+            effectsConsumed = res.count === 1
+        }
+        return NextResponse.json({ ok: true, consumed, noteConsumed, effectsConsumed })
     } catch {
         // Profil / colonne absents (avant db:push) → rien à consommer, non bloquant.
         return NextResponse.json({ ok: true, consumed: false })

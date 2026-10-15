@@ -13,7 +13,7 @@
 import type { SpeciesData, PokeType, StatKey, MoveData } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { MOVES, getMove } from "../data/moves"
-import { moveCategory, typeEffectiveness } from "../battle/typeChart"
+import { moveCategory, moveCategoryOf, typeEffectiveness } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
 
 export const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -385,7 +385,7 @@ export function moveCard(id: string, types: PokeType[]): MoveCardInfo | null {
     const dmg = isDamagingMove(m)
     return {
         id, name: m.name, type: m.type,
-        cat: !dmg ? "STATUT" : moveCategory(m.type) === "PHYSICAL" ? "PHYS" : "SPÉ",
+        cat: !dmg ? "STATUT" : moveCategoryOf(m) === "PHYSICAL" ? "PHYS" : "SPÉ",
         power: effectivePower(m), accuracy: m.accuracy, pp: m.pp,
         rarity: moveRarity(id), stab: isStabMove(id, types), coverage: isCoverageMove(id, types),
         statusTier: dmg ? undefined : statusTier(m), effect: effectSummary(m),
