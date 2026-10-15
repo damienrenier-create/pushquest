@@ -12,10 +12,10 @@ import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
-import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/heldItems"
+import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect, consumeHeldConsumable } from "../data/heldItems"
 import { healCapApplies, healAllowed } from "../data/healCap"
 import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./talentEffects"
-import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
+import { typeEffectiveness, effectivenessMessage, moveCategoryOf, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
 import { obedienceCap, disobeyChance } from "./obedience"
 import { pinchBerry } from "./berries"
@@ -871,7 +871,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // (CT « Apothéose ») : le type devient un type du Daemon ALIGNÉ sur sa MEILLEURE stat offensive, et la
     // catégorie SUIT cette stat → toujours STAB, frappant avec la bonne stat (ex. Feu mais PHYSIQUE).
     let effType = move.type
-    let isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
+    let isPhysical = moveCategoryOf(move) === "PHYSICAL"
     // FUSION — TRANSMUTATION : une fusion à type FORCÉ convertit dans sa propre essence la 1re attaque offensive
     //   héritée de chaque parent (cf. moveTypeOverride). Seul le TYPE change → STAB + table des types ; la
     //   CATÉGORIE reste celle du move d'origine, pour ne pas basculer un rayon spécial sur l'Attaque physique.
@@ -1099,9 +1099,9 @@ function tryInflictStatus(state: BattleState, targetSide: SideId, status: Exclud
     const cure = heldEffect(mon)
     if (cure?.berryCureStatus) {
         mon.status = "NONE"; mon.statusCounter = 0
-        mon.heldItem = undefined
+        const eaten = consumeHeldConsumable(mon, "cure") ?? cure // bon slot (fusionné à 2 objets)
         events.push({ kind: "status", side: targetSide, status: "NONE" }) // baie neutralise le statut à peine infligé : le badge repart aussitôt
-        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${cure.name} : statut neutralisé !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${eaten.name} : statut neutralisé !` })
     }
 }
 
@@ -1131,7 +1131,7 @@ function applyStatChange(state: BattleState, side: SideId, stat: StageKey, delta
     if (delta < 0 && mon.stages[stat] > -6) {
         // OBJET TENU — Herbe Blanche : annule la prochaine BAISSE de stat réelle, puis se consomme.
         if (heldEffect(mon)?.negateStatDrop) {
-            mon.heldItem = undefined
+            consumeHeldConsumable(mon, "negate") // bon slot (fusionné à 2 objets)
             events.push({ kind: "message", text: `${displayName(mon)} : l'Herbe Blanche annule la baisse de ${labelStat(stat)} !` })
             return
         }
@@ -1264,13 +1264,13 @@ function triggerPinchBerry(state: BattleState, side: SideId, events: BattleEvent
     const max = maxHpOf(mon)
     const trig = pinchBerry(it, mon.currentHp / max)
     if (!trig) return
-    mon.heldItem = undefined // consommée au déclenchement
+    const eaten = consumeHeldConsumable(mon, "pinch") ?? it // consommée au déclenchement — dans le BON slot (fusionné à 2 objets)
     if (trig.kind === "heal") {
         applyHeal(state, side, Math.max(1, Math.floor(max * trig.frac)), events)
-        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${it.name} et restaure ses PV !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${eaten.name} et restaure ses PV !` })
     } else {
         mon.stages[trig.stat] = clampStage(mon.stages[trig.stat] + 1)
-        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${it.name} : ça le galvanise !` })
+        events.push({ kind: "message", text: `🍒 ${displayName(mon)} a mangé sa ${eaten.name} : ça le galvanise !` })
     }
 }
 
@@ -1343,7 +1343,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
             if (rev?.berryRevive && !(mon as any).__phoenixUsed) {
                 mon.currentHp = 1
                 ;(mon as any).__phoenixUsed = true
-                mon.heldItem = undefined
+                const eaten = consumeHeldConsumable(mon, "revive") ?? rev // bon slot (fusionné à 2 objets)
                 // Le KO efface TOUT avant que la baie n'agisse (elle réanime APRÈS la chute) : le Daemon revient PROPRE
                 //   — plus de statut (sommeil/toxik/brûlure…), boosts de stats remis à neutre, volatiles (confusion…) vidés.
                 const hadStatus = mon.status !== "NONE"
@@ -1352,7 +1352,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
                 mon.volatiles = {}
                 events.push({ kind: "hp", side, hp: 1, max: maxHpOf(mon) })
                 if (hadStatus) events.push({ kind: "status", side, status: "NONE" }) // retire le badge de statut à l'écran
-                events.push({ kind: "message", text: `🔥 ${displayName(mon)} a mangé sa ${rev.name} et refuse de tomber (survit à 1 PV) !` })
+                events.push({ kind: "message", text: `🔥 ${displayName(mon)} a mangé sa ${eaten.name} et refuse de tomber (survit à 1 PV) !` })
                 continue
             }
             ;(mon as any).__fainted = true

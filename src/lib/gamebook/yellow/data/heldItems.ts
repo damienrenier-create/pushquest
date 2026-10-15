@@ -204,7 +204,7 @@ function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
     const maxOpt = (x?: number, y?: number) => (x == null ? y : y == null ? x : Math.max(x, y))
     const prodOpt = (x?: number, y?: number) => (x == null && y == null ? undefined : (x ?? 1) * (y ?? 1))
     return {
-        ...a, // garde id/nom/emoji + champs CONSOMMABLES du slot 1 (baies, negateStatDrop) + typeBoost/statMult/physDmg (lus par les autres helpers)
+        ...a, // garde id/nom/emoji + typeBoost/statMult/physDmg du slot 1 (lus par les autres helpers)
         leftoversFrac: harmonic(a.leftoversFrac, b.leftoversFrac),
         drainDealtFrac: harmonic(a.drainDealtFrac, b.drainDealtFrac),
         critStage: ((a.critStage ?? 0) + (b.critStage ?? 0)) || undefined,
@@ -213,7 +213,46 @@ function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
         flinchPct: maxOpt(a.flinchPct, b.flinchPct),
         incomingAccMult: prodOpt(a.incomingAccMult, b.incomingAccMult),
         expMult: prodOpt(a.expMult, b.expMult),
+        // ── CONSOMMABLES (baies, Herbe Blanche) : visibles depuis L'UN OU L'AUTRE slot, slot 1 prioritaire. ──
+        //   ⚠️ BUG CORRIGÉ (Jacanon, 15/10/2026) : le `...a` ci-dessus ne gardait que les consommables du slot 1. Un
+        //   fusionné « Grelot Coque (slot 1) × Baie Phénix (slot 2) » ne voyait donc JAMAIS sa Phénix : ses baies
+        //   « ne fonctionnaient pas » en Ligue de Fusion. La consommation du bon slot est faite par
+        //   consumeHeldConsumable (le moteur ne touche plus heldItem à la main).
+        berryHealFrac: a.berryHealFrac ?? b.berryHealFrac,
+        berryBoostStat: a.berryBoostStat ?? b.berryBoostStat,
+        berryCureStatus: a.berryCureStatus ?? b.berryCureStatus,
+        berryRevive: a.berryRevive ?? b.berryRevive,
+        negateStatDrop: a.negateStatDrop ?? b.negateStatDrop,
     }
+}
+
+/** Les 4 familles de consommables, telles que le moteur les déclenche. */
+export type ConsumableKind = "pinch" | "cure" | "revive" | "negate"
+
+function providesConsumable(it: HeldItemData, kind: ConsumableKind): boolean {
+    switch (kind) {
+        case "pinch": return !!it.berryHealFrac || !!it.berryBoostStat
+        case "cure": return !!it.berryCureStatus
+        case "revive": return !!it.berryRevive
+        case "negate": return !!it.negateStatDrop
+    }
+}
+
+/** CONSOMME l'objet tenu qui vient de se déclencher — dans le BON slot. Pour un Daemon normal c'est son unique
+ *  objet (byte-identique à l'ancien `mon.heldItem = undefined`). Pour un FUSIONNÉ à deux objets, on retire celui
+ *  qui fournit réellement l'effet consommé (slot 1 d'abord, comme la priorité de mergeHeldEffects) — et on laisse
+ *  l'autre en place : manger sa Baie Phénix ne doit pas faire disparaître son Grelot Coque.
+ *  Renvoie l'objet consommé (pour nommer la baie à l'écran), ou undefined si aucun slot ne le fournissait. */
+export function consumeHeldConsumable(inst: MonRef, kind: ConsumableKind): HeldItemData | undefined {
+    const slots: Array<"heldItem" | "heldItem2"> = ["heldItem", "heldItem2"]
+    for (const slot of slots) {
+        const it = getHeldItem(inst[slot])
+        if (it && applies(it, inst.speciesId) && providesConsumable(it, kind)) {
+            inst[slot] = undefined
+            return it
+        }
+    }
+    return undefined
 }
 
 /** L'objet tenu ACTIF du Daemon (verrou d'espèce respecté), ou — pour un FUSIONNÉ à 2 objets — un item SYNTHÉTIQUE

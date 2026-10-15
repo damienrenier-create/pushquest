@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { HELD_ITEMS, heldStatMult, heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "./heldItems"
+import { HELD_ITEMS, heldStatMult, heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect, consumeHeldConsumable } from "./heldItems"
 import { buildFusion, disposeFusion } from "./fusionMon"
 import { createMonInstance } from "../battle/factory"
 
@@ -42,11 +42,20 @@ describe("Objets tenus — fusion à 2 objets", () => {
         expect(heldEffect({ heldItem: crit.id, heldItem2: crit.id })?.critStage).toBe(crit.critStage! * 2)
     })
 
-    it("consommable (negateStatDrop / Herbe Blanche) : actif en slot 1, INERTE en slot 2 (pas d'immunité permanente)", () => {
+    // ⚠️ CONTRAT CHANGÉ le 15/10/2026 (bug des baies de Jacanon). AVANT : un consommable en slot 2 était rendu INERTE,
+    //   parce que le moteur ne savait consommer que `mon.heldItem` — le rendre visible aurait créé une immunité
+    //   PERMANENTE. C'était le moindre mal, et c'est ce qui rendait muettes les baies d'un fusionné « passif × baie ».
+    //   DEPUIS : consumeHeldConsumable retire le BON slot. Le consommable du slot 2 est donc actif, ET consommé.
+    it("consommable (negateStatDrop / Herbe Blanche) : actif depuis les DEUX slots, consommé depuis le bon (pas d'immunité permanente)", () => {
         const herb = all.find((i) => i.negateStatDrop && !i.species)
         if (!herb) return
-        expect(heldEffect({ heldItem: herb.id })?.negateStatDrop).toBe(true)             // slot 1 → actif (consommé via mon.heldItem)
-        expect(heldEffect({ heldItem: lefto.id, heldItem2: herb.id })?.negateStatDrop).toBeFalsy() // slot 2 → NON combiné (sinon jamais consommé)
+        expect(heldEffect({ heldItem: herb.id })?.negateStatDrop).toBe(true)                    // slot 1 → actif
+        const m = { heldItem: lefto.id as string | undefined, heldItem2: herb.id as string | undefined }
+        expect(heldEffect(m)?.negateStatDrop).toBe(true)                                        // slot 2 → actif AUSSI désormais
+        expect(consumeHeldConsumable(m, "negate")?.id).toBe(herb.id)                           // …et c'est LUI qui est consommé
+        expect(m.heldItem2).toBeUndefined()
+        expect(m.heldItem, "les Restes du slot 1 ne sont pas touchés").toBe(lefto.id)
+        expect(heldEffect(m)?.negateStatDrop, "plus d'immunité après consommation").toBeFalsy()
     })
 
     it("dégâts entrants physiques : les 2 réducteurs se multiplient", () => {
