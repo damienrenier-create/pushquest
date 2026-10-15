@@ -46,3 +46,20 @@ export function shinyFrenzyCaptureMessage(left: number): string {
     if (left <= 0) return "🍝 « Trois shiny dans ta besace… la fête est finie, mortel. Les étoiles reprennent leur rythme habituel. Joyeux anniversaire. »"
     return `🍝 « Un shiny de plus pour ton anniversaire ! Encore ${left} à capturer avant que les étoiles ne se calment. »`
 }
+
+/** 🤫 SECRET — lit l'état de frénésie dans des flags de save BRUTS (JSON Prisma, côté serveur) : `{ until, left }`
+ *  valides → l'état ; sinon null. Le serveur ne fait que LIRE la save (jamais l'écrire). */
+export function frenzyFromFlags(flags: unknown): ShinyFrenzyState | null {
+    const raw = (flags as { shinyFrenzy?: unknown } | null | undefined)?.shinyFrenzy as { until?: unknown; left?: unknown } | null | undefined
+    if (!raw || typeof raw !== "object") return null
+    const until = Number(raw.until), left = Number(raw.left)
+    if (!Number.isFinite(until) || !Number.isFinite(left)) return null
+    return { until, left }
+}
+
+/** Les shinies d'un joueur en FRÉNÉSIE sont un secret entre lui et le Dieu Spaghetti (règle de Sartay, 15/10/2026) :
+ *  AUCUNE fête communautaire (+50⚡ à tous), ni bonus de clan, ni prime de parrainage. Sans cette garde, 50 % de
+ *  shiny = 40 annonces et 2 000⚡ pour tout le Nexus en dix minutes (constaté sur Jacanon). */
+export function shinyFeteSuppressed(flags: unknown, now: number): boolean {
+    return shinyFrenzyActive(frenzyFromFlags(flags), now)
+}

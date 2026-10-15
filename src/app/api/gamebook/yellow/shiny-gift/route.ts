@@ -15,6 +15,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { fanOutSponsorGift } from "@/lib/gamebook/yellow/sponsorGift"
 import { sameClanUserIds } from "@/lib/gamebook/yellow/clanFervor"
+import { shinyFeteSuppressed } from "@/lib/gamebook/yellow/data/shinyFrenzy"
 
 export const dynamic = "force-dynamic"
 const SHINY_ENERGY = 50
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
         // Idempotence : la fête n'a lieu qu'UNE fois par événement (anti-refresh / re-POST).
         const dup = await sg.findFirst({ where: { eventKey }, select: { id: true } })
         if (dup) return NextResponse.json({ ok: true, skipped: "dup" })
+
+        // 🤫 FRÉNÉSIE SHINY (cadeau d'anniversaire, cf. data/shinyFrenzy) : les shinies d'un joueur en frénésie sont un
+        //   SECRET entre lui et le Dieu Spaghetti → AUCUNE fête (ni communautaire, ni clan, ni parrainage). Lu dans SA save
+        //   (le serveur ne l'écrit jamais) → la garde agit dès le déploiement, même sur un onglet resté ouvert.
+        const mine = await prisma.gamebookProgress.findFirst({ where: { userId: auth.userId, chapterId: YELLOW_CHAPTER_ID }, select: { flags: true } })
+        if (shinyFeteSuppressed(mine?.flags, Date.now())) return NextResponse.json({ ok: true, skipped: "frenzy" })
 
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
