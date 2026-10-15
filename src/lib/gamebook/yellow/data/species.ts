@@ -3542,6 +3542,138 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Une raie sombre tapie dans le sable des fonds à la nuit tombée. Elle endort, empoisonne et enlise ses proies avant qu'elles ne réalisent ce qui les frappe.",
         sprite: "/yellow/sprites/dex/ro.png",
     },
+
+    // CANON d'une CRÉATION de joueur (Kingme) — SHINY CRAFTÉ : pop ultra-rare dans toute haute herbe / grotte
+    //   une fois le Dôme Fusion atteint (cf. data/craftedShinies). Porté FIDÈLEMENT depuis buildCustomSpecies : stats
+    //   (BST 236/319/414), learnset PARTAGÉ, évolutions 16/34, talent « affinite_elem ».
+    chadine: {
+        id: "chadine", dexNo: 226, name: "Chadine", types: ["EAU","COMBAT"],
+        baseStats: {hp: 43, atk: 74, def: 40, spe: 51, spc: 28}, // BST 236
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "poing_karate" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "tranche" }, { level: 36, moveId: "frappe_cavitation" }, { level: 42, moveId: "hydrocanon" }, { level: 48, moveId: "frappe_atlas" }, { level: 54, moveId: "crochet_maitre" }, { level: 60, moveId: "deluge_crochets" }],
+        evolution: { toId: "arlpol", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 106, rarity: "RARE", growthRate: "medium_slow", secretTalent: "affinite_elem",
+        role: "EAU/COMBAT — offensif physique (création)",
+        description: "Un animal marin, mi orque mi hippopotame. Tout mou dans sa phase bebe. — Nerveux mais très agile — 🖋️ Création de Kingme",
+        sprite: "/yellow/sprites/dex/chadine.png", hiddenUntilCaught: true,
+    },
+    arlpol: {
+        id: "arlpol", dexNo: 227, name: "Arlpol", types: ["EAU","COMBAT"],
+        baseStats: {hp: 58, atk: 100, def: 54, spe: 69, spc: 38}, // BST 319
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "poing_karate" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "tranche" }, { level: 36, moveId: "frappe_cavitation" }, { level: 42, moveId: "hydrocanon" }, { level: 48, moveId: "frappe_atlas" }, { level: 54, moveId: "crochet_maitre" }, { level: 60, moveId: "deluge_crochets" }],
+        evolution: { toId: "lesleo", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 144, rarity: "RARE", growthRate: "medium_slow", secretTalent: "affinite_elem",
+        role: "EAU/COMBAT — offensif physique (création)",
+        description: "Un animal marin, mi orque mi hippopotame. Tout mou dans sa phase bebe. — Nerveux mais très agile — 🖋️ Création de Kingme",
+        sprite: "/yellow/sprites/dex/arlpol.png", hiddenUntilCaught: true,
+    },
+    lesleo: {
+        id: "lesleo", dexNo: 228, name: "Lesleo", types: ["EAU","COMBAT"],
+        baseStats: {hp: 75, atk: 130, def: 70, spc: 49, spe: 90}, // BST 414
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "poing_karate" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "tranche" }, { level: 36, moveId: "frappe_cavitation" }, { level: 42, moveId: "hydrocanon" }, { level: 48, moveId: "frappe_atlas" }, { level: 54, moveId: "crochet_maitre" }, { level: 60, moveId: "deluge_crochets" }],
+        catchRate: 45, baseExp: 186, rarity: "RARE", growthRate: "medium_slow", secretTalent: "affinite_elem",
+        role: "EAU/COMBAT — offensif physique (création)",
+        description: "Il doit grandir et se lever pour devenir un combattant très musclé, en signe  de vengeance à son enfance ingrate. — Nerveux mais très agile — 🖋️ Création de Kingme",
+        sprite: "/yellow/sprites/dex/lesleo.png", hiddenUntilCaught: true,
+    },
+
+    // CANON d'une CRÉATION de joueur (Tom) — SHINY CRAFTÉ : pop ultra-rare dans toute haute herbe / grotte
+    //   une fois le Dôme Fusion atteint (cf. data/craftedShinies). Porté FIDÈLEMENT depuis buildCustomSpecies : stats
+    //   (BST 240/324/420), learnset PARTAGÉ, évolutions 16/34, talent « poigne_fer ».
+    stashex: {
+        id: "stashex", dexNo: 229, name: "Stashex", types: ["PSY"],
+        baseStats: {hp: 46, atk: 17, def: 26, spe: 77, spc: 74}, // BST 240
+        learnset: [{ level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "onde_cerebrale" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "eveil_divin" }, { level: 42, moveId: "vague_mentale" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "belier" }],
+        evolution: { toId: "stashex2", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 108, rarity: "RARE", growthRate: "medium_slow", secretTalent: "poigne_fer",
+        role: "PSY — rapide spécial (création)",
+        description: "Petite créature abstraite flottante, composée de fragments noirs aux formes anguleuses, parcourus de lignes vert électrique. Son corps semble constamment se désagréger et se reconstruire en petits pixels lumineux. — Curieux, obstiné et légèrement chaotique — 🖋️ Création de Tom",
+        sprite: "/yellow/sprites/dex/stashex.png", hiddenUntilCaught: true,
+    },
+    stashex2: {
+        id: "stashex2", dexNo: 230, name: "StasHex", types: ["PSY"],
+        baseStats: {hp: 62, atk: 23, def: 35, spe: 104, spc: 100}, // BST 324
+        learnset: [{ level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "onde_cerebrale" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "eveil_divin" }, { level: 42, moveId: "vague_mentale" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "belier" }],
+        evolution: { toId: "stashex3", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 146, rarity: "RARE", growthRate: "medium_slow", secretTalent: "poigne_fer",
+        role: "PSY — rapide spécial (création)",
+        description: "Petite créature abstraite flottante, composée de fragments noirs aux formes anguleuses, parcourus de lignes vert électrique. Son corps semble constamment se désagréger et se reconstruire en petits pixels lumineux. — Curieux, obstiné et légèrement chaotique — 🖋️ Création de Tom",
+        sprite: "/yellow/sprites/dex/stashex2.png", hiddenUntilCaught: true,
+    },
+    stashex3: {
+        id: "stashex3", dexNo: 231, name: "StasHEX", types: ["PSY"],
+        baseStats: {hp: 80, atk: 30, def: 45, spc: 130, spe: 135}, // BST 420
+        learnset: [{ level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "onde_cerebrale" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "eveil_divin" }, { level: 42, moveId: "vague_mentale" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "belier" }],
+        catchRate: 45, baseExp: 189, rarity: "RARE", growthRate: "medium_slow", secretTalent: "poigne_fer",
+        role: "PSY — rapide spécial (création)",
+        description: "Grande créature abstraite et imposante, constituée de fragments noirs flottants et de formes géométriques parcourues d'énergie vert électrique. Son corps semble en perpétuelle reconstruction. — Curieux, obstiné et légèrement chaotique — 🖋️ Création de Tom",
+        sprite: "/yellow/sprites/dex/stashex3.png", hiddenUntilCaught: true,
+    },
+
+    // CANON d'une CRÉATION de joueur (TomGotrails) — SHINY CRAFTÉ : pop ultra-rare dans toute haute herbe / grotte
+    //   une fois le Dôme Fusion atteint (cf. data/craftedShinies). Porté FIDÈLEMENT depuis buildCustomSpecies : stats
+    //   (BST 254/343/445), learnset PARTAGÉ, évolutions 16/34, talent « chanceux ».
+    ewokid: {
+        id: "ewokid", dexNo: 232, name: "Ewokid ", types: ["DRAGON","PLANTE"],
+        baseStats: {hp: 51, atk: 26, def: 46, spe: 57, spc: 74}, // BST 254
+        learnset: [{ level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "tranche_feuille" }, { level: 18, moveId: "fouet_lianes" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "plaquage" }, { level: 42, moveId: "tempete_verte" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "draco_charge" }],
+        evolution: { toId: "endorix", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 114, rarity: "RARE", growthRate: "medium_slow", secretTalent: "chanceux",
+        role: "DRAGON/PLANTE — offensif spécial (création)",
+        description: "Bipède style petit ours doté d'une fourrure hirsute et porte un petit capuchon fait de feuilles et de bouts de bois. — Ingénieux et rusé — 🖋️ Création de TomGotrails",
+        sprite: "/yellow/sprites/dex/ewokid.png", hiddenUntilCaught: true,
+    },
+    endorix: {
+        id: "endorix", dexNo: 233, name: "Endorix", types: ["DRAGON","PLANTE"],
+        baseStats: {hp: 69, atk: 35, def: 62, spe: 77, spc: 100}, // BST 343
+        learnset: [{ level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "tranche_feuille" }, { level: 18, moveId: "fouet_lianes" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "plaquage" }, { level: 42, moveId: "tempete_verte" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "draco_charge" }],
+        evolution: { toId: "wooky", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 154, rarity: "RARE", growthRate: "medium_slow", secretTalent: "chanceux",
+        role: "DRAGON/PLANTE — offensif spécial (création)",
+        description: "Bipède style petit ours doté d'une fourrure hirsute et porte un petit capuchon fait de feuilles et de bouts de bois. — Ingénieux et rusé — 🖋️ Création de TomGotrails",
+        sprite: "/yellow/sprites/dex/endorix.png", hiddenUntilCaught: true,
+    },
+    wooky: {
+        id: "wooky", dexNo: 234, name: "Wooky", types: ["DRAGON","PLANTE"],
+        baseStats: {hp: 90, atk: 45, def: 80, spc: 130, spe: 100}, // BST 445
+        learnset: [{ level: 5, moveId: "charge" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "tranche_feuille" }, { level: 18, moveId: "fouet_lianes" }, { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "jet_de_sable" }, { level: 36, moveId: "plaquage" }, { level: 42, moveId: "tempete_verte" }, { level: 48, moveId: "hurlement" }, { level: 54, moveId: "draco_charge" }],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_slow", secretTalent: "chanceux",
+        role: "DRAGON/PLANTE — offensif spécial (création)",
+        description: "porte un grand masque tribal en bois sculpté et un manteau de feuillage dense — Ingénieux et rusé — 🖋️ Création de TomGotrails",
+        sprite: "/yellow/sprites/dex/wooky.png", hiddenUntilCaught: true,
+    },
+
+    // CANON d'une CRÉATION de joueur (Rob) — SHINY CRAFTÉ : pop ultra-rare dans toute haute herbe / grotte
+    //   une fois le Dôme Fusion atteint (cf. data/craftedShinies). Porté FIDÈLEMENT depuis buildCustomSpecies : stats
+    //   (BST 271/366/475), learnset PARTAGÉ, évolutions 22/40, talent « coup_dur ».
+    dracominus: {
+        id: "dracominus", dexNo: 235, name: "Dracominus", types: ["DRAGON","SPECTRE"],
+        baseStats: {hp: 60, atk: 26, def: 57, spe: 57, spc: 71}, // BST 271
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "draco_rage" }, { level: 18, moveId: "fournaise" }, { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "spores_dodo" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "draco_souffle" }, { level: 48, moveId: "griffe_draconique" }, { level: 54, moveId: "lame_eau" }],
+        evolution: { toId: "spectragon", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 122, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "DRAGON/SPECTRE — offensif spécial (création)",
+        description: "Un dragon spectral aux écailles noires, une lueur violette, enveloppé de brumes fantomatiques, mignon et au regard malicieux, dans une posture prédatrice élégante — Malicieux, fier et terriblement intelligent — 🖋️ Création de Rob",
+        sprite: "/yellow/sprites/dex/dracominus.png", hiddenUntilCaught: true,
+    },
+    spectragon: {
+        id: "spectragon", dexNo: 236, name: "Spectragon", types: ["DRAGON","SPECTRE"],
+        baseStats: {hp: 81, atk: 35, def: 77, spe: 77, spc: 96}, // BST 366
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "draco_rage" }, { level: 18, moveId: "fournaise" }, { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "spores_dodo" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "draco_souffle" }, { level: 48, moveId: "griffe_draconique" }, { level: 54, moveId: "lame_eau" }],
+        evolution: { toId: "thanadrak", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 165, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "DRAGON/SPECTRE — offensif spécial (création)",
+        description: "Un dragon spectral aux écailles noires, une lueur violette, enveloppé de brumes fantomatiques, mignon et au regard malicieux, dans une posture prédatrice élégante — Malicieux, fier et terriblement intelligent — 🖋️ Création de Rob",
+        sprite: "/yellow/sprites/dex/spectragon.png", hiddenUntilCaught: true,
+    },
+    thanadrak: {
+        id: "thanadrak", dexNo: 237, name: "Thanadrak", types: ["DRAGON","SPECTRE"],
+        baseStats: {hp: 105, atk: 45, def: 100, spc: 125, spe: 100}, // BST 475
+        learnset: [{ level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "ultrasons" }, { level: 12, moveId: "draco_rage" }, { level: 18, moveId: "fournaise" }, { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "spores_dodo" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "draco_souffle" }, { level: 48, moveId: "griffe_draconique" }, { level: 54, moveId: "lame_eau" }],
+        catchRate: 45, baseExp: 214, rarity: "RARE", growthRate: "slow", secretTalent: "coup_dur",
+        role: "DRAGON/SPECTRE — offensif spécial (création)",
+        description: "Un dragon spectral massif aux écailles noires fissurées laissant filtrer une lueur violette, enveloppé de brumes fantomatiques, aux ailes déchiquetées et au regard incandescent, dans une posture prédatrice terrifiante — Malicieux, fier et terriblement intelligent — 🖋️ Création de Rob",
+        sprite: "/yellow/sprites/dex/thanadrak.png", hiddenUntilCaught: true,
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -3568,6 +3700,10 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
     custom_cmml4dogn00005n1_bidouzen_s3: "karatame",      // Embi
     custom_cmq5gbo5g0000g6m_guizer_s3: "mobyd",           // Task1
     custom_cmsvywl6u0001xka_possyl_s3: "necrossum",      // Zyran
+    custom_cmuhdss6u0003lcg_chadine_s3: "lesleo", // Kingme
+    custom_cmtifg0cn0001146_stashex_s3: "stashex3", // Tom
+    custom_cmtj184wc00276w9_ewokid_s3: "wooky", // TomGotrails
+    custom_cmti9xukc002h7k2_dracominus_s3: "thanadrak", // Rob
 }
 
 // ESPÈCES RÉSOLVABLES CÔTÉ SERVEUR mais HORS DEX : les fusions de base « stabilisées » (Mottelave, Basaltor,
@@ -3637,7 +3773,9 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
     "joeyrrant", "wallabisan", "kangoudead",             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
     "possyl", "possombre", "necrossum",                   // création canonisée (Zyran) — spectre-possédé NORMAL→NORMAL/SPECTRE, mur physique
-    "charolyx", "bubolyx", "pestilyx"]) {                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
+    "charolyx", "bubolyx", "pestilyx",
+    "chadine", "arlpol", "lesleo", "stashex", "stashex2", "stashex3",            // ✨ SHINY CRAFTÉS canonisés (Kingme, Tom) : pop partout post-Dôme Fusion, cachés du dex tant que non capturés
+    "ewokid", "endorix", "wooky", "dracominus", "spectragon", "thanadrak"]) {   // ✨ SHINY CRAFTÉS canonisés (TomGotrails, Rob) — cf. data/craftedShinies                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 

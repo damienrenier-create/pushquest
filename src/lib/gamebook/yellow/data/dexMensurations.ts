@@ -535,6 +535,23 @@ export const DEX_SIZE: Record<string, DexSize> = {
     // 543 · Cryolithe (SOL/GLACE)
     cryolithe: { size: [3.2, 4.8], weight: [2200, 4800], quip: "Un menhir qui rumine : les glaciers avancent plus vite que lui, et fondent avant qu'il n'ait décidé de bouger." },
 
+    // ══ ✨ SHINY CRAFTÉS canonisés le 15/10/2026 (dex 226-237, cf. data/craftedShinies) ══
+    // 226-228 · Chadine / Arlpol / Lesleo (EAU/COMBAT) — création de Kingme : bébé tout mou → colosse musclé (poids physique dérivé des stats)
+    chadine: { size: [0.45, 0.7], weight: [14, 32], quip: "Un ballon de plage trop gonflé, tout mou, qui flotte de travers — et qui file sous l'eau plus vite que la main qui voulait le caresser." },
+    arlpol: { size: [1.1, 1.6], weight: [60, 130], quip: "Le gabarit d'un lutteur de foire sorti de la rivière : on le pousse, c'est lui qui vous pousse." },
+    lesleo: { size: [2, 2.8], weight: [190, 340], quip: "Un hippopotame debout avec des épaules d'orque : le ponton penche quand il y pose un pied, et personne n'ose le lui faire remarquer." },
+    // 229-231 · Stashex / StasHex / StasHEX (PSY) — création de Tom : fragments flottants → plus le spécimen est parfait, moins il pèse
+    stashex: { size: [0.3, 0.5], weight: [0.4, 1.2], weightMode: "special", quip: "Grosse comme une lanterne et pas plus lourde qu'une poignée de pixels : on la pèse, la balance affiche trois chiffres différents en une seconde." },
+    stashex2: { size: [0.9, 1.3], weight: [4, 10], weightMode: "special", quip: "La taille d'un enfant, le poids d'un chat — et jamais tout à fait au même endroit d'une pesée à l'autre." },
+    stashex3: { size: [2.2, 3.2], weight: [14, 30], weightMode: "special", quip: "Trois mètres de géométrie flottante qui pèsent moins qu'un sac de farine : ce n'est pas un corps, c'est un nuage qui a pris des cours de maths." },
+    // 232-234 · Ewokid / Endorix / Wooky (DRAGON/PLANTE) — création de TomGotrails : ourson hirsute → arbre qui marche (masse = santé)
+    ewokid: { size: [0.6, 0.9], weight: [9, 18], weightMode: "physical", quip: "Un ourson en peluche qui aurait trouvé une boîte à outils : il tient dans un sac à dos, et vide le vôtre en trois minutes." },
+    endorix: { size: [1.2, 1.6], weight: [30, 55], weightMode: "physical", quip: "Le gabarit d'un gros chien debout, le manteau d'un buisson entier : quand il s'assoit sur une souche, on ne sait plus laquelle est la souche." },
+    wooky: { size: [1.9, 2.5], weight: [70, 130], weightMode: "physical", quip: "Un arbre de deux mètres qui marche. Le poids d'un ours, la ruse d'un renard, et un masque qui vous jauge pendant que vous cherchez où est sa tête." },
+    // 235-237 · Dracominus / Spectragon / Thanadrak (DRAGON/SPECTRE) — création de Rob : dragon spectral, plus parfait = plus éthéré
+    dracominus: { size: [0.5, 0.8], weight: [5, 12], weightMode: "special", quip: "La taille d'un chat, le poids d'une brume : il passe la porte sans qu'on ait besoin de l'ouvrir — et ce n'est pas le plus inquiétant." },
+    spectragon: { size: [1.6, 2.3], weight: [40, 85], weightMode: "special", quip: "Deux mètres d'ailes en lambeaux qui ne devraient pas porter grand-chose. Elles portent très bien. Les lois de la physique ont préféré ne pas insister." },
+    thanadrak: { size: [3.4, 4.8], weight: [150, 320], weightMode: "special", quip: "Grand comme une maison hantée, léger comme sa légende : plus un spécimen est parfait, moins il pèse — comme si la mort elle-même s'allégeait en lui." },
 }
 
 /** Fourchette de mensurations d'une espèce, ou null si pas encore définie. */

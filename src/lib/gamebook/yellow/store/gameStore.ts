@@ -35,6 +35,7 @@ import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advanc
 import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
 import { countPopForDexWish, dexWishActive } from "../data/dexWish"
 import { shinyFrenzyChance } from "../data/shinyFrenzy"
+import { craftedShinyUnlocked } from "../data/craftedShinies"
 import { MISSINGNO_ID } from "../data/missingnoSpecies"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
@@ -2251,6 +2252,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     sylvebarbeAwake: getPlayerSave().sylvebarbeAwake, // run 1 : lève les TÉNÈBRES `postSylvebarbe` (Plage) une fois l'endgame ouvert
                     fusionGoldCleared: isTrainerDefeated(FUSION_TIER_MARKER.or), // 🏅 PERK OR : Grotte du Nexus → rares ×2 / communs ×½ (cf. data/fusionLeaguePerks)
                     shinyChance: shinyFrenzyChance(getShinyFrenzy(), Date.now()), // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : 50 % tant qu'elle est active, sinon taux normal
+                    craftedUnlocked: craftedShinyUnlocked((m) => isTrainerDefeated(m)), // ✨ SHINY CRAFTÉS : arrivé au Dôme Fusion (prologue vu ou épreuve gagnée) → 1/256 de rencontre = création canonisée
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                     // CRÉATURES ANCIENNES B2F : débloquées « après la 1re victoire à la Ligue de Fusion ». ⚠️ Lire les marqueurs des
                     //   BOSS (y_fusion_maitre/miroir) était FAUX : resetFusionLeagueProgress() les efface au palier suivant → le gate

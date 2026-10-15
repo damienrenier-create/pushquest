@@ -6,6 +6,7 @@
 
 import { createMonInstance } from "../battle/factory"
 import { grotteGoldWeightMult } from "./fusionLeaguePerks"
+import { rollCraftedShiny } from "./craftedShinies"
 import { getMove } from "./moves"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
@@ -137,6 +138,7 @@ export interface EncounterCtx {
     sylvebarbeAwake?: boolean  // RUN 1 : Sylvebarbe vaincu (endgame ouvert) → lève les entrées `postSylvebarbe` (ex. TÉNÈBRES de la Plage). En run 2/3 (ngplus/run3), le gate est ignoré (pools dédiés).
     fusionGoldCleared?: boolean // 🏅 PERK OR (Ligue de Fusion bouclée en or) : Grotte du Nexus → rares ×2, communs ×½ (cf. data/fusionLeaguePerks)
     shinyChance?: number        // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : probabilité de shiny FORCÉE au pop (0.5). Absent = taux normal ~1/512
+    craftedUnlocked?: boolean   // ✨ SHINY CRAFTÉS : le joueur a atteint le Dôme Fusion → une rencontre sur ~256 devient l'une des 4 créations canonisées (cf. data/craftedShinies)
 }
 
 /** Le gate `postSylvebarbe` est-il levé pour ce contexte ? → OUI en run 2/3 (pools dédiés, TÉNÈBRES assumées) ou une
@@ -1081,11 +1083,23 @@ const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(
  * Tire (ou non) une rencontre sauvage. Renvoie un Daemon prêt au combat, ou null.
  * Le niveau suit le 1er Daemon de l'équipe (rares : +1 à +2).
  */
+/** Tire (ou non) une rencontre sauvage, puis applique la SURCOUCHE « shiny crafté » (data/craftedShinies) : une fois le
+ *  Dôme Fusion atteint, une rencontre sur ~256 est REMPLACÉE par l'une des 4 créations canonisées — au même niveau, le
+ *  stade suivant le niveau. Le pool, ses gates et ses poids ne bougent pas. Hors éligibilité : aucun jet consommé,
+ *  comportement byte-identique à avant. */
 export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
+    const rng = ctx.rng ?? Math.random
+    const base = rollWildEncounterCore(ctx, rng)
+    if (!base || !ctx.craftedUnlocked) return base
+    const pick = rollCraftedShiny(rng)
+    if (!pick || !getSpecies(pick)) return base // lignée pas (encore) canonisée dans ce build → rencontre normale
+    return finalizeSpawn({ speciesId: pick, base: 1 }, base.level, rng, ctx)
+}
+
+function rollWildEncounterCore(ctx: EncounterCtx, rng: () => number): MonInstance | null {
     // Sélection du pool selon le monde : RUN 3 (RUN3_ZONES) > RUN 2 (NGPLUS_ZONES) > run 1 (ZONES par défaut).
     const zone = (ctx.run3 && RUN3_ZONES[ctx.mapId]) || (ctx.ngplus && NGPLUS_ZONES[ctx.mapId]) || ZONES[ctx.mapId]
     if (!zone) return null
-    const rng = ctx.rng ?? Math.random
     if (rng() >= zone.rate) return null
 
     // GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau choisi par la LIGNE, type par le CARRÉ.

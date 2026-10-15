@@ -1583,6 +1583,81 @@ export const DEX_LORE: Record<string, DexLore> = {
         note: "Trois jours d'observation. Il a bougé une oreille. Une seule. J'ai noté l'événement en gras dans mon carnet, avec l'heure exacte. Le reste de la page est resté désespérément vide.",
     },
 
+
+    // ══ ✨ SHINY CRAFTÉS — 4 créations de joueurs canonisées le 15/10/2026 (cf. data/craftedShinies). Fiches écrites
+    //    à partir des MOTS DES CRÉATEURS (direction artistique, caractère, destin du stade final) ; dex 226-237. ══
+    // 226 · Chadine (EAU/COMBAT) — création de Kingme
+    chadine: {
+        ecology: "Nouveau-né des eaux du Nexus, mi-orque mi-hippopotame, encore tout mou : une outre de graisse bleutée qui flotte plus qu'elle ne nage et se cogne aux rochers sans jamais se vexer. Nerveux, il sursaute au moindre remous — puis file, d'une agilité qu'on ne lui soupçonnait pas. Les grands du banc le bousculent ; il encaisse, et il retient.",
+        dicton: "Ce qui est mou aujourd'hui n'a pas encore décidé de ce qu'il deviendra.",
+        note: "Je l'ai cru échoué sur la berge : il dormait, étalé comme une flaque. Quand j'ai approché, il a bondi dans l'eau si vite que mon carnet a pris la vague.",
+    },
+    // 227 · Arlpol (EAU/COMBAT)
+    arlpol: {
+        ecology: "La graisse s'est tassée en muscle. Dressé sur ses pattes arrière, il s'entraîne seul contre le courant des rapides, mâchoire serrée, et cogne les troncs flottants jusqu'à les fendre. Il ne joue plus avec le banc qui le malmenait : il s'en souvient. Toujours nerveux, toujours agile — mais le sursaut est devenu une garde.",
+        dicton: "La rancune, bien nourrie, fait d'excellents biceps.",
+        note: "Il frappe l'eau à chaque aube, exactement cent fois. J'ai compté. Il m'a vu compter, et n'a pas apprécié qu'on le regarde s'entraîner.",
+    },
+    // 228 · Lesleo (EAU/COMBAT)
+    lesleo: {
+        ecology: "Colosse marin debout sur deux jambes, épaules d'orque et masse d'hippopotame, chaque muscle ciselé par des années de revanche. Il remonte les crues à contre-courant sans ralentir et brise d'un crochet ce qui, autrefois, le bousculait. L'enfance ingrate est loin ; il n'en reste que la discipline, et une agilité absurde pour une telle montagne.",
+        dicton: "On ne se venge pas d'un passé : on le dépasse, et il n'ose plus suivre.",
+        note: "Le banc qui le malmenait a traversé sa crique. Il n'a pas levé une nageoire. Il a juste attendu qu'ils comprennent qui il était devenu — ça n'a pas pris longtemps.",
+    },
+    // 229 · Stashex (PSY) — création de Tom
+    stashex: {
+        ecology: "Petite créature abstraite qui flotte à hauteur de genou : des fragments noirs anguleux, striés de lignes vert électrique, qui se désagrègent et se recomposent sans cesse en pixels lumineux. Curieuse de tout, obstinée, un brin chaotique, elle se glisse dans les sacs, les coffres et les poches pour « voir comment c'est fait ».",
+        dicton: "Ce qui se défait sans arrêt n'a jamais peur de casser.",
+        note: "Elle a démonté ma lanterne en cent morceaux pendant la nuit, puis l'a remontée à l'envers. Elle éclaire toujours. Vers le bas.",
+    },
+    // 230 · StasHex (PSY)
+    stashex2: {
+        ecology: "Les fragments ont grossi et s'ordonnent par instants en silhouette presque solide : carapace géométrique, queue de pixels qui crépite. La reconstruction perpétuelle est devenue une arme — ce qu'on brise se reforme avant même d'avoir touché le sol. Son obstination s'est muée en méthode, son chaos en calcul.",
+        dicton: "Chaque fois qu'il se recompose, il garde une pièce de ce qui l'a frappé.",
+        note: "J'ai noté sa forme exacte à midi. À midi et une minute, le dessin était faux. À midi deux, il regardait mon dessin d'un air critique.",
+    },
+    // 231 · StasHEX (PSY)
+    stashex3: {
+        ecology: "Grande entité imposante : un essaim de blocs noirs flottants et de formes géométriques parcourues d'énergie vert électrique, qui ne se recompose plus par réflexe mais par volonté. Elle lit les trajectoires avant qu'elles n'existent et déplace ses fragments là où le coup allait tomber. On dit qu'elle n'est jamais entière au même instant — c'est précisément ce qui la rend insaisissable.",
+        dicton: "Il n'y a rien à viser chez celui qui est partout un peu.",
+        note: "J'ai tendu la main pour toucher un fragment. Il s'est écarté poliment, et un autre m'a tapoté l'épaule depuis derrière. Je n'ai pas insisté.",
+    },
+    // 232 · Ewokid (DRAGON/PLANTE) — création de TomGotrails
+    ewokid: {
+        ecology: "Petit bipède au pelage hirsute, coiffé d'un capuchon de feuilles et de brindilles qu'il tresse lui-même. Ingénieux et rusé, il pose des collets dans les sous-bois, détourne les ruisseaux et sait allumer un feu avec deux cailloux et beaucoup d'insistance. Sous la fourrure couve déjà un souffle de dragon, minuscule, qui roussit le capuchon les soirs d'émotion.",
+        dicton: "Petit, rusé, bien caché : trois raisons de ne pas marcher là où il est passé.",
+        note: "Il a volé ma boussole, l'a étudiée une heure, puis me l'a rendue avec un piège autour. J'ai mis vingt minutes à me libérer. Il applaudissait.",
+    },
+    // 233 · Endorix (DRAGON/PLANTE)
+    endorix: {
+        ecology: "Plus grand, plus large, le pelage épaissi en manteau de feuillage où nichent lichens et insectes. Il porte désormais un masque de bois grossièrement taillé et mène les siens comme un chef de clan : embuscades coordonnées, pièges en cascade, retraite dans la canopée. Le souffle de dragon est devenu réel ; il s'en sert pour durcir ses pointes de bois.",
+        dicton: "La forêt ne combat pas. Elle laisse faire ceux qui la connaissent.",
+        note: "Trois Endorix ont encerclé mon campement, en silence, à la tombée du jour. Ils voulaient seulement voir comment fonctionnait ma théière. Ils l'ont gardée.",
+    },
+    // 234 · Wooky (DRAGON/PLANTE)
+    wooky: {
+        ecology: "Colosse sylvestre au grand masque tribal de bois sculpté, drapé d'un manteau de feuillage si dense qu'on le prend pour un arbre jusqu'à ce qu'il bouge. Ses griffes fendent la pierre, son souffle de dragon fait éclore les graines en une nuit. Rusé jusqu'au bout, il préfère toujours le piège au combat — et quand il combat, c'est que le piège était le combat.",
+        dicton: "Le sage de la forêt ne se cache pas : c'est la forêt qui se cache derrière lui.",
+        note: "J'ai parlé une heure à un arbre avant qu'il ne retire son masque. Il avait écouté toute mon histoire. Il a trouvé la fin un peu faible.",
+    },
+    // 235 · Dracominus (DRAGON/SPECTRE) — création de Rob
+    dracominus: {
+        ecology: "Dragonnet spectral aux écailles noires, baigné d'une lueur violette et enveloppé de brumes qui le suivent comme un manteau trop grand. Mignon au premier regard, malicieux au second : il adore traverser les murs pour souffler une bougie, puis contempler, fier, la panique qu'il a semée. Déjà terriblement intelligent, il apprend un piège en le voyant une fois.",
+        dicton: "La malice est l'intelligence qui n'a pas encore fini de grandir.",
+        note: "Il a traversé ma table, pris une pièce de mon jeu d'échecs et l'a reposée trois coups plus loin. C'était le meilleur coup possible. J'ai perdu la pièce, et la partie.",
+    },
+    // 236 · Spectragon (DRAGON/SPECTRE)
+    spectragon: {
+        ecology: "Les écailles se fissurent et laissent filtrer une lueur violette plus vive ; les ailes se déchirent en lambeaux de brume qui ne l'empêchent nullement de voler. Sa posture de prédateur n'a plus rien de joueur : il choisit ses proies avec une patience de stratège et traverse les parois pour les attendre là où elles se croyaient seules. La fierté a pris le pas sur la malice.",
+        dicton: "Un mur n'arrête que ceux qui croient encore aux murs.",
+        note: "J'ai dormi dans une tour fermée à triple tour. Au matin, il était assis sur mon coffre, et le coffre était ouvert. Rien ne manquait — il voulait juste que je sache.",
+    },
+    // 237 · Thanadrak (DRAGON/SPECTRE)
+    thanadrak: {
+        ecology: "Dragon spectral massif : écailles noires fissurées d'où jaillit une lueur violette, ailes déchiquetées, regard incandescent. Les brumes fantomatiques qui l'entourent seraient, dit-on, tout ce qui reste de ceux qui l'ont défié. Fier, malicieux encore, et d'une intelligence qui lit les intentions avant qu'elles ne soient formulées : il ne chasse pas, il décide, et le reste s'exécute.",
+        dicton: "La mort n'est pas sa fin : c'est son territoire.",
+        note: "Il m'a laissé partir. Je n'ai jamais su si c'était par mépris, par curiosité, ou parce qu'il s'était déjà servi de ce qu'il voulait. Je n'ai pas relu cette page depuis.",
+    },
 }
 
 /** Lore éditorial « premium » d'une espèce, ou null si pas encore rédigé (→ repli sur `description`). */

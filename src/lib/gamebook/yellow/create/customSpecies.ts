@@ -780,6 +780,14 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmsat15v80001wvy_joeyrrant: ["/yellow/sprites/dex/joeyrrant.png", "/yellow/sprites/dex/wallabisan.png", "/yellow/sprites/dex/kangoudead.png"],
     // Possyl → Possombre → Nécrossum (Zyran) : spectre-possédé NORMAL → NORMAL/SPECTRE, mur physique.
     custom_cmsvywl6u0001xka_possyl: ["/yellow/sprites/dex/possyl.png", "/yellow/sprites/dex/possombre.png", "/yellow/sprites/dex/necrossum.png"],
+    // Chadine → Arlpol → Lesleo (Kingme) : shiny crafté, EAU/COMBAT.
+    custom_cmuhdss6u0003lcg_chadine: ["/yellow/sprites/dex/chadine.png", "/yellow/sprites/dex/arlpol.png", "/yellow/sprites/dex/lesleo.png"],
+    // Stashex → StasHex → StasHEX (Tom) : shiny crafté, PSY.
+    custom_cmtifg0cn0001146_stashex: ["/yellow/sprites/dex/stashex.png", "/yellow/sprites/dex/stashex2.png", "/yellow/sprites/dex/stashex3.png"],
+    // Ewokid  → Endorix → Wooky (TomGotrails) : shiny crafté, DRAGON/PLANTE.
+    custom_cmtj184wc00276w9_ewokid: ["/yellow/sprites/dex/ewokid.png", "/yellow/sprites/dex/endorix.png", "/yellow/sprites/dex/wooky.png"],
+    // Dracominus → Spectragon → Thanadrak (Rob) : shiny crafté, DRAGON/SPECTRE.
+    custom_cmti9xukc002h7k2_dracominus: ["/yellow/sprites/dex/dracominus.png", "/yellow/sprites/dex/spectragon.png", "/yellow/sprites/dex/thanadrak.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */
