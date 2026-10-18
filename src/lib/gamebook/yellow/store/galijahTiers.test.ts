@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { galijahTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT } from "./playerStore"
+import { galijahTier, galijahStrengthTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT } from "./playerStore"
 
 // GALIJAH — paliers de repop indexés sur le nb d'ESPÈCES distinctes du Pokédex (150 → 200+).
 describe("galijahTier", () => {
@@ -17,8 +17,12 @@ describe("galijahTier", () => {
         expect(galijahTier(200)).toBe(5) // niv 100 + 100 % EV
     })
     it("plafonné à 5 au-delà de 200", () => {
-        expect(galijahTier(250)).toBe(5)
-        expect(galijahTier(999)).toBe(5)
+        expect(galijahTier(250)).toBe(10) // SANS plafond depuis le 18/10 : manqué à 200+, il revient tous les 10 (cas Jacanon à 227 = palier 7)
+        expect(galijahTier(999)).toBe(84)
+        expect(galijahTier(227)).toBe(7)
+        expect(galijahStrengthTier(227)).toBe(5) // la FORCE, elle, plafonne (niv 100 + 100 % EV)
+        expect(galijahStrengthTier(999)).toBe(5)
+        expect(galijahStrengthTier(149)).toBe(0)
     })
     it("les tables niveau/EV sont cohérentes (6 paliers, croissantes)", () => {
         expect(GALIJAH_TIER_LEVELS).toEqual([70, 80, 90, 100, 100, 100])

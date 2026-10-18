@@ -94,3 +94,33 @@ export const ARTISANE_LINES = [
 export const ARTISANE_LOCKED_LINE = "« Reviens quand tu auras remporté une Ligue — je ne forge que pour les vainqueurs. »"
 export const ARTISANE_NEED_LEAGUE_LINE = "« Tu as déjà pris ta pièce. Va décrocher une nouvelle Ligue, et je rallumerai ma forge. »"
 export const ARTISANE_CAP_LINE = "« J'ai forgé tout ce que je pouvais pour toi. Mes mains ont besoin de repos… définitivement. »"
+
+// ── GUÉRISON de l'état forgé (18/10/2026, cas Jacanon) ──────────────────────────────────────────────────────────
+// L'id d'une pièce était `sig_<craftsUsed>_<6 car. d'uid>` : quand le compteur était perdu (n = 0 à chaque forge) ou
+// que deux Daemons partageaient un préfixe d'uid (deux Ténèbrir « rpl2-1-… »), deux pièces avaient le MÊME id →
+// (dés)équiper par id touchait la mauvaise pièce et rendait au sac l'objet tenu du MAUVAIS Daemon (d'où un porteur
+// de pièce qui gardait son Grelot Coque). Helpers purs, testables, appelés à l'hydratation (idempotents).
+
+/** Dédoublonne les ids : le 1er garde le sien, les suivants deviennent `<id>_2`, `<id>_3`… Ordre conservé. */
+export function dedupeCraftedItemIds(items: readonly CraftedItem[]): CraftedItem[] {
+    const taken = new Set<string>(); const out: CraftedItem[] = []
+    for (const c of items) {
+        let id = c.id, k = 2
+        while (taken.has(id)) id = `${c.id}_${k++}`
+        taken.add(id); out.push(id === c.id ? c : { ...c, id })
+    }
+    return out
+}
+
+/** Id d'une NOUVELLE pièce, garanti unique parmi les pièces existantes (suffixe _2, _3… si besoin). */
+export function uniqueCraftedItemId(base: string, existing: readonly CraftedItem[]): string {
+    const taken = new Set(existing.map((c) => c.id)); let id = base, k = 2
+    while (taken.has(id)) id = `${base}_${k++}`
+    return id
+}
+
+/** Compteur À VIE de forges : jamais inférieur au nombre de pièces réellement forgées dans ce monde (un compteur
+ *  perdu rendait le verrou « rebattre une Ligue » et le plafond à vie inopérants). */
+export function craftsUsedFloor(craftsUsed: number | undefined, items: readonly CraftedItem[]): number {
+    return Math.max(craftsUsed ?? 0, items.length)
+}

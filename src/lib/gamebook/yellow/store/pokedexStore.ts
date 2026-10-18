@@ -5,7 +5,11 @@
 // (seen à la rencontre, caught à la capture/évolution). Sérialisable pour la save.
 
 import { useSyncExternalStore } from "react"
-import { visibleDexSpecies, isDexHidden, getSpecies, isCustomSpeciesId } from "../data/species"
+import { visibleDexSpecies, isDexHidden, getSpecies, isCustomSpeciesId, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
+
+/** Espèces HORS DEX permanent (fusions capturables de la Grotte et leurs stades, Ukognofy) : jamais dans le total…
+ *  sauf une fois CAPTURÉES (cf. pokedexCompletion). */
+const OFF_DEX_IDS: ReadonlySet<string> = new Set(PERMANENT_OFF_DEX_SPECIES.map((sp) => sp.id))
 
 export interface PokedexState {
     seen: string[]    // speciesId
@@ -115,8 +119,14 @@ export function pokedexCompletion(isChampion = false, isRun2 = false, isRun3 = f
     // captures comptées = celles VISIBLES dans le tier courant (une capture run-3 ne gonfle pas le compteur en run 1).
     // `!isCustomSpeciesId` : les espèces custom (Ukognofy + 5 fusions de base) ne sont JAMAIS dans `total`
     //   (visibleDexSpecies n'itère que SPECIES) → les exclure aussi de `caught` évite un pct > 100 % / un « 142/141 ».
-    const caught = dex.caught.filter((id) => { const sp = getSpecies(id); return !!sp && !isCustomSpeciesId(id) && !isDexHidden(sp, dex.caught, isChampion, isRun2, isRun3, dexFullUnlock, dex.seen) }).length
-    return { caught, total, pct: total > 0 ? Math.round((caught / total) * 100) : 0 }
+    const caught = dex.caught.filter((id) => { const sp = getSpecies(id); return !!sp && !isCustomSpeciesId(id) && !OFF_DEX_IDS.has(id) && !isDexHidden(sp, dex.caught, isChampion, isRun2, isRun3, dexFullUnlock, dex.seen) }).length
+    // FUSIONS CAPTURÉES (demande Jacanon, 18/10/2026) : une espèce hors dex permanent (fusion de la Grotte, stade évolué,
+    //   Ukognofy) n'est jamais dans le total tant qu'on ne l'a pas… mais une fois CAPTURÉE elle compte : +1 capturé ET
+    //   +1 au total — exactement comme un Daemon run-2 qui « rentre » dans le total à sa capture. Le % ne peut que monter,
+    //   et rien n'est révélé de ce qui reste à trouver.
+    const offDexCaught = dex.caught.filter((id) => OFF_DEX_IDS.has(id)).length
+    const c = caught + offDexCaught, t = total + offDexCaught
+    return { caught: c, total: t, pct: t > 0 ? Math.round((c / t) * 100) : 0 }
 }
 
 // --- Hooks ---

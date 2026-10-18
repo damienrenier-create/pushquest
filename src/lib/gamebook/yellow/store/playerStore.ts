@@ -21,7 +21,7 @@ import { leagueFusionSpecies } from "../data/leagueFusionDex"
 import { getGauntletTeam } from "./fusionGauntlet" // LEAF (types only) — pas de cycle. Fallback de gel du roster reflet.
 import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
-import { craftLifetimeCap, type CraftStat, type CraftedItem } from "../data/artisane"
+import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { LAMP_ITEM_ID } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
@@ -750,9 +750,21 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionChampionAvatar: "fusionChampionAvatar" in p ? p.fusionChampionAvatar : st.fusionChampionAvatar,
         casinoCapToday: "casinoCapToday" in p ? p.casinoCapToday : st.casinoCapToday,
     }
-    // ARTISANE — re-dérive l'objet signature ÉQUIPÉ sur chaque instance (champ transient, jamais sérialisé).
+    // ARTISANE — GUÉRISON de l'état forgé (18/10/2026, cas Jacanon) puis re-dérivation du champ transient `signatureItem` :
+    //   (1) ids DÉDOUBLONNÉS (collision `sig_0_…` → (dés)équiper touchait la mauvaise pièce) ; (2) compteur à vie jamais
+    //   inférieur au nb de pièces (compteur perdu → verrou « rebattre une Ligue » et plafond inopérants) ; (3) règle
+    //   « 1 seul objet » : un porteur de pièce ÉQUIPÉE qui tient encore un objet classique le rend au sac.
+    //   Idempotent → l'état guéri part au prochain autosave.
     if (st.craftedItems?.length) {
-        st = { ...st, team: st.team.map((m) => monWithSig(m, st.craftedItems!)), pc: st.pc.map((m) => monWithSig(m, st.craftedItems!)) }
+        const items = dedupeCraftedItemIds(st.craftedItems)
+        const equippedUids = new Set(items.filter((c) => c.equipped).map((c) => c.boundUid))
+        const bag = { ...st.items }
+        const strip = (m: MonInstance): MonInstance => {
+            if (!m.heldItem || !equippedUids.has(m.uid)) return m
+            bag[m.heldItem] = (bag[m.heldItem] ?? 0) + 1
+            return { ...m, heldItem: undefined }
+        }
+        st = { ...st, craftedItems: items, craftsUsed: craftsUsedFloor(st.craftsUsed, items), items: bag, team: st.team.map((m) => monWithSig(strip(m), items)), pc: st.pc.map((m) => monWithSig(strip(m), items)) }
     }
     emit()
 }
@@ -1920,10 +1932,17 @@ export function isGalijahArmed(): boolean {
 //   defeatedTrainers (per-monde → un run neuf redonne une chance au palier courant, l'espèce restant globale).
 export const GALIJAH_TIER_LEVELS = [70, 80, 90, 100, 100, 100] as const // niveau de spawn par palier 0..5
 export const GALIJAH_TIER_EVPCT = [0, 0, 0, 0, 0.5, 1] as const         // fraction d'EV_TOTAL_CAP distribuée par palier
-/** Palier de Galijah selon le nb d'ESPÈCES distinctes au Pokédex (−1 si <150 ; 0 à 150, +1 tous les 10, plafonné 5 à 200+). */
+/** Palier de Galijah selon le nb d'ESPÈCES distinctes au Pokédex : −1 si <150 ; 0 à 150, puis +1 tous les 10 — SANS
+ *  plafond. Manqué à un palier, il revient au suivant (227 espèces = palier 7, 230 = palier 8…). Avant le 18/10/2026
+ *  l'index était plafonné à 5 : un Galijah manqué à 200+ ne revenait PLUS JAMAIS dans ce monde (cas Jacanon : manqué
+ *  aux paliers 3, 4 et 5, puis plus rien à 227 espèces). La FORCE, elle, plafonne au palier 5 → galijahStrengthTier. */
 export function galijahTier(caughtCount: number): number {
     if (caughtCount < GALIJAH_CAPTURE_THRESHOLD) return -1
-    return Math.min(5, Math.floor((caughtCount - GALIJAH_CAPTURE_THRESHOLD) / 10))
+    return Math.floor((caughtCount - GALIJAH_CAPTURE_THRESHOLD) / 10)
+}
+/** Index de FORCE (niveau / EV) dans GALIJAH_TIER_LEVELS / GALIJAH_TIER_EVPCT (6 entrées) : palier plafonné à 5 (200+). */
+export function galijahStrengthTier(caughtCount: number): number {
+    return Math.max(0, Math.min(GALIJAH_TIER_LEVELS.length - 1, galijahTier(caughtCount)))
 }
 const galijahTierMarker = (tier: number) => `galijah_appeared_t${tier}`
 /** GALIJAH — peut-il APPARAÎTRE MAINTENANT ? Pas capturé, ≥150 espèces, ET pas déjà apparu AU PALIER COURANT
@@ -2167,7 +2186,7 @@ export function addCraftedItem(input: { stat: CraftStat; pct: number; precision:
     if (craftCapReached()) return null
     const n = getCraftsUsed()
     const item: CraftedItem = {
-        id: `sig_${n}_${input.boundUid.slice(0, 6)}`,
+        id: uniqueCraftedItemId(`sig_${n}_${input.boundUid.slice(0, 6)}`, st.craftedItems ?? []), // UNIQUE (cf. data/artisane : collisions historiques)
         name: input.name, stat: input.stat, pct: input.pct, precision: input.precision,
         boundUid: input.boundUid, boundName: input.boundName, boundSpeciesId: input.boundSpeciesId, equipped: true,
     }
