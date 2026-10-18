@@ -10,6 +10,7 @@ import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
 import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
+import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
 import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
@@ -258,6 +259,8 @@ interface PlayerState {
     shinyWish?: ShinyWishState
     /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » (cf. data/dexWish). Absent = vœu inactif. */
     dexWish?: DexWishState
+    /** 🐈‍⬛ GALIJAH — régime QUOTIDIEN (≥200 espèces) : tirage du jour (numéro de pop 1-50), pops comptés, apparu ? (cf. data/galijahDaily). */
+    galijahDaily?: GalijahDailyState
     /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) — fenêtre + captures restantes (cf. data/shinyFrenzy). Absent = inactif. */
     shinyFrenzy?: ShinyFrenzyState
     ballLockRemaining: number
@@ -719,6 +722,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         evResetCharges: p.evResetCharges ?? st.evResetCharges,
         shinyWish: p.shinyWish ?? st.shinyWish,
         dexWish: p.dexWish ?? st.dexWish,
+        galijahDaily: p.galijahDaily ?? st.galijahDaily,
         shinyFrenzy: p.shinyFrenzy ?? st.shinyFrenzy,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
@@ -1688,6 +1692,9 @@ export function recordShinyFrenzyCapture(): { left: number; done: boolean } | nu
 
 // ═══════ VŒU « JE CHOISIS LE NUMÉRO » (Guillaume) — accesseurs ; la règle vit dans data/dexWish ═══════
 export function getDexWish(): DexWishState | undefined { return st.dexWish }
+/** 🐈‍⬛ GALIJAH quotidien (≥200 espèces) — état du jour (tirage, pops, apparu). */
+export function getGalijahDaily(): GalijahDailyState | undefined { return st.galijahDaily }
+export function setGalijahDaily(next: GalijahDailyState | undefined) { st = { ...st, galijahDaily: next }; emit() }
 export function setDexWish(next: DexWishState | undefined): void {
     // ⚠️ On garde l'état tant qu'une ANNONCE est en attente, même à 0 charge : la 7e annonce vide les charges,
     //   et la jeter ici perdrait le Daemon promis pour ce jour-là.
@@ -1950,6 +1957,10 @@ const galijahTierMarker = (tier: number) => `galijah_appeared_t${tier}`
 export function galijahCanAppear(): boolean {
     const dex = getPokedex().caught
     if (dex.includes("galijah") || dex.length < GALIJAH_CAPTURE_THRESHOLD) return false
+    // ≥200 ESPÈCES (Sartay 18/10/2026) : RÉGIME QUOTIDIEN — une apparition max par jour, planquée derrière un numéro de
+    //   pop de l'île (1-50, cf. data/galijahDaily) → « peut apparaître » = pas encore apparu aujourd'hui. Les paliers
+    //   (150→199) ne jouent plus.
+    if (galijahDailyRegime(dex)) return galijahDailyAvailable(st.galijahDaily, isoDay())
     const tier = galijahTier(dex.length)
     return tier >= 0 && !st.defeatedTrainers.includes(galijahTierMarker(tier))
 }

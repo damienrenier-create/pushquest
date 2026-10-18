@@ -35,13 +35,14 @@ import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advanc
 import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
 import { countPopForDexWish, dexWishActive } from "../data/dexWish"
 import { shinyFrenzyChance } from "../data/shinyFrenzy"
+import { galijahDailyRegime, galijahDailyPop } from "../data/galijahDaily"
 import { craftedShinyUnlocked } from "../data/craftedShinies"
 import { MISSINGNO_ID } from "../data/missingnoSpecies"
 import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, galijahStrengthTier, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree, getShinyFrenzy } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, galijahStrengthTier, getGalijahDaily, setGalijahDaily, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree, getShinyFrenzy } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getFusionChampionAvatar } from "./playerStore"
 import { avatarFilter } from "../data/avatars"
@@ -2183,7 +2184,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 setDailyMarker("ile_enc_", `ile_enc_${day}`)
                 const dex = getPokedex().caught
                 let spawn: MonInstance
-                if (!firstOfDay && galijahCanAppear() && Math.random() < 0.25) {
+                // ≥200 ESPÈCES (Sartay 18/10/2026) : RÉGIME QUOTIDIEN — chaque jour, Galijah est planqué derrière un numéro de pop
+                //   de l'île tiré entre 1 et 50 (persisté : pas de re-tirage au rechargement) ; une apparition max par jour,
+                //   jusqu'à sa capture. En dessous : paliers 150→199, jamais au 1er combat du jour, puis 25 %/combat.
+                let galijahNow = false
+                if (galijahDailyRegime(dex)) {
+                    const r = galijahDailyPop(getGalijahDaily(), day)
+                    setGalijahDaily(r.state); persistYellowSave() // le compte du jour part en save à chaque pop
+                    galijahNow = r.spawn
+                } else {
+                    galijahNow = !firstOfDay && galijahCanAppear() && Math.random() < 0.25
+                }
+                if (galijahNow) {
                     // PALIER de repop selon le nb d'espèces : niveau croissant (70→100) puis EV (190=50 %, 200=100 %).
                     const gTier = galijahStrengthTier(dex.length) // index de FORCE plafonné (le palier de repop, lui, est sans plafond)
                     // Capture ALIGNÉE sur les autres légendaires (Sartay 10/09) : captureMult 0.8 comme
@@ -2193,7 +2205,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     spawn = buildForcedSpawn("galijah", GALIJAH_TIER_LEVELS[gTier], true); Object.assign(spawn, { captureMult: 0.8, captureLevel: 50 })
                     const gEvPct = GALIJAH_TIER_EVPCT[gTier]
                     if (gEvPct > 0) { const gSp = getSpecies("galijah"); if (gSp) spawn.ev = distributeEvs(gSp.baseStats, Math.round(EV_TOTAL_CAP * gEvPct)) } // paliers 190/200 : Galijah PRÉ-ENTRAÎNÉ
-                    markGalijahAppeared(); persistYellowSave() // apparu → re-gate jusqu'au palier suivant (+10 espèces)
+                    if (!galijahDailyRegime(dex)) markGalijahAppeared() // paliers (<200) : re-gate jusqu'au palier suivant ; en régime quotidien l'état du jour suffit
+                    persistYellowSave()
                 } else {
                     const pool = ["plumiot", "ruffiant"]
                     if (!dex.includes("mimimoy")) pool.push("mimimoy") // Mimimoy seulement s'il n'est pas encore capturé
@@ -3147,7 +3160,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         //   rematch 1×/jour. (Le seuil 150 ne concerne QUE le pop de Galijah.)
         if (npc.id === SURFER_NPC_ID) {
             // GALIJAH croisé mais pas capturé → le Surfeur s'émerveille et renvoie vers L'ARCHIVISTE (greffé à tout dialogue).
-            const gHint = (getPokedex().seen.includes("galijah") && !getPokedex().caught.includes("galijah")) ? [SURFER_GALIJAH_HINT] : []
+            //   « croisé » = marqueur d'apparition (paliers) ou apparition du jour (régime quotidien) — Galijah est hiddenUntilCaught,
+            //   donc jamais marqué « vu » : la condition historique sur `seen` ne se déclenchait jamais.
+            const gMet = getPlayerSave().defeatedTrainers.some((m) => m.startsWith("galijah_appeared")) || !!getGalijahDaily()?.appeared || getPokedex().seen.includes("galijah")
+            const gHint = (gMet && !getPokedex().caught.includes("galijah")) ? [SURFER_GALIJAH_HINT] : []
             if (hasSurfCt()) {
                 if (!surferRematchAvailableToday(new Date().toISOString().slice(0, 10))) {
                     set({ dialogue: { npcId: npc.id, npcName: SURFER_NAME, lines: [...SURFER_DONE_TODAY_LINES, ...gHint], lineIndex: 0 } })

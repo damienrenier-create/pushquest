@@ -275,6 +275,8 @@ export interface YellowSave {
     shinyWish?: { charges: number; day: string; target: number; pops: number }
     /** VŒU DU GÉNIE (Guillaume) — « je choisis le numéro » : journées restantes + annonce du jour. Cf. data/dexWish. */
     dexWish?: { charges: number; day: string; dex: number; speciesId: string; level: number; pops: number }
+    /** 🐈‍⬛ GALIJAH quotidien (≥200 espèces) : jour, numéro de pop cible (1-50), pops du jour, apparu. Cf. data/galijahDaily. */
+    galijahDaily?: { day: string; target: number; pops: number; appeared: boolean }
     /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : fin de fenêtre (epoch ms) + captures restantes. Cf. data/shinyFrenzy. */
     shinyFrenzy?: { until: number; left: number }
     ballLockRemaining: number
@@ -922,6 +924,13 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             return charges > 0 || speciesId
                 ? { charges, day: typeof w.day === "string" ? w.day : "", dex: n(w.dex), speciesId, level: n(w.level), pops: n(w.pops) }
                 : undefined
+        })(),
+        galijahDaily: (() => {
+            const g = (o as { galijahDaily?: unknown }).galijahDaily as Record<string, unknown> | undefined
+            if (!g || typeof g !== "object" || typeof g.day !== "string") return undefined
+            const target = Math.floor(Number(g.target)), pops = Math.floor(Number(g.pops) || 0)
+            if (!Number.isFinite(target) || target < 1) return undefined // tirage invalide → on re-tirera (jamais de Galijah « gratuit » au pop 0)
+            return { day: g.day.slice(0, 10), target: Math.min(50, target), pops: Math.max(0, pops), appeared: g.appeared === true }
         })(),
         shinyFrenzy: (() => {
             const w = (o as { shinyFrenzy?: unknown }).shinyFrenzy as Record<string, unknown> | undefined
