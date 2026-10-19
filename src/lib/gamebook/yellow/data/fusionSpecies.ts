@@ -87,6 +87,44 @@ const CLANS: readonly { key: string; label: string; ids: ReadonlySet<string> }[]
 const MIMIMOY_ID = "mimimoy" // parent Mimimoy → TOUTES ses stats à 0,7 (révèle son potentiel aux croisements)
 /** Clé de paire indépendante de l'ordre. */
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+/** NOMS SUR MESURE des paires de CLAN (Sartay 19/10/2026 : « faut les renommer sur mesure évidemment » — le mot-valise
+ *  automatique donnait « Aquap-panthe » à trois paires). Un nom par paire, quel que soit l'ordre des parents. Pyrovolt,
+ *  Gékaucké et Voltombre reprennent le nom que la Ligue leur donnait déjà (équipe ultime du Dieu Spaghetti ; équipe platine de l'ACE).
+ *  Ce ne sont PAS des inédites : la clé du secret reste `clan:<clan>` (une seule fête par clan), seul le nom change. */
+const CLAN_PAIR_NAMES: Record<string, string> = {
+    // Panthères (15)
+    [pairKey("florapanthe", "panthegel")]: "Taïganthe",
+    [pairKey("florapanthe", "pyropanthe")]: "Flamboyanthe",
+    [pairKey("florapanthe", "ombrapanthe")]: "Chrysanthère",
+    [pairKey("florapanthe", "aquapanthe")]: "Nénufauve",
+    [pairKey("florapanthe", "voltapanthe")]: "Éclaurier",
+    [pairKey("panthegel", "pyropanthe")]: "Glaçardent",
+    [pairKey("panthegel", "ombrapanthe")]: "Frissonce",
+    [pairKey("panthegel", "aquapanthe")]: "Banquipard",
+    [pairKey("panthegel", "voltapanthe")]: "Boréalynx",
+    [pairKey("pyropanthe", "ombrapanthe")]: "Félifollet",
+    [pairKey("pyropanthe", "aquapanthe")]: "Ébullion",
+    [pairKey("pyropanthe", "voltapanthe")]: "Pyrovolt",
+    [pairKey("ombrapanthe", "aquapanthe")]: "Achéronce",
+    [pairKey("ombrapanthe", "voltapanthe")]: "Voltombre",
+    [pairKey("aquapanthe", "voltapanthe")]: "Tempêtigre",
+    // Geckos (10)
+    [pairKey("gekroc", "gekraise")]: "Géksilex",
+    [pairKey("gekroc", "gekosmic")]: "Géksynapse",
+    [pairKey("gekroc", "geckebre")]: "Géfulgurite",
+    [pairKey("gekroc", "geaucke")]: "Geauclair",
+    [pairKey("gekraise", "gekosmic")]: "Gékmétéore",
+    [pairKey("gekraise", "geckebre")]: "Géktison",
+    [pairKey("gekraise", "geaucke")]: "Gékaucké",
+    [pairKey("gekosmic", "geckebre")]: "Géclipse",
+    [pairKey("gekosmic", "geaucke")]: "Geaumirage",
+    [pairKey("geckebre", "geaucke")]: "Geaugouffre",
+}
+/** Nom sur mesure d'une paire de clan (ordre indifférent), ou null hors clan. */
+export function clanPairName(aId?: string, bId?: string): string | null {
+    if (!aId || !bId) return null
+    return CLAN_PAIR_NAMES[pairKey(aId, bId)] ?? null
+}
 /** Paires de SYNERGIE précises (boost only, nom auto conservé) → label d'annonce de découverte. */
 const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("merorem", "tonytony")]: "la synergie des piliers du casino",
@@ -378,7 +416,7 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const moveTypes = { ...transmutedMoveTypes(a, b, natural, special?.forcedType, !!special?.transmuteAll), ...recoloredMoveTypes(natural, special) }
     const moves = Object.keys(moveTypes).length > 0 ? natural : withGuaranteedStab(natural, types, special?.stabMove)
     return {
-        name: special?.name ?? fusionName(a, b),
+        name: special?.name ?? clanPairName(a.speciesId, b.speciesId) ?? fusionName(a, b), // inédite > paire de clan nommée > mot-valise
         types,
         stats,
         level: Math.max(a.level, b.level),
