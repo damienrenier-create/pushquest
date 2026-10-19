@@ -7,6 +7,24 @@ import { dailyCarousels, specialCarousels, DailyCarouselSlide, SpecialCarousel }
 
 const LS_KEY_PREFIX = "pushquest_daily_seen_";
 
+/** Page d'inscription du lien « amis simplifié » (mode fun) — même code que la page register. */
+function isFunSignupPage(): boolean {
+    if (typeof window === "undefined") return false;
+    return window.location.pathname.startsWith("/register") && new URLSearchParams(window.location.search).get("invite") === "nexus-fun-2026";
+}
+
+/** Un carrousel reste-t-il à montrer (spécial pas encore vu, ou carrousel du jour en période) ? Lecture seule. */
+function hasPendingCarousel(): boolean {
+    try {
+        if (specialCarousels.some((sp) => localStorage.getItem(`pushquest_special_seen_${sp.specialEventId}`) !== "true")) return true;
+        const now = new Date();
+        if (now.getFullYear() === 2026 && now.getMonth() === 4 && now.getDate() >= 1 && now.getDate() <= 10) {
+            return !!dailyCarousels.find((c) => c.day === now.getDate()) && localStorage.getItem(`${LS_KEY_PREFIX}${now.getDate()}_202604`) !== "true";
+        }
+    } catch { /* stockage indisponible : rien à montrer */ }
+    return false;
+}
+
 export default function DailyDiscoveryCarousel() {
     const router = useRouter();
     const [activeCarousel, setActiveCarousel] = useState<typeof dailyCarousels[0] | SpecialCarousel | null>(null);
@@ -16,42 +34,55 @@ export default function DailyDiscoveryCarousel() {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        // First check special carousels
-        for (const special of specialCarousels) {
-            const lsKey = `pushquest_special_seen_${special.specialEventId}`;
-            if (localStorage.getItem(lsKey) !== "true") {
-                setActiveCarousel(special);
-                setIsSpecial(true);
-                setIsVisible(true);
-                return; // Stop checking further, show special priority
-            }
-        }
-
-        // Logic to determine which carousel to show based on date
-        // Target: May 1st to May 10th, 2026
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth(); // 0-indexed, May is 4
-        const day = now.getDate();
-
-        // --- FOR TESTING PURPOSES ONLY ---
-        // Uncomment to force a specific day during development
-        // const forceDay = 1; 
-        // if (forceDay) { ... }
-        // ---------------------------------
-
-        if (year === 2026 && month === 4 && day >= 1 && day <= 10) {
-            const carousel = dailyCarousels.find(c => c.day === day);
-            if (carousel) {
-                const lsKey = `${LS_KEY_PREFIX}${day}_202604`;
-                const seen = localStorage.getItem(lsKey);
-
-                if (seen !== "true") {
-                    setActiveCarousel(carousel);
+        // JOUEURS FUN (lien d'inscription nexus-fun-2026, demande Sartay 19/10/2026) : ces carrousels parlent de PushQuest
+        //   (XP, badges, reps) — ça ne les concerne pas. Rien sur la page d'inscription de ce lien, rien pour un compte fun.
+        //   Le profil n'est lu QUE si un carrousel est en attente (pas d'appel réseau à chaque page pour les autres).
+        if (isFunSignupPage()) return;
+        let cancelled = false;
+        const pick = () => {
+            // First check special carousels
+            for (const special of specialCarousels) {
+                const lsKey = `pushquest_special_seen_${special.specialEventId}`;
+                if (localStorage.getItem(lsKey) !== "true") {
+                    setActiveCarousel(special);
+                    setIsSpecial(true);
                     setIsVisible(true);
+                    return; // Stop checking further, show special priority
                 }
             }
-        }
+
+            // Logic to determine which carousel to show based on date
+            // Target: May 1st to May 10th, 2026
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-indexed, May is 4
+            const day = now.getDate();
+
+            // --- FOR TESTING PURPOSES ONLY ---
+            // Uncomment to force a specific day during development
+            // const forceDay = 1; 
+            // if (forceDay) { ... }
+            // ---------------------------------
+
+            if (year === 2026 && month === 4 && day >= 1 && day <= 10) {
+                const carousel = dailyCarousels.find(c => c.day === day);
+                if (carousel) {
+                    const lsKey = `${LS_KEY_PREFIX}${day}_202604`;
+                    const seen = localStorage.getItem(lsKey);
+
+                    if (seen !== "true") {
+                        setActiveCarousel(carousel);
+                        setIsVisible(true);
+                    }
+                }
+            }
+        };
+        if (!hasPendingCarousel()) return;
+        fetch("/api/user/me")
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+            .then((me) => { if (!cancelled && me?.gameMode !== "fun") pick(); });
+        return () => { cancelled = true; };
     }, []);
 
     if (!isVisible || !activeCarousel) return null;
