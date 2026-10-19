@@ -96,6 +96,8 @@ import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/ga
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
+import { FrontierTabs, FrontierRulesView, FrontierStatsView, type FrontierTab } from "./FrontierMasters"
+import { TOWER_RULES, FACTORY_RULES } from "@/lib/gamebook/yellow/frontier/frontierBoard"
 import EspionPanel from "./EspionPanel"
 import TrocPanel from "./TrocPanel"
 import MasterCtChoice from "./MasterCtChoice"
@@ -418,6 +420,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [domeRegisterOpen, setDomeRegisterOpen] = useState(false) // le SÉLECTEUR de tier ne s'affiche qu'après « S'inscrire » (via le mage), pas tout seul
     const [danMode, setDanMode] = useState(false) // sélecteur/carrousel courant : true = tiers DAN (Gardien des Dan), false = tiers Dôme (Maître du Dôme)
     const [domeTab, setDomeTab] = useState<"inscrire" | "regles" | "stats">("inscrire") // onglet actif du carrousel du mage
+    const [frontierTab, setFrontierTab] = useState<FrontierTab>("jouer") // TOUR / USINE : onglets Jouer / Règles / Stats (comme le Maître du Dôme)
     // Quitter la map du Dôme (marcher pour sortir) réinitialise l'écran de mise + le sélecteur → on repasse par le mage au retour.
     useEffect(() => {
         if (mapPlayer.mapId !== "yellow_combat_dome" && mapPlayer.mapId !== "yellow_dome_dan") { if (domeSetup) setDomeSetup(null); if (domeRegisterOpen) setDomeRegisterOpen(false); setDanMode(false); domeLaunchingRef.current = false }
@@ -506,6 +509,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // PALIER PLATINE : charge le couloir (ACE + salles des champions + Maître en titre) à l'entrée de la salle
     //   du trône, et l'oublie en sortant. Sans lui, la salle n'a aucun adversaire à présenter.
     const platineCorridor = usePlatineCorridor(mapPlayer.mapId) // effet (charge/oublie le couloir) ET état affiché
+    useEffect(() => { setFrontierTab("jouer") }, [mapPlayer.mapId]) // TOUR / USINE : on revient sur « Jouer » à chaque entrée dans une salle
     // SACRE EN CARAFE : si le réseau a lâché pile au moment de graver un sacre platine, on le rejoue ici, une
     //   fois par chargement. Silencieux : c'est du rattrapage, pas un événement de jeu.
     useEffect(() => { void flushPendingPlatineClaim() }, [])
@@ -2097,7 +2101,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (ended && !frontierReportedRef.current) {
                 frontierReportedRef.current = true
                 // persiste JC + record (serveur, neutre si table absente) → le profil frais met à jour le statut CHAMPION
-                postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }).then((p) => { if (p) setFrontierProf(p) })
+                postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc, levelRule: ended.levelRule, team: getActiveWorld() === "replay" ? undefined : freezeChampionTeam(ended.mode === "FACTORY" ? (getDraftedTeam() ?? []) : getPlayer().team) }).then((p) => { if (p) setFrontierProf(p) }) // STATS PARTAGÉES : le serveur grave l'équipe si c'est un nouveau record
                 setToast(`🏯 Série terminée — ${ended.streak} victoire(s) · ${ended.jc} JC enregistrés`)
             }
             endRun()
@@ -3460,8 +3464,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
-                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #e8893a", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 300 }}>
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #e8893a", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 360 }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>🏯 TOUR DE COMBAT</div>
+                    <FrontierTabs tab={frontierTab} onTab={setFrontierTab} accent="#e8893a" />
                     {/* CHAMPION de la Tour (série ≥ 46 = palier DAN_4, « équivalent Dôme ») : choix d'une CT du Maître, une seule fois. */}
                     {frontierProf && frontierProf.towerBest >= 46 && !isMasterCtClaimed("tour") && (
                         <div style={{ marginBottom: 8, padding: 8, background: "rgba(255,215,74,.12)", border: "1px solid #ffd54a", borderRadius: 8 }}>
@@ -3469,6 +3474,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <MasterCtChoice facility="tour" onClaimed={(name) => setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DE LA TOUR. 🏆`)} />
                         </div>
                     )}
+                    {frontierTab === "jouer" && (<>
                     <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Série d&apos;endurance avec ton équipe : tiens le plus loin possible. 👑 Boss tous les 7 — et tu n&apos;es soigné QUE tous les 7 combats. Choisis ton mode :</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
@@ -3478,16 +3484,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </button>
                         ))}
                     </div>
+                    </>)}
+                    {frontierTab === "regles" && <FrontierRulesView lines={TOWER_RULES} />}
+                    {frontierTab === "stats" && <FrontierStatsView facility="tour" best={frontierProf?.towerBest ?? 0} accent="#e8893a" />}
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                 </div>
             )}
             {/* ZONE DE COMBAT — USINE : draft de location. N'OUVRE QUE via le Maître de l'Usine (usineMenuOpen). */}
             {!battle && !run && usineMenuOpen && mapPlayer.mapId === "yellow_combat_usine" && !dialogue && (
-                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #6aa0ec", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #6aa0ec", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 380 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                         <div style={{ fontWeight: 800 }}>🏭 USINE DE COMBAT</div>
                         <button onClick={() => { setUsineDraft(null); closeUsineMenu() }} style={{ background: "#332e4a", color: "#fff", border: "none", borderRadius: 7, padding: "2px 8px", cursor: "pointer", fontWeight: 800, fontSize: 12 }}>✕</button>
                     </div>
+                    {!usineDraft && <FrontierTabs tab={frontierTab} onTab={setFrontierTab} accent="#6aa0ec" />}
                     {/* CHAMPION de l'Usine (série ≥ 46 = palier DAN_4, « équivalent Dôme ») : choix d'une CT du Maître, une seule fois. */}
                     {frontierProf && frontierProf.factoryBest >= 46 && !isMasterCtClaimed("usine") && (
                         <div style={{ marginBottom: 8, padding: 8, background: "rgba(255,215,74,.12)", border: "1px solid #ffd54a", borderRadius: 8 }}>
@@ -3495,7 +3505,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <MasterCtChoice facility="usine" onClaimed={(name) => setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DE L'USINE. 🏆`)} />
                         </div>
                     )}
-                    {!usineDraft ? (
+                    {!usineDraft && frontierTab === "regles" ? <FrontierRulesView lines={FACTORY_RULES} /> : !usineDraft && frontierTab === "stats" ? <FrontierStatsView facility="usine" best={frontierProf?.factoryBest ?? 0} accent="#6aa0ec" /> : !usineDraft ? (
                         <>
                             <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — tu joueras une équipe de LOCATION :</div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
@@ -4103,7 +4113,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button onClick={() => { setTourChoice(false); setUsineCt(null) }} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Continuer</button>
                         <button onClick={() => {
                             const ended = quitRun()
-                            if (ended && !frontierReportedRef.current) { frontierReportedRef.current = true; postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }) }
+                            if (ended && !frontierReportedRef.current) { frontierReportedRef.current = true; postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc, levelRule: ended.levelRule, team: getActiveWorld() === "replay" ? undefined : freezeChampionTeam(ended.mode === "FACTORY" ? (getDraftedTeam() ?? []) : getPlayer().team) }).then((p) => { if (p) setFrontierProf(p) }) }
                             setToast(`🏁 Série quittée — ${ended?.streak ?? 0} victoire(s) · ${ended?.jc ?? 0} JC gardés`)
                             setTourChoice(false); setUsineCt(null); endRun()
                         }} style={{ background: "#555", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Quitter (garder les JC)</button>

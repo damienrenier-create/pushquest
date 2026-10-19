@@ -580,6 +580,8 @@ model FrontierProfile {
   towerBest   Int      @default(0)    // meilleure série Tour
   factoryBest Int      @default(0)    // meilleure série Usine
   domeBest    Int      @default(0)    // meilleur résultat Dôme (rounds gagnés)
+  towerTeam   String?                 // STATS PARTAGÉES (19/10/2026) : équipe gravée avec le record de Tour, JSON {streak, levelRule, team, at}
+  factoryTeam String?                 // idem pour l'Usine (l'équipe de LOCATION du record)
   symbols     Json     @default("[]") // symboles de prestige obtenus (cosmétique)
   replaysUsed Int      @default(0)    // nb de REJEUX (« run bis ») déjà lancés → coût JC croissant du prochain (global, cf. data/replayCost)
   spyCount    Int      @default(0)    // ESPION (Usine) : nb d'espionnages payants effectués → coût JC croissant, PERSO, jamais reset

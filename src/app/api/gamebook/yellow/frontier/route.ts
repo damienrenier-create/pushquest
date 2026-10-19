@@ -14,6 +14,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
+import { buildFrontierBoard, sanitizeFrontierTeam, sanitizeLevelRule } from "@/lib/gamebook/yellow/frontier/frontierBoard"
 
 export const dynamic = "force-dynamic"
 
@@ -54,9 +55,37 @@ function pickProfile(p: any) {
 //   les colonnes lues → immunise la lecture du JC contre tout futur ajout de schéma. NE JAMAIS y mettre une colonne récente.
 const PROFILE_SELECT = { jc: true, towerBest: true, factoryBest: true, domeBest: true, symbols: true, replaysUsed: true } as const
 
-export async function GET() {
+// STATS PARTAGÉES Tour / Usine (onglet 📊 Stats, demande Sartay 19/10/2026) : le meilleur record de chaque joueur, avec
+//   l'équipe gravée au moment de ce record. Comptes système écartés. Neutre (listes vides) si la table manque.
+async function frontierBoard(meId: string) {
+    try {
+        const fp = (prisma as any).frontierProfile
+        const rows = (await fp.findMany({
+            where: { OR: [{ towerBest: { gt: 0 } }, { factoryBest: { gt: 0 } }] },
+            select: { userId: true, towerBest: true, factoryBest: true },
+        })) as { userId: string; towerBest: number; factoryBest: number }[]
+        const ids = rows.map((r) => r.userId)
+        const teams = new Map<string, { towerTeam: string | null; factoryTeam: string | null }>()
+        try {
+            const t = (await fp.findMany({ where: { userId: { in: ids } }, select: { userId: true, towerTeam: true, factoryTeam: true } })) as { userId: string; towerTeam: string | null; factoryTeam: string | null }[]
+            for (const x of t) teams.set(x.userId, x)
+        } catch { /* colonnes pas encore créées (avant db:push) → classement sans équipes */ }
+        const users = await prisma.user.findMany({ where: { id: { in: ids }, isSystem: false }, select: { id: true, nickname: true } })
+        const nick = new Map(users.map((u) => [u.id, u.nickname]))
+        const real = rows.filter((r) => nick.has(r.userId))
+        return {
+            tower: buildFrontierBoard(real.map((r) => ({ userId: r.userId, best: r.towerBest, engraved: teams.get(r.userId)?.towerTeam })), (id) => nick.get(id), meId),
+            factory: buildFrontierBoard(real.map((r) => ({ userId: r.userId, best: r.factoryBest, engraved: teams.get(r.userId)?.factoryTeam })), (id) => nick.get(id), meId),
+        }
+    } catch {
+        return { tower: [], factory: [] }
+    }
+}
+
+export async function GET(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
+    if (req.nextUrl.searchParams.get("board")) return NextResponse.json({ ok: true, ...(await frontierBoard(auth.userId)) })
     try {
         const fp = (prisma as any).frontierProfile
         const p = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
@@ -129,6 +158,17 @@ export async function POST(req: NextRequest) {
                 update: data,
                 select: PROFILE_SELECT,
             })
+            // GRAVURE (stats partagées) : un NOUVEAU record de Tour / d'Usine grave l'équipe qui l'a établi. Séparée et
+            //   best-effort : avant le db:push des colonnes, l'update échoue sans toucher au record déjà enregistré.
+            const teamField = body.mode === "TOWER" ? "towerTeam" : body.mode === "FACTORY" ? "factoryTeam" : null
+            if (teamField && streak > 0 && streak > cur[bestField]) {
+                const team = sanitizeFrontierTeam(body.team)
+                if (team.length) {
+                    try {
+                        await fp.update({ where: { userId: auth.userId }, data: { [teamField]: JSON.stringify({ streak, levelRule: sanitizeLevelRule(body.levelRule), team, at: new Date().toISOString() }) } })
+                    } catch { /* colonne absente → record gardé, équipe non gravée */ }
+                }
+            }
             return NextResponse.json({ ok: true, profile: pickProfile(saved) })
         }
 

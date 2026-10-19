@@ -4,6 +4,8 @@
 // Centralise les appels à /api/gamebook/yellow/frontier (route gatée ; neutre tant que
 // la table FrontierProfile n'existe pas → ces helpers dégradent proprement).
 
+import type { FrontierBoardEntry } from "./frontierBoard"
+
 const BASE = "/api/gamebook/yellow/frontier"
 
 export interface FrontierProfile {
@@ -26,7 +28,7 @@ export async function fetchFrontierProfile(): Promise<FrontierProfile> {
 }
 
 /** Persiste la fin d'une série : crédite les JC gagnés + met à jour le meilleur record de la salle. */
-export async function postRecordRun(input: { mode: string; streak: number; jcEarned: number; symbol?: string }): Promise<FrontierProfile | null> {
+export async function postRecordRun(input: { mode: string; streak: number; jcEarned: number; symbol?: string; levelRule?: string; team?: unknown[] }): Promise<FrontierProfile | null> {
     try {
         const r = await fetch(BASE, {
             method: "POST",
@@ -85,4 +87,14 @@ export async function postFrontierGrant(amount: number): Promise<number | null> 
         const j = await r.json()
         return typeof j?.jc === "number" ? j.jc : null
     } catch { return null }
+}
+
+/** STATS PARTAGÉES Tour / Usine : meilleur record de chaque joueur (+ équipe gravée avec ce record). */
+export interface FrontierBoard { tower: FrontierBoardEntry[]; factory: FrontierBoardEntry[] }
+export async function fetchFrontierBoard(): Promise<FrontierBoard> {
+    try {
+        const r = await fetch(`${BASE}?board=1`)
+        const j = await r.json()
+        return { tower: Array.isArray(j?.tower) ? j.tower : [], factory: Array.isArray(j?.factory) ? j.factory : [] }
+    } catch { return { tower: [], factory: [] } }
 }
