@@ -165,3 +165,53 @@ describe("choix de type sur égalité", () => {
         expect(f.types).toEqual(["EAU", "GLACE"])
     })
 })
+
+describe("STARTERS DU RUN 3 (19/10/2026) — Métal / Fée / Combat-Insecte : deux inédites + une synergie", () => {
+    it("Colosfer × Lunarque → Lunasfer, DRAGON mono forcé, boosté, STAB garanti", () => {
+        const f = computeFusion(P("colosfer", { types: ["METAL"] }), P("lunarque", { types: ["FEE"] }))
+        expect(f.name).toBe("Lunasfer"); expect(f.types).toEqual(["DRAGON"]); expect(f.stats.hp).toBe(140)
+        expect(f.moves).toContain("draco_charge") // parents de test sans attaque → l'attaque garantie
+    })
+    it("TRANSMUTATION TOTALE : toutes les attaques OFFENSIVES de Lunasfer passent en DRAGON (statuts intacts)", () => {
+        const a = { ...P("colosfer", { types: ["METAL"] }), moves: ["tete_de_fer", "seisme", "repos"] }
+        const b = { ...P("lunarque", { types: ["FEE"] }), moves: ["eclat_lunaire", "vague_mentale"] }
+        const f = computeFusion(a, b)
+        const offensive = f.moves.filter((m) => !["repos"].includes(m))
+        expect(offensive.length).toBeGreaterThanOrEqual(3)
+        for (const m of offensive) expect(f.moveTypes[m], m).toBe("DRAGON")
+        expect(f.moveTypes["repos"]).toBeUndefined()
+    })
+    it("Coccilune : toutes ses attaques offensives passent en GLACE", () => {
+        const a = { ...P("lunarque", { types: ["FEE"] }), moves: ["eclat_lunaire", "vague_mentale"] }
+        const b = { ...P("coccimperatrice", { types: ["COMBAT", "INSECTE"] }), moves: ["crochet_maitre", "essaim_vorace"] }
+        const f = computeFusion(a, b)
+        for (const m of f.moves) expect(f.moveTypes[m], m).toBe("GLACE")
+    })
+    it("une inédite SANS transmuteAll garde l'ancienne règle : une attaque par parent (Cendrecerf)", () => {
+        const a = { ...P("sylvapuce", { types: ["PLANTE"] }), moves: ["lance_soleil", "fouet_lianes"] }
+        const b = { ...P("pyrokoss", { types: ["FEU"] }), moves: ["lance_flammes", "flammeche"] }
+        const f = computeFusion(a, b)
+        expect(Object.keys(f.moveTypes).length).toBeLessThanOrEqual(2)
+    })
+    it("Colosfer × Coccimpératrice (= l'Impérafer officiel de KOGA) → SYNERGIE : boosté, type CALCULÉ (pas re-typé)", () => {
+        const f = computeFusion(P("coccimperatrice", { types: ["COMBAT", "INSECTE"] }), P("colosfer", { types: ["METAL"] }))
+        expect(f.stats.hp).toBe(140)
+        expect(f.types).not.toEqual(["ELEC"]); expect(f.types).toContain("METAL")
+    })
+    it("Lunarque × Coccimpératrice → Coccilune, GLACE mono forcé, boosté", () => {
+        const f = computeFusion(P("lunarque", { types: ["FEE"] }), P("coccimperatrice", { types: ["COMBAT", "INSECTE"] }))
+        expect(f.name).toBe("Coccilune"); expect(f.types).toEqual(["GLACE"]); expect(f.stats.hp).toBe(140)
+        expect(f.moves).toContain("souffle_polaire")
+    })
+    it("fusionSynergy : 3 secrets de découverte, ordre indifférent ; les pré-évolutions ne comptent pas", () => {
+        expect(fusionSynergy("lunarque", "colosfer")?.key).toBe("special:Lunasfer")
+        expect(fusionSynergy("coccimperatrice", "colosfer")?.key).toBe("pair:coccimperatrice|colosfer")
+        expect(fusionSynergy("coccimperatrice", "lunarque")?.key).toBe("special:Coccilune")
+        expect(fusionSynergy("barrisfer", "astracorne")).toBeNull()
+        expect(fusionSynergy("colosfer", "colosfer")).toBeNull()
+    })
+    it("deux starters shiny → JACKPOT shiny_synergy (0,9/0,7)", () => {
+        const f = computeFusion(P("colosfer", { types: ["METAL"], shiny: true }), P("lunarque", { types: ["FEE"], shiny: true }))
+        expect(f.stats.hp).toBe(180)
+    })
+})

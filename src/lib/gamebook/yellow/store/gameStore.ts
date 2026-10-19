@@ -31,14 +31,14 @@ import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, 
 import { previousFusionTier, isTopFusionTier, fusionRunBerriesActive } from "../data/fusionLeague"
 import { buildPlatineAceTeam } from "../data/fusionLeague"
 import { buildPlatineRoomTeam } from "../data/platineArena"
-import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave } from "./platineRun"
+import { currentPlatineOpponent, getPlatineStep, isPlatineOpponentBeaten, advancePlatineStep, abandonPlatineRun, snapshotPlatineRun, seedPlatineMirrorFromSave, isPlatineFinalStep, isPlatineCorridorCleared, isPlatineCorridorLoaded, hasPendingPlatineClaim } from "./platineRun"
 import { onWildPop, makeEphemeralShiny, shinyWishActive, shinyPopMessage } from "../data/ephemeralShiny"
 import { countPopForDexWish, dexWishActive } from "../data/dexWish"
 import { shinyFrenzyChance } from "../data/shinyFrenzy"
 import { galijahDailyRegime, galijahDailyPop } from "../data/galijahDaily"
 import { craftedShinyUnlocked } from "../data/craftedShinies"
 import { MISSINGNO_ID } from "../data/missingnoSpecies"
-import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO } from "../data/platineLore"
+import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT, PLATINE_SHORT_SEEN_MARKER, PLATINE_ANNOUNCE_MARKER, PLATINE_THRONE_OPEN_LINES, PLATINE_ACE_INTRO_VARIANTS, PLATINE_ROOM_INTRO, PLATINE_THRONE_INTRO, PLATINE_HOLDER_ROOM_LINES, PLATINE_JUST_CROWNED_LINES, PLATINE_SELF_THRONE_INTRO, PLATINE_CLAIM_PENDING_LINE, PLATINE_EMPTY_CHAIR_INTRO } from "../data/platineLore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -840,15 +840,25 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
         //   en boucle — et de re-encaisser son pot-de-vin — tant qu'on n'a pas franchi la porte.
         if (isPlatineOpponentBeaten()) {
             const down = currentPlatineOpponent()
+            // DERNIER adversaire tombé = le joueur vient d'être SACRÉ : le vaincu ne le chasse plus (« va-t'en »), il lui
+            //   cède la chaise. C'était la « salle de trône vide » de Mools (18/10/2026).
+            const crowned = isPlatineFinalStep()
             return {
                 npcId: trainerId, npcName: down?.label ?? trainer.name, lineIndex: 0,
-                lines: ["*Il est déjà à terre, et il évite ton regard.*", "« C'est bon, tu as gagné. La porte de droite est ouverte — va-t'en. »"],
+                lines: crowned
+                    ? [...PLATINE_JUST_CROWNED_LINES, ...(hasPendingPlatineClaim() ? [PLATINE_CLAIM_PENDING_LINE] : [])]
+                    : ["*Il est déjà à terre, et il évite ton regard.*", "« C'est bon, tu as gagné. La porte de droite est ouverte — va-t'en. »"],
             }
         }
         const opp = currentPlatineOpponent()
         if (!opp) {
-            // Couloir non chargé (réseau muet) ou déjà terminé : on ne lance JAMAIS un combat dans le vide.
+            // Couloir PAS ENCORE CHARGÉ (requête en cours, ou en échec → bandeau RÉESSAYER) : on ne lance jamais un combat
+            //   dans le vide, et on ne DÉTRUIT RIEN — jeter le gauntlet ici le reconstruisait neuf au passage suivant, soit
+            //   un soin gratuit à mi-couloir (relecture 19/10/2026).
+            if (!isPlatineCorridorLoaded()) return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*Le couloir se forme… reviens dans un instant.*"] }
             disposeFusionGauntlet()
+            // Couloir TERMINÉ (le joueur a franchi la porte après son sacre) : la salle n'est pas vide, elle est À LUI.
+            if (isPlatineCorridorCleared()) return { npcId: trainerId, npcName: "👑 LE TRÔNE", lineIndex: 0, lines: [...PLATINE_HOLDER_ROOM_LINES, ...(hasPendingPlatineClaim() ? [PLATINE_CLAIM_PENDING_LINE] : [])] }
             return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*La salle est vide. Redescends voir le Dieu Spaghetti.*"] }
         }
         if (opp.kind === "ace") {
@@ -1047,7 +1057,8 @@ function platineDialogueNpcId(fallback: string): string {
 
 function platineOpponentIntro(): string[] | null {
     const opp = currentPlatineOpponent()
-    if (!opp) return null
+    // Couloir terminé : pas l'intro statique (« quelqu'un devant elle »), qui contredirait les lignes du Maître.
+    if (!opp) return isPlatineCorridorCleared() ? [PLATINE_EMPTY_CHAIR_INTRO] : null
     // DÉJÀ TOMBÉ : on ne rejoue pas son discours d'arrivée. Re-parler au PNJ après l'avoir battu est un
     //   réflexe (on cherche la porte, ou une récompense) — et ACE reservait ses quatre lignes de menace,
     //   les fantômes se « dressaient » une seconde fois, avant qu'on enchaîne sur « il est déjà à terre ».
@@ -1060,6 +1071,9 @@ function platineOpponentIntro(): string[] | null {
     }
     const days = opp.holder.reignDays
     const since = days <= 0 ? "ce matin" : days === 1 ? "1 jour" : `${days} jours`
+    // Le tenant devant SA propre chaise : on ne lui annonce pas « X s'y tient » comme s'il s'agissait d'un autre.
+    const me = getCurrentPlayerId() || null // identité de SESSION (team[].currentOwnerId peut être celui d'un vendeur au Troc)
+    if (me && opp.holder.userId === me) return [PLATINE_SELF_THRONE_INTRO.replace("{days}", since)]
     return [PLATINE_THRONE_INTRO.replace("{nick}", opp.holder.nickname).replace("{days}", since)]
 }
 

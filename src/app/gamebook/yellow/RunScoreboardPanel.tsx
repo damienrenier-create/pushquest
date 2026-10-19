@@ -352,12 +352,12 @@ function EmperorsBoard() {
             <div style={sectionTitle}>💎 EMPEREURS DU NEXUS</div>
             <div style={{ fontSize: 10, opacity: 0.6, lineHeight: 1.45, margin: "0 0 6px" }}>
                 Palier PLATINE. <b>+1 point</b> par challenger qui tombe dans ton couloir — les points sont <b>gardés à vie</b>.
-                👑 = le <b>Maître en titre</b>, celui qu&apos;on affronte en dernière salle. ⭐ = l&apos;<b>Empereur</b>, celui qui a repoussé le plus de monde.
+                👑 = le <b>Maître en titre</b> — le <b>Maître Ultime du Nexus</b>, celui qu&apos;on affronte en dernière salle. ⭐ = l&apos;<b>Empereur</b>, celui qui a repoussé le plus de monde.
             </div>
             {rows.slice(0, 10).map((e) => (
                 <div key={e.userId} style={{ ...row, background: e.isEmperor ? "rgba(185,220,255,0.14)" : "rgba(255,255,255,0.05)", border: e.isHolder ? "1px solid rgba(255,213,74,0.55)" : "1px solid transparent" }}>
                     <span style={rank}>{e.isEmperor ? "⭐" : `${e.rank}.`}</span>
-                    <span style={name}>{e.isHolder ? "👑 " : ""}{e.nickname}</span>
+                    <span style={name}>{e.isHolder ? "👑 " : ""}{e.nickname}{e.title ? <span style={{ fontSize: 9, opacity: 0.72, marginLeft: 6, fontWeight: 600 }}>{e.title.replace(/^[^\p{L}]+/u, "")}</span> : null}</span>
                     <span style={{ fontSize: 10, opacity: 0.6, whiteSpace: "nowrap", marginRight: 6 }}>
                         {e.days > 0 ? `${e.days} j` : "sacré ce jour"}{e.reigns > 1 ? ` · ${e.reigns} règnes` : ""}
                     </span>

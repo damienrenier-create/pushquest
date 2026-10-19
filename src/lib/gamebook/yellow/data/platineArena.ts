@@ -138,9 +138,15 @@ function roomMoveTypes(m: FusionChampionMon, slots: MoveSlot[]): Record<string, 
     }
     const special = m.aId && m.bId ? specialFusionForIds(m.aId, m.bId) : null
     const forced = special?.forcedType
-    if (!forced) return out
+    // La photo doit avoir été gravée AVEC ce type forcé : une inédite ajoutée APRÈS coup sur une paire déjà jouée
+    //   (Lunasfer, Coccilune — 19/10/2026) ne doit pas re-typer rétroactivement une chimère figée ordinaire.
+    if (!forced || m.types?.length !== 1 || m.types[0] !== forced) return out
     const ids = slots.map((s) => s.moveId)
     Object.assign(out, recoloredMoveTypes(ids, special))
+    if (special?.transmuteAll) {
+        for (const id of ids) if ((getMove(id)?.power ?? 0) > 0 && getMove(id)?.type !== forced && !out[id]) out[id] = forced
+        return out
+    }
     const lead = ids.find((id) => (getMove(id)?.power ?? 0) > 0 && getMove(id)?.type !== forced && !out[id])
     if (lead) out[lead] = forced
     return out

@@ -175,3 +175,44 @@ export function platineCreditsLines(ledger: PlatineLedger, won: boolean, limit =
     if (best) out.push(`LE coup du parcours : ${best.name} — ${best.move}, ${best.damage} dégâts.`)
     return out
 }
+
+// ── LE DÉTENTEUR DANS SA SALLE (19/10/2026 — la « salle de trône vide » de Mools) ──
+/** Dernier adversaire tombé : le joueur vient d'être SACRÉ. Le vaincu ne le chasse plus (« va-t'en »), il lui cède la chaise. */
+export const PLATINE_JUST_CROWNED_LINES = [
+    "*Il est à terre. Derrière lui, la chaise n'attend plus que toi.*",
+    "« C'est fait. À partir de maintenant, le couloir porte TON nom — la porte de droite mène à ta chaise. »",
+]
+/** Couloir TERMINÉ, le joueur est devant la chaise : la salle n'est pas vide, elle est à lui. */
+export const PLATINE_HOLDER_ROOM_LINES = [
+    "*Au fond, la chaise. Personne devant : c'est TOI qui t'y assois.*",
+    "« 👑 Tu es le MAÎTRE ULTIME DU NEXUS. Ton règne et ton équipe figée sont gravés : les prochains devront te traverser, et chacun qui tombe dans ton couloir t'apporte un point. »",
+    "« Pour contempler ton règne : START → 🏆 Palmarès → 📊 Classement concours → onglet 🐉 Ligue → 💎 Empereurs du Nexus. »",
+]
+/** Le tenant affronte sa PROPRE chaise (dernière salle = lui-même). `{days}` = ancienneté du règne. Gagner regrave l'équipe sans toucher au chrono. */
+export const PLATINE_SELF_THRONE_INTRO = "*La chaise n'est pas vide : c'est TOI qui t'y tiens depuis {days}. Ton double se lève — bats-le, et ton équipe gravée sera celle d'aujourd'hui.*"
+
+/** Défaite alors que le trône est VACANT : personne ne marque de point (cf. PLATINE_DEFEAT_LINES quand il y a un tenant). */
+export const PLATINE_DEFEAT_LINES_VACANT = [
+    "*Le couloir se referme derrière toi.*",
+    "« Tu es tombé. Personne ne marque sur ta chute : la chaise est toujours vide, et elle attend qu'on vienne la prendre. »",
+]
+/** Le MAÎTRE EN TITRE tombe dans son propre couloir : le serveur ignore ce point (pas d'auto-crédit), son règne ne bouge pas. */
+export const PLATINE_DEFEAT_LINES_SELF = [
+    "*Le couloir se referme derrière toi.*",
+    "« Tombé dans ton propre couloir. Ta chaise reste à toi : on ne marque pas de point sur soi-même, et ton règne continue. »",
+]
+/** Lignes de défaite selon le tenant : `holderUserId` undefined = INCONNU (couloir pas chargé → cas général) ; null = trône
+ *  vacant ; égal à `myUserId` = le Maître lui-même. */
+export function platineDefeatBaseLines(holderUserId: string | null | undefined, myUserId: string | null): string[] {
+    if (holderUserId === undefined) return [...PLATINE_DEFEAT_LINES]
+    if (!holderUserId) return [...PLATINE_DEFEAT_LINES_VACANT]
+    if (myUserId && holderUserId === myUserId) return [...PLATINE_DEFEAT_LINES_SELF]
+    return [...PLATINE_DEFEAT_LINES]
+}
+
+/** Titre des crédits de défaite quand la chaise est VIDE (le titre par défaut dit « reste occupé »). */
+export const PLATINE_CREDITS_TITLE_VACANT = "🪑 LA CHAISE RESTE VIDE"
+/** Le sacre n'a pas encore été accepté par le serveur (POST en échec, rejoué au prochain chargement). */
+export const PLATINE_CLAIM_PENDING_LINE = "« Le Nexus n'a pas encore gravé ton nom — il réessaiera au prochain chargement. »"
+/** Intro de la chaise une fois le couloir terminé (remplace l'intro statique « quelqu'un devant elle »). */
+export const PLATINE_EMPTY_CHAIR_INTRO = "*Au fond, la chaise t'attend. Personne devant.*"

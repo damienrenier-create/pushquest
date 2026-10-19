@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -69,8 +69,8 @@ import { setTeamAndPc, getEvResetCharges, consumeEvResetCharges, isAttackCostExt
 import { isEphemeralShiny, takeShinyKo, shinyKoMessage } from "../data/ephemeralShiny"
 import { shinyFrenzyCaptureMessage } from "../data/shinyFrenzy"
 import { consumeShinyPopMessage } from "./playerStore"
-import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror } from "./platineRun"
-import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, PLATINE_DEFEAT_LINES, platineCreditsLines } from "../data/platineLore"
+import { markPlatineOpponentBeaten, getPlatineStep, currentPlatineOpponent, snapshotPlatineRun, getPlatineLedger, setPlatineLedger, isPlatineFinalStep, reportPlatineClaim, reportPlatineFail, resetPlatineRun, abandonPlatineRun, clearPlatineRunMirror, getPlatineHolder, isPlatineCorridorLoaded } from "./platineRun"
+import { platineBribe, PLATINE_EXCUSES, PLATINE_BRIBE_LINE, PLATINE_BRIBE_DEAL, PLATINE_BRIBE_NONE, PLATINE_ACE_LOSE_LINES, PLATINE_ACE_WIN_LINES, PLATINE_SACRE_LINES, platineDefeatBaseLines, platineCreditsLines, PLATINE_CREDITS_TITLE_VACANT } from "../data/platineLore"
 import { recordHit } from "../data/platineLedger"
 import { postFrontierGrant } from "../frontier/frontierApi"
 import { armGalijahByDex, grantMegamonarx, hasMegamonarx } from "./playerStore"
@@ -1579,6 +1579,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (lid === "y_fusion_platine") {
         if (b.outcome === "win") {
             markPlatineOpponentBeaten()
+            // Le carry écrit en fin de combat (persistFusionGauntletWear) date d'AVANT cette victoire (beaten: false) : on le
+            //   réécrit, sinon un rechargement avant la porte remettait l'adversaire debout (cas du tenant qui se rebat :
+            //   signature du couloir inchangée, et le miroir local est effacé au sacre).
+            { const j = serializeGauntletCarryJson({ platine: snapshotPlatineRun() }); setFusionLeagueCarry(j); writeGauntletCarryLs(j) }
             // L'EXCUSE ET LE SILENCE (idee Sartay). Le vaincu se justifie — mal — puis achete ton silence :
             //   50 JC par Daemon qu'IL a mis a terre. On facture le DELTA de K.O. de CE combat uniquement
             //   (les PV sont reportes de salle en salle : le total de fin inclut les morts d'avant).
@@ -1616,7 +1620,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                         stats: { ...f.result.stats },
                         moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
                         moveTypes: freezeMoveTypes(f.instance),
-                        items: freezeItems(f.instance),
+                        items: f.result.heldItems.length ? [...f.result.heldItems] : undefined, // objets HÉRITÉS (une baie consommée en route reste gravée)
                         shiny: f.instance.shiny === true,
                         aId: par?.[0], bId: par?.[1],
                     }
@@ -1648,10 +1652,17 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   l'argument central du palier, celui qui fait le classement des Empereurs. On capture le
             //   registre AVANT l'abandon (qui l'efface) et on nourrit l'épilogue de l'écran de défaite.
             const wasAce = currentPlatineOpponent()?.kind === "ace"
+            // Le texte dit la VÉRITÉ du point : trône vacant → personne ne marque ; le Maître tombé chez lui → le serveur
+            //   ignore (pas d'auto-crédit) ; sinon le tenant marque +1. (Le tenant est lu AVANT l'abandon, qui l'efface.)
+            const myUserId = getCurrentPlayerId() || null // identité de SESSION (pas team[].currentOwnerId : faux après un Troc)
+            const loaded = isPlatineCorridorLoaded() // couloir pas chargé (reprise après F5 sans réseau) → tenant INCONNU, texte général
+            const holderId = loaded ? (getPlatineHolder()?.userId ?? null) : undefined
+            const credits = platineCreditsLines(getPlatineLedger(), false)
+            if (holderId === null && credits.length) credits[0] = PLATINE_CREDITS_TITLE_VACANT // « reste occupé » mentirait
             platineDefeatLines = [
                 ...(wasAce ? PLATINE_ACE_WIN_LINES : []),
-                ...PLATINE_DEFEAT_LINES,
-                ...platineCreditsLines(getPlatineLedger(), false),
+                ...platineDefeatBaseLines(holderId, myUserId),
+                ...credits,
             ]
             reportPlatineFail()
             abandonPlatineRun() // tomber EST un abandon : le miroir part avec, on repartira d'ACE
@@ -1709,7 +1720,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                             stats: { ...f.result.stats },
                             moves: f.result.moves.map((id) => getMove(id)?.name ?? id),
                         moveTypes: freezeMoveTypes(f.instance),
-                        items: freezeItems(f.instance),
+                        items: f.result.heldItems.length ? [...f.result.heldItems] : undefined, // objets HÉRITÉS (une baie consommée en route reste gravée)
                         shiny: f.instance.shiny === true,
                             aId: par?.[0], bId: par?.[1],
                         }
@@ -1839,13 +1850,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (isLose && isTrainerDefeated(FUSION_UNLOCK_MARKER)) recordFusionLeagueDefeat(activeFusionTier((m) => isTrainerDefeated(m)))
     // GÉNÉRIQUE DE DÉFAITE (Ligue de Fusion) : à la défaite d'une salle, on liste PAR QUELLE ATTAQUE chaque fusion est
     //   tombée (record __lastHitBy posé par le moteur) → overlay 5s thématique avant le renvoi à l'Autel. null sinon.
+    // COULOIR PLATINE : le vaincu doit lire QUI l'a battu (le tenant, pas le décor « LE TRÔNE ») et ce que sa chute
+    //   a coûté (+1 point au Maître) — platineFoeName / platineDefeatLines étaient composés mais jamais lus (19/10/2026).
+    const isPlatineRoom = storeState.trainer?.trainerId === PLATINE_TRAINER_ID
     const fusionDefeat = (isFusionLeague && b.outcome === "lose")
-        ? { trainerName: getTrainer(storeState.trainer?.trainerId ?? "")?.name ?? "LA LIGUE DE FUSION",
+        ? { trainerName: (isPlatineRoom ? platineFoeName : null) ?? getTrainer(storeState.trainer?.trainerId ?? "")?.name ?? "LA LIGUE DE FUSION",
+            epilogue: isPlatineRoom && platineDefeatLines ? [...platineDefeatLines] : undefined,
             koLog: b.player.team.filter((m) => m.currentHp <= 0).map((m) => {
                 const hit = (m as { __lastHitBy?: { move: string; by: string } }).__lastHitBy
                 return { victim: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: hit?.move ?? "—", by: hit?.by ?? "—" }
             }) }
         : null
+    platineFoeName = null; platineDefeatLines = null // consommés : ne jamais fuiter sur une défaite suivante
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
     // ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : un shiny CAPTURÉ pendant la fenêtre décompte une des captures de la
     //   fête. Ce sont les CAPTURES qui comptent, jamais les rencontres (cf. data/shinyFrenzy). Le Dieu Spaghetti

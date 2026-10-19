@@ -142,3 +142,52 @@ export function throneTitle(r: RankedThrone): string {
     if (r.isHolder) return "👑 Maître en titre"
     return "Ancien Maître"
 }
+
+// ─────────── BORNAGE DE L'ÉQUIPE GRAVÉE (pur, testable — déplacé ici depuis la route le 19/10/2026) ───────────
+/** Ces chimères sont REJOUÉES telles quelles (frozenStats, aucun recalcul) par tous les challengers : une équipe bricolée
+ *  à 9999 rendrait le trône imprenable à vie, et c'est un abus qui touche les AUTRES joueurs. On borne donc à l'écriture.
+ *  On GARDE désormais `moveTypes`, `items` et `shiny` : la route les jetait, et le tenant était rejoué les mains vides,
+ *  sans chromatique et sans ses types transmutés — plus facile à détrôner que sa propre salle OR, qui conserve tout.
+ *  Renvoie [] si rien d'exploitable. (Plafonds larges : une fusion dorée platine tourne autour de 700-900 par stat.) */
+export function sanitizeThroneTeam(raw: unknown): FusionChampionMon[] {
+    if (!Array.isArray(raw)) return []
+    const num = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)))
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "")
+    const out: FusionChampionMon[] = []
+    for (const m of raw.slice(0, 6)) {
+        if (!m || typeof m !== "object") continue
+        const o = m as Record<string, unknown>
+        const st = (o.stats ?? {}) as Record<string, unknown>
+        const name = str(o.name, 40)
+        if (!name) continue // sans nom, la salle ne peut rien afficher : on préfère l'écarter
+        const moveTypes: Record<string, string> = {}
+        if (o.moveTypes && typeof o.moveTypes === "object") {
+            for (const [k, v] of Object.entries(o.moveTypes as Record<string, unknown>).slice(0, 4)) { const kk = str(k, 40), vv = str(v, 20); if (kk && vv) moveTypes[kk] = vv }
+        }
+        const items = Array.isArray(o.items) ? o.items.map((x) => str(x, 40)).filter(Boolean).slice(0, 2) : []
+        const mon: FusionChampionMon = {
+            name, sprite: str(o.sprite, 300),
+            types: Array.isArray(o.types) ? o.types.slice(0, 2).map((t) => str(t, 20)) : [],
+            level: Math.max(1, Math.min(100, Math.floor(Number(o.level) || 1))),
+            stats: { hp: num(st.hp, 2000), atk: num(st.atk, 1500), def: num(st.def, 1500), spe: num(st.spe, 1500), spc: num(st.spc, 1500) },
+            moves: Array.isArray(o.moves) ? o.moves.slice(0, 4).map((x) => str(x, 40)) : [],
+        }
+        if (o.aId) mon.aId = str(o.aId, 40)
+        if (o.bId) mon.bId = str(o.bId, 40)
+        if (Object.keys(moveTypes).length) mon.moveTypes = moveTypes
+        if (items.length) mon.items = items
+        if (o.shiny === true) mon.shiny = true
+        out.push(mon)
+    }
+    return out
+}
+
+/** REPRISE DE LA CHAISE. Pas de fiche → nouveau règne (claimThrone). Une fiche ET le joueur est DÉJÀ le tenant (il vient de
+ *  rebattre son propre couloir) → on regrave l'équipe et le skin SANS toucher au chrono ni au nombre de règnes : il n'a
+ *  jamais perdu la chaise, son ancienneté continue (avant, se rebattre soi-même remettait le règne à zéro). Sinon (ancien
+ *  Maître qui revient) → renewThrone. */
+export function reclaimThrone(prev: ThroneSlot | null, team: FusionChampionMon[], avatar: string | undefined, now: Date, isTenant: boolean): ThroneSlot {
+    if (!prev) return claimThrone(team, avatar, now)
+    if (isTenant) return { ...prev, team: team.slice(0, 6), avatar: avatar ?? prev.avatar }
+    return renewThrone(prev, team, avatar, now)
+}

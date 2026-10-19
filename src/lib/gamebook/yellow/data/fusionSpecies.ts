@@ -96,6 +96,7 @@ const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("karatame", "bouhbou")]: "la synergie des arts martiaux",   // 2 combattants (Combat × Combat/Spectre)
     [pairKey("namizeus", "brookhante")]: "la synergie des âmes errantes", // 2 spectres (Spectre/Élec × Spectre)
     [pairKey("kilipanda", "druidours")]: "la synergie des ursidés",       // panda × ours-druide (les plantigrades)
+    [pairKey("colosfer", "coccimperatrice")]: "la synergie de l'impératrice de fer", // starters du run 3 (19/10/2026) : le joueur recrée l'Impérafer officiel de KOGA, boosté — et KOGA aussi : le Conseil profite des synergies (décision Sartay 19/10).
 }
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
 interface SpecialFusion {
@@ -112,6 +113,9 @@ interface SpecialFusion {
      *  une attaque fait partie de l'identité de la chimère : la Vampigraine de Cendrecerf n'est pas une graine,
      *  c'est une braise noire qui s'enracine. Vaut pour les fusions du JOUEUR comme pour celles des PNJ. */
     recoloredMoves?: readonly string[]
+    /** TRANSMUTATION TOTALE : TOUTES les attaques OFFENSIVES de la fusion prennent son type (STAB partout), et pas seulement
+     *  la 1re de chaque parent. Les statuts ne bougent pas. Demande Sartay 19/10 pour Lunasfer (DRAGON) et Coccilune (GLACE). */
+    transmuteAll?: boolean
 }
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
 const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
@@ -123,6 +127,13 @@ const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
     [pairKey("crapotaure", "uzumaro")]: { name: "Gamabunta", concept: "un crapaud GIGANTESQUE bordeaux (rouge sombre) façon chef des crapauds, portant un pagne/haori de guerrier, fumant une longue pipe japonaise (kiseru), un immense sabre (katana) à la ceinture, posture massive et martiale" }, // les 2 grenouilles → crapaud-boss (type calculé)
     [pairKey("vipember", "necrocorbe")]: { name: "Orochitachi", concept: "une immense chimère CORBEAU-SERPENT façon Orochi : corbeau noir-violet aux vastes ailes ornées de plumes-joyaux rouges et vertes, longue queue-serpent écaillée se terminant par une TÊTE DE SERPENT, yeux rouges hypnotiques (façon sharingan), aura ténébreuse et maléfique" }, // vipère × corbeau (type calculé)
     [pairKey("karmaki", "enclumind")]: { name: "Karmind Z", concept: "un gorille-singe SUPER SAIYAN (cheveux dorés hérissés, visage et poings rouges, yeux rouges perçants), en méditation position du lotus, armure de PIERRE/ENCLUME grise sur le torse, flottant sur une tige-liane verte fleurie (plante), une lourde enclume suspendue, aura de karma psychique. Style Dragon Ball Z." }, // karma × enclume (type calculé)
+    // ── STARTERS DU RUN 3 (décision Sartay, 19/10/2026) : comme le trio Cerfeuillu / Pyrokoss / Razmarée, chaque paire des
+    //    trois finaux du triangle MÉTAL / FÉE / COMBAT-INSECTE accouche d'un TROISIÈME élément (type mono forcé, toutes ses attaques
+    //    offensives transmutées dans ce type : `transmuteAll`).
+    //    La 3e paire (Colosfer × Coccimpératrice) est DÉJÀ une fusion officielle — l'Impérafer de KOGA : elle reçoit une
+    //    SYNERGIE (cf. SYNERGY_PAIRS) qui garde son identité, au lieu d'une inédite qui l'aurait re-typée.
+    [pairKey("colosfer", "lunarque")]: { name: "Lunasfer", forcedType: "DRAGON", stabMove: "draco_charge", transmuteAll: true, concept: "un dragon colossal d'ACIER bleu nuit poli comme un miroir sous la lune, tête d'éléphant-dragon aux défenses d'ivoire métallique, corne de licorne en croissant de lune, écailles de fer gravées de croissants argentés, grandes ailes membraneuses nacrées, aura draconique violette" },
+    [pairKey("lunarque", "coccimperatrice")]: { name: "Coccilune", forcedType: "GLACE", stabMove: "souffle_polaire", transmuteAll: true, concept: "une coccinelle-licorne chevalière aux élytres bleu nuit constellés, corne de GLACE en croissant de lune, gantelets de givre, traîne de flocons scintillants" },
 }
 /** Fusion INÉDITE pour cette paire d'IDS de parents (ordre indifférent), ou null. */
 export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion | null {
@@ -304,9 +315,13 @@ export function withGuaranteedStab(moves: readonly string[], types: readonly Pok
  *  prend le type forcé. Idée Sartay 11/09 — la fusion convertit l'héritage de ses parents dans sa propre essence,
  *  au lieu de recevoir une attaque plaquée. Les STATUTS sont ignorés (les retyper ne donnerait aucun STAB), et une
  *  attaque déjà du bon type n'est pas recomptée. Renvoie {} hors fusion à type forcé. */
-export function transmutedMoveTypes(a: FusionParent, b: FusionParent, moves: readonly string[], forced?: PokeType): Record<string, PokeType> {
+export function transmutedMoveTypes(a: FusionParent, b: FusionParent, moves: readonly string[], forced?: PokeType, all = false): Record<string, PokeType> {
     if (!forced) return {}
     const out: Record<string, PokeType> = {}
+    if (all) { // TRANSMUTATION TOTALE (`transmuteAll`) : chaque attaque offensive qui n'est pas déjà du type forcé
+        for (const m of moves) { const mv = getMove(m); if ((mv?.power ?? 0) > 0 && mv?.type !== forced) out[m] = forced }
+        return out
+    }
     for (const parent of bySpeed(a, b)) {
         const hit = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && parent.moves.includes(m) && !out[m])
         if (hit) out[hit] = forced
@@ -331,7 +346,7 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const natural = fuseMoves(a, b)
     // La transmutation suffit à donner un STAB : on ne plaque `stabMove` QUE si elle n'a rien pu convertir
     //   (parent sans la moindre attaque offensive — possible pour une fusion tentée par un joueur).
-    const moveTypes = { ...transmutedMoveTypes(a, b, natural, special?.forcedType), ...recoloredMoveTypes(natural, special) }
+    const moveTypes = { ...transmutedMoveTypes(a, b, natural, special?.forcedType, !!special?.transmuteAll), ...recoloredMoveTypes(natural, special) }
     const moves = Object.keys(moveTypes).length > 0 ? natural : withGuaranteedStab(natural, types, special?.stabMove)
     return {
         name: special?.name ?? fusionName(a, b),

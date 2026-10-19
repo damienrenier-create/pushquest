@@ -21,7 +21,7 @@ const tc = (t: string) => TYPE_COLOR[t] ?? "#8a7fb0"
 const STAT_ROWS = [["hp", "PV"], ["atk", "Attaque"], ["def", "Défense"], ["spe", "Vitesse"], ["spc", "Spéciale"]] as const
 
 const parentFromSpecies = (sp: ReturnType<typeof getSpecies>): FusionParent => ({
-    name: sp!.name, types: sp!.types, stats: sp!.baseStats, level: 1, moves: sp!.learnset.map((l) => l.moveId),
+    name: sp!.name, types: sp!.types, stats: sp!.baseStats, level: 1, moves: sp!.learnset.map((l) => l.moveId), speciesId: sp!.id, // sans l'espèce : ni inédite ni boost (la fiche contredisait la liste)
 })
 
 export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: string; onClose: () => void }) {

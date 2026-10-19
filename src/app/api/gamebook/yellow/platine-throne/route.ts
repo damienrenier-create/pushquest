@@ -24,8 +24,8 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import {
-    PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, renewThrone, awardFailurePoint, reignDays,
-    rankThrones, throneTitle, type ThroneEntry,
+    PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, awardFailurePoint, reignDays,
+    rankThrones, throneTitle, sanitizeThroneTeam, reclaimThrone, type ThroneEntry,
 } from "@/lib/gamebook/yellow/data/platineThrone"
 import { buildPlatineCorridor, type PlatineChampion } from "@/lib/gamebook/yellow/data/platineArena"
 
@@ -39,35 +39,7 @@ async function requireYellow() {
     return { ok: true as const, userId }
 }
 
-/** BORNAGE DE L'ÉQUIPE DU TRÔNE. Ces chimères sont REJOUÉES telles quelles (frozenStats, aucun recalcul) par
- *  tous les challengers : une équipe bricolée à 9999 en chaque stat rendrait le trône imprenable À VIE, et
- *  c'est un abus qui touche les AUTRES joueurs, pas la save du tricheur. On borne donc à l'écriture — c'est
- *  la seule occasion, ensuite plus personne ne repasse dessus. Renvoie [] si rien d'exploitable.
- *  (Plafonds larges à dessein : une fusion dorée de palier platine tourne autour de 700-900 par stat.) */
-function sanitizeThroneTeam(raw: unknown): any[] {
-    if (!Array.isArray(raw)) return []
-    const num = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)))
-    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "")
-    const out: any[] = []
-    for (const m of raw.slice(0, 6)) {
-        if (!m || typeof m !== "object") continue
-        const o = m as Record<string, unknown>
-        const st = (o.stats ?? {}) as Record<string, unknown>
-        const name = str(o.name, 40)
-        if (!name) continue // sans nom, la salle ne peut rien afficher : on préfère l'écarter
-        out.push({
-            name, sprite: str(o.sprite, 300),
-            types: Array.isArray(o.types) ? o.types.slice(0, 2).map((t) => str(t, 20)) : [],
-            level: Math.max(1, Math.min(100, Math.floor(Number(o.level) || 1))),
-            stats: { hp: num(st.hp, 2000), atk: num(st.atk, 1500), def: num(st.def, 1500), spe: num(st.spe, 1500), spc: num(st.spc, 1500) },
-            moves: Array.isArray(o.moves) ? o.moves.slice(0, 4).map((x) => str(x, 40)) : [],
-            aId: o.aId ? str(o.aId, 40) : undefined,
-            bId: o.bId ? str(o.bId, 40) : undefined,
-        })
-    }
-    return out
-}
-
+// Le BORNAGE de l'équipe gravée vit désormais dans data/platineThrone.ts (sanitizeThroneTeam, pur et testé).
 /** Sans ce marqueur dans la save, le joueur n'a jamais mis les pieds dans le couloir. */
 const PLATINE_OPEN_MARKER = "fusleague_platine_open"
 
@@ -142,7 +114,7 @@ export async function GET() {
             return {
                 userId: r.userId, nickname: r.nickname,
                 wonAt: new Date(r.wonAt).toISOString(),
-                team: Array.isArray(team) ? team : [],
+                team: sanitizeThroneTeam(team), // une fiche OR malformée ne doit pas bloquer le palier pour tout le monde (relecture 19/10)
                 avatar: avatarByUser.get(r.userId),
             }
         })
@@ -238,14 +210,16 @@ export async function POST(req: NextRequest) {
         //   pour tout le groupe. Mieux vaut refuser le sacre (le joueur refera le couloir) que bloquer le palier.
         if (team.length === 0) return NextResponse.json({ ok: false, reason: "empty-team" }, { status: 400 })
         const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 200) : undefined
-        const slot = claimThrone(team as any, avatar, new Date())
 
         // UNE FICHE PAR JOUEUR. Un ancien Maître qui reprend la chaise MET À JOUR la sienne et GARDE ses points
         //   (renewThrone) : le classement des Empereurs a de la mémoire. `wonAt` est repassé explicitement (ce
         //   n'est pas un @updatedAt) — c'est lui qui désigne le tenant et fait repartir l'ancienneté.
         const mine = rows.find((r) => r.userId === auth.userId) ?? null
         const prev = mine ? decodeThrone(mine.team) : null
-        const next = prev ? renewThrone(prev, team as any, avatar, new Date()) : slot
+        // TENANT qui rebat son propre couloir : son règne CONTINUE (chrono + nombre de règnes intacts), seule l'équipe
+        //   est regravée. Avant, un Maître qui s'affrontait lui-même repartait d'un règne de 0 jour.
+        const isTenant = rows[0]?.userId === auth.userId
+        const next = reclaimThrone(prev, team, avatar, new Date(), isTenant)
         if (mine) {
             await lc.update({ where: { id: mine.id }, data: { nickname: me.nickname, team: encodeThrone(next), wonAt: new Date() } })
         } else {

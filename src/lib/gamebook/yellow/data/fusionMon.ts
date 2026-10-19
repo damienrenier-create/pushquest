@@ -113,8 +113,13 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     const forcedType = special?.forcedType
     const curedTypes: Record<string, string> = {}
     if (opts?.moves && forcedType) {
-        const lead = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && getMove(m)?.type !== forcedType)
-        if (lead) curedTypes[lead] = forcedType
+        if (special?.transmuteAll) {
+            // TRANSMUTATION TOTALE : toutes les offensives du moveset curé passent dans le type de la fusion.
+            for (const m of moves) if ((getMove(m)?.power ?? 0) > 0 && getMove(m)?.type !== forcedType) curedTypes[m] = forcedType
+        } else {
+            const lead = moves.find((m) => (getMove(m)?.power ?? 0) > 0 && getMove(m)?.type !== forcedType)
+            if (lead) curedTypes[lead] = forcedType
+        }
     }
     // La RECOLORATION s'applique dans les deux cas : une attaque signature garde son type quelle que soit
     //   la provenance du moveset (curé pour ACE, dérivé pour la fusion d'un joueur).
