@@ -82,7 +82,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
-import { fusioBallInShop, FUSIO_BALL_SHOP_PRICE } from "@/lib/gamebook/yellow/data/fusionLeaguePerks"
+import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBoughtCount, fusioShopMarkersFor } from "@/lib/gamebook/yellow/data/fusionLeaguePerks"
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
@@ -4626,14 +4626,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             // 🏅 PERK OR (Ligue de Fusion bouclée en or) : la Fusio-Ball entre en rayon, à prix FIXE (hors Bourse).
                             //   Décision Sartay 15/10/2026 — récompenser l'assiduité. Pour les autres, rien ne change (price 0 = hors rayon).
                             const goldCleared = player.defeatedTrainers.includes(FUSION_TIER_MARKER.or)
+                            const fusioBought = fusioShopBoughtCount(player.defeatedTrainers) // PRIX PROGRESSIF (Sartay 19/10) : 1000, 2000, 3000…
                             const sellable = [
                                 ...Object.values(ITEMS).filter((it) => it.price > 0),
-                                ...(fusioBallInShop(goldCleared) && ITEMS.fusio_ball ? [{ ...ITEMS.fusio_ball, price: FUSIO_BALL_SHOP_PRICE }] : []),
+                                ...(fusioBallInShop(goldCleared) && ITEMS.fusio_ball ? [{ ...ITEMS.fusio_ball, price: fusioBallShopPrice(fusioBought) }] : []),
                             ]
                             // BOURSE : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Active dès le run 3
                             //   (endgame), ET dès le DÉBUT en mode FUN (le marché évolue aussi en fun run 1 & 2). Sinon = prix de base.
                             const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
-                            const priceOf = (it: { id?: string; price: number; category: string }) => it.id === "fusio_ball" ? FUSIO_BALL_SHOP_PRICE : shopPrice(it.price, it.category, bourseCtx) // Fusio-Ball : 1000 FLAT, hors Bourse
+                            const priceOf = (it: { id?: string; price: number; category: string }) => it.id === "fusio_ball" ? fusioBallShopPrice(fusioBought) : shopPrice(it.price, it.category, bourseCtx) // Fusio-Ball : progressif (1000 × rang de l'achat), hors Bourse
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
                             const SECOND_TOWN_BALLS = new Set(["super_ball_plus", "hyper_ball", "hyper_ball_plus"])
@@ -4666,7 +4667,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
                                                         <span>{curse ? "GRATUIT" : `${price} reps`}</span>
                                                     </span>
-                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}</span>
+                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}{it.id === "fusio_ball" ? " — Prix progressif : +1000 reps à chaque Fusio-Ball achetée." : ""}</span>
                                                 </button>
                                             )
                                         })}
@@ -4712,7 +4713,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Confirmation d'achat (anti-clic accidentel) + sélecteur de quantité */}
             {shopOpen && buyConfirm && (() => {
-                const total = buyConfirm.price * buyQty
+                const fusioBoughtNow = fusioShopBoughtCount(player.defeatedTrainers)
+                const isFusio = buyConfirm.id === "fusio_ball"
+                const total = isFusio ? fusioBallShopTotal(fusioBoughtNow, buyQty) : buyConfirm.price * buyQty // FUSIO-BALL : chaque ball à son rang (1000, 2000, 3000…)
                 const canAfford = player.reps >= total
                 return (
                     <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setBuyConfirm(null)}>
@@ -4727,10 +4730,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
                                 Total : <b>{total} reps</b>{canAfford ? "" : " — insuffisant"}
                             </div>
+                            {isFusio && <div style={{ textAlign: "center", marginTop: -6, marginBottom: 10, fontSize: 11, opacity: 0.7 }}>Prix progressif : {Array.from({ length: buyQty }, (_, k) => fusioBallShopPrice(fusioBoughtNow + k)).join(" + ")} reps</div>}
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
-                                onClick={() => { if (getItem(buyConfirm.id)?.category === "BALL" && player.ballLockRemaining > 0) { setBuyConfirm(null); return } if (spendReps(total)) { addItem(buyConfirm.id, buyQty); if (getItem(buyConfirm.id)?.category === "HEAL") recordPotionBuy(); persistYellowSave() } setBuyConfirm(null) }}
+                                onClick={() => { if (getItem(buyConfirm.id)?.category === "BALL" && player.ballLockRemaining > 0) { setBuyConfirm(null); return } if (spendReps(total)) { addItem(buyConfirm.id, buyQty); if (getItem(buyConfirm.id)?.category === "HEAL") recordPotionBuy(); if (isFusio) for (const m of fusioShopMarkersFor(fusioBoughtNow, buyQty)) markTrainerDefeated(m); persistYellowSave() } setBuyConfirm(null) }}
                             >✅ Acheter</button>
                             <button style={menuBtnDimStyle} onClick={() => setBuyConfirm(null)}>← Annuler</button>
                         </div>

@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import { usePlayer, setFusionRoster, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { fusionPairError } from "@/lib/gamebook/yellow/data/fusiodex"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, persistYellowSave, persistYellowSaveNow } from "@/lib/gamebook/yellow/store/saveManager"
 import { officialFusions, officialFusionProgress, historyFusions, fusionEvolutionChain, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { MISSINGNO_SPRITE } from "@/lib/gamebook/yellow/data/fusionSprite"
@@ -19,7 +19,7 @@ import { useFusionSprite } from "../useFusionSprite"
 import { FusionDetailView, FusionSpeciesFiche } from "../FusionDetailView"
 import { GEM_CHIMERA_ID, GEM_CHIMERA_RIDDLE } from "@/lib/gamebook/yellow/data/megamonarxClues"
 import { computeFusion, type FusionStats, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
-import { fusionSecretEntries, discoveredByKey, SECRET_KIND_LABEL, type FusionSecretEntry, type DiscoveredSecret } from "@/lib/gamebook/yellow/data/fusionSecrets"
+import { fusionSecretEntries, discoveredByKey, SECRET_KIND_LABEL, shadowClarity, shadowBucket, type FusionSecretEntry, type DiscoveredSecret } from "@/lib/gamebook/yellow/data/fusionSecrets"
 import { fetchDiscoveredSecrets, reportForgedFusionSecrets } from "@/lib/gamebook/yellow/synergyGift"
 
 type Tab = "rules" | "official" | "mine" | "secrets"
@@ -124,14 +124,16 @@ const speciesParent = (id: string): FusionParent | null => { const sp = getSpeci
 // 🔮 SECRETS DE FUSION (Sartay 19/10/2026) : une carte par secret — OMBRE + énigme tant que personne ne l'a percé, puis
 //   COULEUR pour tout le Nexus (recette, nom, découvreur). Le sprite vient du registre officiel, sinon du cache généré
 //   (lecture seule : la page ne déclenche aucune génération).
-function SecretCard({ e, index, found, onOpen }: { e: FusionSecretEntry; index: number; found?: DiscoveredSecret; onOpen: (a: string, b: string) => void }) {
+function SecretCard({ e, index, found, onOpen, bucket, ready }: { e: FusionSecretEntry; index: number; found?: DiscoveredSecret; onOpen: (a: string, b: string) => void; bucket: number; ready: boolean }) {
     const pair = e.showcase.kind === "pair" ? e.showcase : null
     const revealedEarly = !!found
     // Le VRAI sprite n'est demandé que pour une carte PERCÉE : pour une ombre, ni requête ni URL ne doit trahir la recette.
     const { url: gen } = useFusionSprite(revealedEarly ? pair?.a : undefined, revealedEarly ? pair?.b : undefined)
     const [err, setErr] = useState(false)
     const official = pair ? officialFusionForParents(pair.a, pair.b) : null
-    const sprite = !revealedEarly ? `/api/gamebook/yellow/secret-shadow?i=${index}` // OMBRE noircie côté serveur, numéro opaque
+    // OMBRE noircie ET floutée côté serveur (netteté = niveaux de TES deux parents ; `c` = simple clé de cache). Pas d'énigme :
+    //   l'ombre suffit (Sartay 19/10). Image chargée seulement une fois la save enregistrée (`ready`), pour des niveaux à jour.
+    const sprite = !revealedEarly ? (ready ? `/api/gamebook/yellow/secret-shadow?i=${index}&c=${bucket}` : undefined)
         : pair ? (official?.sprite ?? gen ?? undefined) : getSpecies(e.showcase.kind === "single" ? e.showcase.id : "")?.sprite
     const revealed = !!found
     const ring = revealed ? "#c79cff" : "#3a2e56"
@@ -159,14 +161,14 @@ function SecretCard({ e, index, found, onOpen }: { e: FusionSecretEntry; index: 
                         <div style={S.parentLine}>🧬 {recipe}</div>
                         <div style={S.descMuted}>🔓 Percé par {found!.by} le {new Date(found!.at).toLocaleDateString("fr-FR")}</div>
                     </>
-                    : <div style={S.desc}>« {e.riddle} »</div>}
+                    : null}
             </div>
             <div style={S.tag}>{revealed ? "✨" : "🔒"}</div>
         </div>
     )
 }
 
-function SecretsList({ entries, found, onOpen }: { entries: FusionSecretEntry[]; found: Map<string, DiscoveredSecret>; onOpen: (a: string, b: string) => void }) {
+function SecretsList({ entries, found, onOpen, bucketOf, ready }: { entries: FusionSecretEntry[]; found: Map<string, DiscoveredSecret>; onOpen: (a: string, b: string) => void; bucketOf: (e: FusionSecretEntry) => number; ready: boolean }) {
     const n = entries.filter((e) => found.has(e.key)).length
     return (
         <div style={S.list}>
@@ -174,8 +176,8 @@ function SecretsList({ entries, found, onOpen }: { entries: FusionSecretEntry[];
                 <div style={S.progHead}><span>Secrets de fusion percés dans le Nexus</span><b style={{ color: "#d9b8ff" }}>{n} / {entries.length}</b></div>
                 <div style={S.progTrack}><span style={{ ...S.progFill, width: `${entries.length ? (n / entries.length) * 100 : 0}%` }} /></div>
             </div>
-            <div style={S.hint}>Chaque ombre cache une fusion qui « va bien ensemble » : sa génétique est <b>BOOSTÉE</b>. Le premier dresseur qui la forge à l&apos;Atelier la révèle en couleur pour tout le Nexus — et toute la communauté touche +200⚡.</div>
-            {entries.map((e, i) => <SecretCard key={e.key} e={e} index={i} found={found.get(e.key)} onOpen={onOpen} />)}
+            <div style={S.hint}>Chaque ombre cache une fusion qui « va bien ensemble » : sa génétique est <b>BOOSTÉE</b>. Une ombre se précise à mesure que tes <b>deux Daemons parents</b> gagnent des niveaux : elle est nette quand les deux sont niveau 100. Le premier dresseur qui la forge la révèle en couleur pour tout le Nexus.</div>
+            {entries.map((e, i) => <SecretCard key={e.key} e={e} index={i} found={found.get(e.key)} onOpen={onOpen} bucket={bucketOf(e)} ready={ready} />)}
         </div>
     )
 }
@@ -188,6 +190,20 @@ export default function FusiodexClient() {
     useEffect(() => { void loadYellowSave() }, [])
 
     const unlocked = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
+    // OMBRES FLOUTÉES PAR JOUEUR : le serveur floute d'après la save STOCKÉE → on l'enregistre d'abord (niveaux à jour), puis on
+    //   charge les images (au plus tard après 3 s). `unlocked` n'est vrai qu'une fois la save chargée : jamais d'écriture à vide.
+    const [shadowsReady, setShadowsReady] = useState(false)
+    useEffect(() => {
+        if (!unlocked) return
+        let done = false
+        const go = () => { if (!done) { done = true; setShadowsReady(true) } }
+        void persistYellowSaveNow().catch(() => undefined).finally(go)
+        const t = setTimeout(go, 3000)
+        return () => clearTimeout(t)
+    }, [unlocked])
+    // Palier de netteté par carte (clé de cache de l'image) : meilleur niveau de chaque espèce chez le joueur.
+    const bestLevels = useMemo(() => { const m = new Map<string, number>(); for (const x of [...player.team, ...player.pc]) if ((x.level ?? 0) > (m.get(x.speciesId) ?? 0)) m.set(x.speciesId, x.level); return m }, [player.team, player.pc])
+    const bucketOf = useMemo(() => (e: FusionSecretEntry) => shadowBucket(shadowClarity(e.showcase, (id) => bestLevels.get(id) ?? 0)), [bestLevels])
     const official = officialFusions(dex.seen)
     const prog = officialFusionProgress(dex.seen)
     // 🔮 SECRETS : catalogue (statique) + secrets déjà percés dans le Nexus (serveur, mondial — lu à l'ouverture).
@@ -353,7 +369,7 @@ export default function FusiodexClient() {
                         })}
                     </div>
                 ) : tab === "secrets" ? (
-                    <SecretsList entries={secrets} found={foundByKey} onOpen={(aId, bId) => setDetail({ aId, bId })} />
+                    <SecretsList entries={secrets} found={foundByKey} onOpen={(aId, bId) => setDetail({ aId, bId })} bucketOf={bucketOf} ready={shadowsReady} />
                 ) : (
                     <div style={S.list}>
                         <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais. Le bouton <b>⚔️ Équiper</b> la charge dans ton équipe de Ligue (retrouve 2 Daemons possédés de ces espèces).</div>

@@ -78,3 +78,37 @@ export function discoveredByKey(list: readonly DiscoveredSecret[]): Map<string, 
     for (const d of list) if (d && d.key && !out.has(d.key)) out.set(d.key, d)
     return out
 }
+
+/** NETTETÉ D'UNE OMBRE (demande Sartay 19/10/2026) — propre à CHAQUE joueur : niveau combiné de SES deux Daemons parents
+ *  (meilleur exemplaire de chaque espèce), rapporté à 200. Deux parents niveau 100 = ombre nette ; aucun des deux = une tache.
+ *  Mimimoy (avec n'importe qui) : son seul niveau, sur 100. Renvoie 0..1. */
+export function shadowClarity(showcase: SecretShowcase, bestLevel: (speciesId: string) => number): number {
+    const lv = (id: string) => Math.max(0, Math.min(100, Math.floor(bestLevel(id) || 0)))
+    const c = showcase.kind === "pair" ? (lv(showcase.a) + lv(showcase.b)) / 200 : lv(showcase.id) / 100
+    return Math.max(0, Math.min(1, c))
+}
+/** Flou maximal (sigma gaussien, en px sur une silhouette de 140 px) : une tache méconnaissable. */
+export const SHADOW_MAX_BLUR = 20 // réglé sur aperçu (19/10) : à netteté 0, une tache méconnaissable même à la taille de la carte
+/** Flou appliqué par le SERVEUR : linéaire, nul à netteté 1, maximal à netteté 0. */
+export function shadowBlurSigma(clarity: number): number { return SHADOW_MAX_BLUR * (1 - Math.max(0, Math.min(1, clarity))) }
+/** Palier de netteté (0..20, pas de 5 %) : simple clé de cache côté navigateur — le serveur recalcule depuis la save. */
+export function shadowBucket(clarity: number): number { return Math.round(Math.max(0, Math.min(1, clarity)) * 20) }
+/** Meilleur niveau par espèce dans une save BRUTE (monde vivant + run 2 + run 3 ; jamais la bulle de rejeu, jetable). Lecture défensive. */
+export function bestLevelsFromSave(save: unknown): Map<string, number> {
+    const out = new Map<string, number>()
+    const root = (save && typeof save === "object" ? save : {}) as Record<string, unknown>
+    for (const w of [root, root.ngplusWorld, root.run3World]) {
+        if (!w || typeof w !== "object") continue
+        const world = w as { team?: unknown; pc?: unknown }
+        for (const list of [world.team, world.pc]) {
+            if (!Array.isArray(list)) continue
+            for (const m of list) {
+                const mon = (m ?? {}) as { speciesId?: unknown; level?: unknown }
+                if (typeof mon.speciesId !== "string") continue
+                const lv = Math.max(0, Math.min(100, Math.floor(Number(mon.level) || 0)))
+                if (lv > (out.get(mon.speciesId) ?? 0)) out.set(mon.speciesId, lv)
+            }
+        }
+    }
+    return out
+}

@@ -58,3 +58,31 @@ describe("poids de pop dans la Grotte", () => {
         expect(src).toMatch(new RegExp(`RARE = ${GROTTE_RARE_BASE_MAX}\\b`))
     })
 })
+
+describe("Fusio-Ball : prix progressif en boutique (Sartay 19/10/2026)", () => {
+    it("1000 la 1re, 2000 la 2e, 3000 la 3e…", async () => {
+        const { fusioBallShopPrice } = await import("./fusionLeaguePerks")
+        expect([0, 1, 2, 9].map(fusioBallShopPrice)).toEqual([1000, 2000, 3000, 10000])
+    })
+    it("plusieurs d'un coup : chacune à son rang", async () => {
+        const { fusioBallShopTotal } = await import("./fusionLeaguePerks")
+        expect(fusioBallShopTotal(0, 1)).toBe(1000)
+        expect(fusioBallShopTotal(0, 3)).toBe(6000)
+        expect(fusioBallShopTotal(2, 2)).toBe(7000) // 3000 + 4000
+        expect(fusioBallShopTotal(5, 0)).toBe(0)
+    })
+    it("le compteur vient des marqueurs d'achat (distincts, préfixe exact)", async () => {
+        const { fusioShopBoughtCount, fusioShopMarkersFor } = await import("./fusionLeaguePerks")
+        expect(fusioShopMarkersFor(2, 2)).toEqual(["fusio_shop_3", "fusio_shop_4"])
+        expect(fusioShopBoughtCount(["fusio_shop_1", "fusio_shop_2", "fusio_shop_2", "y_fusion_maitre", "fusleague_or"])).toBe(2)
+        expect(fusioShopBoughtCount([])).toBe(0)
+    })
+    it("⚠️ la boutique affiche le prix progressif et la fenêtre d'achat facture chaque ball à son rang", async () => {
+        const fs = await import("node:fs"); const path = await import("node:path")
+        const src = fs.readFileSync(path.join(process.cwd(), "src/app/gamebook/yellow/YellowDevClient.tsx"), "utf8")
+        expect(src).toContain("price: fusioBallShopPrice(fusioBought)")
+        expect(src).toContain("fusioBallShopTotal(fusioBoughtNow, buyQty)")
+        expect(src).toContain("fusioShopMarkersFor(fusioBoughtNow, buyQty)) markTrainerDefeated(m)")
+        expect(src).not.toContain("FUSIO_BALL_SHOP_PRICE") // plus aucun prix fixe en boutique
+    })
+})
