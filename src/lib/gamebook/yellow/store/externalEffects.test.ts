@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
     hydratePlayer, setActiveWorld, getPlayer, applyExternalEffects, isCasinoRestricted, casinoBetAllowed,
-    getShinyFrenzy, recordShinyFrenzyCapture, CASINO_RESTRICTED_MARKER,
+    getShinyFrenzy, recordShinyFrenzyCapture, CASINO_RESTRICTED_MARKER, getShopSurtax, surtaxShopPrice,
 } from "./playerStore"
 import { shinyFrenzyActive, shinyFrenzyChance } from "../data/shinyFrenzy"
 
@@ -83,5 +83,18 @@ describe("shiny_frenzy — 50 % de shiny, jusqu'à 3 captures", () => {
     it("sans frénésie active, une capture de shiny ne décompte rien", () => {
         setup()
         expect(recordShinyFrenzyCapture()).toBeNull()
+    })
+})
+
+describe("🧾 shop_surtax — le contrôle fiscal de Jacanon (20/10/2026)", () => {
+    it("applique une surtaxe ×2 pendant 7 jours sur la boutique, et le lot est acquitté", () => {
+        setup()
+        const before = Date.now()
+        expect(applyExternalEffects(JSON.stringify([{ kind: "shop_surtax", amount: 2, hours: 168 }]))).toBe(true)
+        const s = getShopSurtax()
+        expect(s?.mult).toBe(2)
+        expect((s?.until ?? 0) - before).toBeGreaterThanOrEqual(168 * 3600_000 - 1000)
+        expect(surtaxShopPrice(1000)).toBe(2000)
+        expect(surtaxShopPrice(1000, (s?.until ?? 0) + 1)).toBe(1000) // expirée → prix normal
     })
 })

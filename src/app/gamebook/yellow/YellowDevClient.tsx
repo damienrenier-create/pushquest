@@ -86,7 +86,7 @@ import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBough
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -4627,6 +4627,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
                             <span>BOUTIQUE</span><span>💪 {player.reps}/{player.repsCap} reps</span>
                         </div>
+                        {shopSurtaxFactor() > 1 && (
+                            <div style={{ fontSize: 11, color: "#ffb0a0", background: "rgba(255,90,70,0.12)", border: "1px solid rgba(255,90,70,0.35)", borderRadius: 8, padding: "6px 8px", margin: "4px 0 6px", lineHeight: 1.4 }}>
+                                🧾 <b>Contrôle fiscal du Nexus</b> — tous les prix <b>×{shopSurtaxFactor()}</b> pour toi jusqu'au {new Date(player.shopSurtax?.until ?? 0).toLocaleDateString("fr-FR")}. Le croupier a parlé.
+                            </div>
+                        )}
                         {isAbundanceCurseActive() && (
                             <div style={{ fontSize: 11, color: "#e8b84a", background: "rgba(232,184,74,0.12)", borderRadius: 8, padding: "6px 8px", margin: "4px 0 6px", lineHeight: 1.4 }}>
                                 🍝 <b>Abondance maudite</b> — achat payant COUPÉ. {abundanceFreeItemAvailableToday() ? "Choisis 1 objet GRATUIT aujourd'hui (hors CT)." : "Objet gratuit du jour déjà pris — reviens demain."}
@@ -4645,7 +4650,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             // BOURSE : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Active dès le run 3
                             //   (endgame), ET dès le DÉBUT en mode FUN (le marché évolue aussi en fun run 1 & 2). Sinon = prix de base.
                             const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
-                            const priceOf = (it: { id?: string; price: number; category: string }) => it.id === "fusio_ball" ? fusioBallShopPrice(fusioBought) : shopPrice(it.price, it.category, bourseCtx) // Fusio-Ball : progressif (1000 × rang de l'achat), hors Bourse
+                            const priceOf = (it: { id?: string; price: number; category: string }) => surtaxShopPrice(it.id === "fusio_ball" ? fusioBallShopPrice(fusioBought) : shopPrice(it.price, it.category, bourseCtx)) // Fusio-Ball : progressif (1000 × rang de l'achat), hors Bourse
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
                             const SECOND_TOWN_BALLS = new Set(["super_ball_plus", "hyper_ball", "hyper_ball_plus"])
@@ -4726,7 +4731,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {shopOpen && buyConfirm && (() => {
                 const fusioBoughtNow = fusioShopBoughtCount(player.defeatedTrainers)
                 const isFusio = buyConfirm.id === "fusio_ball"
-                const total = isFusio ? fusioBallShopTotal(fusioBoughtNow, buyQty) : buyConfirm.price * buyQty // FUSIO-BALL : chaque ball à son rang (1000, 2000, 3000…)
+                const total = isFusio ? surtaxShopPrice(fusioBallShopTotal(fusioBoughtNow, buyQty)) : buyConfirm.price * buyQty // FUSIO-BALL : chaque ball à son rang (1000, 2000, 3000…)
                 const canAfford = player.reps >= total
                 return (
                     <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setBuyConfirm(null)}>
@@ -4900,12 +4905,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         return [...gifts, ...purch].map((ct) => {
                                             const mv = getMove(ct.moveId)
                                             const isGift = !purchIds.has(ct.id)
-                                            const afford = isGift || player.reps >= ct.price
+                                            const ctPrice = surtaxShopPrice(ct.price) // 🧾 contrôle fiscal éventuel
+                                            const afford = isGift || player.reps >= ctPrice
                                             return (
                                                 <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                     <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                         <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv && mv.accuracy > 0 ? ` · Préc ${mv.accuracy}` : ""}{mv?.description ? ` — ${mv.description}` : ""}</span></span>
-                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps`}</span>
+                                                        <span>{isGift ? "✨ Cadeau" : `${ctPrice} reps`}</span>
                                                     </span>
                                                 </button>
                                             )

@@ -1,16 +1,29 @@
 // src/lib/gamebook/yellow/poker/bots.ts
 //
 // Nexus — Poker : JOUEURS IA (comblent la table à ≥ MIN joueurs quand les potes ne sont pas tous là).
-// - botDecision : heuristique simple (force de main + pot odds + aléa) → fold/check/call/raise/allin.
+// - botDecision : décision fondée sur l'ÉQUITÉ réelle de la main (Monte-Carlo contre des mains inconnues) et les
+//   COTES DU POT → fold/check/call/raise/allin. Le style (persona) module la décision, il ne la remplace pas.
 // - runBots : joue automatiquement TOUS les tours de bots consécutifs (côté serveur) jusqu'au tour d'un
 //   humain ou la fin de main → aucun blocage quand c'est à un bot de parler.
 // - ensureBots : ajuste le nb de bots ENTRE les mains (fill jusqu'à `target`, retire si assez d'humains,
 //   recave les bots ruinés). Les bots = « la maison » : leurs jetons ne sont pas des reps (house-style).
+//
+// REFONTE 20/10/2026 (exploit de Jacanon, +48 612 ⚡ en 15 parties) — l'ancienne heuristique notait une main
+// post-flop par sa seule CATÉGORIE (carte haute ≈ 0,06, paire ≈ 0,15) et comparait ça à un seuil de fold ≥ 0,12 :
+// les boss se couchaient devant une mise de DEUX jetons dans un pot de 300, deux fois sur trois, et sur-misaient
+// préflop (relances à 60 % du tapis avec R-9). La ligne « grosse relance préflop, puis mise minimale à chaque
+// carte » rapportait 44 à 62 ⚡ par main (simulation, scratchpad/pokersim.ts). Désormais :
+//   • la force d'une main = son ÉQUITÉ contre N mains au hasard (le bot ne voit QUE ses 2 cartes et le tableau) ;
+//   • face à une mise, on compare l'équité aux cotes du pot : une mise minuscule se SUIT toujours ;
+//   • les mises sont dimensionnées sur le POT (½ à 1 pot, tapis seulement quand le pot le justifie) ;
+//   • le style ne crée plus de « trou » exploitable : il déplace les seuils de quelques points, et le manque de
+//     discipline (skill bas) se traduit par des SUIVIS de trop, jamais par des couchers devant rien.
 
 import { Rng } from "../battle/rng"
 import { act, legalActions, totalPot, type PokerAction, type PokerTable, type BotProfile } from "./engine"
 import { pruneSeats } from "./room"
-import { evaluateBest } from "./handEval"
+import { evaluateBest, compareHands } from "./handEval"
+import { makeDeck, type Card } from "./cards"
 
 export const BOT_BUYIN = 1000
 
@@ -54,52 +67,113 @@ function pickBoss(t: PokerTable, rng?: Rng, excludeNames?: readonly string[]): {
     return { name: boss.name, persona }
 }
 
-/** Force de main du bot ∈ [0,1] : préflop = valeur des 2 cartes ; postflop = catégorie de la meilleure main. */
-function handStrength(t: PokerTable, i: number): number {
-    const s = t.seats[i]
-    if (s.hole.length < 2) return 0
-    if (t.community.length === 0) {
-        const [hi, lo] = s.hole.map((c) => c.rank).sort((a, b) => b - a)
-        const pair = hi === lo
-        const suited = s.hole[0].suit === s.hole[1].suit
-        let str = (hi + lo) / 28              // hauteur des cartes (2+2 → .14 ; A+A → 1)
-        if (pair) str += 0.35                 // paire servie
-        if (suited) str += 0.06               // assorties
-        if (!pair && hi - lo <= 2) str += 0.04 // connecteurs
-        return Math.min(1, str)
+// ══════════════════ ÉQUITÉ (Monte-Carlo) ══════════════════
+/** Échantillons par estimation : assez pour une décision stable, peu pour rester instantané (≈ 2 ms). */
+export const EQUITY_SAMPLES_HEADS_UP = 80
+export const EQUITY_SAMPLES_MULTI = 48
+
+/** Équité ∈ [0,1] de `hole` + `community` contre `opponents` mains INCONNUES (tirées parmi les cartes non vues),
+ *  tableau complété au hasard. Le bot ne lit JAMAIS les cartes adverses ni l'ordre du paquet : il n'utilise que ce
+ *  qu'un joueur humain verrait. Déterministe pour un rng donné. Égalité = ½ point. */
+export function handEquity(hole: readonly Card[], community: readonly Card[], opponents: number, rng: Rng, samples?: number): number {
+    if (hole.length < 2) return 0
+    const n = Math.max(1, Math.min(6, Math.floor(opponents)))
+    const k = samples ?? (n === 1 ? EQUITY_SAMPLES_HEADS_UP : EQUITY_SAMPLES_MULTI)
+    const known = new Set([...hole, ...community].map((c) => c.rank * 4 + c.suit))
+    const unseen = makeDeck().filter((c) => !known.has(c.rank * 4 + c.suit))
+    const need = 2 * n + (5 - community.length)
+    let score = 0
+    for (let s = 0; s < k; s++) {
+        // Tirage partiel de Fisher-Yates : `need` cartes au hasard parmi les non-vues.
+        for (let i = 0; i < need; i++) {
+            const j = i + Math.floor(rng.next() * (unseen.length - i))
+            const tmp = unseen[i]; unseen[i] = unseen[j]; unseen[j] = tmp
+        }
+        const board = [...community, ...unseen.slice(2 * n, need)]
+        const mine = evaluateBest([...hole, ...board])
+        let best = 1 // 1 = je gagne, 0.5 = partage, 0 = battu
+        for (let o = 0; o < n && best > 0; o++) {
+            const cmp = compareHands(mine, evaluateBest([unseen[2 * o], unseen[2 * o + 1], ...board]))
+            if (cmp < 0) best = 0
+            else if (cmp === 0 && best > 0.5) best = 0.5
+        }
+        score += best
     }
-    const r = evaluateBest([...s.hole, ...t.community])
-    return Math.min(1, r.category / 8 + (r.tiebreak[0] ?? 0) / 220) // catégorie (0..8)/8 + petit départage
+    return score / k
+}
+
+/** Adversaires encore en lice contre le siège `i` (pas couchés, dans la main). Au moins 1 (sinon la main est finie). */
+function liveOpponents(t: PokerTable, i: number): number {
+    return Math.max(1, t.seats.filter((s, k) => k !== i && !s.folded && !s.sittingOut).length)
 }
 
 /** Décision d'un bot pour le siège `i` (c'est son tour). */
 export function botDecision(t: PokerTable, i: number, rng: Rng): PokerAction {
     const { canCheck, toCall, minRaiseTo, maxRaiseTo } = legalActions(t, i)
     const s = t.seats[i]
-    const str = handStrength(t, i)
     const p = s.persona ?? DEFAULT_PROFILE     // style du bot (tiré au hasard à sa création, stocké sur le siège)
+    const opps = liveOpponents(t, i)
+    const eq = handEquity(s.hole, t.community, opps, rng)
     const r = rng.next()
+    const r2 = rng.next() // 2e tirage : taille des mises et pièges — imprévisibilité (demande Sartay 20/10 : « plus imprévisibles »)
+    const pot = totalPot(t)
     const canRaise = maxRaiseTo > minRaiseTo
-    const raiseTo = (frac: number) => Math.min(maxRaiseTo, minRaiseTo + Math.floor((maxRaiseTo - minRaiseTo) * frac))
+    const bb = t.blinds.bb
+    // Mise « à » un total correspondant à `frac` × pot (pot APRÈS mon suivi), bornée aux relances légales. La taille est
+    //   BROUILLÉE de ±25 % : la même main ne mise jamais deux fois pareil, on ne lit pas la force dans le montant.
+    const betTo = (frac: number) => {
+        const jitter = 0.75 + r2 * 0.5
+        const target = s.betThisRound + toCall + Math.max(bb, Math.round((pot + toCall) * frac * jitter))
+        return Math.max(minRaiseTo, Math.min(maxRaiseTo, target))
+    }
+    // Multiway, la même équité vaut moins : on relève légèrement les exigences par adversaire supplémentaire.
+    const multi = (opps - 1) * 0.03
+    // PIÈGE (slow-play) : avec une main écrasante, les bots posés checkent/suivent parfois pour laisser l'autre miser.
+    const trapping = eq >= 0.85 && r2 < 0.18 + (1 - p.aggro) * 0.22
 
     if (canCheck) {
-        // Value bet : d'autant + probable que la main est forte ET que le bot est agressif.
-        if (str > 0.6 && canRaise && r < p.aggro) return { kind: "raise", to: raiseTo(0.35 + p.aggro * 0.3) }
-        // Bluff : à la fréquence propre du bot, sur main faible.
-        if (str < 0.35 && canRaise && r < p.bluff) return { kind: "raise", to: raiseTo(0.3) }
+        if (t.phase === "preflop") {
+            // Ouverture / relance préflop : bonnes mains (équité ≥ ~50 % + sélectivité), taille 2-4 BB + 1 BB par limper ;
+            //   de temps en temps un limp piège avec une main forte, ou une ouverture légère (bluff préflop) selon le style.
+            const openAt = 0.50 + (p.tight - 0.5) * 0.12 + multi
+            const limpers = t.seats.filter((x, k) => k !== i && !x.folded && !x.sittingOut && x.betThisRound > 0).length
+            const openTo = () => Math.max(minRaiseTo, Math.min(maxRaiseTo, t.currentBet + bb * (2 + Math.round(r2 * 2) + limpers)))
+            if (eq >= openAt && canRaise && r < 0.35 + p.aggro * 0.6 && !trapping) return { kind: "raise", to: openTo() }
+            if (eq < openAt && eq >= 0.38 && canRaise && opps <= 2 && r < p.bluff * 0.5) return { kind: "raise", to: openTo() } // ouverture légère
+            return { kind: "check" }
+        }
+        // Post-flop sans mise à suivre : mise de valeur avec une main qui domine (sauf piège), bluff au rythme du style
+        //   (tête-à-tête surtout, parfois à trois), sinon check.
+        const valueAt = 0.60 + (p.tight - 0.5) * 0.08 + multi
+        if (eq >= valueAt && canRaise && r < 0.45 + p.aggro * 0.5 && !trapping) return { kind: "raise", to: betTo(0.5 + p.aggro * 0.45) }
+        if (eq < 0.40 && canRaise && opps <= 2 && r < p.bluff * (opps === 1 ? 0.9 : 0.45)) return { kind: "raise", to: betTo(0.55 + r2 * 0.35) }
         return { kind: "check" }
     }
-    // Face à une mise : seuil de fold modulé par le style. Serré (tight) → se couche +. Peu skillé → respecte
-    // mal les pot-odds et « suit quand même » (calling station).
-    const potOdds = toCall / Math.max(1, totalPot(t) + toCall)
-    const foldThreshold = 0.12 + p.tight * 0.22 + potOdds * (0.3 + p.skill * 0.4)
-    if (str < foldThreshold) {
-        if (r > p.skill && str > foldThreshold * 0.55) return { kind: "call" } // erreur de discipline (suit une main marginale)
+
+    // ── Face à une mise : cotes du pot contre équité. ──
+    const potOdds = toCall / Math.max(1, pot + toCall)
+    // Exigence : les cotes, plus une marge de sélectivité (tight), plus la pression multiway. Une mise minuscule
+    //   (cotes ≈ 0) se suit toujours : il n'existe plus de « mise de 2 » qui fait fuir la table.
+    const need = Math.min(0.92, potOdds + (p.tight - 0.5) * 0.10 + multi + 0.02)
+    const allInCall = toCall >= s.stack
+    if (eq < need) {
+        // Manque de discipline (skill bas) : suit parfois une main un peu courte — jamais un tapis sans rien.
+        const slip = r > p.skill && eq > need * 0.75 && !allInCall
+        if (slip) return { kind: "call" }
         return { kind: "fold" }
     }
-    // Main jouable : relance de valeur si forte + agressive, sinon suivre (ou tapis si couvert).
-    if (str > 0.7 && canRaise && r < p.aggro * 0.8) return { kind: "raise", to: raiseTo(0.4 + p.aggro * 0.3) }
-    return toCall >= s.stack ? { kind: "allin" } : { kind: "call" }
+    // Main nettement devant : relance (ou tapis quand le pot est déjà gros par rapport au tapis) — sauf piège (on suit
+    //   pour relancer plus tard, « check-raise » naturel).
+    const raiseAt = Math.max(0.68, need + 0.30)
+    if (eq >= raiseAt && canRaise && r < 0.25 + p.aggro * 0.6 && !trapping) {
+        const to = betTo(0.75 + p.aggro * 0.5)
+        if (to >= s.betThisRound + s.stack * 0.6) return { kind: "allin" } // relance qui engage l'essentiel du tapis → tapis franc
+        return { kind: "raise", to }
+    }
+    // Bluff-relance : sur une main correcte (semi-bluff) ou, plus rarement, sur du vent — au rythme du style, en tête-à-tête.
+    if (eq >= need + 0.12 && eq < raiseAt && canRaise && opps === 1 && r < p.bluff * 0.4) return { kind: "raise", to: betTo(0.6 + r2 * 0.5) }
+    if (eq >= need && eq < need + 0.12 && canRaise && opps === 1 && potOdds < 0.3 && r < p.bluff * 0.15) return { kind: "raise", to: betTo(0.8) }
+    return allInCall ? { kind: "allin" } : { kind: "call" }
 }
 
 /** Fait jouer tous les bots dont c'est le tour, à la suite, jusqu'au tour d'un HUMAIN ou la fin de main. */

@@ -4,6 +4,7 @@
 // Stocké côté DB dans GamebookProgress.flags de la ligne chapterId="yellow"
 // (isolée de l'arc v3 → aucune migration). Versionné pour rester compatible.
 
+import { parseShopSurtax } from "../data/shopSurtax"
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
@@ -50,6 +51,8 @@ export interface YellowSave {
     pokerBossStacks: Record<string, number>
     pokerCashCap: number
     pokerCashDate: string
+    /** Cash quotidien : NET déjà réglé aujourd'hui (signé ; gains bornés par POKER_DAILY_NET_CAP, cf. poker/cashGame). */
+    pokerCashNet: number
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
     spagGift: boolean
     /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
@@ -281,6 +284,8 @@ export interface YellowSave {
     galijahDaily?: { day: string; target: number; pops: number; appeared: boolean }
     /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) : fin de fenêtre (epoch ms) + captures restantes. Cf. data/shinyFrenzy. */
     shinyFrenzy?: { until: number; left: number }
+    /** 🧾 CONTRÔLE FISCAL : surtaxe personnelle sur la boutique (fin epoch ms + multiplicateur). Cf. data/shopSurtax. */
+    shopSurtax?: { until: number; mult: number }
     ballLockRemaining: number
     /** PÂTE DE LUXE — file d'attente PRÉ-TIRÉE des issues (ex. cadeau Task1 : 6 issues garanties, ordre aléatoire).
      *  Chaque usage consomme la tête ; file vide → tirage générique 50/50 (perfect/min). Valeurs : "perfect"|"min"|"shiny_perfect". Défaut []. */
@@ -394,7 +399,7 @@ export const MSG_LOG_MAX = 120
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, towerStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, factoryStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", pokerCashNet: 0, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [], seenAt: {}, firstCatch: {} }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, capturesToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {}, dmgByDaemon: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, towerStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, factoryStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, domeTierRecord: {}, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -746,6 +751,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         pokerBossStacks: numRecNonNeg(o.pokerBossStacks), // garde les 0 (boss ruinés) → ne ressuscitent pas au reload
         pokerCashCap: typeof o.pokerCashCap === "number" && isFinite(o.pokerCashCap) ? Math.max(0, Math.floor(o.pokerCashCap)) : 0,
         pokerCashDate: typeof o.pokerCashDate === "string" ? o.pokerCashDate : "",
+        pokerCashNet: typeof o.pokerCashNet === "number" && isFinite(o.pokerCashNet) ? Math.trunc(o.pokerCashNet) : 0,
         spagGift: o.spagGift === true,
         pastaGodGift: o.pastaGodGift === true,
         pastaBoughtToday: typeof o.pastaBoughtToday === "number" ? Math.max(0, Math.floor(o.pastaBoughtToday)) : 0,
@@ -942,6 +948,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             const until = Number(w.until) || 0, left = Math.max(0, Math.floor(Number(w.left) || 0))
             return until > 0 && left > 0 ? { until, left } : undefined // fête finie (0 capture) → on ne traîne rien
         })(),
+        shopSurtax: parseShopSurtax((o as { shopSurtax?: unknown }).shopSurtax),
         evResetCharges: Math.max(0, Math.floor(Number((o as { evResetCharges?: unknown }).evResetCharges) || 0)) || undefined,
         ballLockRemaining: typeof o.ballLockRemaining === "number" ? Math.max(0, Math.min(100000, Math.floor(o.ballLockRemaining))) : 0,
         luxeOutcomeQueue: Array.isArray(o.luxeOutcomeQueue) ? (o.luxeOutcomeQueue as unknown[]).filter((v): v is string => v === "perfect" || v === "min" || v === "shiny_perfect").slice(0, 100) : [],

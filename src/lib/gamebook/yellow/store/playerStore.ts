@@ -12,6 +12,7 @@ import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from 
 import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
 import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
 import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
+import { freshShopSurtax, shopSurtaxMult, surtaxedPrice, type ShopSurtaxState } from "../data/shopSurtax"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -78,6 +79,7 @@ interface PlayerState {
     pokerBossStacks: Record<string, number>
     pokerCashCap: number   // ton buy-in à la 1re partie du jour (plafond des jetons donnés aux boss)
     pokerCashDate: string  // jour courant du cash (reset des tapis boss quand il change)
+    pokerCashNet?: number  // NET déjà réglé aujourd'hui au cash (signé) — plafond POKER_DAILY_NET_CAP (20/10/2026)
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
     spagGift: boolean
     /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
@@ -265,6 +267,8 @@ interface PlayerState {
     galijahDaily?: GalijahDailyState
     /** ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) — fenêtre + captures restantes (cf. data/shinyFrenzy). Absent = inactif. */
     shinyFrenzy?: ShinyFrenzyState
+    /** 🧾 CONTRÔLE FISCAL : surtaxe personnelle sur la boutique (cf. data/shopSurtax). Absent = aucune. */
+    shopSurtax?: ShopSurtaxState
     ballLockRemaining: number
     /** PÂTE DE LUXE — file pré-tirée des issues (cadeau garanti) ; tête consommée à chaque usage. Défaut []. */
     luxeOutcomeQueue: string[]
@@ -636,6 +640,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         pokerBossStacks: p.pokerBossStacks ?? st.pokerBossStacks ?? {},
         pokerCashCap: p.pokerCashCap ?? st.pokerCashCap ?? 0,
         pokerCashDate: p.pokerCashDate ?? st.pokerCashDate ?? "",
+        pokerCashNet: p.pokerCashNet ?? st.pokerCashNet ?? 0,
         spagGift: p.spagGift ?? st.spagGift ?? false,
         pastaGodGift: p.pastaGodGift ?? st.pastaGodGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, casinoSpentToday: p.casinoSpentToday ?? st.casinoSpentToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
@@ -726,6 +731,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         dexWish: p.dexWish ?? st.dexWish,
         galijahDaily: p.galijahDaily ?? st.galijahDaily,
         shinyFrenzy: p.shinyFrenzy ?? st.shinyFrenzy,
+        shopSurtax: p.shopSurtax ?? st.shopSurtax,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
@@ -1658,6 +1664,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "attack_cost_extended": if (!st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ATTACK_COST_EXTENDED_MARKER] }; return true // vœu « jauge pleine » (Laura) : coûts jusqu'au niv 80, plafond 13
         case "dex_wish_days": st = { ...st, dexWish: freshDexWish(amt || DEX_WISH_DEFAULT_CHARGES) }; return true // voeu « je choisis le numero » (Guillaume) : N journees sur commande
         case "casino_uncap": st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== CASINO_RESTRICTED_MARKER) }; return true // lève le plafond casino (ex-vœu de Jacanon, décision Sartay 15/10/2026)
+        case "shop_surtax": st = { ...st, shopSurtax: freshShopSurtax(Date.now(), e.amount, e.hours) }; return true // 🧾 contrôle fiscal : prix de la boutique × amount pendant hours (Jacanon, 20/10/2026)
         case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
@@ -1681,6 +1688,12 @@ export function isAttackCostExtended(): boolean { return st.defeatedTrainers.inc
 
 // ═══════ ✨ FRÉNÉSIE SHINY (anniversaire Jacanon) — accesseurs ; la règle vit dans data/shinyFrenzy ═══════
 export function getShinyFrenzy(): ShinyFrenzyState | undefined { return st.shinyFrenzy }
+// ═══════ 🧾 CONTRÔLE FISCAL (surtaxe boutique personnelle) — accesseurs ; la règle vit dans data/shopSurtax ═══════
+export function getShopSurtax(): ShopSurtaxState | undefined { return st.shopSurtax }
+/** Multiplicateur de prix en vigueur (1 = aucun). */
+export function shopSurtaxFactor(now = Date.now()): number { return shopSurtaxMult(st.shopSurtax, now) }
+/** Prix boutique surtaxé si un contrôle fiscal est en cours. */
+export function surtaxShopPrice(price: number, now = Date.now()): number { return surtaxedPrice(price, st.shopSurtax, now) }
 /** Un shiny vient d'être CAPTURÉ : décompte une des captures de la fête. null si aucune frénésie active. */
 export function recordShinyFrenzyCapture(): { left: number; done: boolean } | null {
     const cur = st.shinyFrenzy
@@ -2365,11 +2378,14 @@ export function isPokerFirstGameDone(): boolean { return st.pokerFirstGameDone }
 /** Début d'une partie cash : reset les tapis boss si NOUVEAU JOUR, fixe le cap (= ton buy-in) à la 1re
  *  partie du jour. Renvoie le cap du jour + les tapis boss persistés (nom → reps ; 0 = ruiné/out). */
 export function beginPokerCashGame(today: string, playerBuyin: number): { cap: number; bossStacks: Record<string, number> } {
-    if (st.pokerCashDate !== today) st = { ...st, pokerCashDate: today, pokerCashCap: 0, pokerBossStacks: {} }
+    if (st.pokerCashDate !== today) st = { ...st, pokerCashDate: today, pokerCashCap: 0, pokerBossStacks: {}, pokerCashNet: 0 } // nouveau jour : marge de gain remise à neuf
     let cap = st.pokerCashCap
     if (cap <= 0) { cap = Math.max(1, Math.floor(playerBuyin)); st = { ...st, pokerCashCap: cap } }
     return { cap, bossStacks: { ...st.pokerBossStacks } }
 }
+/** Cash quotidien : NET déjà réglé aujourd'hui (signé). Sert au plafond de gain (cf. poker/cashGame.settleDailyCashout). */
+export function getPokerCashNet(): number { return st.pokerCashNet ?? 0 }
+export function setPokerCashNet(net: number) { st = { ...st, pokerCashNet: Math.trunc(net) || 0 }; emit() }
 /** Persiste les tapis finaux des boss après une partie cash (0 = ruiné → out pour la journée). */
 export function savePokerBossStacks(stacks: Record<string, number>) {
     st = { ...st, pokerBossStacks: { ...stacks } }
@@ -2748,7 +2764,7 @@ export function recordPnj5Defeat(): number {
 
 /** Prix actuel d'un Super Pasta : (120 + bonus journalier) × 1.5^(achats du RUN). */
 export function superPastaPrice(): number {
-    return Math.round((SUPER_PASTA_BASE + st.pastaDayBonus) * SUPER_PASTA_GROWTH ** st.pastaBoughtToday)
+    return surtaxShopPrice(Math.round((SUPER_PASTA_BASE + st.pastaDayBonus) * SUPER_PASTA_GROWTH ** st.pastaBoughtToday)) // 🧾 surtaxe éventuelle
 }
 
 /**
@@ -4222,7 +4238,7 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
         const sp = getSpecies(m.speciesId)
         if (!sp || !canLearnCt(sp, ct)) return { ok: false, reason: "incompatible" }
         if (m.moves.some((s) => s.moveId === ct.moveId) || m.pendingMoves?.includes(ct.moveId)) return { ok: false, reason: "known" }
-        const cost = owned ? 0 : ct.price // CT cadeau = gratuite
+        const cost = owned ? 0 : surtaxShopPrice(ct.price) // CT cadeau = gratuite ; 🧾 surtaxe éventuelle (contrôle fiscal)
         if (st.reps < cost) return { ok: false, reason: "reps" }
         const free = m.moves.length < 4
         const pp = getMove(ct.moveId)?.pp ?? 5

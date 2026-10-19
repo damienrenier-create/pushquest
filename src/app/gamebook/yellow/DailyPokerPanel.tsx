@@ -1,11 +1,13 @@
 "use client"
 
-// Nexus — Poker CASH QUOTIDIEN vs les boss (SOLO, VRAIES reps). Table à 6 (toi + 5 boss). Chaque boss a un
-// tapis du jour : capé sur ton buy-in de 1re partie, mais il GARDE ses gains. Un boss ruiné (tapis 0) part
-// et revient demain. Aucune triche — vrai cash game. Jouable tant qu'il reste des boss non ruinés.
+// Nexus — Poker CASH QUOTIDIEN vs les boss (SOLO, VRAIES reps). Table à 6 (toi + 5 boss). Chaque boss reçoit UNE fois
+// par jour un tapis = ton buy-in de 1re partie, puis joue avec ce qu'il a (gains gardés, pertes non rendues). Un boss
+// ruiné (tapis 0) part et revient demain. VERROUS 20/10/2026 : buy-in DÉBITÉ à l'assise (plus de free-roll au
+// rechargement), gain net PLAFONNÉ par jour (POKER_DAILY_NET_CAP, l'excédent revient à la maison), robots aux cotes.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, creditReps, logEnergyIncome, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, creditReps, logEnergyIncome, beginPokerCashGame, savePokerBossStacks, casinoBetAllowed, spendCasinoBet, getGameMode, getPokerCashNet, setPokerCashNet } from "@/lib/gamebook/yellow/store/playerStore"
+import { POKER_DAILY_NET_CAP, cashAllowanceLeft, settleDailyCashout } from "@/lib/gamebook/yellow/poker/cashGame"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCashPoker } from "@/lib/gamebook/yellow/multiplayer/useCashPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -23,7 +25,9 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
     const [buyin, setBuyin] = useState(DEFAULT_BUYIN)
     const [raiseTo, setRaiseTo] = useState(0)
     const [say, setSay] = useState<{ seat: number; text: string; n: number } | null>(null)
-    const [result, setResult] = useState<{ tapis: number; net: number } | null>(null)
+    const [result, setResult] = useState<{ tapis: number; net: number; taken: number } | null>(null)
+    const todayNet = player.pokerCashDate === todayKey() ? (player.pokerCashNet ?? 0) : 0 // net du jour (un autre jour enregistré = marge neuve)
+    const allowance = cashAllowanceLeft(todayNet) // marge de gain restante aujourd'hui (plafond net)
     const spentRef = useRef(0)
     const cashingRef = useRef(false)
     const nextTimer = useRef<number | null>(null)
@@ -72,9 +76,14 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
         const bi = Math.max(MIN_BUYIN, Math.min(player.reps, Math.floor(buyin) || MIN_BUYIN))
         if (player.reps < bi) return
         if (!casinoBetAllowed(bi).ok) return // VŒU DU GÉNIE : buy-in (≥ 20) au-dessus du cap casino 10/mise → interdit
-        spentRef.current = bi // buy-in au RISQUE (pas encore débité — réglé en NET à la sortie → un refresh n'engage rien)
+        // Marge du jour épuisée → le croupier refuse l'assise (le bouton est déjà grisé ; garde-fou).
+        if (cashAllowanceLeft(player.pokerCashDate === todayKey() ? getPokerCashNet() : 0) <= 0) return
+        // BUY-IN DÉBITÉ À L'ASSISE (20/10/2026) : avant, réglé en net à la sortie → recharger la page effaçait une partie
+        //   perdue (free-roll). Désormais quitter sans encaisser = perdre son buy-in, comme à une vraie table.
+        if (!spendCasinoBet(bi).ok) return
+        spentRef.current = bi
         const { cap, bossStacks } = beginPokerCashGame(todayKey(), bi)
-        persistYellowSave() // verrouille le cap/jour du cash même si la session est ensuite abandonnée
+        persistYellowSave() // verrouille le débit + le cap/jour du cash même si la session est ensuite abandonnée
         joinCash(bi, cap, bossStacks)
         setPhase("play")
     }
@@ -86,13 +95,17 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
         if (cashingRef.current) return
         cashingRef.current = true
         const { playerTapis, bossStacks } = leaveCash()
-        // Règlement du NET (buy-in jamais débité à l'assise) : on crédite le gain, ou on débite la perte.
+        // Règlement : le buy-in a déjà été débité à l'assise → on rend le tapis, le GAIN net étant borné par la marge du
+        //   jour (POKER_DAILY_NET_CAP) ; l'excédent est repris par la maison (« la maison plafonne », comme le tuto).
         const net = playerTapis - spentRef.current
-        if (net > 0) logEnergyIncome("🃏 Poker", creditReps(net))          // crédit INTÉGRAL (jamais tronqué par le cap)
-        else if (net < 0) spendReps(-net)     // perte réelle (≤ buy-in ≤ tes reps → toujours possible)
+        const settled = settleDailyCashout(net, getPokerCashNet())
+        const back = Math.max(0, spentRef.current + settled.credit) // ce qui revient au joueur (buy-in + net borné)
+        if (back > 0) creditReps(back)
+        if (settled.credit > 0) logEnergyIncome("🃏 Poker", settled.credit)
+        setPokerCashNet(settled.netToday)
         savePokerBossStacks(bossStacks)
         persistYellowSave()
-        setResult({ tapis: playerTapis, net })
+        setResult({ tapis: back, net: settled.credit, taken: settled.taken })
         setPhase("done")
     }
 
@@ -109,7 +122,9 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                     <div style={{ fontSize: 12.5, lineHeight: 1.6 }}>
                         <p style={{ margin: "4px 0" }}>Table à <b>6</b> : toi + <b>5 boss</b> de la Ligue et des arènes. {getGameMode() === "fun" ? <>Ta <b>vraie énergie ⚡</b> est en jeu</> : <><b>Vraies reps</b></>} — tu gagnes et tu perds pour de vrai.</p>
                         <ul style={{ margin: "6px 0", paddingLeft: 18, opacity: 0.9 }}>
-                            <li>Chaque boss démarre avec un tapis <b>= ton buy-in</b> (jamais plus que toi), mais <b>garde ses gains</b> d'une partie à l'autre.</li>
+                            <li>Chaque boss reçoit <b>une fois par jour</b> un tapis <b>= ton buy-in</b> (jamais plus que toi), puis joue avec ce qu'il a : il <b>garde ses gains</b>, ses pertes ne lui sont pas rendues.</li>
+                            <li>Ton buy-in est <b>débité à l'assise</b> : quitter sans encaisser, c'est le perdre.</li>
+                            <li>La maison <b>plafonne</b> : au plus <b>+{POKER_DAILY_NET_CAP} ⚡ net par jour</b> (il te reste <b>{allowance} ⚡</b> de marge aujourd'hui) ; l'excédent lui revient.</li>
                             <li>Un boss que tu <b>ruines</b> (tapis 0) <b>quitte la table</b> et ne revient que <b>demain</b>.</li>
                             <li>Tu peux <b>encaisser</b> ton tapis et partir quand tu veux.</li>
                         </ul>
@@ -117,7 +132,8 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                             <span style={{ fontSize: 12 }}>Reps : <b>{player.reps} ⚡</b> · Buy-in :</span>
                             <input type="number" min={MIN_BUYIN} max={player.reps} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
                         </div>
-                        <button style={{ ...bigBtn, background: "#4cd964", color: "#0a2a12", width: "100%" }} disabled={player.reps < Math.max(MIN_BUYIN, buyin)} onClick={start}>
+                        {allowance <= 0 && <div style={{ ...bustBanner, background: "#3a2e1e" }}>🧑‍⚖️ Le croupier : « Tu as assez plumé la maison pour aujourd'hui. Reviens demain. »</div>}
+                        <button style={{ ...bigBtn, background: allowance > 0 ? "#4cd964" : "#334", color: allowance > 0 ? "#0a2a12" : "#889", width: "100%" }} disabled={allowance <= 0 || player.reps < Math.max(MIN_BUYIN, buyin)} onClick={start}>
                             S'asseoir ({Math.max(MIN_BUYIN, Math.min(player.reps, buyin || 0))} ⚡)
                         </button>
                         {player.reps < Math.max(MIN_BUYIN, buyin) && <div style={{ fontSize: 10.5, color: "#e0a0a0", textAlign: "center", marginTop: 4 }}>Pas assez de reps (min {MIN_BUYIN} ⚡).</div>}
@@ -174,6 +190,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                         <div style={{ ...bustBanner, background: result.net >= 0 ? "#1e3a24" : "#3a1e1e" }}>
                             {result.net >= 0 ? `💰 Bénéfice du jour : +${result.net} ⚡` : `📉 Perte : ${result.net} ⚡`}
                         </div>
+                        {result.taken > 0 && <div style={{ ...bustBanner, background: "#3a2e1e" }}>🧑‍⚖️ La maison plafonne : <b>{result.taken} ⚡</b> repris (max +{POKER_DAILY_NET_CAP} ⚡ net par jour).</div>}
                         <p style={{ fontSize: 11, opacity: 0.75, margin: "6px 0" }}>Les boss ruinés reviennent demain, plus remontés que jamais.</p>
                         <button style={{ ...bigBtn, background: "#4cd964", color: "#0a2a12", width: "100%" }} onClick={onDone}>Terminer</button>
                     </div>
