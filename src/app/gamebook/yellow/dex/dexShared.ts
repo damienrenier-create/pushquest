@@ -24,14 +24,7 @@ export function galijahCounterStyle(remaining: number): CSSProperties {
         fontVariantNumeric: "tabular-nums",
     }
 }
-/** Indice MégamonarX (« ??? ») à 2 paliers narratifs selon l'avancée à la Ligue de Fusion. null = pas encore d'indice. */
-export function megamonarxHint(reachedFusion: boolean, wonFusion: boolean): string | null {
-    return wonFusion
-        ? "🔮 On murmure qu'une fusion peut ÉVOLUER dans de bonnes conditions… une victoire à la Ligue, dit-on, en serait la clé."
-        : reachedFusion
-            ? "🔮 Une rumeur court au Dôme… une fusion poussée à son ultime limite pourrait transcender. Nul ne sait vraiment comment."
-            : null
-}
+// (L'indice MégamonarX vit désormais dans data/megamonarxClues — une ENQUÊTE à 4 indices, cf. fiche N°203.)
 
 // Couleur par type (chips + accents). Palette type-Gen1 classique.
 export const TYPE_COLORS: Record<PokeType, string> = {

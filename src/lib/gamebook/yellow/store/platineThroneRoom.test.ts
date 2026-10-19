@@ -95,3 +95,19 @@ describe("relecture du 19/10 (garde-fous structurels)", () => {
         expect(read("src/app/gamebook/yellow/FusionDetailView.tsx")).toContain("speciesId: sp!.id")
     })
 })
+
+describe("relecture du 19/10 (2e passe)", () => {
+    it("⚠️ trône pas chargé : sortie AVANT toute reconstruction d'équipe dans launchFusionLeague", () => {
+        const g = read("src/lib/gamebook/yellow/store/gameStore.ts")
+        const fn = g.slice(g.indexOf("function launchFusionLeague("))
+        const guard = fn.indexOf("trainerId === \"y_fusion_platine\" && !isPlatineCorridorLoaded()")
+        expect(guard).toBeGreaterThan(0)
+        expect(guard).toBeLessThan(fn.indexOf("let playerFusions = getGauntletTeam()"))
+    })
+    it("⚠️ sacres OR : bornés à l'écriture et réservés à qui a l'argent (tous mondes)", () => {
+        const hof = read("src/app/api/gamebook/yellow/fusion-hall-of-fame/route.ts")
+        expect(hof).toContain("const team = sanitizeThroneTeam(body.team)")
+        expect(hof).toContain("saveHasMarker(prog?.flags, \"fusleague_argent\", { includeReplay: true })")
+        expect(read("src/app/api/gamebook/yellow/platine-throne/route.ts")).toContain("saveHasMarker(prog?.flags, PLATINE_OPEN_MARKER)")
+    })
+})

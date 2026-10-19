@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { sanitizeThroneTeam, reclaimThrone, claimThrone, type ThroneSlot } from "./platineThrone"
+import { sanitizeThroneTeam, reclaimThrone, claimThrone, saveHasMarker, type ThroneSlot } from "./platineThrone"
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 // LE TRÔNE — deux correctifs du 19/10/2026 (enquête après le sacre de Mools) :
@@ -39,7 +39,7 @@ describe("sanitizeThroneTeam", () => {
         expect(sanitizeThroneTeam(null)).toEqual([])
         expect(sanitizeThroneTeam("x")).toEqual([])
         expect(sanitizeThroneTeam([{ stats: {} }, 42, null])).toEqual([])
-        const [m] = sanitizeThroneTeam([{ name: "A", shiny: "oui", items: "restes", moveTypes: "x", moves: "y" }])
+        const [m] = sanitizeThroneTeam([{ name: "A", stats: { hp: 10 }, shiny: "oui", items: "restes", moveTypes: "x", moves: "y" }])
         expect(m.shiny).toBeUndefined(); expect(m.items).toBeUndefined(); expect(m.moveTypes).toBeUndefined(); expect(m.moves).toEqual([])
     })
 })
@@ -59,5 +59,21 @@ describe("reclaimThrone", () => {
     it("un ANCIEN Maître qui reprend la chaise → nouveau chrono, règnes +1, points gardés", () => {
         const next = reclaimThrone(prev, [MON], "new.png", now, false)
         expect(next.sinceAt).toBe(now.toISOString()); expect(next.reigns).toBe(2); expect(next.points).toBe(3)
+    })
+})
+
+describe("relecture du 19/10 : bornes et marqueurs", () => {
+    it("une chimère sans PV est écartée ; un id de parent custom (43 car.) n'est plus tronqué", () => {
+        expect(sanitizeThroneTeam([{ ...MON, stats: { ...MON.stats, hp: 0 } }])).toEqual([])
+        const id = "custom_cmsat15v80001wvy_joeyrrant_s3_xxxxxxx"
+        expect(sanitizeThroneTeam([{ ...MON, aId: id }])[0].aId).toBe(id)
+    })
+    it("saveHasMarker : racine, run 2, run 3 — jamais la bulle de rejeu", () => {
+        expect(saveHasMarker({ defeatedTrainers: ["fusleague_argent"] }, "fusleague_argent")).toBe(true)
+        expect(saveHasMarker({ defeatedTrainers: [], ngplusWorld: { defeatedTrainers: ["fusleague_argent"] } }, "fusleague_argent")).toBe(true)
+        expect(saveHasMarker({ run3World: { defeatedTrainers: ["fusleague_argent"] } }, "fusleague_argent")).toBe(true)
+        expect(saveHasMarker({ replayWorld: { defeatedTrainers: ["fusleague_argent"] } }, "fusleague_argent")).toBe(false)
+        expect(saveHasMarker({ replayWorld: { defeatedTrainers: ["fusleague_argent"] } }, "fusleague_argent", { includeReplay: true })).toBe(true) // porte OR du Hall of Fame
+        expect(saveHasMarker(null, "fusleague_argent")).toBe(false)
     })
 })

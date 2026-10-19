@@ -107,9 +107,9 @@ import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, 
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes, fusionSecretRevealKey } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { shouldLogMessage } from "@/lib/gamebook/yellow/data/messageJournal"
-import { reportSynergyDiscovery } from "@/lib/gamebook/yellow/synergyGift"
+import { reportSynergyDiscovery, reportSecretReveal, reportForgedFusionSecrets } from "@/lib/gamebook/yellow/synergyGift"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { prefetchFusionSprites } from "@/lib/gamebook/yellow/data/fusionSpriteClient"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
@@ -1884,9 +1884,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // 🐉🪨 MÉGAMONARX — CINÉMATIQUE HISTORIQUE : un Dracolithe niv 100 a remporté la Ligue de Fusion et TRANSCENDE en
     //   3ᵉ légendaire. Le Daemon est déjà en équipe/PC (grantMegamonarx). On fige la save (événement critique) et le
     //   Dieu Spaghetti narre la naissance de la « fusion infinie ». One-shot (signal effacé après lecture).
+    //   La save est figée TOUT DE SUITE ; la cinématique, elle, ATTEND l'écran libre (combat fermé, évolutions jouées, dialogues
+    //   du sacre lus) : showDialogue REMPLACE le dialogue en cours, et au Trône le générique du sacre (rematchReward) part dans
+    //   le même flush — il l'aurait écrasée (relecture 19/10). Les offres Fusio-Ball / boucle attendent à leur tour (!megamonarxReveal).
+    const megaPersistedRef = useRef(false)
     useEffect(() => {
-        if (!megamonarxReveal) return
-        persistYellowSaveNow()
+        if (!megamonarxReveal) { megaPersistedRef.current = false; return }
+        if (!megaPersistedRef.current) { megaPersistedRef.current = true; persistYellowSaveNow() }
+        if (battle || evolutions.length > 0 || rematchReward || dialogue || newDexEntry || pendingLearn || fusionParentReward) return
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             "*Le sol du Nexus se fissure. Ton Dracolithe, sacré champion de la Fusion, se met à irradier d'une lumière que nul œil n'a jamais contemplée…*",
             "« IM… IMPOSSIBLE. La fusion parfaite, poussée à son APOGÉE ABSOLUE… Elle ne se contente plus d'unir deux âmes. Elle en FORGE une TROISIÈME. »",
@@ -1895,7 +1900,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "🐉🪨 « MÉGAMONARX s'éveille. Le 3ᵉ légendaire du Nexus. Immortel. Colossal. Et il est TIEN — à jamais. Que ton nom résonne dans l'éternité, champion. »",
         ])
         clearMegamonarxReveal()
-    }, [megamonarxReveal, showDialogue])
+    }, [megamonarxReveal, battle, evolutions.length, rematchReward, dialogue, newDexEntry, pendingLearn, fusionParentReward, showDialogue])
 
     // LIGUE DE FUSION : à la fin d'un combat, les fusionnés reversent la moitié de leur XP à leurs parents →
     // notification (une fois l'écran libre, sans écraser un prompt d'apprentissage / dialogue en cours).
@@ -1920,13 +1925,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         // !fusionParentReward : au sacre, le message « parents entraînés » et cette offre partent dans le MÊME flush ;
         //   sans ce gate, le modal (zIndex 9500) recouvrirait le message avant lecture. On attend qu'il soit consommé.
-        if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun && !fusionParentReward) {
+        if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun && !fusionParentReward && !megamonarxReveal) {
             fusioBuyingRef.current = false // ré-arme le verrou d'achat pour cette offre
             fusioReofferShownRef.current = true // l'offre du sacre COMPTE comme la proposition de cette session
             setFusioBallModal(true)
             clearFusioBallOffer()
         }
-    }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward])
+    }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, megamonarxReveal])
 
     // FUSIO-BALL — ANTI-CLIC-RAPIDE : à l'ouverture de l'offre, on ARME les boutons après ~700 ms (le sacre se termine
     //   souvent sur un tap encore en vol qui fermait l'offre instantanément). Couplé à la SUPPRESSION du clic-hors-cadre.
@@ -1942,13 +1947,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     //   dans le même flush) via !fusioBallModal && !fusioBallOffer. Jamais en bulle de rejeu (double garde).
     useEffect(() => {
         if (loopOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun
-            && !fusionParentReward && !fusioBallOffer && !fusioBallModal && !fusionSacre && getActiveWorld() !== "replay") {
+            && !fusionParentReward && !fusioBallOffer && !fusioBallModal && !fusionSacre && !megamonarxReveal && getActiveWorld() !== "replay") {
             // SACRE OR : la MÉGA célébration proposera la boucle via son CTA (APRÈS la fête) → on consomme l'offre sans
             //   ouvrir le modal maintenant. Hors OR (ex. capture Ukognofy) : modal direct comme avant.
             if (!(fusionEpilogue && fusionEpilogue.tier === "or")) setLoopModal(true)
             clearLoopOffer()
         }
-    }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre, fusionEpilogue])
+    }, [loopOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward, fusioBallOffer, fusioBallModal, fusionSacre, fusionEpilogue, megamonarxReveal])
 
     // ÉPILOGUE « MAÎTRE DE LA CHIMÈRE » — après le sacre, EN DERNIER (une fois toutes les modales/cinématiques du sacre
     //   consommées : Fusio-Ball, boucle, Mégamonarx…), le Dieu Spaghetti prononce son laïus (EPILOGUE_INTRO_LINES) ;
@@ -3755,7 +3760,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     if (pairErr) { setToast(pairErr); return }
                     fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes (joueur + ennemi)
                     const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
-                    recordFusionCreated(picks[0].speciesId, picks[1].speciesId); persistYellowSave() // journalise dans « Mes fusions » (Fusiodex) — l'épreuve EST une chimère assemblée à l'Autel (dédup idempotent)
+                    recordFusionCreated(picks[0].speciesId, picks[1].speciesId) // journalise dans « Mes fusions » (Fusiodex) — l'épreuve EST une chimère assemblée à l'Autel (dédup idempotent)
+                    reportForgedFusionSecrets(picks[0].speciesId, picks[1].speciesId, markSynergyDiscovered); persistYellowSave() // 🔮 l'épreuve PERCE aussi un secret (relecture 19/10 : la paire de geckos de Mools restait dans l'ombre)
                     const lvl = result.level
                     // ÉPREUVE D'OUVERTURE : vs 2 fusions ennemies (Tonyront EAU/NORMAL · Maîtrelmin COMBAT/ELEC), scalées.
                     const enemy = buildFusionTrialEnemy(lvl)
@@ -3843,6 +3849,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             //   joueur perce CE secret (par clé, pas par paire), on l'annonce ET on déclenche la fête
                             //   communautaire (serveur idempotent MONDIAL par clé → aucun double-versement). Cf. concern 04/09.
                             const syn = fusionSynergy(ma.speciesId, mb.speciesId)
+                            // 🔮 PAGE « SECRETS » : une paire de CLAN a sa propre carte → on la révèle (la fête du clan, elle, reste unique).
+                            const revealKey = fusionSecretRevealKey(ma.speciesId, mb.speciesId)
+                            if (syn && revealKey && revealKey !== syn.key) reportSecretReveal(revealKey, syn.label)
                             if (syn && markSynergyDiscovered(syn.key)) {
                                 reportSynergyDiscovery(syn.key, syn.label)
                                 showDialogue("y_dome_spaghetti", "✨ Dieu Spaghetti", [

@@ -172,8 +172,9 @@ export function sanitizeThroneTeam(raw: unknown): FusionChampionMon[] {
             stats: { hp: num(st.hp, 2000), atk: num(st.atk, 1500), def: num(st.def, 1500), spe: num(st.spe, 1500), spc: num(st.spc, 1500) },
             moves: Array.isArray(o.moves) ? o.moves.slice(0, 4).map((x) => str(x, 40)) : [],
         }
-        if (o.aId) mon.aId = str(o.aId, 40)
-        if (o.bId) mon.bId = str(o.bId, 40)
+        if (o.aId) mon.aId = str(o.aId, 64) // ids custom jusqu'à 43 car. (custom_<slug16>_<slug16>_sN) : tronqués, le sprite ne se résout plus
+        if (o.bId) mon.bId = str(o.bId, 64)
+        if (!(mon.stats.hp > 0)) continue // une chimère sans PV rendrait la salle absurde (relecture 19/10)
         if (Object.keys(moveTypes).length) mon.moveTypes = moveTypes
         if (items.length) mon.items = items
         if (o.shiny === true) mon.shiny = true
@@ -190,4 +191,13 @@ export function reclaimThrone(prev: ThroneSlot | null, team: FusionChampionMon[]
     if (!prev) return claimThrone(team, avatar, now)
     if (isTenant) return { ...prev, team: team.slice(0, 6), avatar: avatar ?? prev.avatar }
     return renewThrone(prev, team, avatar, now)
+}
+
+/** La save (flags bruts, côté serveur) porte-t-elle ce marqueur dans UN de ses mondes réels (principal, run 2, run 3) ?
+ *  Les marqueurs de Ligue sont PAR MONDE ; ne lire que la racine refusait à tort un joueur qui a joué ailleurs. La bulle de
+ *  rejeu est ignorée (jetable). */
+export function saveHasMarker(flags: unknown, marker: string, opts?: { includeReplay?: boolean }): boolean {
+    const f = (flags ?? {}) as { defeatedTrainers?: unknown; ngplusWorld?: { defeatedTrainers?: unknown } | null; run3World?: { defeatedTrainers?: unknown } | null; replayWorld?: { defeatedTrainers?: unknown } | null }
+    const lists = [f.defeatedTrainers, f.ngplusWorld?.defeatedTrainers, f.run3World?.defeatedTrainers, ...(opts?.includeReplay ? [f.replayWorld?.defeatedTrainers] : [])]
+    return lists.some((l) => Array.isArray(l) && l.includes(marker))
 }

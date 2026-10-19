@@ -16,12 +16,11 @@ import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
-import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
-import { isFusionChampion } from "@/lib/gamebook/yellow/data/fusionLeague"
+import { megamonarxClueContext, megamonarxClues, MEGAMONARX_CLUE_TOTAL } from "@/lib/gamebook/yellow/data/megamonarxClues"
 import {
     TYPE_COLORS, STAT_ORDER, STAT_LABEL, baseStatTotal, statColor,
     buildEvolutionChain, computeTypeDefenses, type TypeMatch,
-    galijahCounterStyle, megamonarxHint,
+    galijahCounterStyle,
 } from "../dexShared"
 import TypeChip, { typeChartHref } from "../TypeChip"
 
@@ -63,6 +62,18 @@ function MatchRow({ title, matches, onPick }: { title: string; matches: TypeMatc
     )
 }
 
+/** Fiche scellée N°203 : le texte de mystère, la jauge de l'enquête, puis chaque indice débloqué. */
+function MegaClues({ clues }: { clues: string[] }) {
+    const n = clues.length
+    return (
+        <span style={{ display: "block" }}>
+            <span style={{ display: "block", marginBottom: 10 }}>Un secret rôde derrière ce numéro… il ne se révélera qu&apos;à celui qui le fera sien.</span>
+            <span style={{ display: "block", fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>🔍 Indices : {n} / {MEGAMONARX_CLUE_TOTAL} {"✦".repeat(n)}{"✧".repeat(Math.max(0, MEGAMONARX_CLUE_TOTAL - n))}</span>
+            {clues.map((c, i) => <span key={i} style={{ display: "block", textAlign: "left", marginBottom: 8, opacity: 1 }}>{c}</span>)}
+        </span>
+    )
+}
+
 export default function DexDetailClient({ id }: { id: string }) {
     const router = useRouter()
     const dex = usePokedex()
@@ -78,9 +89,10 @@ export default function DexDetailClient({ id }: { id: string }) {
     const seen = caught || dex.seen.includes(id)
     const ultraSecretLocked = DEX_ULTRA_SECRET.has(id) && !caught
     if (ultraSecretLocked || !seen) {
-        const reachedFusion = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
-        const wonFusion = isFusionChampion((m) => player.defeatedTrainers.includes(m))
-        const mHint = ultraSecretLocked && id === "megamonarx" ? megamonarxHint(reachedFusion, wonFusion) : null
+        // 🐉🪨 MÉGAMONARX — l'ENQUÊTE : indices cumulés selon ce que le joueur a VRAIMENT fait (cf. data/megamonarxClues).
+        const mClues = ultraSecretLocked && id === "megamonarx"
+            ? megamonarxClues(megamonarxClueContext({ markers: player.defeatedTrainers, seen: dex.seen, fusionHistory: player.fusionHistory }))
+            : null
         // GALIJAH : une fois CROISÉ (vu, pas capturé), L'ARCHIVISTE complète sa fiche scellée avec le calendrier de repop.
         const gSeenNotCaught = ultraSecretLocked && id === "galijah" && dex.seen.includes("galijah")
         const gRem = ultraSecretLocked && id === "galijah" && !gSeenNotCaught ? galijahCountdown(dex.caught.length) : null
@@ -89,7 +101,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>
                         {ultraSecretLocked
-                            ? <img src={sp.sprite} alt="?" style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated", filter: "brightness(0)" }} />
+                            ? <img src={`/api/gamebook/yellow/secret-shadow?s=${encodeURIComponent(id)}`} alt="?" style={{ width: 140, height: 140, objectFit: "contain", imageRendering: "pixelated" }} /> // ombre noircie CÔTÉ SERVEUR : un clic droit ne montre rien de plus
                             : "❓"}
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 4 }}>N°{String(sp.dexNo).padStart(3, "0")}</div>
@@ -97,9 +109,9 @@ export default function DexDetailClient({ id }: { id: string }) {
                     {gRem !== null && <div style={{ ...galijahCounterStyle(gRem), marginBottom: 8 }}>{gRem}</div>}
                     <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20, maxWidth: 340, marginLeft: "auto", marginRight: "auto", lineHeight: 1.5 }}>
                         {ultraSecretLocked
-                            ? (mHint ?? (gSeenNotCaught
+                            ? (mClues ? <MegaClues clues={mClues} /> : (gSeenNotCaught
                                 ? <span>🔍 <b>L&apos;ARCHIVISTE a complété cette fiche.</b> Ce colosse <b>REVIENT, plus fort</b>, à mesure que ton Pokédex grandit : <b>150</b> esp. → niv 70 · <b>160</b> → +10 niv · <b>170</b> → +20 niv · <b>180</b> → niv 100 · <b>190</b> → niv 100 à demi-dressé · <b>200</b> → niv 100 pleinement dressé. Rate-le, et un adversaire plus redoutable t&apos;attend.</span>
-                                : (gRem !== null ? "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche." : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien.")))
+                                : (gRem !== null ? (gRem === 0 ? "L'heure est venue : il rôde déjà quelque part, entre les vagues." : "Un décompte énigmatique s'égrène… plus il approche de zéro, plus l'heure est proche.") : "Un secret rôde derrière ce numéro… il ne se révélera qu'à celui qui le fera sien.")))
                             : "Cette entrée reste scellée… tu la débloqueras en RENCONTRANT ce Daemon."}
                     </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>

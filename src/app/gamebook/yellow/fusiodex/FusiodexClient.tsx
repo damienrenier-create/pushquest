@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { usePlayer, setFusionRoster } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, setFusionRoster, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { fusionPairError } from "@/lib/gamebook/yellow/data/fusiodex"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -17,9 +17,12 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ChimeraPlaceholder } from "../ChimeraPlaceholder"
 import { useFusionSprite } from "../useFusionSprite"
 import { FusionDetailView, FusionSpeciesFiche } from "../FusionDetailView"
-import type { FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { GEM_CHIMERA_ID, GEM_CHIMERA_RIDDLE } from "@/lib/gamebook/yellow/data/megamonarxClues"
+import { computeFusion, type FusionStats, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { fusionSecretEntries, discoveredByKey, SECRET_KIND_LABEL, type FusionSecretEntry, type DiscoveredSecret } from "@/lib/gamebook/yellow/data/fusionSecrets"
+import { fetchDiscoveredSecrets, reportForgedFusionSecrets } from "@/lib/gamebook/yellow/synergyGift"
 
-type Tab = "rules" | "official" | "mine"
+type Tab = "rules" | "official" | "mine" | "secrets"
 const STAT_LABELS = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]] as const
 
 // TRI de « Mes fusions » : ordre d'ajout, alphabétique, type, BST, ou n'importe quelle stat.
@@ -115,6 +118,68 @@ function FusionChain({ rootId, caught }: { rootId: string; caught: string[] }) {
     )
 }
 
+const capFirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+const speciesParent = (id: string): FusionParent | null => { const sp = getSpecies(id); return sp ? { name: sp.name, types: sp.types, stats: sp.baseStats, level: 1, moves: sp.learnset.map((l) => l.moveId), speciesId: sp.id } : null }
+
+// 🔮 SECRETS DE FUSION (Sartay 19/10/2026) : une carte par secret — OMBRE + énigme tant que personne ne l'a percé, puis
+//   COULEUR pour tout le Nexus (recette, nom, découvreur). Le sprite vient du registre officiel, sinon du cache généré
+//   (lecture seule : la page ne déclenche aucune génération).
+function SecretCard({ e, index, found, onOpen }: { e: FusionSecretEntry; index: number; found?: DiscoveredSecret; onOpen: (a: string, b: string) => void }) {
+    const pair = e.showcase.kind === "pair" ? e.showcase : null
+    const revealedEarly = !!found
+    // Le VRAI sprite n'est demandé que pour une carte PERCÉE : pour une ombre, ni requête ni URL ne doit trahir la recette.
+    const { url: gen } = useFusionSprite(revealedEarly ? pair?.a : undefined, revealedEarly ? pair?.b : undefined)
+    const [err, setErr] = useState(false)
+    const official = pair ? officialFusionForParents(pair.a, pair.b) : null
+    const sprite = !revealedEarly ? `/api/gamebook/yellow/secret-shadow?i=${index}` // OMBRE noircie côté serveur, numéro opaque
+        : pair ? (official?.sprite ?? gen ?? undefined) : getSpecies(e.showcase.kind === "single" ? e.showcase.id : "")?.sprite
+    const revealed = !!found
+    const ring = revealed ? "#c79cff" : "#3a2e56"
+    const nameOf = (id: string) => getSpecies(id)?.name ?? id
+    // TITRE = le nom que le joueur obtiendra en jeu (officiel, sinon celui du moteur — inédite comprise) ; SOUS-TITRE = le secret.
+    const autoName = useMemo(() => { const pa = pair ? speciesParent(pair.a) : null, pb = pair ? speciesParent(pair.b) : null; return pa && pb ? computeFusion(pa, pb).name : null }, [pair?.a, pair?.b])
+    const title = !revealed ? "? ? ?" : e.kind === "mimimoy" ? capFirst(e.label) : (official?.name ?? autoName ?? capFirst(e.label))
+    const recipe = e.kind === "mimimoy" ? "Mimimoy ✦ n'importe quel Daemon" : pair ? `${nameOf(pair.a)} ✦ ${nameOf(pair.b)}` : ""
+    const alias = revealed && e.kind !== "mimimoy" && capFirst(e.label) !== title ? capFirst(e.label) : null
+    const clickable = revealed && !!pair
+    return (
+        <div onClick={() => { if (clickable && pair) onOpen(pair.a, pair.b) }} title={clickable ? "Voir la fiche de la fusion" : undefined}
+            style={{ ...S.card, borderLeftColor: ring, cursor: clickable ? "pointer" : "default" }}>
+            <div style={{ ...S.frame, width: 78, height: 78, borderColor: ring, boxShadow: revealed ? `0 0 0 2px ${ring}55, 0 0 14px ${ring}55` : "0 0 12px rgba(120,90,200,0.25)" }}>
+                {sprite && !err
+                    ? <img src={sprite} alt="" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", filter: revealed ? undefined : "drop-shadow(0 0 4px rgba(185,138,255,0.6))" }} />
+                    : <span style={{ fontSize: 30, opacity: 0.6 }}>?</span>}
+            </div>
+            <div style={S.body}>
+                <div style={S.name}>{title.toUpperCase()}</div>
+                <div style={S.chips}><span style={{ ...S.chip, background: revealed ? "#c79cff" : "#4a3a6a", color: revealed ? "#161018" : "#d9c8f5" }}>{SECRET_KIND_LABEL[e.kind]}</span></div>
+                {revealed
+                    ? <>
+                        {alias && <div style={S.desc}>{alias}</div>}
+                        <div style={S.parentLine}>🧬 {recipe}</div>
+                        <div style={S.descMuted}>🔓 Percé par {found!.by} le {new Date(found!.at).toLocaleDateString("fr-FR")}</div>
+                    </>
+                    : <div style={S.desc}>« {e.riddle} »</div>}
+            </div>
+            <div style={S.tag}>{revealed ? "✨" : "🔒"}</div>
+        </div>
+    )
+}
+
+function SecretsList({ entries, found, onOpen }: { entries: FusionSecretEntry[]; found: Map<string, DiscoveredSecret>; onOpen: (a: string, b: string) => void }) {
+    const n = entries.filter((e) => found.has(e.key)).length
+    return (
+        <div style={S.list}>
+            <div style={S.progWrap}>
+                <div style={S.progHead}><span>Secrets de fusion percés dans le Nexus</span><b style={{ color: "#d9b8ff" }}>{n} / {entries.length}</b></div>
+                <div style={S.progTrack}><span style={{ ...S.progFill, width: `${entries.length ? (n / entries.length) * 100 : 0}%` }} /></div>
+            </div>
+            <div style={S.hint}>Chaque ombre cache une fusion qui « va bien ensemble » : sa génétique est <b>BOOSTÉE</b>. Le premier dresseur qui la forge à l&apos;Atelier la révèle en couleur pour tout le Nexus — et toute la communauté touche +200⚡.</div>
+            {entries.map((e, i) => <SecretCard key={e.key} e={e} index={i} found={found.get(e.key)} onOpen={onOpen} />)}
+        </div>
+    )
+}
+
 export default function FusiodexClient() {
     const router = useRouter()
     const player = usePlayer()
@@ -125,6 +190,24 @@ export default function FusiodexClient() {
     const unlocked = player.defeatedTrainers.includes(AUTEL_VISITED_MARKER)
     const official = officialFusions(dex.seen)
     const prog = officialFusionProgress(dex.seen)
+    // 🔮 SECRETS : catalogue (statique) + secrets déjà percés dans le Nexus (serveur, mondial — lu à l'ouverture).
+    const secrets = useMemo(() => fusionSecretEntries(), [])
+    const [discovered, setDiscovered] = useState<DiscoveredSecret[]>([])
+    useEffect(() => {
+        if (!unlocked) return
+        // RATTRAPAGE (relecture 19/10) : une fusion de « Mes fusions » qui cache un secret jamais signalé (forgée à l'épreuve
+        //   de l'Autel, ou avant la page Secrets) est signalée maintenant — fête si 1re fois pour CE joueur, révélation de paire
+        //   de clan. Idempotent serveur ; on relit la liste un peu après pour afficher le résultat.
+        let reported = false
+        for (const h of player.fusionHistory) if (reportForgedFusionSecrets(h.a, h.b, markSynergyDiscovered)) reported = true
+        if (reported) persistYellowSave()
+        void fetchDiscoveredSecrets().then(setDiscovered)
+        const t = setTimeout(() => { void fetchDiscoveredSecrets().then(setDiscovered) }, 2500)
+        return () => clearTimeout(t)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [unlocked])
+    const foundByKey = useMemo(() => discoveredByKey(discovered), [discovered])
+    const secretsFound = secrets.filter((e) => foundByKey.has(e.key)).length
 
     // MES FUSIONS : journal permanent ; on enrichit chaque entrée avec son sprite + nom OFFICIELS si la paire de
     //   parents matche une fusion connue (sinon sprite MissingNo + nom mot-valise). La clé = "aId|bId".
@@ -219,6 +302,7 @@ export default function FusiodexClient() {
                             <button style={{ ...S.tab, ...(tab === "rules" ? S.tabOn : {}) }} onClick={() => setTab("rules")}>📜 Règles</button>
                             <button style={{ ...S.tab, ...(tab === "official" ? S.tabOn : {}) }} onClick={() => setTab("official")}>✨ Officielles <span style={S.badge}>{prog.seen}/{prog.total}</span></button>
                             <button style={{ ...S.tab, ...(tab === "mine" ? S.tabOn : {}) }} onClick={() => setTab("mine")}>🛠️ Mes fusions <span style={S.badge}>{created.length}</span></button>
+                            <button style={{ ...S.tab, ...(tab === "secrets" ? S.tabOn : {}) }} onClick={() => setTab("secrets")}>🔮 Secrets <span style={S.badge}>{secretsFound}/{secrets.length}</span></button>
                         </div>
                     )}
                 </div>
@@ -258,6 +342,7 @@ export default function FusiodexClient() {
                                             ? <TypeChips types={f.types} />
                                             : <div style={S.desc}>Chimère non observée</div>}
                                         {f.seen && f.description && <div style={S.desc}>« {f.description} »</div>}
+                                        {f.seen && f.id === GEM_CHIMERA_ID && !dex.caught.includes("megamonarx") && <div style={S.desc}>{GEM_CHIMERA_RIDDLE}</div>}
                                         {/* À LA CAPTURE : révèle la lignée d'évolution (jusqu'au 1er stade non atteint, en ???). */}
                                         {dex.caught.includes(f.id) && <FusionChain rootId={f.id} caught={dex.caught} />}
                                         {!f.seen && <div style={S.descMuted}>Croise-la en jeu (Grotte du Nexus ou Ligue de Fusion) pour révéler son identité.</div>}
@@ -267,6 +352,8 @@ export default function FusiodexClient() {
                             )
                         })}
                     </div>
+                ) : tab === "secrets" ? (
+                    <SecretsList entries={secrets} found={foundByKey} onOpen={(aId, bId) => setDetail({ aId, bId })} />
                 ) : (
                     <div style={S.list}>
                         <div style={S.hint}>Le <b>journal</b> de toutes les chimères assemblées à l&apos;Autel — conservé à jamais. Le bouton <b>⚔️ Équiper</b> la charge dans ton équipe de Ligue (retrouve 2 Daemons possédés de ces espèces).</div>

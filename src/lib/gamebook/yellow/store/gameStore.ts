@@ -22,8 +22,8 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, startClanChiefBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
-import { computeFusion, fusionSynergy, type FusionSynergy } from "../data/fusionSpecies"
-import { reportSynergyDiscovery } from "../synergyGift"
+import { computeFusion, fusionSynergy, fusionSecretRevealKey, type FusionSynergy } from "../data/fusionSpecies"
+import { reportSynergyDiscovery, reportSecretReveal } from "../synergyGift"
 import { requestFusionSprites } from "../data/fusionSpriteClient"
 import { getGauntletTeam, setGauntletTeam, gauntletHasAlive, serializeGauntletCarryJson, swapGauntletTeam, reorderGauntletMoves, setGauntletBerries, getGauntletBerries, setGauntletBossBeaten, getGauntletBossBeaten, readGauntletCarryLs, writeGauntletCarryLs, type GauntletCarryMon } from "./fusionGauntlet"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
@@ -768,6 +768,9 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     // GAUNTLET : on ne dispose QUE les espèces ENNEMIES de la salle précédente. L'équipe du joueur (le gauntlet)
     //   est CONSERVÉE d'une salle à l'autre (mêmes instances → PV/PP/K.O. entamés) : ne PAS la disposer ici.
     disposeFusionLeagueSpecies()
+    // LE TRÔNE, couloir PAS ENCORE CHARGÉ : on sort AVANT toute reconstruction d'équipe, écriture du carry ou essai du jour
+    //   (sinon, dans le créneau d'un rechargement, une équipe à PV pleins écrasait l'usure → soin gratuit ; relecture 19/10).
+    if (trainerId === "y_fusion_platine" && !isPlatineCorridorLoaded()) return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["*Le couloir se forme… reviens dans un instant.*"] }
     const save = getPlayerSave()
     const all = [...save.team, ...save.pc]
     const byU = (uid: string) => all.find((m) => m.uid === uid)
@@ -800,6 +803,12 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
     const synergies = save.fusionRoster
         .map((p) => fusionSynergy(byU(p.a)?.speciesId, byU(p.b)?.speciesId))
         .filter((s): s is FusionSynergy => !!s)
+    // 🔮 PAGE « SECRETS » : chaque paire de CLAN du roster a sa carte → révélation (idempotente serveur, sans fête).
+    for (const p of save.fusionRoster) {
+        const sa = byU(p.a)?.speciesId, sb = byU(p.b)?.speciesId
+        const rk = fusionSecretRevealKey(sa, sb), syn = fusionSynergy(sa, sb)
+        if (rk && syn && rk !== syn.key) reportSecretReveal(rk, syn.label)
+    }
     if (synergies.length) {
         const seenKeys = new Set<string>()
         for (const s of synergies) if (!seenKeys.has(s.key)) { seenKeys.add(s.key); reportSynergyDiscovery(s.key, s.label) } // best-effort, serveur dédupe à vie

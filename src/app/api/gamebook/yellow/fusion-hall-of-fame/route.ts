@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { sanitizeThroneTeam, saveHasMarker } from "@/lib/gamebook/yellow/data/platineThrone"
 
 export const dynamic = "force-dynamic"
 
@@ -59,13 +60,21 @@ export async function POST(req: NextRequest) {
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const tier = typeof body.tier === "string" && TIERS.has(body.tier) ? body.tier : null
     if (!tier) return NextResponse.json({ error: "Bad tier" }, { status: 400 })
-    // Roster gelé côté client (FusionChampionMon[]) ; stocké tel quel (borné à 6), non cru pour autre chose.
-    const team = Array.isArray(body.team) ? body.team.slice(0, 6) : []
+    // Roster gelé côté client (FusionChampionMon[]) : BORNÉ à l'écriture (relecture 19/10) — les sacres OR sont REJOUÉS dans le
+    //   couloir platine par tous les challengers ; une équipe malformée ou gonflée bloquait le palier pour tout le monde.
+    const team = sanitizeThroneTeam(body.team)
+    if (team.length === 0) return NextResponse.json({ error: "Bad team" }, { status: 400 })
 
     try {
         const lc = (prisma as any).leagueChampion
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
+        // Palier OR = une SALLE du couloir platine : réservé à qui a bouclé l'ARGENT (marqueur sans course : l'or se joue après ;
+        //   fusleague_or, lui, est posé dans le même tick que ce POST, avant que la save n'arrive au serveur).
+        if (tier === "or") {
+            const prog = await (prisma as any).gamebookProgress.findFirst({ where: { chapterId: YELLOW_CHAPTER_ID, userId: auth.userId }, select: { flags: true } })
+            if (!saveHasMarker(prog?.flags, "fusleague_argent", { includeReplay: true })) return NextResponse.json({ error: "not-eligible" }, { status: 403 }) // bulle de rejeu acceptée : l'argent n'y est posé qu'en le jouant
+        }
         await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team), world: `fusion:${tier}` } })
         // RÉCOMPENSE CROISÉE (calquée sur la Ligue classique, cf. hall-of-fame/) : tous les AUTRES joueurs reçoivent
         //   un don d'énergie (+1/3 de LEUR quota, appliqué à la réclamation via hall-of-fame/energy — table partagée).

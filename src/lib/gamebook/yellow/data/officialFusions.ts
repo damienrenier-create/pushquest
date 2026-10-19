@@ -13,6 +13,7 @@ import { FUSION_LEAGUE, FUSION_BOSS_PAIRS } from "./fusionLeague"
 import { FUSION_TRIAL_PAIRS } from "./fusionTrial"
 import { FUSION_BASE_PARENTS, FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
 import { fusionSpritePath } from "./fusionSprite"
+import { specialFusionForIds } from "./fusionSpecies"
 
 export interface OfficialFusion { name: string; sprite: string }
 
@@ -76,6 +77,11 @@ function registry(): Map<string, OfficialFusion> {
     const m = new Map<string, OfficialFusion>()
     const add = (a: string, b: string, name: string, sprite: string) => {
         const k = pairKey(a, b)
+        // Une FUSION INÉDITE nommée prime sur un nom officiel DIFFÉRENT (décision Sartay 19/10/2026 : « on garde Vaporêve » —
+        //   Pyrokoss × Razmarée n'est plus l'ancienne « Pyromarée »). Son sprite vient alors du générateur (concept de l'inédite) ;
+        //   pyromaree.png reste une référence de style du générateur. Même nom (Gamabunta, Orochitachi, Karmind Z) → entrée gardée.
+        const special = specialFusionForIds(a, b)
+        if (special && special.name !== name) return
         if (!m.has(k)) m.set(k, { name, sprite }) // 1re occurrence gagne (les paires curées sont uniques de toute façon)
     }
     for (const p of FUSION_CUSTOM_PAIRS) add(p.a, p.b, p.name, p.sprite) // perso d'abord → priorité sur tout le reste

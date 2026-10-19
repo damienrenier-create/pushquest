@@ -13,6 +13,7 @@ import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yell
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
+import { megamonarxClueContext, megamonarxClueCount, MEGAMONARX_CLUE_TOTAL } from "@/lib/gamebook/yellow/data/megamonarxClues"
 
 // Vignette. `secret` (non rencontré / ultra-secret) → SILHOUETTE : bloc noir CSS PUR, on ne TÉLÉCHARGE PAS le PNG
 //   (identité masquée de toute façon → perf : un catalogue de 150+ entrées ne fetch plus des dizaines de Mo de PNG).
@@ -47,7 +48,9 @@ export default function DexClient() {
     const caughtSet = useMemo(() => new Set(dex.caught), [dex.caught])
     const seenSet = useMemo(() => new Set(dex.seen), [dex.seen])
     const caughtThisRunSet = useMemo(() => new Set(player.caughtThisRun ?? []), [player.caughtThisRun])
-    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun]) // L'ARCHIVISTE a débloqué la lecture (BST) — mais visible seulement si AUSSI capturé
+    const unlocked = useMemo(() => new Set(player.fichesUnlockedThisRun), [player.fichesUnlockedThisRun])
+    // 🐉🪨 MÉGAMONARX — nombre d'indices de l'enquête déjà débloqués (affiché sur sa silhouette, cf. data/megamonarxClues).
+    const megaClues = useMemo(() => megamonarxClueCount(megamonarxClueContext({ markers: player.defeatedTrainers, seen: dex.seen, fusionHistory: player.fusionHistory })), [player.defeatedTrainers, dex.seen, player.fusionHistory]) // L'ARCHIVISTE a débloqué la lecture (BST) — mais visible seulement si AUSSI capturé
     // En run 3 (dex « catalogue complet »), les espèces NORMALES non croisées sont révélées ; mais les SURPRISES
     //   (hiddenUntilCaught : lignées de clan, némésis, Gékroc… + ultra-secrets) restent cachées tant qu'on ne les a
     //   pas rencontrées, sinon la LISTE spoilerait ce que la FICHE détail scelle (anti-spoiler cohérent liste↔fiche).
@@ -123,17 +126,32 @@ export default function DexClient() {
                     // JAMAIS RENCONTRÉ (à vie) → SILHOUETTE noire, NON CLIQUABLE (« ??? », BST masqué). On sait juste
                     //   qu'il existe (numéro). Catalogue complet façon Pokédex à trous.
                     if (!enc) {
-                        return (
-                            <div key={sp.id} style={{ ...S.card, ...S.cardSilhouette, cursor: "default" }} title="Pas encore rencontré">
+                        // ULTRA-SECRETS (MégamonarX, Galijah) : jamais « vus » avant capture, mais leur fiche SCELLÉE porte les
+                        //   indices (enquête MégamonarX, décompte Galijah) → leur silhouette est CLIQUABLE. Avant (19/10/2026), la
+                        //   fiche N°203 n'était joignable qu'en tapant l'URL : son indice était littéralement introuvable.
+                        const ultra = DEX_ULTRA_SECRET.has(sp.id)
+                        const gRem = ultra && sp.id === "galijah" ? galijahCountdown(dex.caught.length) : null
+                        const megaN = ultra && sp.id === "megamonarx" ? megaClues : null
+                        const inner = (
+                            <>
                                 <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                                 <DexIcon sp={sp} secret />
                                 <div style={S.body}>
                                     <div style={S.name}>???</div>
                                     <div style={S.chips}>{sp.types.map((_t, i) => <span key={i} style={{ ...S.chip, background: "#555" }}>???</span>)}</div>
                                 </div>
-                                <div style={S.bst}><div style={S.bstNum}>{maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></div>
-                            </div>
+                                <div style={S.bst}>
+                                    {gRem !== null
+                                        ? <div style={galijahCounterStyle(gRem)}>{gRem}</div>
+                                        : megaN !== null
+                                            ? <><div style={S.bstNum}>🔍 {megaN}/{MEGAMONARX_CLUE_TOTAL}</div><div style={S.bstLbl}>INDICES</div></>
+                                            : <><div style={S.bstNum}>{maskedBst(baseStatTotal(sp.baseStats))}</div><div style={S.bstLbl}>BST</div></>}
+                                </div>
+                            </>
                         )
+                        return ultra
+                            ? <button key={sp.id} onClick={() => router.push(`/gamebook/yellow/dex/${sp.id}`)} style={{ ...S.card, ...S.cardSilhouette }} title="Un secret rôde derrière ce numéro… (fiche scellée)">{inner}</button>
+                            : <div key={sp.id} style={{ ...S.card, ...S.cardSilhouette, cursor: "default" }} title="Pas encore rencontré">{inner}</div>
                     }
                     const caught = caughtSet.has(sp.id)
                     // ULTRA-SECRET vu mais NON capturé : identité masquée « ??? ». Galijah : décompte énigmatique.

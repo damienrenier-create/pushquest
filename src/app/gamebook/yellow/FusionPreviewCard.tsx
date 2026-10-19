@@ -9,6 +9,8 @@ import { fusionWeights, fusionSynergy, type FusionStats } from "@/lib/gamebook/y
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 import { useFusionSprite } from "./useFusionSprite"
+import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { isGemChimeraPair, gemChimeraAltarLine } from "@/lib/gamebook/yellow/data/megamonarxClues"
 
 const TYPE_COLOR: Record<string, string> = {
     NORMAL: "#9aa2ac", FEU: "#ff6b3d", EAU: "#4d90d5", PLANTE: "#5cbd57", ELEC: "#f2c633", GLACE: "#74cec0",
@@ -58,6 +60,9 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
     //   (celle-ci se fait à l'entrée de la Ligue de Fusion). Sinon → placeholder Chimère.
     const { url: genUrl } = useFusionSprite(aId, bId)
     const resolved = spriteSrc ?? genUrl ?? undefined
+    // 🐉🪨 ENQUÊTE MÉGAMONARX : le joueur vient de poser LA paire → l'Autel confirme la piste (tant que le légendaire n'est pas éveillé).
+    const dex = usePokedex()
+    const gemLine = isGemChimeraPair(aId, bId) && !dex.caught.includes("megamonarx") ? gemChimeraAltarLine(level) : null
     return (
         <div style={{ border: `1px solid ${ring}88`, borderRadius: 12, padding: "11px 12px", margin: "8px 0", background: "rgba(124,79,192,0.09)", display: "flex", flexDirection: "column", gap: 9 }}>
             <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
@@ -81,6 +86,7 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
                     ✨ BONUS DE SYNERGIE — génétique boostée (stats renforcées) : {synergy.label}
                 </div>
             )}
+            {gemLine && <div style={{ textAlign: "center", fontSize: 10.5, fontStyle: "italic", padding: "5px 9px", borderRadius: 8, color: "#efe4ff", background: "rgba(124,79,192,0.22)", lineHeight: 1.4 }}>{gemLine}</div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 14px" }}>
                 {STAT_LABELS.map(([k, lbl]) => {
                     const v = stats[k] ?? 0

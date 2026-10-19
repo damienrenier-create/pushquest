@@ -1502,6 +1502,7 @@ export const TRAINERS: TrainerData[] = [
             "*Cape au vent, sur un trône d'écailles.* Te voilà. Le Conseil t'a jugé digne… on verra.",
             "Je suis LANCE, Maître Dragon et Champion des Chimères. Mes fusions sont l'apogée de l'art : deux légendes soudées en une seule bête ailée.",
             "Et pour finir, mon ACE — un colosse dragon qu'aucun challenger n'a jamais fait plier.",
+            "Une seule de mes chimères porte des écailles de diamant. Je ne l'ai jamais menée à son apogée… On dit qu'alors, sacrée, elle ne redevient jamais deux.", // 🐉🪨 enquête MégamonarX (19/10/2026)
             "Bats-moi, et il ne te restera qu'un dernier adversaire… le plus terrible de tous.",
         ],
         defeat: ["« …Mes dragons-chimères, à terre. Inconcevable. Tu es prêt. Mais es-tu prêt à affronter CELUI qui t'a tout appris ? »"],

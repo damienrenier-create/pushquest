@@ -1640,6 +1640,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 }
                 clearPlatineRunMirror() // couloir bouclé : plus rien à reprendre au prochain chargement
                 platineSacre = true
+                // 🐉🪨 MÉGAMONARX au palier TRÔNE : prendre la chaise VAUT SACRE (relecture 19/10 — le sacre classique n'existe plus à
+                //   ce palier : sans ça, les champions passés au platine, Mools et Jacanon, ne pouvaient plus jamais l'éveiller).
+                if (getActiveWorld() !== "replay" && !hasMegamonarx() && (gt ?? []).some((f) => getSpecies(f.speciesId)?.name === "Dracolithe" && f.result.level >= 100)) {
+                    if (grantMegamonarx()) megamonarxReveal = true
+                }
             }
         } else if (b.outcome === "lose") {
             // Tombé dans le couloir : le Maître en titre marque +1, et la tentative est perdue (pas de reprise).

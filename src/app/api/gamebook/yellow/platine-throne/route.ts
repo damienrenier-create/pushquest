@@ -25,7 +25,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import {
     PLATINE_THRONE_WORLD, decodeThrone, encodeThrone, claimThrone, awardFailurePoint, reignDays,
-    rankThrones, throneTitle, sanitizeThroneTeam, reclaimThrone, type ThroneEntry,
+    rankThrones, throneTitle, sanitizeThroneTeam, reclaimThrone, saveHasMarker, type ThroneEntry,
 } from "@/lib/gamebook/yellow/data/platineThrone"
 import { buildPlatineCorridor, type PlatineChampion } from "@/lib/gamebook/yellow/data/platineArena"
 
@@ -51,8 +51,7 @@ async function platineEligible(userId: string): Promise<boolean> {
             where: { chapterId: YELLOW_CHAPTER_ID, userId },
             select: { flags: true },
         })
-        const markers = (prog?.flags as { defeatedTrainers?: unknown })?.defeatedTrainers
-        return Array.isArray(markers) && markers.includes(PLATINE_OPEN_MARKER)
+        return saveHasMarker(prog?.flags, PLATINE_OPEN_MARKER) // tous les mondes réels (pas seulement la racine)
     } catch { return false }
 }
 

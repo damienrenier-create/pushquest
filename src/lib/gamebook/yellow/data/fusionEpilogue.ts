@@ -57,7 +57,7 @@ export function fusionEpilogueQuests(i: EpilogueQuestInput): EpilogueQuest[] {
         { icon: "🕳️", label: "Atteindre le fond de la Grotte du Nexus (B2F)", done: mk(i, "y_pnj3_grotte_b2f"),
           hint: "La Grotte du Nexus cache bien plus de profondeurs qu'il n'y paraît. Ceux qui osent descendre jusqu'au tout dernier étage y trouvent ce que nul autre n'a vu." },
         { icon: "🐲", label: "Éveiller MÉGAMONARX (3ᵉ légendaire)", done: has(i, "megamonarx"),
-          hint: "Certaines unions ne se contentent pas de fusionner deux âmes : portée à son apogée puis sacrée au firmament de la Ligue, une chimère peut en forger une troisième, immortelle. À toi de deviner quel couple de titans engendre un dieu." },
+          hint: "Certaines unions ne se contentent pas de fusionner deux âmes : portée à son apogée puis sacrée au firmament de la Ligue, une chimère peut en forger une troisième, immortelle. À toi de deviner quel couple de titans engendre un dieu. Le Pokédex, au numéro 203, tient le carnet de l'enquête." },
         { icon: "🌟", label: "Capturer GALIJAH (4ᵉ légendaire)", done: has(i, "galijah"),
           hint: "L'être-mystère ne se révèle qu'à ceux dont le Pokédex déborde de vies rencontrées. Continue de collectionner sans relâche : le jour venu, sa chasse s'armera d'elle-même." },
         { icon: "🏆", label: "Titre OR au Dôme de Combat", done: i.domeChampionships >= 3,

@@ -171,6 +171,35 @@ export function fusionSynergy(aId?: string, bId?: string): FusionSynergy | null 
     return null
 }
 
+/** Clé de RÉVÉLATION d'une fusion (page « Secrets ») : celle de la fête (fusionSynergy), sauf pour un CLAN, où chaque PAIRE a
+ *  sa propre carte (`clan:<clan>:<a|b>`). La fête et ses +200⚡ restent une seule fois par clan. null = pas un secret. */
+export function fusionSecretRevealKey(aId?: string, bId?: string): string | null {
+    const syn = fusionSynergy(aId, bId)
+    if (!syn || !aId || !bId) return null
+    return syn.key.startsWith("clan:") ? `${syn.key}:${pairKey(aId, bId)}` : syn.key
+}
+
+export type FusionSecretKind = "special" | "pair" | "clan" | "mimimoy"
+export interface FusionSecretDef { key: string; kind: FusionSecretKind; label: string; pair?: [string, string]; members?: readonly string[] }
+/** INVENTAIRE des « secrets » de fusion (clé = celle de fusionSynergy → celle de la fête de découverte) : inédites nommées,
+ *  duos, clans, potentiel de Mimimoy. Sert à la page « Secrets » du Fusiodex (ombres → couleur une fois percés). */
+export function fusionSecretCatalog(): FusionSecretDef[] {
+    const out: FusionSecretDef[] = []
+    for (const [pk, sp] of Object.entries(SPECIAL_FUSION_PAIRS)) out.push({ key: `special:${sp.name}`, kind: "special", label: sp.name, pair: pk.split("|") as [string, string] })
+    for (const [pk, label] of Object.entries(SYNERGY_PAIRS)) out.push({ key: `pair:${pk}`, kind: "pair", label, pair: pk.split("|") as [string, string] })
+    // CLANS : une carte par PAIRE de membres distincts (Sartay 19/10 : « quid des clans ? ») — la clé de la carte est la clé
+    //   de RÉVÉLATION (fusionSecretRevealKey) ; la fête, elle, reste une seule fois par clan (clé `clan:<clan>`).
+    for (const c of CLANS) {
+        const ids = [...c.ids]
+        for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+            const pk = pairKey(ids[i], ids[j])
+            out.push({ key: `clan:${c.key}:${pk}`, kind: "clan", label: c.label, pair: pk.split("|") as [string, string], members: ids })
+        }
+    }
+    out.push({ key: "mimimoy", kind: "mimimoy", label: "le potentiel caché de Mimimoy", members: [MIMIMOY_ID] })
+    return out
+}
+
 /** Poids par stat pour un parent selon le `mode` : "all" (Mimimoy) = 0,7 partout ; sinon 3 plus HAUTES = hi,
  *  2 plus basses = lo (hi/lo selon le tier). Égalité départagée par l'ordre fixe hp>atk>déf>vit>spé (déterministe). */
 export function fusionWeights(stats: Readonly<Record<StatKey, number>>, mode: FusionWeightMode = "normal"): Record<string, number> {

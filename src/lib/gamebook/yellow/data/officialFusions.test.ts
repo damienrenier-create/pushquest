@@ -62,3 +62,15 @@ describe("buildFusion — reconnaissance côté JOUEUR", () => {
         } finally { disposeFusion(f.speciesId) }
     })
 })
+
+describe("une fusion inédite nommée prime sur un nom officiel différent (Sartay 19/10 : « on garde Vaporêve »)", () => {
+    it("Pyrokoss × Razmarée n'est plus l'ancienne Pyromarée", () => {
+        expect(officialFusionForParents("pyrokoss", "razmaree")).toBeNull()
+        expect(officialFusionForParents("razmaree", "pyrokoss")).toBeNull()
+    })
+    it("une inédite au MÊME nom garde son sprite maison (Gamabunta, Orochitachi, Karmind Z)", () => {
+        expect(officialFusionForParents("crapotaure", "uzumaro")?.name).toBe("Gamabunta")
+        expect(officialFusionForParents("vipember", "necrocorbe")?.name).toBe("Orochitachi")
+        expect(officialFusionForParents("karmaki", "enclumind")?.name).toBe("Karmind Z")
+    })
+})
