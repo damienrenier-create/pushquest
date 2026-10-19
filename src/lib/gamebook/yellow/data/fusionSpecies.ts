@@ -125,6 +125,22 @@ export function clanPairName(aId?: string, bId?: string): string | null {
     if (!aId || !bId) return null
     return CLAN_PAIR_NAMES[pairKey(aId, bId)] ?? null
 }
+/** NOMS SUR MESURE des DUOS de synergie (Sartay 19/10/2026 : « tu peux donner perso plus recherché pour toutes les fusions
+ *  synergiques » — fini « Lévia-y D », « Mob-line »…). Mérotony reprend le nom de la Ligue (équipe ultime du Dieu Spaghetti) :
+ *  une paire = un nom, un sprite. Karabouh et Impérafer n'y sont pas : leur nom OFFICIEL (registre + sprite dédié) prime. */
+const DUO_PAIR_NAMES: Record<string, string> = {
+    [pairKey("merorem", "tonytony")]: "Mérotony",
+    [pairKey("leviathonn", "mobyd")]: "Mobyathan",
+    [pairKey("mobyd", "orcaline")]: "Ivorque",
+    [pairKey("tenebrir", "loupyre")]: "Ragnapyre",
+    [pairKey("namizeus", "brookhante")]: "Yohorage",
+    [pairKey("kilipanda", "druidours")]: "Pandolmen",
+}
+/** Nom sur mesure d'une paire SYNERGIQUE nommée (paire de clan ou duo), ordre indifférent, ou null. */
+export function synergyPairName(aId?: string, bId?: string): string | null {
+    if (!aId || !bId) return null
+    return CLAN_PAIR_NAMES[pairKey(aId, bId)] ?? DUO_PAIR_NAMES[pairKey(aId, bId)] ?? null
+}
 /** Paires de SYNERGIE précises (boost only, nom auto conservé) → label d'annonce de découverte. */
 const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("merorem", "tonytony")]: "la synergie des piliers du casino",
@@ -416,7 +432,7 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const moveTypes = { ...transmutedMoveTypes(a, b, natural, special?.forcedType, !!special?.transmuteAll), ...recoloredMoveTypes(natural, special) }
     const moves = Object.keys(moveTypes).length > 0 ? natural : withGuaranteedStab(natural, types, special?.stabMove)
     return {
-        name: special?.name ?? clanPairName(a.speciesId, b.speciesId) ?? fusionName(a, b), // inédite > paire de clan nommée > mot-valise
+        name: special?.name ?? synergyPairName(a.speciesId, b.speciesId) ?? fusionName(a, b), // inédite > paire synergique nommée (clan ou duo) > mot-valise
         types,
         stats,
         level: Math.max(a.level, b.level),
