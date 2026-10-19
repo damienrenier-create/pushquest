@@ -86,7 +86,7 @@ import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBough
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -2085,6 +2085,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearFrontierResult()
             return
         }
+        { const fMode = getRun()?.mode; if (fMode === "TOWER" || fMode === "FACTORY") recordFrontierResult(fMode, frontierResult.won) } // STATS Tour / Usine : bilan V/D
         if (frontierResult.won) {
             // USINE : les JETONS tombent à CHAQUE victoire (applyWin). La CT, elle, n'est offerte QUE lorsqu'on
             // vient de battre un BOSS (Cerveau, tous les 7) — sinon elle arrivait beaucoup trop vite. curRun =
@@ -3486,7 +3487,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                     </>)}
                     {frontierTab === "regles" && <FrontierRulesView lines={TOWER_RULES} />}
-                    {frontierTab === "stats" && <FrontierStatsView facility="tour" best={frontierProf?.towerBest ?? 0} accent="#e8893a" />}
+                    {frontierTab === "stats" && <FrontierStatsView facility="tour" best={frontierProf?.towerBest ?? 0} stats={player.towerStats} accent="#e8893a" />}
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                 </div>
             )}
@@ -3505,7 +3506,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <MasterCtChoice facility="usine" onClaimed={(name) => setToast(`🎁 CT « ${name} » apprise ! Sacré MAÎTRE DE L'USINE. 🏆`)} />
                         </div>
                     )}
-                    {!usineDraft && frontierTab === "regles" ? <FrontierRulesView lines={FACTORY_RULES} /> : !usineDraft && frontierTab === "stats" ? <FrontierStatsView facility="usine" best={frontierProf?.factoryBest ?? 0} accent="#6aa0ec" /> : !usineDraft ? (
+                    {!usineDraft && frontierTab === "regles" ? <FrontierRulesView lines={FACTORY_RULES} /> : !usineDraft && frontierTab === "stats" ? <FrontierStatsView facility="usine" best={frontierProf?.factoryBest ?? 0} stats={player.factoryStats} accent="#6aa0ec" /> : !usineDraft ? (
                         <>
                             <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — tu joueras une équipe de LOCATION :</div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>

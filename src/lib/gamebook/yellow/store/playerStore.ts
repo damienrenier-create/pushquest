@@ -133,6 +133,8 @@ interface PlayerState {
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
     pvpStats: PvpStats
     domeStats?: DomeStats // stats DÔME UNIQUEMENT (fétiches + bilan tournois) — optionnel, défaut vide
+    towerStats?: DomeStats // TOUR DE COMBAT : combats V/D + fétiches (même forme que le Dôme)
+    factoryStats?: DomeStats // USINE DE COMBAT : combats V/D + Daemons loués fétiches
     /** Bilan PAR TIER du Dôme (tierId → {wins, losses}) : pilote les malus anti-farm (remboursement −30 %/défaite +
      *  JC −5 %/reprise sur un tier DÉJÀ vaincu). Optionnel, défaut {}. */
     domeTierRecord?: Record<string, { wins: number; losses: number }>
@@ -655,7 +657,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         capturesToday: p.capturesToday ?? st.capturesToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
-        domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(),
+        domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(), towerStats: p.towerStats ?? st.towerStats ?? emptyDomeStats(), factoryStats: p.factoryStats ?? st.factoryStats ?? emptyDomeStats(),
         domeTierRecord: p.domeTierRecord ?? st.domeTierRecord ?? {},
         stats: p.stats ?? st.stats ?? emptyYellowStats(),
         acePeakLevel: p.acePeakLevel ?? st.acePeakLevel ?? 0,
@@ -2548,6 +2550,22 @@ export function recordDomeUse(speciesId: string, moveId?: string) {
     const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
     const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
     st = { ...st, domeStats: { ...s, daemonUse, moveUse } }
+    emit()
+}
+/** TOUR / USINE — usage d'un Daemon et d'une attaque dans un combat de la salle (appelé par battleStore, chemin solo). */
+export function recordFrontierUse(facility: "TOWER" | "FACTORY", speciesId: string, moveId?: string) {
+    const key = facility === "TOWER" ? "towerStats" : "factoryStats"
+    const s = st[key] ?? emptyDomeStats()
+    const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
+    const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
+    st = { ...st, [key]: { ...s, daemonUse, moveUse } }
+    emit()
+}
+/** TOUR / USINE — issue d'UN combat de la salle (une victoire ou la défaite qui clôt la série). */
+export function recordFrontierResult(facility: "TOWER" | "FACTORY", won: boolean) {
+    const key = facility === "TOWER" ? "towerStats" : "factoryStats"
+    const s = st[key] ?? emptyDomeStats()
+    st = { ...st, [key]: { ...s, daemonUse: { ...s.daemonUse }, moveUse: { ...s.moveUse }, wins: s.wins + (won ? 1 : 0), losses: s.losses + (won ? 0 : 1) } }
     emit()
 }
 /** DÔME UNIQUEMENT — issue d'un TOURNOI (win = remporté ; loss = éliminé/finale perdue). */

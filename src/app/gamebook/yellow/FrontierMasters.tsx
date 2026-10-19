@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { FRONTIER_CHAMPION_STREAK, LEVEL_RULE_LABEL, type FrontierBoardEntry } from "@/lib/gamebook/yellow/frontier/frontierBoard"
 import { fetchFrontierBoard, type FrontierBoard } from "@/lib/gamebook/yellow/frontier/frontierApi"
 
@@ -57,7 +58,10 @@ function BoardRow({ e, i, accent }: { e: FrontierBoardEntry; i: number; accent: 
     )
 }
 
-export function FrontierStatsView({ facility, best, accent }: { facility: "tour" | "usine"; best: number; accent: string }) {
+interface PersonalStats { wins: number; losses: number; daemonUse: Record<string, number>; moveUse: Record<string, number> }
+const topN = (rec: Record<string, number> | undefined, n: number) => Object.entries(rec ?? {}).sort((a, b) => b[1] - a[1]).slice(0, n)
+
+export function FrontierStatsView({ facility, best, stats, accent }: { facility: "tour" | "usine"; best: number; stats?: PersonalStats; accent: string }) {
     const [board, setBoard] = useState<FrontierBoard | null>(null)
     useEffect(() => {
         let cancelled = false
@@ -69,10 +73,15 @@ export function FrontierStatsView({ facility, best, accent }: { facility: "tour"
     const title = facility === "tour" ? "🏯 Les maîtres de la Tour" : "🏭 Les maîtres de l'Usine"
     return (
         <div style={{ textAlign: "left", fontSize: 11.5, lineHeight: 1.5 }}>
-            <div style={{ fontWeight: 800, color: accent, marginBottom: 2 }}>🏅 Ton record</div>
+            <div style={{ fontWeight: 800, color: accent, marginBottom: 2 }}>🏅 Palmarès</div>
             <div style={{ marginBottom: 10 }}>
-                {best} victoire{best > 1 ? "s" : ""} d&apos;affilée · {left === 0 ? <b>👑 Champion</b> : <>encore <b>{left}</b> pour le sacre de Champion</>}
+                Record : <b>{best}</b> victoire{best > 1 ? "s" : ""} d&apos;affilée · {left === 0 ? <b>👑 Champion</b> : <>encore <b>{left}</b> pour le sacre de Champion</>}
+                <br />Combats : {stats?.wins ?? 0}V / {stats?.losses ?? 0}D
             </div>
+            <div style={{ fontWeight: 800, color: accent, marginBottom: 2 }}>{facility === "tour" ? "🐾 Tes Daemons de la Tour" : "🐾 Tes Daemons loués préférés"}</div>
+            <div style={{ marginBottom: 10 }}>{topN(stats?.daemonUse, 5).map(([id, n], i) => `${i + 1}. ${getSpecies(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun combat compté pour l'instant)"}</div>
+            <div style={{ fontWeight: 800, color: accent, marginBottom: 2 }}>{facility === "tour" ? "💥 Tes attaques de la Tour" : "💥 Tes attaques de l'Usine"}</div>
+            <div style={{ marginBottom: 10 }}>{topN(stats?.moveUse, 5).map(([id, n], i) => `${i + 1}. ${getMove(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun combat compté pour l'instant)"}</div>
             <div style={{ fontWeight: 800, color: accent, marginBottom: 5 }}>{title}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "42dvh", overflowY: "auto" }}>
                 {list === null

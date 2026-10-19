@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -818,6 +818,20 @@ export function submitPlayerAction(action: PlayerAction) {
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
         grantReps(paidMoveCost, true) // force : on rend au joueur SA propre énergie (attaque non partie) — même en run 3
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
+    }
+    // ZONE DE COMBAT — FÉTICHES (Daemon + attaque) du Dôme, de la Tour et de l'Usine, comptés ICI, au chemin SOLO où ces
+    //   combats se jouent. Le comptage du Dôme ne vivait que dans le chemin PvP (jamais emprunté par un tournoi) : ses
+    //   fétiches restaient vides pour tout le monde (constat 19/10/2026 : 6 saves avec tournois, 0 fétiche). Seulement si
+    //   l'attaque est réellement partie.
+    if (action.kind === "move" && next.lastPlayerActed !== false) {
+        const tid = storeState.trainer?.trainerId
+        const facility = tid === "frontier:DOME" ? "DOME" : tid === "frontier:TOWER" ? "TOWER" : tid === "frontier:FACTORY" ? "FACTORY" : null
+        const meMon = facility ? battle.player.team[battle.player.activeIndex] : undefined
+        if (facility && meMon) {
+            const usedMove = action.moveIndex >= 0 && action.moveIndex !== STRUGGLE_INDEX ? meMon.moves[action.moveIndex]?.moveId : undefined
+            if (facility === "DOME") recordDomeUse(meMon.speciesId, usedMove)
+            else recordFrontierUse(facility, meMon.speciesId, usedMove)
+        }
     }
     // CONSOLATION « 10 balls ratées d'affilée » : chaque Ball lancée compte (succès → reset la série).
     if (action.kind === "ball") recordCaptureResult(next.outcome === "caught")
