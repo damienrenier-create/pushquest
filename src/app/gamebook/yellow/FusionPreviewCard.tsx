@@ -5,7 +5,7 @@
 // à l'Autel de la Chimère ET à l'Atelier de Fusion pour VOIR ce que donnera la fusion AVANT de la créer.
 
 import { useState } from "react"
-import { fusionWeights, fusionSynergy, type FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { fusionWeights, fusionBoost, type FusionStats } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ChimeraPlaceholder } from "./ChimeraPlaceholder"
 import { useFusionSprite } from "./useFusionSprite"
@@ -54,7 +54,7 @@ export function FusionPreviewCard({ name, types, stats, moves, level, spriteSrc,
     const CAP = 180
     // BONUS DE SYNERGIE (clan / paire / inédite / mimimoy) → génétique boostée (0,7/0,5 au lieu de 0,6/0,45).
     //   null sinon. Sert au badge ET à afficher les BONS poids de contribution des parents ci-dessous.
-    const synergy = aId && bId ? fusionSynergy(aId, bId) : null
+    const synergy = aId && bId ? fusionBoost(aId, bId) : null // secret OU règle (créateurs, chimères) : le badge suit le vrai bonus
     const domW = synergy ? 0.7 : 0.6 // seuil de poids « dominant » selon le tier (boosté vs normal)
     // Sprite généré (cache serveur) — LECTURE SEULE : on affiche s'il existe déjà, sans jamais lancer de génération
     //   (celle-ci se fait à l'entrée de la Ligue de Fusion). Sinon → placeholder Chimère.

@@ -17,7 +17,8 @@
 //     le type partagé représente déjà les DEUX parents). Mono uniquement si aucun autre type dispo.
 //   • Nom : 1re moitié du nom du 1er parent (dominant) + « - » + 2e moitié du 2e.
 
-import { SPECIES } from "./species"
+import { SPECIES, getSpecies, CANONICAL_NEMESIS } from "./species"
+import { CRAFTED_SHINY_IDS } from "./craftedShinies"
 import { getMove } from "./moves"
 import type { PokeType, StatKey } from "../battle/types"
 
@@ -198,12 +199,46 @@ export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion |
 export function specialFusionFor(a: FusionParent, b: FusionParent): SpecialFusion | null {
     return specialFusionForIds(a.speciesId, b.speciesId)
 }
-/** Génétique BOOSTÉE (0,7/0,5) ? = fusion inédite nommée OU 2 membres d'un même CLAN OU paire de synergie. */
+/** CRÉATIONS DE JOUEUR (« starteurs perso », décision Sartay 19/10/2026) : les lignées canonisées du Créateur de Daemon —
+ *  les CLÉS de CANONICAL_NEMESIS (ses VALEURS sont les NÉMÉSIS, les antagonistes : jamais comptées) — plus les 4 shiny
+ *  craftés et leurs évolutions, plus tout Daemon custom (`custom_…`). Construit à la demande (espèces chargées). */
+let _craftedIds: Set<string> | null = null
+function craftedIds(): Set<string> {
+    if (_craftedIds) return _craftedIds
+    const out = new Set<string>(Object.keys(CANONICAL_NEMESIS).filter((id) => !id.startsWith("custom_")))
+    for (const root of CRAFTED_SHINY_IDS) {
+        let id: string | undefined = root
+        for (let guard = 0; id && guard < 6; guard++) { out.add(id); id = getSpecies(id)?.evolution?.toId }
+    }
+    return (_craftedIds = out)
+}
+/** Daemon CRAFTÉ : une création de joueur (n'importe quel stade de sa lignée), jamais une némésis. Une par joueur arrivé au
+ *  run 2 (19/10/2026 : 11 lignées — Gavillus de Mools/Sartay, Joeyrrant, Guizer, Shady, Possyl, Bidouzen, Phoéchaud,
+ *  Dracominus, Stashex, Ewokid, Chadine). Les ids custom des créateurs comptent ; les NÉMÉSIS custom (`custom_nem…`, owner
+ *  `nem_<id>`) jamais. */
+export function isCraftedStarter(speciesId?: string): boolean {
+    if (!speciesId) return false
+    if (speciesId.startsWith("custom_")) return !speciesId.startsWith("custom_nem")
+    return craftedIds().has(speciesId)
+}
+/** Vraie fusion AU STADE FINAL : espèce fusionnée possédée (dexNo ≥ 500 ou Ukognofy, hors custom) dont la lignée est
+ *  ACHEVÉE (plus d'évolution). Même définition de « vraie fusion » que fusiodex.isTrueFusion (dupliquée pour éviter un
+ *  import circulaire ; un test vérifie qu'elles concordent). */
+export function isFinalTrueFusion(speciesId?: string): boolean {
+    if (!speciesId || speciesId.startsWith("custom_")) return false
+    const sp = getSpecies(speciesId)
+    if (!(speciesId === "ukognofy" || (sp?.dexNo ?? 0) >= 500)) return false
+    return !!sp && !sp.evolution
+}
+/** Génétique BOOSTÉE (0,7/0,5) ? = fusion inédite nommée OU 2 membres d'un même CLAN OU paire de synergie OU deux créations
+ *  de joueur OU super-fusion de deux fusionnés au stade final. */
 function isBoostedFusion(a: FusionParent, b: FusionParent): boolean {
     if (specialFusionFor(a, b)) return true
     if (!a.speciesId || !b.speciesId) return false
     const aId = a.speciesId, bId = b.speciesId
     if (CLANS.some((clan) => clan.ids.has(aId) && clan.ids.has(bId))) return true // 2 panthères, ou 2 geckos…
+    if (isCraftedStarter(aId) && isCraftedStarter(bId)) return true // DEUX créations de joueur (Sartay 19/10/2026) — jamais les némésis
+    if (isFinalTrueFusion(aId) && isFinalTrueFusion(bId)) return true // SUPER-FUSION de deux fusionnés au stade final (Sartay 19/10/2026)
     return !!SYNERGY_PAIRS[pairKey(aId, bId)]
 }
 /** La fusion est-elle DORÉE (2 parents shiny → tier max 0,8/0,6) ? */
@@ -222,6 +257,18 @@ export function fusionSynergy(aId?: string, bId?: string): FusionSynergy | null 
     const pk = pairKey(aId, bId)
     if (SYNERGY_PAIRS[pk]) return { key: `pair:${pk}`, label: SYNERGY_PAIRS[pk] }
     if (aId === MIMIMOY_ID || bId === MIMIMOY_ID) return { key: "mimimoy", label: "le potentiel caché de Mimimoy" }
+    return null
+}
+
+/** RAISON du bonus de génétique d'une paire, pour l'AFFICHAGE (badge « bonus de synergie », poids des parents) : un secret
+ *  (fusionSynergy) ou une RÈGLE (deux créations de joueur ; deux fusionnés au stade final). Les règles ne sont PAS des
+ *  secrets : ni fête, ni carte sur la page Secrets. null = génétique normale. */
+export function fusionBoost(aId?: string, bId?: string): FusionSynergy | null {
+    const syn = fusionSynergy(aId, bId)
+    if (syn) return syn
+    if (!aId || !bId) return null
+    if (isCraftedStarter(aId) && isCraftedStarter(bId)) return { key: "rule:createurs", label: "la synergie des créateurs" }
+    if (isFinalTrueFusion(aId) && isFinalTrueFusion(bId)) return { key: "rule:chimeres", label: "la synergie des chimères" }
     return null
 }
 

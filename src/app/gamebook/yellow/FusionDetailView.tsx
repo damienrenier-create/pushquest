@@ -5,7 +5,7 @@
 // computeFusion) — donc « potentiel de base » ; au combat, les stats se recalculent sur tes vrais Daemons.
 
 import { useState } from "react"
-import { computeFusion, fusionSynergy, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, fusionBoost, type FusionParent } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
@@ -32,7 +32,7 @@ export function FusionDetailView({ aId, bId, onClose }: { aId: string; bId: stri
     if (!spA || !spB) return null
 
     const res = computeFusion(parentFromSpecies(spA), parentFromSpecies(spB))
-    const synergy = fusionSynergy(aId, bId) // BONUS de synergie (clan / paire / inédite) → génétique boostée. null sinon.
+    const synergy = fusionBoost(aId, bId) // BONUS de génétique : secret (clan / paire / inédite / Mimimoy) ou règle (créateurs, chimères). null sinon.
     const official = officialFusionForParents(aId, bId)
     const name = official?.name ?? res.name
     const sprite = official?.sprite ?? gen ?? undefined
