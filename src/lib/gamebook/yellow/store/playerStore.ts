@@ -13,7 +13,7 @@ import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../da
 import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
 import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
 import { freshShopSurtax, shopSurtaxMult, surtaxedPrice, type ShopSurtaxState } from "../data/shopSurtax"
-import { cashAllowanceLeft, settleDailyCashout } from "../poker/cashGame"
+import { cashAllowanceLeft, settleDailyCashout, openCashDay } from "../poker/cashGame"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -76,10 +76,10 @@ interface PlayerState {
     /** 1re partie de poker (tuto solo house-funded) déjà jouée ? → ensuite = cash quotidien / multi. */
     pokerFirstGameDone: boolean
     /** CASH QUOTIDIEN vs les boss : tapis du jour de chaque boss (nom → reps ; 0 = ruiné/out du jour). Persiste
-     *  entre tes parties du jour, reset à minuit. Le cap des DONS de la maison = pokerCashCap. */
+     *  entre tes parties du jour, reset à minuit (UTC). Le DON de la maison à chaque boss = pokerCashCap. */
     pokerBossStacks: Record<string, number>
-    pokerCashCap: number   // ton buy-in à la 1re partie du jour (plafond des jetons donnés aux boss)
-    pokerCashDate: string  // jour courant du cash (reset des tapis boss quand il change)
+    pokerCashCap: number   // tapis du MENU DU JOUR donné à chaque boss, fixé à ta 1re assise du jour (borne aussi ton buy-in)
+    pokerCashDate: string  // jour courant du cash, « menu:AAAA-MM-JJ » (reset des tapis boss quand il change)
     casinoNetToday?: number // CASINO : NET déjà réglé le jour casinoNetDate (signé) — plafond CASINO_DAILY_NET_CAP (20/10/2026)
     casinoNetDate?: string
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
@@ -2378,13 +2378,14 @@ export function markPokerFirstGameDone() {
 export function isPokerFirstGameDone(): boolean { return st.pokerFirstGameDone }
 
 // === CASH QUOTIDIEN vs les boss (persistant à la journée, reset à minuit) ===
-/** Début d'une partie cash : reset les tapis boss si NOUVEAU JOUR, fixe le cap (= ton buy-in) à la 1re
- *  partie du jour. Renvoie le cap du jour + les tapis boss persistés (nom → reps ; 0 = ruiné/out). */
-export function beginPokerCashGame(today: string, playerBuyin: number): { cap: number; bossStacks: Record<string, number> } {
-    if (st.pokerCashDate !== today) st = { ...st, pokerCashDate: today, pokerCashCap: 0, pokerBossStacks: {} }
-    let cap = st.pokerCashCap
-    if (cap <= 0) { cap = Math.max(1, Math.floor(playerBuyin)); st = { ...st, pokerCashCap: cap } }
-    return { cap, bossStacks: { ...st.pokerBossStacks } }
+/** Début d'une partie cash : ouvre (ou reprend) la journée. Le tapis donné à chaque boss = le MENU DE LA SEMAINE pour
+ *  ta jauge, FIXÉ à ta 1re assise du jour (avant le 20/10/2026 : ton 1er buy-in, et rien ne bornait les suivants →
+ *  « 5 000 contre des boss à 40 »). Une save d'avant le menu repart sur le menu (cf. cashGame.openCashDay).
+ *  Renvoie le tapis du jour + les tapis boss persistés (nom → reps ; 0 = ruiné/out). */
+export function beginPokerCashGame(today: string, gauge: number): { cap: number; bossStacks: Record<string, number> } {
+    const day = openCashDay({ date: st.pokerCashDate, cap: st.pokerCashCap, bossStacks: st.pokerBossStacks }, today, gauge)
+    st = { ...st, pokerCashDate: day.date, pokerCashCap: day.cap, pokerBossStacks: day.bossStacks }
+    return { cap: day.cap, bossStacks: { ...day.bossStacks } }
 }
 // ════════════════ CASINO — PLAFOND NET QUOTIDIEN (poker cash, roulette, blackjack, tuto) ════════════════
 const casinoDayKey = () => new Date().toISOString().slice(0, 10)

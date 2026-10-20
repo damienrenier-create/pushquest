@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react"
 import { usePlayer, casinoPillar } from "@/lib/gamebook/yellow/store/playerStore"
 import { TONYTONY_TARGET, TONYTONY_SHINY_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
+import { cashDayStake, pokerMenuFor } from "@/lib/gamebook/yellow/poker/cashGame"
 
 interface Amt { nickname: string; amount: number }
 interface Num { n: number; c: number; color: string }
@@ -40,6 +41,10 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
     const won = player.labDefi.casinoTotalWon // énergie totale gagnée au casino (le croupier en tient le compte)
     const tonyClaimed = player.labDefi.tonytonyClaimed, tonyShiny = player.labDefi.tonytonyShiny
     const pillar = casinoPillar() // 🥚 Tonytony (run 1) / 🦠 Merorem (run 2)
+    // MENU DE LA SEMAINE du poker (cashGame) : le plat du jour et le tapis de chaque boss pour ta jauge.
+    const pokerDay = new Date().toISOString().slice(0, 10)
+    const pokerMenu = pokerMenuFor(pokerDay)
+    const pokerStake = cashDayStake({ date: player.pokerCashDate, cap: player.pokerCashCap }, pokerDay, player.repsCap)
     const [stats, setStats] = useState<Stats | null>(null)
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [slide, setSlide] = useState(0)
@@ -92,6 +97,7 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
                                         <div style={{ marginTop: 4, color: "#7ce0a0", fontWeight: 700 }}>🎉 Palier atteint — va le réclamer à l&apos;ordi du labo !</div>}
                                 </div>
                                 <div style={tip}>💻 Psst… si t&apos;es joueur, il y a des <b>défis</b> sur l&apos;ordi du <b>labo</b> (à l&apos;étage du Centre Daemon). Va voir.</div>
+                                <div style={tip}>🃏 Aujourd&apos;hui au poker : <b>{pokerMenu.dish}</b> — <b>{pokerStake.toLocaleString("fr-FR")} ⚡</b> par boss. Le menu de la semaine est affiché à la table.</div>
                                 <button style={playBtn} onClick={onPlay}>🎡 Jouer à la roulette</button>
                             </div>
                         )}

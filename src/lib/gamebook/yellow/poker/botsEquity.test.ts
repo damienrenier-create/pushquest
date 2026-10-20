@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { createTable, startHand, act, legalActions, totalPot, type PokerTable, type PokerAction, type BotProfile } from "./engine"
-import { botDecision, handEquity } from "./bots"
+import { createTable, startHand, act, legalActions, totalPot, emptyTells, heavyRaiseTo, type PokerTable, type PokerAction, type BotProfile } from "./engine"
+import { botDecision, handEquity, handEquityVsRange, chenScore, chenThreshold, raiseRangeOf, betRangeOf } from "./bots"
 import { evaluateBest } from "./handEval"
 import { Rng } from "../battle/rng"
 import type { Card } from "./cards"
@@ -157,6 +157,70 @@ describe("tells — le moteur observe l'humain, les bots s'adaptent (Sartay 20/1
             return bluffs / 120
         }
         expect(bluffRate(9)).toBeGreaterThan(bluffRate(1) + 0.1)
+    }, SLOW)
+})
+
+describe("fourchettes préflop (20/10, soir) — un tapis sélectif n'est plus payé par des mains moyennes", () => {
+    it("score de Chen : As-As 20, Roi-Roi 16, As-Roi assortis 12, 2-2 5, 7-2 dépareillé -1 ; le top 10 % commence vers 8", () => {
+        expect(chenScore(C(14, 0), C(14, 1))).toBe(20)
+        expect(chenScore(C(13, 0), C(13, 1))).toBe(16)
+        expect(chenScore(C(14, 2), C(13, 2))).toBe(12)
+        expect(chenScore(C(2, 0), C(2, 1))).toBe(5)
+        expect(chenScore(C(7, 0), C(2, 1))).toBe(-1)
+        expect(chenThreshold(1)).toBe(-1)
+        expect(chenThreshold(0.10)).toBeGreaterThanOrEqual(8)
+    })
+    it("raiseRangeOf : un inconnu est supposé sérieux ; un pousse-tapis compulsif est vite lu, un sélectif reste lu sélectif", () => {
+        expect(raiseRangeOf(undefined)).toBeCloseTo(0.15, 5)
+        expect(raiseRangeOf({ ...emptyTells(), hands: 100, preRaises: 100, preHeavy: 100 })).toBeGreaterThan(0.9)
+        expect(raiseRangeOf({ ...emptyTells(), hands: 10, preRaises: 10, preHeavy: 10 })).toBeGreaterThan(0.55) // lu en 10 mains
+        expect(raiseRangeOf({ ...emptyTells(), hands: 100, preRaises: 10, preHeavy: 10 })).toBeLessThan(0.11)
+        expect(raiseRangeOf({ hands: 5, bets: 1, tinyBets: 0, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 1 })).toBeCloseTo(0.10, 5) // tables d'avant : pas de preHeavy
+    })
+    it("betRangeOf : qui ne mise vraiment qu'avec deux paires est lu serré, qui mise tout le temps est lu large", () => {
+        expect(betRangeOf(undefined)).toBeCloseTo(0.40, 5)
+        expect(betRangeOf({ ...emptyTells(), postActs: 200, postBets: 20 })).toBeLessThan(0.15)
+        expect(betRangeOf({ ...emptyTells(), postActs: 200, postBets: 190 })).toBeGreaterThan(0.85)
+    })
+    it("un tapis préflop compte comme relance « lourde » ; une ouverture à 3 BB, non ; après le flop, une mise minuscule n'est pas une vraie mise", () => {
+        const t = headsUp(9)
+        act(t, ME, { kind: "raise", to: 6 })
+        expect(t.seats[ME].tells).toMatchObject({ preRaises: 1, preHeavy: 0 })
+        const u = headsUp(10)
+        act(u, ME, { kind: "allin" })
+        expect(u.seats[ME].tells).toMatchObject({ preRaises: 1, preHeavy: 1 })
+        expect(heavyRaiseTo(2, 2500)).toBe(625)
+        expect(heavyRaiseTo(76, 1000)).toBe(760)
+        const v = headsUp(11)
+        v.phase = "flop"; v.community = [C(13, 0), C(8, 1), C(3, 2)]
+        v.seats[ME].committed = 40; v.seats[BOT].committed = 40; v.seats[ME].betThisRound = 0; v.seats[BOT].betThisRound = 0; v.currentBet = 0; v.minRaise = 2; v.toAct = ME
+        act(v, ME, { kind: "raise", to: 2 })
+        expect(v.seats[ME].tells).toMatchObject({ postActs: 1, postBets: 0 })
+    })
+    it("équité contre une fourchette : Roi-9 dépareillé vaut ~58 % contre une main au hasard, nettement moins contre le top 10 %", () => {
+        const k9 = [C(13, 0), C(9, 1)]
+        expect(handEquity(k9, [], 1, new Rng(11), 600)).toBeGreaterThan(0.54)
+        expect(handEquityVsRange(k9, [], 1, new Rng(11), 0.10, 600)).toBeLessThan(0.42)
+        expect(handEquityVsRange(k9, [], 1, new Rng(5), 1, 300)).toBe(handEquity(k9, [], 1, new Rng(5), 300)) // 100 % = au hasard
+    }, SLOW)
+    it("⚠️ face à un TAPIS de 100 BB d'un joueur qui ne pousse que ~10 % de ses mains, Roi-9 se couche ; contre un pousse-tout, As-Dame paie", () => {
+        const decide = (preHeavy: number, hole: Card[], seed: number) => {
+            const t = createTable([{ id: "bot_1", name: "Bot", stack: 200 }, { id: "me", name: "Moi", stack: 200 }], { sb: 1, bb: 2 })
+            t.seats[BOT].bot = true; t.seats[BOT].persona = DEFAULT
+            startHand(t, new Rng(seed))
+            t.seats[ME].tells = { ...emptyTells(), hands: 100, preRaises: preHeavy, preHeavy }
+            act(t, ME, { kind: "allin" })
+            t.seats[BOT].hole = hole
+            return botDecision(t, BOT, new Rng(seed * 17)).kind
+        }
+        let foldsVsTight = 0, callsVsManiac = 0
+        for (let seed = 1; seed <= 30; seed++) {
+            if (decide(10, [C(13, 0), C(9, 1)], seed) === "fold") foldsVsTight++
+            const k = decide(100, [C(14, 2), C(12, 3)], seed)
+            if (k === "call" || k === "allin") callsVsManiac++
+        }
+        expect(foldsVsTight).toBeGreaterThanOrEqual(28)
+        expect(callsVsManiac).toBeGreaterThanOrEqual(26)
     }, SLOW)
 })
 

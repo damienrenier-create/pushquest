@@ -1,7 +1,7 @@
 "use client"
 
 // Nexus — Poker CASH QUOTIDIEN vs les boss (SOLO local, VRAIES reps). 6 sièges (toi + 5 boss).
-// Les boss ont un tapis DU JOUR persistant : cap sur les DONS de la maison = ton buy-in, mais leurs GAINS
+// Les boss ont un tapis DU JOUR persistant : DON de la maison = le menu du jour (cashGame), mais leurs GAINS
 // restent acquis (cf. cashGame.bossStartStack). Un boss RUINÉ (tapis 0) part et ne revient que le lendemain.
 // Aucune triche (vrai cash game). Règle d'or : jamais de partie sans toi à table (ensureBots l'impose).
 // Les bots jouent UN PAR UN (botTurn) → tempo piloté par le panneau.

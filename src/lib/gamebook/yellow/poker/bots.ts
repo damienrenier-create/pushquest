@@ -25,11 +25,16 @@
 //     presque toujours → sur-relancé plus large.
 //   • le style ne crée plus de « trou » exploitable : le manque de discipline (skill bas) se traduit par des SUIVIS
 //     de trop, jamais par des couchers devant rien.
+//   • FOURCHETTES (20/10, soir) : face à une relance LOURDE préflop ou à une vraie mise après le flop d'un humain,
+//     l'équité se mesure contre les mains avec lesquelles CE joueur le fait (fréquence montrée, a priori sérieux),
+//     plus contre une main au hasard (les ouvertures ordinaires, si). Avant, deux lignes
+//     « honnêtes » gagnaient : tapis préflop seulement avec ses meilleures mains (+0,1 à +4 BB/main dès 50 BB de
+//     profondeur) et mise du pot seulement avec deux paires ou mieux (+0,2 à +0,7 BB/main).
 
 import { Rng } from "../battle/rng"
-import { act, legalActions, totalPot, type PokerAction, type PokerTable, type BotProfile, type SeatTells } from "./engine"
+import { act, legalActions, totalPot, heavyRaiseTo, type PokerAction, type PokerTable, type BotProfile, type SeatTells } from "./engine"
 import { pruneSeats } from "./room"
-import { evaluateBest, compareHands } from "./handEval"
+import { evaluateBest, compareHands, type HandRank } from "./handEval"
 import { makeDeck, type Card } from "./cards"
 
 export const BOT_BUYIN = 1000
@@ -109,6 +114,101 @@ export function handEquity(hole: readonly Card[], community: readonly Card[], op
     return score / k
 }
 
+// ══════════════════ FOURCHETTES ══════════════════
+/** Score de Chen d'une main de départ (classement préflop classique, de -1 à 20) : sert à dire « le top 15 % ». */
+export function chenScore(a: Card, b: Card): number {
+    const hi = Math.max(a.rank, b.rank), lo = Math.min(a.rank, b.rank)
+    const base = (r: number) => (r === 14 ? 10 : r === 13 ? 8 : r === 12 ? 7 : r === 11 ? 6 : r / 2)
+    if (hi === lo) return Math.max(5, base(hi) * 2)
+    const gap = hi - lo - 1
+    let sc = base(hi) + (a.suit === b.suit ? 2 : 0) - (gap === 0 ? 0 : gap === 1 ? 1 : gap === 2 ? 2 : gap === 3 ? 4 : 5)
+    if (gap <= 1 && hi < 12) sc += 1
+    return Math.ceil(sc)
+}
+/** Scores de Chen des 1 326 mains de départ, du meilleur au pire (pour convertir « top x % » en seuil). */
+const CHEN_SORTED: number[] = (() => {
+    const d = makeDeck(), out: number[] = []
+    for (let x = 0; x < d.length; x++) for (let y = x + 1; y < d.length; y++) out.push(chenScore(d[x], d[y]))
+    return out.sort((p, q) => q - p)
+})()
+/** Seuil de Chen du top `frac` des mains : une main est « dans la fourchette » si son score atteint ce seuil. */
+export function chenThreshold(frac: number): number {
+    const k = Math.max(0, Math.min(CHEN_SORTED.length - 1, Math.ceil(frac * CHEN_SORTED.length) - 1))
+    return CHEN_SORTED[k]
+}
+const RANGE_PROBES = 48
+/** Comme handEquity, mais l'adversaire n°0 (celui qui mise) tient une main du TOP `rangeFrac` : préflop, au score de
+ *  Chen ; après le flop, à la force faite sur le tableau actuel (seuil estimé sur 48 mains au hasard). Tirage par rejet ;
+ *  les autres adversaires tiennent des mains au hasard. Le bot ne lit toujours que ses cartes et le tableau : la
+ *  fourchette vient de ce que l'humain a MONTRÉ (raiseRangeOf / betRangeOf). rangeFrac ≥ 1 → handEquity. */
+export function handEquityVsRange(hole: readonly Card[], community: readonly Card[], opponents: number, rng: Rng, rangeFrac: number, samples?: number): number {
+    if (rangeFrac >= 1) return handEquity(hole, community, opponents, rng, samples)
+    if (hole.length < 2) return 0
+    const n = Math.max(1, Math.min(6, Math.floor(opponents)))
+    const k = samples ?? (n === 1 ? EQUITY_SAMPLES_HEADS_UP : EQUITY_SAMPLES_MULTI)
+    const frac = Math.max(0.01, rangeFrac)
+    const known = new Set([...hole, ...community].map((c) => c.rank * 4 + c.suit))
+    const unseen = makeDeck().filter((c) => !known.has(c.rank * 4 + c.suit))
+    const need = 2 * n + (5 - community.length)
+    const swap = (x: number, y: number) => { const tmp = unseen[x]; unseen[x] = unseen[y]; unseen[y] = tmp }
+    const pick = (): [number, number] => {
+        const x = Math.floor(rng.next() * unseen.length)
+        let y = Math.floor(rng.next() * (unseen.length - 1)); if (y >= x) y++
+        return [x, y]
+    }
+    // Qui est « dans la fourchette » : préflop, le score de Chen ; après le flop, la main faite contre un seuil de force.
+    let inRange: (x: number, y: number) => boolean
+    if (community.length === 0) {
+        const thr = chenThreshold(frac)
+        inRange = (x, y) => chenScore(unseen[x], unseen[y]) >= thr
+    } else {
+        const probe: HandRank[] = []
+        for (let p = 0; p < RANGE_PROBES; p++) { const [x, y] = pick(); probe.push(evaluateBest([unseen[x], unseen[y], ...community])) }
+        probe.sort((a, b) => compareHands(b, a))
+        const thr = probe[Math.max(0, Math.min(RANGE_PROBES - 1, Math.ceil(frac * RANGE_PROBES) - 1))]
+        inRange = (x, y) => compareHands(evaluateBest([unseen[x], unseen[y], ...community]), thr) >= 0
+    }
+    let score = 0
+    for (let smp = 0; smp < k; smp++) {
+        // 1) la main de l'AGRESSEUR, tirée dans sa fourchette (rejet ; au pire, la dernière tirée)
+        let [x, y] = pick()
+        for (let tries = 1; tries < 40 && !inRange(x, y); tries++) [x, y] = pick()
+        swap(0, x); swap(1, y === 0 ? x : y)
+        // 2) le reste (autres adversaires + tableau) au hasard parmi les cartes restantes
+        for (let j = 2; j < need; j++) swap(j, j + Math.floor(rng.next() * (unseen.length - j)))
+        const board = [...community, ...unseen.slice(2 * n, need)]
+        const mine = evaluateBest([...hole, ...board])
+        let best = 1
+        for (let o = 0; o < n && best > 0; o++) {
+            const cmp = compareHands(mine, evaluateBest([unseen[2 * o], unseen[2 * o + 1], ...board]))
+            if (cmp < 0) best = 0
+            else if (cmp === 0 && best > 0.5) best = 0.5
+        }
+        score += best
+    }
+    return score / k
+}
+/** A priori des fourchettes : un inconnu est supposé sérieux — relances lourdes = top 15 % (poids : 10 mains),
+ *  vraies mises après le flop = top 40 % (poids : 20 actions). */
+export const RANGE_PRIOR_HANDS = 10
+export const RANGE_PRIOR_ACTS = 20
+/** Fourchette (fraction des mains, 4 % à 100 %) avec laquelle CET humain fait une relance LOURDE préflop (heavyRaiseTo),
+ *  par main jouée. Un pousse-tapis compulsif est vite lu comme tel (100 en 100 mains → 92 %), un joueur sélectif
+ *  reste lu sélectif (10 % → 10 %). */
+export function raiseRangeOf(tells: SeatTells | undefined): number {
+    const hands = Math.max(0, tells?.hands ?? 0)
+    const n = Math.max(0, tells?.preHeavy ?? 0)
+    return Math.max(0.04, Math.min(1, (n + RANGE_PRIOR_HANDS * 0.15) / (hands + RANGE_PRIOR_HANDS)))
+}
+/** Fourchette après le flop (fraction des mains, 8 % à 100 %) avec laquelle CET humain fait une vraie mise : sa
+ *  fréquence de mises non minuscules par action, a priori 40 %. Qui ne mise qu'avec deux paires est lu serré ; qui
+ *  mise tout le temps est lu large — et payé. */
+export function betRangeOf(tells: SeatTells | undefined): number {
+    const acts = Math.max(0, tells?.postActs ?? 0)
+    const bets = Math.max(0, tells?.postBets ?? 0)
+    return Math.max(0.08, Math.min(1, (bets + RANGE_PRIOR_ACTS * 0.40) / (acts + RANGE_PRIOR_ACTS)))
+}
+
 /** Adversaires encore en lice contre le siège `i` (pas couchés, dans la main). Au moins 1 (sinon la main est finie). */
 function liveOpponents(t: PokerTable, i: number): number {
     return Math.max(1, t.seats.filter((s, k) => k !== i && !s.folded && !s.sittingOut).length)
@@ -122,7 +222,7 @@ export function readTells(t: PokerTable, i: number): TellsRead {
     const acc: SeatTells = { hands: 0, bets: 0, tinyBets: 0, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 0 }
     for (const [k, s] of t.seats.entries()) {
         if (k === i || s.bot || s.folded || s.sittingOut || !s.tells) continue
-        for (const key of Object.keys(acc) as (keyof SeatTells)[]) acc[key] += s.tells[key] ?? 0
+        for (const key of Object.keys(acc) as (keyof SeatTells)[]) acc[key] = (acc[key] ?? 0) + (s.tells[key] ?? 0)
     }
     const rate = (num: number, den: number, min: number) => (den >= min ? num / den : null)
     return { tiny: rate(acc.tinyBets, acc.bets, 5), fold: rate(acc.foldsFacing, acc.faced, 6), weak: rate(acc.weakShowdowns, acc.showdowns, 3), preRaise: rate(acc.preRaises, acc.hands, 8) }
@@ -194,13 +294,24 @@ export function botDecision(t: PokerTable, i: number, rng: Rng): PokerAction {
     const need = Math.max(0.03, Math.min(0.92, potOdds + (p.tight - 0.5) * 0.10 + multi + 0.02 + needShift))
     const allInCall = toCall >= s.stack
     const tinyBet = toCall <= Math.max(2 * bb, Math.floor(pot * 0.1))
+    // FOURCHETTE : face à une relance LOURDE préflop ou à une vraie mise après le flop d'un humain, on se mesure à SES
+    //   mains, pas à une main au hasard — sinon un joueur qui ne pousse que ses 10 % meilleures mains (ou ne mise qu'avec
+    //   deux paires) se fait payer par du moyen. Une ouverture ordinaire garde l'équité contre une main au hasard.
+    const aggrIdx = t.lastAggressor ?? -1
+    const aggr = aggrIdx >= 0 && aggrIdx !== i ? t.seats[aggrIdx] : undefined
+    let eqF = eq
+    if (aggr && !aggr.bot && !aggr.folded && !tinyBet) {
+        if (t.phase === "preflop") {
+            if (aggr.allIn || aggr.betThisRound >= heavyRaiseTo(bb, aggr.betThisRound + aggr.stack)) eqF = handEquityVsRange(s.hole, t.community, opps, rng, raiseRangeOf(aggr.tells))
+        } else eqF = handEquityVsRange(s.hole, t.community, opps, rng, betRangeOf(aggr.tells))
+    }
     // PUNITION des mises minuscules : un humain qui mise 2 dans 300 à répétition se fait relancer POUR LA VALEUR dès qu'on
     //   est devant (≥ 55 %). Jamais en bluff : suivre une mise minuscule ne coûte rien et mène à l'abattage — c'est là
     //   qu'un « mise-mini » perd (relecture 20/10 : une relance avec 35 % d'équité le faisait GAGNER à l'abattage).
-    if (tinyBet && minBetter && eq >= 0.55 && canRaise && r < 0.9) return { kind: "raise", to: betTo(0.9) }
-    if (eq < need) {
+    if (tinyBet && minBetter && eqF >= 0.55 && canRaise && r < 0.9) return { kind: "raise", to: betTo(0.9) }
+    if (eqF < need) {
         // Manque de discipline (skill bas) : suit parfois une main un peu courte — jamais un tapis sans rien.
-        const slip = r > p.skill && eq > need * 0.75 && !allInCall
+        const slip = r > p.skill && eqF > need * 0.75 && !allInCall
         if (slip) return { kind: "call" }
         return { kind: "fold" }
     }
@@ -209,15 +320,15 @@ export function botDecision(t: PokerTable, i: number, rng: Rng): PokerAction {
     //   large ; à la turn et à la river, on ne relance qu'avec une main solide (les gros pots se gagnent à l'abattage).
     const late = t.phase === "turn" || t.phase === "river"
     const raiseAt = t.phase === "preflop" && loosePre ? Math.max(0.56, need + 0.2) : late ? Math.max(0.70, need + 0.30) : Math.max(0.62, need + 0.26)
-    if (eq >= raiseAt && canRaise && r < 0.4 + p.aggro * 0.55 && !trapping) {
+    if (eqF >= raiseAt && canRaise && r < 0.4 + p.aggro * 0.55 && !trapping) {
         const to = betTo(t.phase === "preflop" ? 1.0 : 0.75 + p.aggro * 0.5)
         if (to >= s.betThisRound + s.stack * 0.6) return { kind: "allin" } // relance qui engage l'essentiel du tapis → tapis franc
         return { kind: "raise", to }
     }
     // Bluff-relance (jamais à la river, jamais contre une station) : sur une main correcte (semi-bluff) ou, plus rarement,
     //   sur du vent — au rythme du style, en tête-à-tête.
-    if (t.phase !== "river" && !station && eq >= need + 0.10 && eq < raiseAt && canRaise && heads && r < Math.min(0.5, p.bluff * 0.45 * bluffMult)) return { kind: "raise", to: betTo(0.6 + r2 * 0.5) }
-    if (t.phase !== "river" && !station && eq >= need && eq < need + 0.10 && canRaise && heads && potOdds < 0.3 && r < Math.min(0.3, p.bluff * 0.15 * bluffMult)) return { kind: "raise", to: betTo(0.8) }
+    if (t.phase !== "river" && !station && eqF >= need + 0.10 && eqF < raiseAt && canRaise && heads && r < Math.min(0.5, p.bluff * 0.45 * bluffMult)) return { kind: "raise", to: betTo(0.6 + r2 * 0.5) }
+    if (t.phase !== "river" && !station && eqF >= need && eqF < need + 0.10 && canRaise && heads && potOdds < 0.3 && r < Math.min(0.3, p.bluff * 0.15 * bluffMult)) return { kind: "raise", to: betTo(0.8) }
     return allInCall ? { kind: "allin" } : { kind: "call" }
 }
 

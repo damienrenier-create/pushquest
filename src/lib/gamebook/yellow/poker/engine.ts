@@ -29,8 +29,15 @@ export interface SeatTells {
     showdowns: number      // abattages disputés
     weakShowdowns: number  // … avec au plus une paire
     preRaises: number      // relances préflop
+    // Ajouts du 20/10 au soir (absents des tables plus anciennes → lus avec ?? 0) :
+    preHeavy?: number      // … dont LOURDES : tapis, ou relance à ≥ max(10 BB, ¼ de ses jetons) — cf. heavyRaiseTo
+    postActs?: number      // actions après le flop (check, suivi, mise, coucher)
+    postBets?: number      // … dont mises / relances NON minuscules
 }
-export const emptyTells = (): SeatTells => ({ hands: 0, bets: 0, tinyBets: 0, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 0 })
+/** Relance préflop LOURDE : au moins max(10 BB, ¼ des jetons du relanceur, mise du tour comprise). Ce sont elles
+ *  que les bots lisent comme une fourchette (le « tapis sélectif ») ; une ouverture ordinaire, non. */
+export const heavyRaiseTo = (bb: number, chips: number): number => Math.max(10 * bb, 0.25 * chips)
+export const emptyTells = (): SeatTells => ({ hands: 0, bets: 0, tinyBets: 0, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 0, preHeavy: 0, postActs: 0, postBets: 0 })
 
 /** Profil de jeu d'un bot (défini par bots.ts, stocké sur le siège pour persister le style tiré au hasard). */
 export interface BotProfile { tight: number; aggro: number; bluff: number; skill: number }
@@ -132,7 +139,7 @@ export function startHand(t: PokerTable, rng: Rng): void {
     t.log = []
     t.phase = "preflop"
     // TELLS : une main de plus pour chaque humain en jeu ; au-delà de 400 mains on divise tout par deux (mémoire récente).
-    for (const i of inHand) { const h = t.seats[i]; if (h.bot) continue; const k = (h.tells ??= emptyTells()); k.hands++; if (k.hands > 400) for (const key of Object.keys(k) as (keyof SeatTells)[]) k[key] = Math.floor(k[key] / 2) }
+    for (const i of inHand) { const h = t.seats[i]; if (h.bot) continue; const k = (h.tells ??= emptyTells()); k.hands++; if (k.hands > 400) for (const key of Object.keys(k) as (keyof SeatTells)[]) k[key] = Math.floor((k[key] ?? 0) / 2) }
 
     // Positions des blinds (règle heads-up : le BOUTON est petite blinde et parle en 1er préflop).
     const heads = inHand.length === 2
@@ -206,12 +213,17 @@ function recordTells(t: PokerTable, i: number, action: PokerAction, toCall: numb
     if (s.bot) return
     const k = (s.tells ??= emptyTells())
     if (toCall > 0) { k.faced++; if (action.kind === "fold") k.foldsFacing++ }
+    if (t.phase !== "preflop") k.postActs = (k.postActs ?? 0) + 1
     if (action.kind === "raise" || action.kind === "allin") {
         const to = action.kind === "allin" ? s.betThisRound + s.stack : (action.to ?? 0)
         const added = Math.max(0, to - s.betThisRound - toCall)
+        const tiny = added <= Math.max(2 * t.blinds.bb, Math.floor((totalPot(t) + toCall) * 0.1))
         k.bets++
-        if (added <= Math.max(2 * t.blinds.bb, Math.floor((totalPot(t) + toCall) * 0.1))) k.tinyBets++
-        if (t.phase === "preflop") k.preRaises++
+        if (tiny) k.tinyBets++
+        if (t.phase === "preflop") {
+            k.preRaises++
+            if (action.kind === "allin" || to >= heavyRaiseTo(t.blinds.bb, s.betThisRound + s.stack)) k.preHeavy = (k.preHeavy ?? 0) + 1
+        } else if (!tiny) k.postBets = (k.postBets ?? 0) + 1
     }
 }
 
