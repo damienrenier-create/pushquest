@@ -68,6 +68,11 @@ export const FUN_SPRINT_WINDOW_MS = 10 * 60 * 1000   // 10 min
 export const FUN_DAILY_WINDOW_MS = 60 * 60 * 1000    // 1 h
 
 // ── Récompenses (chiffres Sartay) ─────────────────────────────────────────────────────────────────────────────
+/** ARÈNES d'un run : le Blitz récompense la conquête d'une NOUVELLE arène (100 → 300 selon son numéro), donc 5 réussites
+ *  au plus par run. Une fois les 5 badges du monde en poche, il n'est plus proposé : avant le 20/10/2026 il se lançait quand
+ *  même et ne pouvait JAMAIS réussir (refaire une arène déjà conquise ne donne pas de badge — question de Rob du 08/09). */
+export const FUN_ARENA_COUNT = 5
+export function funArenaOpen(badgeCount: number): boolean { return Math.max(0, Math.floor(badgeCount || 0)) < FUN_ARENA_COUNT }
 /** ARÈNE : 100 (1re) → 300 (5e). `badgeCount` = nb de badges APRÈS la victoire (1..5). */
 export function funArenaReward(badgeCount: number): number { return 50 + 50 * Math.max(1, Math.min(5, badgeCount)) }
 
@@ -75,7 +80,7 @@ export function funArenaReward(badgeCount: number): number { return 50 + 50 * Ma
 // L'arène est un défi de COMBAT : plus l'équipe monte, plus chaque attaque coûte cher → à niv 50 un Blitz pouvait
 // coûter presque autant qu'il ne rapportait. On indexe donc SA récompense sur le niveau moyen de l'équipe :
 // ×1 jusqu'à niv 20, montée linéaire jusqu'à ×2 à niv 50, PLAFONNÉ à ×2. Volontairement modéré (jamais un robinet).
-// Le Sprint (déjà 50×N croissant) et la Cible du jour restent inchangés.
+// Le Sprint (75×N croissant) et la Cible du jour restent inchangés.
 export const FUN_LVL_BONUS_FLOOR = 20
 export const FUN_LVL_BONUS_CEIL = 50
 export const FUN_LVL_BONUS_MAX = 2
@@ -89,7 +94,7 @@ export function funArenaRewardScaled(badgeCount: number, avgLevel: number): numb
 }
 /** SPRINT : 75 × N (N = objectif de la manche). */
 export function funSprintReward(n: number): number { return 75 * Math.max(1, n) }
-// CIBLE DU JOUR : la récompense (20-100 selon rareté) est figée dans dailyReps au tirage (cf. encounters.funDailyTarget).
+// CIBLE DU JOUR : la récompense (40-160 selon rareté) est figée dans dailyReps au tirage (cf. encounters.funDailyTarget).
 
 /** ZONES ACCESSIBLES pour la « cible du jour » (union) : plus le joueur progresse, plus le pool s'élargit.
  *  Grotte←plante, Grotte Gelée←roche, Plage+Centrale←feu (Cendreville atteinte), Hautes Herbes←elec,

@@ -37,7 +37,7 @@ import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, run2BlackjackCtPool, MASTER_CT_IDS, type BadgeId } from "../data/cts"
 import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, MEROREM_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_TARGET, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
-import { emptyFunDefis, funArenaRewardScaled, funSprintReward, funDailyZones, FUN_ARENA_WINDOW_MS, FUN_SPRINT_WINDOW_MS, FUN_DAILY_WINDOW_MS, type FunDefisState, type FunDefiKind } from "../data/funDefis"
+import { emptyFunDefis, funArenaOpen, funArenaRewardScaled, funSprintReward, funDailyZones, FUN_ARENA_WINDOW_MS, FUN_SPRINT_WINDOW_MS, FUN_DAILY_WINDOW_MS, type FunDefisState, type FunDefiKind } from "../data/funDefis"
 import { funDailyTarget } from "../data/encounters"
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats, emptyAchTrack, ENERGY_LOG_MAX, MSG_LOG_MAX, type YellowStats, type AchTrack } from "../storage/save"
@@ -3128,6 +3128,7 @@ export function ensureFunDailyTarget(): { species: string; reps: number; done: b
 
 /** Lance un défi fun (remplace un éventuel défi actif). arène→baseline badges ; sprint→objectif = échelle ; cible→du jour. */
 export function startFunDefi(kind: FunDefiKind): void {
+    if (kind === "arena" && !funArenaOpen(st.badges.length)) return // 5 arènes déjà conquises : le Blitz ne pourrait jamais réussir
     const now = Date.now()
     const f = st.funDefis
     const active =

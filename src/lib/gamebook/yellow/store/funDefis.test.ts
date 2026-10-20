@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { funArenaReward, funSprintReward, funDailyZones } from "../data/funDefis"
+import fs from "node:fs"
+import path from "node:path"
+import { funArenaReward, funSprintReward, funDailyZones, funArenaOpen, FUN_ARENA_COUNT } from "../data/funDefis"
 import { rarityRepsTarget } from "../data/encounters"
-import { startFunDefi, funOnCapture, getFunDefis, abandonFunDefi } from "./playerStore"
+import { startFunDefi, funOnCapture, getFunDefis, abandonFunDefi, hydratePlayer } from "./playerStore"
 
 describe("défis fun — récompenses (fonctions pures)", () => {
     it("arène : 100 (1re) → 300 (5e) selon le n° d'arène", () => {
@@ -46,5 +48,28 @@ describe("défis fun — sprint (échelle + crédit auto)", () => {
         expect(r?.kind).toBe("sprint")
         expect(getFunDefis().active).toBeNull()        // défi consommé
         expect(getFunDefis().ladder).toBe(4)           // échelle +1
+    })
+})
+
+describe("défis fun — Blitz d'arène (20/10/2026 : il se lançait à 5 badges et ne pouvait jamais réussir, question de Rob)", () => {
+    it("ouvert tant qu'il reste une arène à conquérir dans le monde, fermé à 5 badges", () => {
+        expect(FUN_ARENA_COUNT).toBe(5)
+        expect(funArenaOpen(0)).toBe(true)
+        expect(funArenaOpen(4)).toBe(true)
+        expect(funArenaOpen(5)).toBe(false)
+    })
+    it("⚠️ à 5 badges, « Lancer » ne crée plus de défi impossible ; avec une arène à conquérir, il se lance", () => {
+        hydratePlayer({ badges: ["plante", "roche", "feu", "elec", "eau"] }); abandonFunDefi()
+        startFunDefi("arena")
+        expect(getFunDefis().active).toBeNull()
+        hydratePlayer({ badges: ["plante"] })
+        startFunDefi("arena")
+        expect(getFunDefis().active?.kind).toBe("arena")
+        abandonFunDefi()
+    })
+    it("la carte du labo ne propose plus « Lancer » quand les 5 arènes sont conquises, et le dit", () => {
+        const lab = fs.readFileSync(path.join(process.cwd(), "src/app/gamebook/yellow/LabPanel.tsx"), "utf8")
+        expect(lab).toContain("{funArenaOpen(player.badges.length)")
+        expect(lab).toContain("Les 5 arènes de ce monde sont déjà conquises")
     })
 })
