@@ -18,8 +18,9 @@ import {
     getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { funSprintReward, funArenaRewardScaled, funLevelMultiplier } from "@/lib/gamebook/yellow/data/funDefis"
+import { chenLabRoute } from "@/lib/gamebook/yellow/data/labDialogues"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { persistYellowSave, canAbandonNgplus } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
     ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
@@ -80,7 +81,10 @@ export default function LabPanel() {
     const d = player.labDefi
     const activePhys = d.activePhys
     const activeCt = d.activeCt
-    const paused = player.isChampion && (player.items[FLUTE_ITEM] ?? 0) <= 0 && !player.sylvebarbeAwake
+    // VERROU = « Chen te doit la Daemonflûte » : le MÊME aiguillage que le PNJ (chenLabRoute). Un labo verrouillé se débloque
+    //   donc TOUJOURS en parlant à Chen, dans tous les modes (avant le 20/10/2026, un Champion fun restait verrouillé à vie :
+    //   Chen lui offrait son cadeau d'énergie au lieu de la flûte).
+    const paused = chenLabRoute({ fun: isFun, world, canAbandon: canAbandonNgplus(), isChampion: player.isChampion, hasFlute: (player.items[FLUTE_ITEM] ?? 0) > 0, sylvebarbeAwake: player.sylvebarbeAwake }) === "flute"
     const today = player.creditedThrough || new Date().toISOString().slice(0, 10)
 
     // ── Actions ──

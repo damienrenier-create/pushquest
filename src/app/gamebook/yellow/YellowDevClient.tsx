@@ -2348,7 +2348,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
             getGameMode() === "fun"
-                ? "« Voici ta seconde vie : ta création pour seul allié, 1000 énergies + 10 FUSIO-BALLS pour tes fusions, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »"
+                ? "« Voici ta seconde vie : ta création pour seul allié, 1000 énergies + 10 NEXUS-BALLS pour tes captures, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »"
                 : "« Voici ta seconde vie : ta création pour seul allié, 10000 énergies bénies, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »",
             "« Des Daemons jamais vus rôdent sur les routes, les types ont basculé, et des CT INÉDITES t'attendent. Rien ne sera comme avant, Maître. »",
             ...(getGameMode() === "fun" ? [
@@ -2357,7 +2357,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             ] : [
                 "« Ton défi de gloire : rallier la Ligue et la vaincre. Ton SCORE = ta PERFORMANCE — Pokédex, taux de victoire et niveaux d'équipe, notée sur 1000. La trace que tu graves dans le Nexus. »",
             ]),
-            `« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création${getGameMode() === "fun" ? ", les 1000⚡ ET les Fusio-Balls" : " ET les 10000⚡"} à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »`,
+            `« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création${getGameMode() === "fun" ? ", les 1000⚡ ET les Nexus-Balls" : " ET les 10000⚡"} à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »`,
             "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
             "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",
         ])
@@ -4401,13 +4401,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 />
             )}
 
-            {/* NG+ — confirmation d'ABANDON (chez le Prof. CHEN) : action IRRÉVERSIBLE (starter + 6000⚡ perdus). */}
+            {/* NG+ — confirmation d'ABANDON (chez le Prof. CHEN) : action IRRÉVERSIBLE (starter + don de départ du run 2 perdus). */}
             {abandonConfirm && (
                 <div style={menuOverlayStyle} onClick={() => setAbandonConfirm(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>⚠️ ABANDONNER LE NEW GAME+ ?</div>
                         <div style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.6, opacity: 0.9, marginBottom: 4 }}>
-                            Tu rends ton Daemon créé et tes <b>6000⚡</b> — <b style={{ color: "#c83030" }}>perdus À JAMAIS</b>.<br />
+                            Tu rends ton Daemon créé et {getGameMode() === "fun" ? <>tes <b>1000⚡</b> et tes <b>10 Nexus-Balls</b></> : <>tes <b>10000⚡</b></>} — <b style={{ color: "#c83030" }}>perdus À JAMAIS</b>.<br />
                             En échange, tu récupères ta partie de <b>Champion</b>, la <b>Daemonflûte</b> et l&apos;accès à la <b>Zone de Combat</b>.
                         </div>
                         <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={async () => {
@@ -5894,9 +5894,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         "*Le trône vacillant, une lueur de pâte sacrée descend sur toi.*",
                         "« CHAMPION ! Tu as tout vaincu… mais crois-tu vraiment avoir touché le fond du Nexus ? »",
                         "« Je t'offre l'ULTIME défi : deviens à ton tour CRÉATEUR. Conçois de tes mains un Daemon INÉDIT — TON œuvre — et recommence une SECONDE VIE avec lui pour seul allié. »",
-                        "« Un Nexus REVISITÉ t'attend : de nouveaux types, de nouvelles arènes, des CT introuvables ailleurs, et des Daemons que nul Champion n'a jamais croisés. Et 10 000 énergies bénies pour t'élancer. »",
-                        "« Mais retiens ceci : ces 10 000⚡ sont un PRÊT du Nexus. Renonce au second run, et il les REPRENDRA. Va au bout, et elles sont à toi pour toujours. »",
-                        "« Et surtout — un SCORE t'attend : franchis cette seconde Ligue avec le PLUS d'énergie possible. Ce chiffre-là, c'est la vraie mesure d'un Maître. »",
+                        ...(getGameMode() === "fun" ? [
+                            "« Un Nexus REVISITÉ t'attend : de nouveaux types, de nouvelles arènes, des CT introuvables ailleurs, et des Daemons que nul Champion n'a jamais croisés. Et 1000 énergies + 10 Nexus-Balls pour t'élancer. »",
+                            "« Mais retiens ceci : ce pécule est un PRÊT du Nexus. Renonce au second run, et il le REPRENDRA. Va au bout, et il est à toi pour toujours. »",
+                            "« Et surtout — un SCORE t'attend : ta PERFORMANCE dans ce Remix… et un gros bonus si tu le boucles avant tes amis. »",
+                        ] : [
+                            "« Un Nexus REVISITÉ t'attend : de nouveaux types, de nouvelles arènes, des CT introuvables ailleurs, et des Daemons que nul Champion n'a jamais croisés. Et 10 000 énergies bénies pour t'élancer. »",
+                            "« Mais retiens ceci : ces 10 000⚡ sont un PRÊT du Nexus. Renonce au second run, et il les REPRENDRA. Va au bout, et elles sont à toi pour toujours. »",
+                            "« Et surtout — un SCORE t'attend : franchis cette seconde Ligue avec le PLUS d'énergie possible. Ce chiffre-là, c'est la vraie mesure d'un Maître. »",
+                        ]),
                         "« Ce n'est pas une option : le Nexus l'exige. Lève-toi, et façonne ta création. 🍝 »",
                     ])
                     setPendingForcedCreator(true) // ouvre le créateur forcé dès la fin du dialogue

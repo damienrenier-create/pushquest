@@ -65,3 +65,11 @@ export function genieTrainerLevel(playerRefLevel: number): number {
 export function genieArcImmediate(): boolean {
     return !GENIE_ARC_ALL
 }
+
+/** Marqueur one-shot (dans defeatedTrainers) de l'effet du vœu `n` (1..3) pour un TOUR de vœux : tour 0 = « genie_fx<n> »
+ *  (les 3 premiers vœux, inchangé), tour k ≥ 1 = « genie_fx<n>_r<k> ». Un nouveau tour accordé par le créateur ne bute donc
+ *  jamais sur les marqueurs des vœux déjà exaucés (20/10/2026 : 2 nouveaux vœux pour Rob). */
+export function genieFxMarker(n: number, round?: number | null): string {
+    const r = Math.max(0, Math.floor(Number(round) || 0))
+    return r > 0 ? `genie_fx${n}_r${r}` : `genie_fx${n}`
+}

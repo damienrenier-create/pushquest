@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { hydratePlayer, setActiveWorld, getPlayer, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, clearForcedEncounter } from "./playerStore"
 import { buildForcedSpawn } from "../data/encounters"
+import { genieFxMarker } from "../data/genieLamp"
 
 // VŒU DU GÉNIE — effet MACHINE (JSON en base) appliqué AUTOMATIQUEMENT à l'acceptation (plus d'aller-retour créateur
 // ni de redéploiement). Idempotent (1 marker save par vœu). Appliqué en LIVE **et NG+** ; seul le run 3 est différé.
@@ -102,5 +103,29 @@ describe("Vœu du génie — application AUTO des effets", () => {
         expect(mon.captureRequiresStatus).toBe(true)
         expect(mon.captureMinBallBonus).toBe(5)
         expect(mon.captureMult).toBe(0.5)
+    })
+})
+
+describe("TOURS DE VŒUX (20/10/2026) — de nouveaux vœux accordés ne butent pas sur les marqueurs des anciens", () => {
+    it("tour 0 = marqueurs historiques genie_fxN ; tour k = genie_fxN_rk", () => {
+        expect(genieFxMarker(1, 0)).toBe("genie_fx1")
+        expect(genieFxMarker(3, undefined)).toBe("genie_fx3")
+        expect(genieFxMarker(2, null)).toBe("genie_fx2")
+        expect(genieFxMarker(2, 1)).toBe("genie_fx2_r1")
+        expect(genieFxMarker(3, 2)).toBe("genie_fx3_r2")
+    })
+    it("⚠️ un vœu 2 du tour 1 s'applique alors que genie_fx2 (tour 0) est déjà posé — puis une seule fois", () => {
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1", "genie_fx2", "genie_fx3"], items: {} }); setActiveWorld("live")
+        const row = { round: 1, accepted1: true, effect1: null, accepted2: true, effect2: JSON.stringify({ kind: "energy", amount: 500 }) }
+        expect(applyAcceptedGenieWishEffects(row)).toBe(true)
+        expect(getPlayer().reps).toBe(600)
+        expect(getPlayer().defeatedTrainers).toContain("genie_fx2_r1")
+        expect(applyAcceptedGenieWishEffects(row)).toBe(false) // déjà marqué pour ce tour
+        expect(getPlayer().reps).toBe(600)
+    })
+    it("le vœu 1 gardé au tour 1 (effet archivé = null) n'est JAMAIS rejoué", () => {
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1"], items: {} }); setActiveWorld("live")
+        expect(applyAcceptedGenieWishEffects({ round: 1, accepted1: true, effect1: null })).toBe(false)
+        expect(getPlayer().reps).toBe(100)
     })
 })

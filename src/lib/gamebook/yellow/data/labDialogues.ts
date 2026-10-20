@@ -22,6 +22,37 @@ export const CHEN_ABANDON_OFFER_LINES = [
     "« Mais réfléchis bien : tu abandonnerais les Daemons inédits, les CT que personne d'autre ne possède, et surtout la chance de graver ton SCORE au sommet de la Ligue. Rares sont les Maîtres qui reviennent, une fois ce chemin entamé… »",
     "« Décide-toi vite : encore quelques combats et il sera trop tard. Alors… tu renonces ? »",
 ]
+/** MODE FUN — la MÊME offre d'abandon que pour les autres joueurs (Sartay 20/10/2026 : « exactement ce qui est fait
+ *  pour les joueurs non fun, avec des dialogues différents ») : en fun, le run 2 démarre avec 1000⚡ + 10 Nexus-Balls. */
+export const CHEN_ABANDON_OFFER_LINES_FUN = [
+    "« Ah… toi. La recrue au Daemon si singulier. Ton regard hésite, mélomane d'un jour. »",
+    "« Si ce Remix te pèse, je peux tout arrêter : rends-moi ton starter, tes 1000 énergies et tes 10 Nexus-Balls — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
+    "« Mais réfléchis bien : tu abandonnerais les Daemons inédits, les CT que personne d'autre ne possède, l'énergie SANS plafond des hauts faits du Remix… et la course contre tes amis pour le boucler le premier. »",
+    "« Décide-toi vite : encore quelques combats et il sera trop tard. Alors… tu renonces ? »",
+]
+/** MODE FUN — après la remise de la Daemonflûte, Chen rappelle que son cadeau d'énergie reste valable (s'il en reste). */
+export const CHEN_FUN_GIFT_REMINDER_LINE = "« Et pour l'énergie, rien ne change : le jour où tu seras à sec (sous les 1000⚡), mon petit coup de pouce t'attend toujours ici. »"
+
+// ── AIGUILLAGE du Prof. CHEN (pur, testé : chenRoute.test.ts) ──
+export type ChenRoute = "abandon" | "magnetor" | "flute" | "fun_gift" | "lab"
+export interface ChenRouteInput {
+    fun: boolean            // getGameMode() === "fun"
+    world: string           // getActiveWorld() : live | ngplus | run3 | replay
+    canAbandon: boolean     // canAbandonNgplus() : run 2, au plus 15 combats livrés
+    isChampion: boolean
+    hasFlute: boolean
+    sylvebarbeAwake: boolean
+}
+/** Ce que fait le Prof. CHEN quand on lui parle : l'abandon du run 2 (≤ 15 combats), Magnetor en run 3, la DAEMONFLÛTE
+ *  au Champion qui ne l'a pas (Sylvebarbe endormi), sinon l'explication du terminal — ou, en MODE FUN, le cadeau d'énergie.
+ *  Les joueurs fun suivent EXACTEMENT le parcours des autres (Sartay 20/10/2026). Avant, leur cadeau passait EN PREMIER :
+ *  un Champion fun ne recevait jamais la flûte (Sylvebarbe et Zone de Combat fermés, labo verrouillé), ni l'offre d'abandon. */
+export function chenLabRoute(s: ChenRouteInput): ChenRoute {
+    if (s.world === "ngplus" && s.canAbandon) return "abandon"
+    if (s.world === "run3") return "magnetor"
+    if (s.isChampion && !s.hasFlute && !s.sylvebarbeAwake) return "flute"
+    return s.fun ? "fun_gift" : "lab"
+}
 
 /** L'ASSISTANT du Prof. CHEN (7,6) — guide vers les récompenses du casino et révèle le projet du chef.
  *  Explique APOTHÉOSE de façon PÉDAGOGIQUE (3 répliques dédiées : le problème → la solution → l'exemple). */

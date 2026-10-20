@@ -85,7 +85,7 @@ import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } fro
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
-import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_ABANDON_OFFER_LINES_FUN, CHEN_FUN_GIFT_REMINDER_LINE, chenLabRoute, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
 import { GENIE_TRAINER_ID, genieTrainerLevel, rollLampCountdown, teamFreshEnough, genieArcEnabledFor, genieArcImmediate, GENIE_MIN_BADGES } from "../data/genieLamp"
@@ -2774,18 +2774,50 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Prof. CHEN (chef du labo) : au sacre, remet la DAEMONFLÛTE (1×, son œuvre de mélomane) ; sinon
-        // explique le terminal de défis + ses enjeux et t'invite à revenir après la Ligue. Le TERMINAL (3,3)
-        // reste la machine qui ouvre les défis ; CHEN, lui, te guide.
+        // Prof. CHEN (chef du labo) — aiguillage PUR `chenLabRoute` (data/labDialogues.ts, testé) : abandon du run 2
+        //   (≤ 15 combats), Magnetor en run 3, DAEMONFLÛTE au Champion qui ne l'a pas (Sylvebarbe endormi), sinon
+        //   l'explication du terminal — ou, en MODE FUN, le cadeau d'énergie. Les joueurs fun suivent EXACTEMENT le parcours
+        //   des autres, avec leurs propres dialogues (Sartay 20/10/2026) : avant, leur cadeau passait EN PREMIER et un Champion
+        //   fun ne recevait jamais la flûte (Sylvebarbe et Zone de Combat fermés, labo verrouillé) ni l'offre d'abandon.
         if (npc.id === "y_lab_scientist") {
-            // MODE FUN : cadeau de bienvenue de 300⚡ (×2 max), À LA PLACE des défis physiques. Compteur dans la save
-            //   (chenGiftClaims, soft-cap). Ordre anti-perte : crédit + compteur PERSISTÉS avant le fan-out best-effort.
-            //   Le don communautaire aux AUTRES joueurs fun (200 au 1er passage, 500 au 2e) est calculé CÔTÉ SERVEUR.
-            //   Fun ⇒ monde "live" → les branches NG+/run3 ci-dessous ne se déclenchent jamais (fun mis en premier).
-            // MODE FUN (jamais en run 3 — le concours n'accorde aucune énergie hors arène) : Chen EXPLIQUE d'abord son
-            //   cadeau et sa contrepartie, puis le joueur CONFIRME (modale Oui/Non → confirmChenGift). Rien n'est crédité
-            //   ici. Offert UNIQUEMENT si le joueur est réellement à court (< 1000⚡).
-            if (getGameMode() === "fun" && getActiveWorld() !== "run3") {
+            const fun = getGameMode() === "fun"
+            const save = getPlayerSave()
+            const route = chenLabRoute({
+                fun, world: getActiveWorld(), canAbandon: canAbandonNgplus(), isChampion: save.isChampion,
+                hasFlute: (save.items["daemonflute"] ?? 0) > 0, sylvebarbeAwake: save.sylvebarbeAwake,
+            })
+            // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
+            if (route === "abandon") {
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: fun ? CHEN_ABANDON_OFFER_LINES_FUN : CHEN_ABANDON_OFFER_LINES }, pendingNgplusAbandon: true })
+                return
+            }
+            // RUN 3 (concours) : le Prof. CHEN ne sert QU'À Magnetor (casino/flûte/défis hors-sujet). S'il voit un
+            //   MAGMATOR niv 50+ dans l'équipe/PC, il l'évolue en MAGNETOR (fournit le Noyau) ; sinon il teaser.
+            if (route === "magnetor") {
+                const mag = [...save.team, ...save.pc].find((m) => m.speciesId === "magmator" && m.level >= 50)
+                if (mag) {
+                    addItem(MAGNETOR_EVO_ITEM, 1)     // CHEN fournit le Noyau de Métal
+                    evolveMagmatorWithChen(mag.uid)   // Magmator → Magnetor (consomme le Noyau, entre au Pokédex)
+                    persistYellowSave()
+                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_RUN3_EVOLVE_LINES } })
+                } else {
+                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_RUN3_TEASER_LINES } })
+                }
+                return
+            }
+            if (route === "flute") {
+                addItem("daemonflute", 1)
+                // Fun : il rappelle que son cadeau d'énergie reste valable (s'il en reste).
+                const lines = fun && chenGiftsRemaining() > 0 ? [...FLUTE_GIVE_LINES, CHEN_FUN_GIFT_REMINDER_LINE] : FLUTE_GIVE_LINES
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines } })
+                return
+            }
+            // MODE FUN (dernier recours, jamais en run 3 : traité plus haut) : cadeau de bienvenue de 300⚡ (×2 max), À LA PLACE
+            //   des défis physiques. Compteur dans la save (chenGiftClaims, soft-cap). Ordre anti-perte : crédit + compteur
+            //   PERSISTÉS avant le fan-out best-effort. Le don communautaire aux AUTRES joueurs fun (200 au 1er passage, 500 au
+            //   2e) est calculé CÔTÉ SERVEUR. Chen EXPLIQUE d'abord son cadeau et sa contrepartie, puis le joueur CONFIRME
+            //   (modale Oui/Non → confirmChenGift). Rien n'est crédité ici. Offert UNIQUEMENT si le joueur est à court (< 1000⚡).
+            if (route === "fun_gift") {
                 if (chenGiftsRemaining() <= 0) {
                     // Mes 2 cadeaux sont donnés → j'aiguille vers le CHEF DE CLAN (cadeau d'énergie communautaire si Daemon-clan > niv 20).
                     const clanTip = getClan() ? ["« Une dernière chose : va voir le CHEF DE TON CLAN ! Si ton disciple a passé le niveau 20, il récompense TOUT le clan en énergie. La force du nombre, champion ! »"] : []
@@ -2798,31 +2830,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
                 const shared = (getPlayerSave().chenGiftClaims ?? 0) === 0 ? 200 : 500
                 set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_FUN_GIFT_OFFER_LINES(CHEN_FUN_GIFT_REPS, shared) }, pendingChenGift: true })
-                return
-            }
-            // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
-            if (getActiveWorld() === "ngplus" && canAbandonNgplus()) {
-                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_ABANDON_OFFER_LINES }, pendingNgplusAbandon: true })
-                return
-            }
-            const save = getPlayerSave()
-            // RUN 3 (concours) : le Prof. CHEN ne sert QU'À Magnetor (casino/flûte/défis hors-sujet). S'il voit un
-            //   MAGMATOR niv 50+ dans l'équipe/PC, il l'évolue en MAGNETOR (fournit le Noyau) ; sinon il teaser.
-            if (getActiveWorld() === "run3") {
-                const mag = [...save.team, ...save.pc].find((m) => m.speciesId === "magmator" && m.level >= 50)
-                if (mag) {
-                    addItem(MAGNETOR_EVO_ITEM, 1)     // CHEN fournit le Noyau de Métal
-                    evolveMagmatorWithChen(mag.uid)   // Magmator → Magnetor (consomme le Noyau, entre au Pokédex)
-                    persistYellowSave()
-                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_RUN3_EVOLVE_LINES } })
-                } else {
-                    set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_RUN3_TEASER_LINES } })
-                }
-                return
-            }
-            if (save.isChampion && (save.items["daemonflute"] ?? 0) <= 0 && !save.sylvebarbeAwake) {
-                addItem("daemonflute", 1)
-                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: FLUTE_GIVE_LINES } })
                 return
             }
             set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_LAB_LINES } })

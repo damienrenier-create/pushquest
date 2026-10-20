@@ -26,7 +26,7 @@ import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
-import { LAMP_ITEM_ID } from "../data/genieLamp"
+import { LAMP_ITEM_ID, genieFxMarker } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -1773,12 +1773,13 @@ export function applyAcceptedGenieWishEffects(row: {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null
     condition1?: string | null; condition2?: string | null; condition3?: string | null
+    round?: number | null // TOUR de vœux (0 = les 3 premiers) → marqueurs genieFxMarker
 } | null | undefined): boolean {
     if (!row || getActiveWorld() === "run3") return false
     const wishes = [
-        { acc: row.accepted1, fx: row.effect1, mark: "genie_fx1", cond: row.condition1 },
-        { acc: row.accepted2, fx: row.effect2, mark: "genie_fx2", cond: row.condition2 },
-        { acc: row.accepted3, fx: row.effect3, mark: "genie_fx3", cond: row.condition3 },
+        { acc: row.accepted1, fx: row.effect1, mark: genieFxMarker(1, row.round), cond: row.condition1 },
+        { acc: row.accepted2, fx: row.effect2, mark: genieFxMarker(2, row.round), cond: row.condition2 },
+        { acc: row.accepted3, fx: row.effect3, mark: genieFxMarker(3, row.round), cond: row.condition3 },
     ]
     let changed = false
     for (const w of wishes) {

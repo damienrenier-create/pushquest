@@ -508,6 +508,10 @@ model GenieWish {
   effect2      String?
   effect3      String?
   proposedSeen Boolean  @default(false) // le pop-up « le génie revient » a-t-il déjà été montré au login
+  // TOURS DE VŒUX (20/10/2026, Rob) : le créateur peut ACCORDER de nouveaux vœux. Le tour courant (0 = les 3 premiers)
+  // signe les marqueurs d'effet (genieFxMarker) ; les vœux remplacés sont ARCHIVÉS dans `history` (JSON), jamais perdus.
+  round        Int      @default(0)
+  history      String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
