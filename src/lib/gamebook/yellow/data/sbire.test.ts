@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS, SBIRE_CLAN_TIPS } from "./sbire"
+import fs from "node:fs"
+import path from "node:path"
+import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS, SBIRE_CLAN_TIPS, SBIRE_TIPS_FUN, SBIRE_CLAN_TIPS_FUN } from "./sbire"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -88,5 +90,32 @@ describe("sbire du dieu Spaghetti — 6 combats/jour", () => {
         expect(sbireExplanation(SBIRE_TIPS.length + 1).slice(0, SBIRE_TIPS[0].length)).toEqual(SBIRE_TIPS[0])
         // Chaque conseil se termine par une bulle clan (🍝).
         expect(sbireExplanation(3).at(-1)).toContain("🍝")
+    })
+})
+
+// Signalé par Sartay le 20/10/2026 : en mode fun, le sbire parlait encore de pompes, de quota et de reps de la vraie vie.
+const NOT_FOR_FUN = /pompe|squat|quota|amende|vraie vie|dehors|encod|séance|(?<!\p{L})reps?(?!\p{L})/iu // limites de mot Unicode : « Repère » n’est pas « reps »
+describe("sbire — conseils du mode FUN", () => {
+    it("⚠️ aucun conseil fun ne parle de pompes, de squats, de quota, d'amende ni de reps de la vraie vie", () => {
+        for (const tip of SBIRE_TIPS_FUN) for (const line of tip) expect(line).not.toMatch(NOT_FOR_FUN)
+        for (const line of SBIRE_CLAN_TIPS_FUN) expect(line).not.toMatch(NOT_FOR_FUN)
+    })
+    it("même nombre de conseils et même ordre : le cycle reste aligné", () => {
+        expect(SBIRE_TIPS_FUN.length).toBe(SBIRE_TIPS.length)
+        expect(SBIRE_CLAN_TIPS_FUN.length).toBe(SBIRE_CLAN_TIPS.length)
+        expect(SBIRE_TIPS_FUN[13]).toEqual(SBIRE_TIPS[13]) // un conseil sans rapport avec les reps est gardé tel quel
+    })
+    it("sbireExplanation(n, true) puise dans les conseils fun, sbireExplanation(n) dans les conseils classiques", () => {
+        expect(sbireExplanation(1, true).slice(0, SBIRE_TIPS_FUN[0].length)).toEqual(SBIRE_TIPS_FUN[0])
+        expect(sbireExplanation(1).slice(0, SBIRE_TIPS[0].length)).toEqual(SBIRE_TIPS[0])
+        expect(sbireExplanation(6, true).at(-1)).toBe(SBIRE_CLAN_TIPS_FUN[5])
+    })
+    it("le conseil d'arène parle des CINQ arènes (plus de « trois salles »)", () => {
+        expect(SBIRE_TIPS.flat().join(" ")).not.toContain("Trois salles")
+        expect(SBIRE_TIPS_FUN.flat().join(" ")).toContain("Cinq arènes")
+    })
+    it("le client passe le mode de jeu au sbire", () => {
+        const ui = fs.readFileSync(path.join(process.cwd(), "src/app/gamebook/yellow/YellowDevClient.tsx"), "utf8")
+        expect(ui).toContain("sbireExplanation(sbireWin, getGameMode() === \"fun\")")
     })
 })

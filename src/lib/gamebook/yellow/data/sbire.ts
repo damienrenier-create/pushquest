@@ -220,9 +220,9 @@ export const SBIRE_TIPS: string[][] = [
     ],
     // 15 — Badges d'arène
     [
-        "Trois salles, trois chefs : Feu, Plante, Eau.",
+        "Cinq arènes, cinq chefs, cinq badges.",
         "Chaque badge agrandit ton portefeuille de reps, gonfle ton énergie par combat et débloque de nouvelles CT.",
-        "Réunis les trois et le Champion t'ouvrira son trône.",
+        "Réunis les cinq et la Ligue t'ouvrira ses portes.",
     ],
     // 16 — OBÉISSANCE (les badges = ton autorité)
     [
@@ -263,6 +263,63 @@ export const SBIRE_TIPS: string[][] = [
     //  sont désormais lisibles sur les PANNEAUX de la map Nord — cf. data/parkSigns.ts.)
 ]
 
+/** MODE FUN — les MÊMES conseils, dans le MÊME ordre, sauf ceux qui parlaient de pompes, de quota ou de reps de la vraie
+ *  vie (faux pour un joueur fun : son énergie vient du jeu, ses IV du hasard et des potes connectés, ses rencontres de
+ *  l'HEURE, ses points Saiyan sont fixes). Clé = position dans SBIRE_TIPS. Signalé par Sartay le 20/10/2026. */
+const SBIRE_TIPS_FUN_OVERRIDES: Record<number, string[]> = {
+    0: [
+        "Ici, ton énergie de combat se gagne en jouant.",
+        "Les défis du labo, tes hauts faits, les cadeaux du Prof. CHEN et de ton clan… voilà tes robinets.",
+        "Ta jauge a un plafond : au-delà, un gain ordinaire est perdu — alors dépense avant d'être au max !",
+    ],
+    1: [
+        "Oublie les PP : ici, chaque attaque se paie en énergie.",
+        "Plus une attaque est puissante, plus elle coûte cher — et la note grimpe avec le niveau du Daemon… et avec tes badges.",
+        "Frappe fort quand ça compte, économise sur les petits combats.",
+    ],
+    2: [
+        "À sec d'énergie en plein combat ? La Charge Désespérée reste gratuite.",
+        "Mais elle est faible et te blesse toi-même. C'est un filet de secours, pas un plan de jeu.",
+    ],
+    3: [
+        "Méfie-toi : il y a DEUX jauges à ne pas confondre.",
+        "Ta réserve totale d'énergie… et un plafond d'énergie dépensable DANS un seul combat (200 au début, +150 par badge).",
+        "Même riche, tu ne peux pas tout cramer d'un coup. Gère ton tempo.",
+    ],
+    4: [
+        "Chaque Daemon sauvage naît avec un potentiel génétique : ses IV, notés de D à PARFAIT.",
+        "En mode fun, c'est le hasard qui le décide… mais la meute aide : chaque joueur fun connecté en même temps que toi rend les IV excellents un peu plus fréquents (jusqu'à +20 %).",
+        "Chasse quand tes potes sont en ligne !",
+    ],
+    5: [
+        "Tu rêves d'un Daemon PARFAIT, tous les IV au sommet ?",
+        "En mode fun, chaque stat tente sa chance au tirage : plus il y a de potes connectés avec toi, plus les beaux IV tombent.",
+    ],
+    9: [
+        "En mode fun, l'entraînement est réglé d'avance : un point par niveau gagné, ni plus ni moins.",
+        "À toi de bien choisir où le placer : PV, Attaque, Vitesse…",
+    ],
+    10: [
+        "Les Daemons que tu croises dépendent de l'HEURE : chaque moment de la journée favorise certains types.",
+        "🌅 5-9 h Plante, Insecte, Vol · ☀️ 9-13 h Normal, Combat, Sol, Roche · 🌤️ 13-17 h Eau, Élec, Métal · 🌆 17-21 h Feu, Dragon, Psy · 🌙 21-5 h Spectre, Poison, Ténèbres, Glace, Fée.",
+    ],
+    11: [
+        "Un Daemon aux IV élevés est plus coriace à capturer : la ball a moins de prise sur lui.",
+        "Affaiblis-le bien avant de lancer ta meilleure ball.",
+    ],
+    14: [
+        "Cinq arènes, cinq chefs, cinq badges.",
+        "Chaque badge agrandit ta jauge d'énergie, gonfle ton énergie par combat et débloque de nouvelles CT — mais en mode fun, tes attaques coûtent aussi un peu plus.",
+        "Réunis les cinq et la Ligue t'ouvrira ses portes.",
+    ],
+    16: [
+        "Les CT enseignent de nouvelles attaques à tes Daemons, contre de l'énergie.",
+        "Certaines sont libres dès le départ ; d'autres ne s'achètent qu'une fois le bon badge en poche.",
+        "Garde toujours un peu d'énergie d'avance pour la CT qui changera ton équipe.",
+    ],
+}
+export const SBIRE_TIPS_FUN: string[][] = SBIRE_TIPS.map((t, i) => SBIRE_TIPS_FUN_OVERRIDES[i] ?? t)
+
 /** CONSEILS CLAN — le sbire médite désormais au cœur de la CHAPELLE DE NOUILLON : il est le mieux placé pour parler
  *  des pactes et des clans. Une bulle « clan » est AJOUTÉE à chaque conseil (cycle indépendant). Édite librement. */
 export const SBIRE_CLAN_TIPS: string[] = [
@@ -277,13 +334,22 @@ export const SBIRE_CLAN_TIPS: string[] = [
     "🍝 Reviens voir ton maître chaque jour : il te verse de l'énergie à hauteur du niveau de ton Daemon-clan (et une Nexus Ball aux dizaines).",
 ]
 
+/** MODE FUN — conseils clan sans « reps » (même ordre). */
+const SBIRE_CLAN_TIPS_FUN_OVERRIDES: Record<number, string> = {
+    5: "🍝 La ferveur récompense la meute : quand un frère de clan croise un shiny, tu touches le TRIPLE de l'énergie prévue.",
+    7: "🍝 On n'affronte JAMAIS le reflet d'un frère de clan — on lui tape dans la main : un high-five, un petit mot, et quelques ⚡ offerts.",
+}
+export const SBIRE_CLAN_TIPS_FUN: string[] = SBIRE_CLAN_TIPS.map((t, i) => SBIRE_CLAN_TIPS_FUN_OVERRIDES[i] ?? t)
+
 /**
  * Conseil (liste de bulles) à afficher pour la n-ième victoire (1-indexée), en cyclant sur le pool une fois tous
  * les conseils vus. On AJOUTE en dernière bulle un conseil CLAN (le sbire médite au cœur de la Chapelle).
  */
-export function sbireExplanation(winNumber: number): string[] {
+export function sbireExplanation(winNumber: number, fun = false): string[] {
     const n = Math.max(1, winNumber)
-    const tip = SBIRE_TIPS[(n - 1) % SBIRE_TIPS.length]
-    const clanTip = SBIRE_CLAN_TIPS[(n - 1) % SBIRE_CLAN_TIPS.length]
+    const tips = fun ? SBIRE_TIPS_FUN : SBIRE_TIPS
+    const clanTips = fun ? SBIRE_CLAN_TIPS_FUN : SBIRE_CLAN_TIPS
+    const tip = tips[(n - 1) % tips.length]
+    const clanTip = clanTips[(n - 1) % clanTips.length]
     return [...tip, clanTip]
 }

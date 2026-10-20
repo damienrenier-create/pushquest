@@ -1802,7 +1802,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (sbireWin !== null && !battle && evolutions.length === 0) {
             const reward = getSbireRewardMsg()
-            const lines = [...sbireExplanation(sbireWin), ...(reward ? [reward] : [])]
+            const lines = [...sbireExplanation(sbireWin, getGameMode() === "fun"), ...(reward ? [reward] : [])] // conseils FUN sans pompes/quota
             showDialogue("y_sbire", "SBIRE", lines)
             clearSbireWin()
         }
