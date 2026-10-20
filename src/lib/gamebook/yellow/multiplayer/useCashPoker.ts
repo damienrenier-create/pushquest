@@ -18,7 +18,7 @@ const CASH_BLINDS = { sb: 1, bb: 2 }
 
 export interface CashPokerControls {
     table: PublicTable | null
-    joinCash: (buyin: number, cap: number, bossStacks: Record<string, number>) => void
+    joinCash: (buyin: number, cap: number, bossStacks: Record<string, number>, blinds?: { sb: number; bb: number }) => void
     act: (move: PokerAction) => void
     botTurn: () => BotSay | null
     nextHand: () => void
@@ -54,8 +54,8 @@ export function useCashPoker(myUserId: string, myName: string): CashPokerControl
 
     const sync = useCallback(() => { const t = tableRef.current; setView(t ? publicView(t, myUserId) : null) }, [myUserId])
 
-    const joinCash = useCallback((buyin: number, cap: number, bossStacks: Record<string, number>) => {
-        const t = createTable([], CASH_BLINDS); tableRef.current = t
+    const joinCash = useCallback((buyin: number, cap: number, bossStacks: Record<string, number>, blinds?: { sb: number; bb: number }) => {
+        const t = createTable([], blinds ?? CASH_BLINDS); tableRef.current = t // blindes indexées sur la jauge (DailyPokerPanel)
         cashRef.current = { cap, bossStacks: { ...bossStacks } }
         const bi = Math.max(1, Math.floor(buyin))
         joinTable(t, { id: myUserId, name: myName, buyin: bi })

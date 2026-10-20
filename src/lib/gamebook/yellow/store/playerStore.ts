@@ -13,6 +13,7 @@ import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../da
 import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
 import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
 import { freshShopSurtax, shopSurtaxMult, surtaxedPrice, type ShopSurtaxState } from "../data/shopSurtax"
+import { cashAllowanceLeft, settleDailyCashout } from "../poker/cashGame"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
@@ -79,7 +80,8 @@ interface PlayerState {
     pokerBossStacks: Record<string, number>
     pokerCashCap: number   // ton buy-in à la 1re partie du jour (plafond des jetons donnés aux boss)
     pokerCashDate: string  // jour courant du cash (reset des tapis boss quand il change)
-    pokerCashNet?: number  // NET déjà réglé aujourd'hui au cash (signé) — plafond POKER_DAILY_NET_CAP (20/10/2026)
+    casinoNetToday?: number // CASINO : NET déjà réglé le jour casinoNetDate (signé) — plafond CASINO_DAILY_NET_CAP (20/10/2026)
+    casinoNetDate?: string
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
     spagGift: boolean
     /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
@@ -640,7 +642,8 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         pokerBossStacks: p.pokerBossStacks ?? st.pokerBossStacks ?? {},
         pokerCashCap: p.pokerCashCap ?? st.pokerCashCap ?? 0,
         pokerCashDate: p.pokerCashDate ?? st.pokerCashDate ?? "",
-        pokerCashNet: p.pokerCashNet ?? st.pokerCashNet ?? 0,
+        casinoNetToday: p.casinoNetToday ?? st.casinoNetToday ?? 0,
+        casinoNetDate: p.casinoNetDate ?? st.casinoNetDate ?? "",
         spagGift: p.spagGift ?? st.spagGift ?? false,
         pastaGodGift: p.pastaGodGift ?? st.pastaGodGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, casinoSpentToday: p.casinoSpentToday ?? st.casinoSpentToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
@@ -2378,14 +2381,27 @@ export function isPokerFirstGameDone(): boolean { return st.pokerFirstGameDone }
 /** Début d'une partie cash : reset les tapis boss si NOUVEAU JOUR, fixe le cap (= ton buy-in) à la 1re
  *  partie du jour. Renvoie le cap du jour + les tapis boss persistés (nom → reps ; 0 = ruiné/out). */
 export function beginPokerCashGame(today: string, playerBuyin: number): { cap: number; bossStacks: Record<string, number> } {
-    if (st.pokerCashDate !== today) st = { ...st, pokerCashDate: today, pokerCashCap: 0, pokerBossStacks: {}, pokerCashNet: 0 } // nouveau jour : marge de gain remise à neuf
+    if (st.pokerCashDate !== today) st = { ...st, pokerCashDate: today, pokerCashCap: 0, pokerBossStacks: {} }
     let cap = st.pokerCashCap
     if (cap <= 0) { cap = Math.max(1, Math.floor(playerBuyin)); st = { ...st, pokerCashCap: cap } }
     return { cap, bossStacks: { ...st.pokerBossStacks } }
 }
-/** Cash quotidien : NET déjà réglé aujourd'hui (signé). Sert au plafond de gain (cf. poker/cashGame.settleDailyCashout). */
-export function getPokerCashNet(): number { return st.pokerCashNet ?? 0 }
-export function setPokerCashNet(net: number) { st = { ...st, pokerCashNet: Math.trunc(net) || 0 }; emit() }
+// ════════════════ CASINO — PLAFOND NET QUOTIDIEN (poker cash, roulette, blackjack, tuto) ════════════════
+const casinoDayKey = () => new Date().toISOString().slice(0, 10)
+/** NET déjà réglé AUJOURD'HUI contre la maison (signé). Un autre jour enregistré → 0. */
+export function casinoNetToday(): number { return st.casinoNetDate === casinoDayKey() ? (st.casinoNetToday ?? 0) : 0 }
+/** Marge de gain restante aujourd'hui (≥ 0). */
+export function casinoAllowanceLeft(): number { return cashAllowanceLeft(casinoNetToday()) }
+/** Règle un résultat NET contre la maison : une perte (déjà débitée à la mise) compte en négatif ; un gain est crédité
+ *  INTÉGRALEMENT dans la marge du jour (creditReps, jamais tronqué par le cap), l'excédent est REPRIS (« la maison
+ *  plafonne »). Journalise le gain sous `source`. Renvoie ce qui a été crédité et ce qui a été repris. */
+export function settleCasinoNet(source: string, net: number): { credit: number; taken: number } {
+    const r = settleDailyCashout(net, casinoNetToday())
+    st = { ...st, casinoNetDate: casinoDayKey(), casinoNetToday: r.netToday }
+    if (r.credit > 0) { creditReps(r.credit); logEnergyIncome(source, r.credit) }
+    emit()
+    return { credit: r.credit, taken: r.taken }
+}
 /** Persiste les tapis finaux des boss après une partie cash (0 = ruiné → out pour la journée). */
 export function savePokerBossStacks(stacks: Record<string, number>) {
     st = { ...st, pokerBossStacks: { ...stacks } }
@@ -3326,13 +3342,16 @@ export function blackjackTotalWon(): number { return st.labDefi.blackjackWon }
  *  accumule le GAIN NET (>0) dans blackjackWon (hors-plafond). La mise a déjà été débitée (spendReps). */
 export function settleBlackjack(payout: number, net: number): void {
     const pay = Math.max(0, Math.floor(payout))
-    if (pay > 0) grantReps(pay)
     const n = Math.floor(net)
+    // PLAFOND CASINO (20/10/2026) : la mise revient (principal), le gain net passe par la marge du jour.
+    const principal = Math.max(0, pay - Math.max(0, n))
+    if (principal > 0) grantReps(principal)
+    const settled = settleCasinoNet("🃏 Blackjack (gain net)", n)
     if (n > 0) {
         st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
         if (!st.defeatedTrainers.includes("ach_blackjack")) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, "ach_blackjack"] } // HAUT FAIT : 1re victoire blackjack
     }
-    logEnergyIncome("🃏 Blackjack (gain net)", n) // JOURNAL : gain net seulement (perte ≤ 0 ignorée ; le remboursement de mise n'est pas une entrée)
+    void settled // journalisé par settleCasinoNet (gain net crédité seulement)
     emit()
 }
 

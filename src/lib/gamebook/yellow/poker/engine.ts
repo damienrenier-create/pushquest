@@ -17,6 +17,21 @@ export interface PokerAction {
     to?: number
 }
 
+/** TELLS d'un HUMAIN — compteurs bornés, persistés avec le siège (toute la partie / la table). Les bots les lisent pour
+ *  S'ADAPTER (20/10/2026) : mises minuscules → punies ; couche souvent face aux relances → bluffé davantage ; montre du
+ *  vent à l'abattage → payé plus léger ; relance préflop presque toujours → sur-relancé plus large. */
+export interface SeatTells {
+    hands: number          // mains jouées
+    bets: number           // mises / relances volontaires
+    tinyBets: number       // … dont minuscules (≤ 2 BB ou ≤ 10 % du pot)
+    faced: number          // fois où il a dû répondre à une mise
+    foldsFacing: number    // … dont couchers
+    showdowns: number      // abattages disputés
+    weakShowdowns: number  // … avec au plus une paire
+    preRaises: number      // relances préflop
+}
+export const emptyTells = (): SeatTells => ({ hands: 0, bets: 0, tinyBets: 0, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 0 })
+
 /** Profil de jeu d'un bot (défini par bots.ts, stocké sur le siège pour persister le style tiré au hasard). */
 export interface BotProfile { tight: number; aggro: number; bluff: number; skill: number }
 
@@ -35,6 +50,7 @@ export interface Seat {
     leaving?: boolean      // départ demandé → retiré de la table ENTRE deux mains (cf. room.ts)
     bot?: boolean          // joueur IA (comble la table ; joue tout seul côté serveur, cf. poker/bots.ts)
     persona?: BotProfile   // BOT : style tiré au hasard à la création (tight/aggro/bluff/skill), persisté
+    tells?: SeatTells      // HUMAIN : tendances observées (cf. SeatTells) — les bots s'y adaptent
 }
 
 export interface PotResult { amount: number; winners: number[]; eligible: number[] }
@@ -52,6 +68,7 @@ export interface PokerTable {
     handId: number
     results: PotResult[]    // rempli à l'abattage (répartition des pots)
     showdownOccurred: boolean // true si la main s'est finie sur un ABATTAGE (→ on révèle les mains non couchées)
+    lastAggressor?: number    // dernier siège à avoir misé/relancé dans la main (-1 = personne) → continuation des bots
     log: string[]
 }
 
@@ -111,8 +128,11 @@ export function startHand(t: PokerTable, rng: Rng): void {
     t.community = []
     t.results = []
     t.showdownOccurred = false
+    t.lastAggressor = -1
     t.log = []
     t.phase = "preflop"
+    // TELLS : une main de plus pour chaque humain en jeu ; au-delà de 400 mains on divise tout par deux (mémoire récente).
+    for (const i of inHand) { const h = t.seats[i]; if (h.bot) continue; const k = (h.tells ??= emptyTells()); k.hands++; if (k.hands > 400) for (const key of Object.keys(k) as (keyof SeatTells)[]) k[key] = Math.floor(k[key] / 2) }
 
     // Positions des blinds (règle heads-up : le BOUTON est petite blinde et parle en 1er préflop).
     const heads = inHand.length === 2
@@ -145,6 +165,7 @@ export function act(t: PokerTable, i: number, action: PokerAction): void {
     if (t.toAct !== i || !canAct(t.seats[i])) { t.log.push("Action ignorée (ce n'est pas ton tour)."); return }
     const s = t.seats[i]
     const { canCheck, toCall, minRaiseTo, maxRaiseTo } = legalActions(t, i)
+    recordTells(t, i, action, toCall)
 
     switch (action.kind) {
         case "fold":
@@ -179,6 +200,21 @@ export function act(t: PokerTable, i: number, action: PokerAction): void {
     advance(t)
 }
 
+/** TELLS (humains seulement) : observe l'action AVANT application. Pur comptage, aucune décision. */
+function recordTells(t: PokerTable, i: number, action: PokerAction, toCall: number): void {
+    const s = t.seats[i]
+    if (s.bot) return
+    const k = (s.tells ??= emptyTells())
+    if (toCall > 0) { k.faced++; if (action.kind === "fold") k.foldsFacing++ }
+    if (action.kind === "raise" || action.kind === "allin") {
+        const to = action.kind === "allin" ? s.betThisRound + s.stack : (action.to ?? 0)
+        const added = Math.max(0, to - s.betThisRound - toCall)
+        k.bets++
+        if (added <= Math.max(2 * t.blinds.bb, Math.floor((totalPot(t) + toCall) * 0.1))) k.tinyBets++
+        if (t.phase === "preflop") k.preRaises++
+    }
+}
+
 /** Mise/relance À un total `to` (borne au tapis). Met à jour currentBet/minRaise et RÉOUVRE le tour. */
 function applyBetTo(t: PokerTable, i: number, to: number, isAllInWord: boolean): void {
     const s = t.seats[i]
@@ -190,6 +226,7 @@ function applyBetTo(t: PokerTable, i: number, to: number, isAllInWord: boolean):
     if (newBet > t.currentBet) {
         if (raiseSize >= t.minRaise) t.minRaise = raiseSize // une VRAIE relance rouvre le tour + fixe le nouvel incrément
         t.currentBet = newBet
+        t.lastAggressor = i
         // Rouvre l'action : tous les autres non-couchés/non-all-in doivent re-parler.
         for (let k = 0; k < t.seats.length; k++) if (k !== i && canAct(t.seats[k])) t.seats[k].hasActed = false
     }
@@ -280,6 +317,8 @@ export function settleShowdown(t: PokerTable): void {
     t.showdownOccurred = true
     const ranks: Record<number, HandRank> = {}
     for (const i of t.seats.map((_, i) => i)) if (contesting(t.seats[i])) ranks[i] = evaluateBest([...t.seats[i].hole, ...t.community])
+    // TELLS : un humain qui a mis de l'argent au-delà des blindes et montre au plus une paire = « va à l'abattage avec rien ».
+    for (const i of t.seats.map((_, i) => i)) { const h = t.seats[i]; if (h.bot || !contesting(h) || h.committed <= t.blinds.bb) continue; const k = (h.tells ??= emptyTells()); k.showdowns++; if (ranks[i].category <= 1) k.weakShowdowns++ }
 
     const pots = buildPots(t)
     for (const pot of pots) {

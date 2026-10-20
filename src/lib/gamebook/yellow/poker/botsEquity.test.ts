@@ -116,6 +116,50 @@ describe("botDecision — plus de trou face à une mise minuscule, respect des c
     }, SLOW)
 })
 
+describe("tells — le moteur observe l'humain, les bots s'adaptent (Sartay 20/10 : « plus intelligentes »)", () => {
+    it("une relance minuscule est comptée comme telle ; se coucher face à une mise aussi ; le dernier agresseur est mémorisé", () => {
+        const t = headsUp(5)
+        act(t, ME, { kind: "raise", to: 4 }) // préflop : 2 de plus dans un pot de 3 → minuscule (≤ 2 BB)
+        expect(t.seats[ME].tells).toMatchObject({ hands: 1, bets: 1, tinyBets: 1, preRaises: 1 })
+        expect(t.lastAggressor).toBe(ME)
+        if (t.toAct === BOT) act(t, BOT, { kind: "raise", to: 40 })
+        if (t.toAct === ME) act(t, ME, { kind: "fold" })
+        expect(t.seats[ME].tells).toMatchObject({ faced: 2, foldsFacing: 1 }) // faced : la grosse blinde préflop, puis la sur-relance
+        expect(t.seats[BOT].tells).toBeUndefined() // on n'observe jamais un bot
+    })
+    it("⚠️ un humain qui mise toujours 2 jetons se fait RELANCER par les bots (punition des mises minuscules)", () => {
+        const punishRate = (tinyBets: number) => {
+            let raises = 0
+            for (let seed = 1; seed <= 120; seed++) {
+                const t = headsUp(seed)
+                t.phase = "flop"; t.community = [t.deck.pop()!, t.deck.pop()!, t.deck.pop()!]
+                t.seats[ME].committed = 152; t.seats[ME].betThisRound = 2
+                t.seats[BOT].committed = 150; t.seats[BOT].betThisRound = 0
+                t.seats[ME].tells = { hands: 20, bets: 10, tinyBets, faced: 0, foldsFacing: 0, showdowns: 0, weakShowdowns: 0, preRaises: 0 }
+                t.currentBet = 2; t.minRaise = 2; t.toAct = BOT
+                if (botDecision(t, BOT, new Rng(seed * 13)).kind === "raise") raises++
+            }
+            return raises / 120
+        }
+        expect(punishRate(10)).toBeGreaterThan(punishRate(0) + 0.06) // relance pour la valeur seulement (≥ 55 % d'équité)
+    }, SLOW)
+    it("un humain qui se couche souvent face aux mises est bluffé davantage", () => {
+        const bluffRate = (foldsFacing: number) => {
+            let bluffs = 0
+            for (let seed = 1; seed <= 120; seed++) {
+                const t = headsUp(seed, { tight: .5, aggro: .5, bluff: .2, skill: .7 })
+                t.phase = "turn"; t.community = [C(13, 0), C(8, 1), C(3, 2), C(10, 3)]
+                t.seats[BOT].hole = [C(6, 3), C(2, 3)] // du vent
+                t.seats[ME].tells = { hands: 20, bets: 2, tinyBets: 0, faced: 10, foldsFacing, showdowns: 0, weakShowdowns: 0, preRaises: 0 }
+                t.seats[ME].committed = 40; t.seats[BOT].committed = 40; t.currentBet = 0; t.toAct = BOT
+                if (botDecision(t, BOT, new Rng(seed)).kind === "raise") bluffs++
+            }
+            return bluffs / 120
+        }
+        expect(bluffRate(9)).toBeGreaterThan(bluffRate(1) + 0.1)
+    }, SLOW)
+})
+
 describe("⚠️ la ligne de Jacanon perd désormais (simulation tête-à-tête, 200 mains, tapis rechargés)", () => {
     const jacanon = (t: PokerTable, i: number): PokerAction => {
         const { canCheck, toCall, minRaiseTo, maxRaiseTo } = legalActions(t, i)

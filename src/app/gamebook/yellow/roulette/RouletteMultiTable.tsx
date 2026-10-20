@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, creditReps, logEnergyIncome, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
+import { settleCasinoNet, usePlayer, grantReps, creditReps, logEnergyIncome, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -146,7 +146,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         const gain = Math.max(0, pc.net)
         const principal = pc.staked + pc.net - gain // = min(retour, mise)
         if (principal > 0) grantReps(principal)
-        if (gain > 0) logEnergyIncome("🎰 Roulette", creditReps(gain))
+        settleCasinoNet("🎰 Roulette", pc.net) // PLAFOND CASINO du jour : gain borné, perte comptée en négatif
         if (pc.net > 0) addCasinoWon(pc.net) // 🥚 le gain net fait progresser la quête Tonytony (compte tenu par le croupier)
         if (pc.solo && pc.net > 0) decrementRouletteLuck(pc.net) // chance potion (secret) : récup jusqu'au prix payé
         persistYellowSave()
@@ -232,7 +232,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 const gain = Math.max(0, mine.net)
                 const principal = mine.staked + mine.net - gain
                 if (principal > 0) grantReps(principal)
-                if (gain > 0) logEnergyIncome("🎰 Roulette", creditReps(gain))
+                settleCasinoNet("🎰 Roulette", mine.net) // PLAFOND CASINO du jour
                 // CHANCE potion (secret) : si SEUL sur la manche et gain net, on récupère jusqu'au prix payé.
                 if (r.players.length === 1 && mine.net > 0) decrementRouletteLuck(mine.net)
                 persistYellowSave()
