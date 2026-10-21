@@ -17,6 +17,7 @@ import { getSpecies, visibleDexSpecies, SPECIES, DEX_ULTRA_SECRET } from "./spec
 import { FUSION_BASE_IDS } from "./fusionBaseSpecies"
 import { getTrainer } from "./trainers"
 import { clanOfSpecies } from "./clans"
+import { withImpliedAncre } from "./boatArena"
 import type { YellowSave } from "../storage/save"
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
@@ -60,7 +61,7 @@ export interface BadgeInput {
     seen: readonly string[]                            // pokedex.seen (conditions de révélation des secrets)
     mons: readonly { level: number; shiny?: boolean; speciesId?: string }[] // équipe + PC (shiny, niv 100)
     teamSize: number
-    arenaBadges: number                                // save.badges.length (0-5)
+    arenaBadges: number                                // save.badges.length (0-6), badge ANCRE implicite pour les saves d'avant le bateau
     isChampion: boolean
     trainersBeaten: number                             // defeatedTrainers.length
     mirrorWins: number                                 // stats.duelWinsTotal (reflets battus)
@@ -176,7 +177,7 @@ export const BADGES: readonly BadgeDef[] = [
     { id: "beat_trainer", label: "Battre un dresseur", tier: "bronze", secret: false, cat: "progression", earned: (i) => i.trainersBeaten >= 1 },
     { id: "full_team", label: "Remplir ton équipe (6 Daemons)", tier: "bronze", secret: false, cat: "progression", earned: (i) => i.teamSize >= 6 },
     { id: "beat_arena", label: "Battre une arène", tier: "silver", secret: false, cat: "progression", earned: (i) => i.arenaBadges >= 1 },
-    { id: "all_arenas", label: "Battre les 5 arènes", tier: "diamond", secret: false, cat: "progression", earned: (i) => i.arenaBadges >= 5 },
+    { id: "all_arenas", label: "Battre les 6 arènes", tier: "diamond", secret: false, cat: "progression", earned: (i) => i.arenaBadges >= 6 },
     { id: "champion", label: "Battre la Ligue (être sacré)", tier: "diamond", secret: false, cat: "progression", earned: (i) => i.isChampion },
 
     // ── ② Collection ──
@@ -430,7 +431,7 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         seen: seenIds,
         mons: mons.map((m) => ({ level: m.level, shiny: m.shiny, speciesId: m.speciesId })),
         teamSize: (s.team ?? []).length,
-        arenaBadges: (s.badges ?? []).length,
+        arenaBadges: withImpliedAncre(s.badges ?? []).length, // une save pas encore reprise (5 badges dont Électrik) compte ses 6
         isChampion: s.isChampion === true,
         trainersBeaten: (s.defeatedTrainers ?? []).filter(isRealTrainerId).length, // VRAIS dresseurs uniquement (pas les marqueurs d'événement)
         mirrorWins: s.stats?.duelWinsTotal ?? 0,

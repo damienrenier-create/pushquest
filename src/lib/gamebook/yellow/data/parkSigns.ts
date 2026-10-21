@@ -79,7 +79,7 @@ export const PARK_SIGN_TIPS: ReadonlyArray<ReadonlyArray<string>> = [
     // 13 — Obéissance (les badges = ton autorité)
     [
         "Un Daemon TROP FORT pour tes badges n'en fait qu'à sa tête : en plein combat, il peut IGNORER ton ordre — tour perdu !",
-        "TES Daemons t'obéissent jusqu'à ≈20 sans badge, puis 30 · 40 · 50 · 65 badge après badge.",
-        "Un Daemon ÉCHANGÉ est plus docile (35 · 50 · 65 · 80…). Les CINQ badges réunis, TOUS t'obéissent jusqu'au niveau 100.",
+        "TES Daemons t'obéissent jusqu'à ≈20 sans badge, puis 30 · 40 · 50 · 55 · 65 badge après badge (run 3 : 55 · 65 · 75 dès le 3ᵉ).",
+        "Un Daemon ÉCHANGÉ est plus docile (35 · 50 · 65 · 80…). Les SIX badges réunis, TOUS t'obéissent jusqu'au niveau 100.",
     ],
 ]

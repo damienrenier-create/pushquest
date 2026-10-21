@@ -37,7 +37,9 @@ export function run3EnergyScore(byArena: Record<string, number> | undefined | nu
 
 /** Plafond ANTI-TRICHE du score « Survivant » (POST client). L'énergie relevée par snapshot est bornée par le
  *  plafond de stockage (repsCap = 1000), et il y a au plus 10 snapshots distincts (5 arènes + 5 membres de Ligue)
- *  → majorant sûr et fini de 10×1000. Sert uniquement à borner un score reçu du client (comme run3MaxScore). */
+ *  → majorant sûr et fini de 10×1000. Sert uniquement à borner un score reçu du client (comme run3MaxScore).
+ *  ⚓ Le BATEAU (arène 4 depuis le 21/10/2026) ne compte PAS au score, comme les gardes : tout le monde reste
+ *  classé sur les MÊMES 5 boss figés + la même Ligue que les joueurs qui ont déjà fini le concours. */
 export function run3EnergyMaxScore(): number { return 10_000 }
 
 /** Score MAX atteignable en vainquant LES 5 BOSS d'arène en entier (la Ligue s'ajoute au runtime). */

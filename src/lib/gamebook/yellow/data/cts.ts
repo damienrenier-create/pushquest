@@ -15,7 +15,8 @@ import { getMove } from "./moves"
 import type { SpeciesData, PokeType } from "../battle/types"
 
 /** Badge requis pour acheter une CT (aligné sur les salles de l'arène). */
-export type BadgeId = "feu" | "plante" | "eau" | "roche" | "elec"
+// « ancre » = l'ARÈNE 4, le bateau (21/10/2026) — cf. data/boatArena.ts.
+export type BadgeId = "feu" | "plante" | "eau" | "roche" | "elec" | "ancre"
 
 export interface CtData {
     id: string          // "ct01"

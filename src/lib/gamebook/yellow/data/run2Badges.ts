@@ -11,6 +11,7 @@
 import type { BadgeInput } from "./run1Badges"
 import { type TierFun, TIER_POINTS_FUN, TIER_EMOJI_FUN } from "./run1Badges"
 import { getSpecies } from "./species"
+import { BOAT_TRAINER_IDS } from "./boatArena"
 
 // ── Helpers locaux (mêmes que run1Badges, ré-écrits pour ne pas exposer les internes) ──
 const shinyCount = (i: BadgeInput) => i.mons.filter((m) => m.shiny).length
@@ -62,7 +63,7 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_resacre_6shiny", label: "Re-sacre avec 6 shiny (Salle Dorée)", funTier: "d3", cat: "shiny", earned: (i) => i.isChampion === true && i.leagueSixShiny === true },
 
     // ─────────── 💎💎 160 — Élite ───────────
-    { id: "r2_arenas5", label: "Vaincre les 5 arènes re-typées", funTier: "d2", cat: "progression", earned: (i) => i.arenaBadges >= 5 },
+    { id: "r2_arenas5", label: "Vaincre les 6 arènes du Remix", funTier: "d2", cat: "progression", earned: (i) => i.arenaBadges >= 6 },
     { id: "r2_shiny6", label: "Capturer 6 shiny (Remix)", funTier: "d2", cat: "shiny", earned: (i) => shinyCount(i) >= 6 },
     { id: "r2_ukognos", label: "Choper UKOGNOS (le légendaire Fée)", funTier: "d2", cat: "rencontres", earned: (i) => has(i, "ukognos") },
 
@@ -89,7 +90,9 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_orcaline", label: "Capturer ORCALINE sauvage (Grotte Gelée, niv 35+)", funTier: "s4", cat: "rencontres", earned: (i) => has(i, "orcaline") },
     { id: "r2_master_ball", label: "Décrocher la Ball ultime (dresseur d'Orcaline)", funTier: "s4", cat: "rencontres", earned: (i) => i.hasMasterBall === true },
     { id: "r2_grotte_gelee", label: "Franchir la Grotte Gelée (5 Frères Glaçon, Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasAllMk(i, GELEE_FRERES), reveal: (i) => hasAnyMk(i, GELEE_FRERES) }, // les 5 Frères Glaçon vaincus (markers de dresseur)
-    { id: "r2_aqua_arena", label: "Vaincre l'Aqua Arena re-thémée EAU (Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasMk(i, "aqua_arena") },
+    // Avant le 21/10/2026, le marqueur « aqua_arena » n'était posé nulle part → haut fait impossible. Le bateau est
+    //   désormais l'arène 4 : vaincu = tout l'équipage battu (marqueurs de dresseur), comme son badge ANCRE.
+    { id: "r2_aqua_arena", label: "Vaincre l'Aqua Arena re-thémée EAU (Remix)", funTier: "s4", cat: "exploration", earned: (i) => hasMk(i, "aqua_arena") || hasAllMk(i, BOAT_TRAINER_IDS) },
 
     // ─────────── ⭐⭐⭐ 20 — Aguerri ───────────
     { id: "r2_arena1", label: "Réussir une ARÈNE RE-TYPÉE", funTier: "s3", cat: "progression", earned: (i) => i.arenaBadges >= 1 },

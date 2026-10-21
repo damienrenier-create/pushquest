@@ -67,7 +67,8 @@ describe("Pêche — tirage + courbes", () => {
     })
     it("fishingRareLevel : 50 % bande de badges / 50 % moyenne d'équipe, borné", () => {
         expect(fishingRareLevel(1, 50, 0.9, 0)).toBe(5)     // bande badge 1 = [5,15], bandRand=0
-        expect(fishingRareLevel(5, 50, 0.9, 0.99)).toBe(75) // bande badge 5 = [60,75], haut
+        expect(fishingRareLevel(6, 50, 0.9, 0.99)).toBe(75) // bande badge 6 = [60,75], haut (6 badges depuis le bateau)
+        expect(fishingRareLevel(4, 50, 0.9, 0)).toBe(40)    // bande badge 4 (le bateau) = [40,48]
         expect(fishingRareLevel(3, 42, 0.2, 0)).toBe(42)    // useAvg<0.5 → moyenne d'équipe
     })
     it("fishingLevel : borné [5,100], calé sur la moyenne", () => {

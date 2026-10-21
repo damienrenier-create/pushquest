@@ -28,8 +28,9 @@ import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_
 import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
 import { run3ArenaBossTeam } from "../data/run3Bosses"
-import { run3ArenaForBoss } from "../data/run3Arenas"
+import { run3ArenaForBoss, RUN3_BOAT_ENERGY } from "../data/run3Arenas"
 import { bossEnemyKey, leagueEnemyKey } from "../data/run3Score"
+import { BOAT_BADGE, BOAT_BOSS_IDS, BOAT_KEY_LINES, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, isBoatTrainer, boatArenaCleared, gymBadgeCount } from "../data/boatArena"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies, registerCustomSpecies } from "../data/species"
@@ -385,7 +386,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
         captureModifier = funCaptureFactor(avgIV)
     }
     shinyKoAtStart = new Set(playerTeam.filter((m) => m.currentHp <= 0).map((m) => m.uid))
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length, evResetCharges: getEvResetCharges() })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length, obedienceRun3: effectiveRunWorld() === "run3", evResetCharges: getEvResetCharges() })
     // VŒU DE TASK1 : le génie annonce le shiny du jour en OUVERTURE du combat — c'est là qu'on le voit briller.
     { const m = consumeShinyPopMessage(); if (m) battle.events.unshift({ kind: "message", text: m }) }
     syncPokedex(battle) // adversaire "vu" dès la rencontre
@@ -451,7 +452,7 @@ export function startTrainerBattle(
     const isDuel = !!opts?.trainerId?.startsWith("duel:") || !!opts?.trainerId?.startsWith("run2ghost:") // reflet / PNJ run-2 d'un autre joueur → XP DOUBLE
     // VŒU DE ZYRAN : armé sur les combats qui engagent sa VRAIE équipe (sauvage + dresseur), pas sur la Zone
     //   de Combat (équipes louées, EV non persistés) ni sur la Ligue de Fusion (chimères éphémères).
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length, evResetCharges: isFrontier ? 0 : getEvResetCharges() })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length, obedienceRun3: effectiveRunWorld() === "run3", evResetCharges: isFrontier ? 0 : getEvResetCharges() })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -745,7 +746,7 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInsta
     const quota = effectiveRunWorld() === "run3"
         ? QUOTA_STD
         : getGameMode() === "fun"
-            ? playerAttackQuota(getPlayer().badges.length)
+            ? playerAttackQuota(gymBadgeCount(getPlayer().badges)) // ⚓ hors badge du bateau : l'Électrik ne coûte pas plus cher qu'avant
             : effectiveQuota(getPlayer().wildCtx?.quota)
     // VŒU DE LAURA : sa courbe de coût monte jusqu'au niveau 80 (plafond 13) au lieu de saturer à 60/10.
     //   Ce site est le SEUL qui facture le joueur, et moveCostForDisplay en est le miroir — l'affichage suit
@@ -1419,19 +1420,32 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const t = getTrainer(storeState.trainer.trainerId)
             const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
+            // ⚓ ARÈNE 4 = LE BATEAU (21/10/2026) : pas UN boss mais tout l'équipage. Le badge ANCRE tombe quand les 4
+            //   matelots ET les 2 boss sont battus (n'importe quel ordre) ; le dernier vaincu remet aussi la CLÉ volée
+            //   (inutile à qui a déjà le badge Électrik : la porte du GYM ne lui est plus fermée).
+            let boatKeyHandover = false
+            if (!badgeAwarded && isBoatTrainer(storeState.trainer.trainerId) && boatArenaCleared(isTrainerDefeated) && awardBadge(BOAT_BADGE)) {
+                badgeAwarded = BOAT_BADGE
+                if (!getPlayer().badges.includes("elec")) addItem(ARENA_KEY_ITEM_ID, 1)
+                boatKeyHandover = true
+            }
+            // 🗝️ GARDIEN DES CLÉS vaincu : il reprend sa clé, la porte du GYM (arène 5) est ouverte (marqueur ci-dessus).
+            if (storeState.trainer.trainerId === KEY_GUARD_TRAINER_ID) consumeItem(ARENA_KEY_ITEM_ID)
             if (badgeAwarded) funOnBadge() // DÉFI FUN arène (no-op hors mode fun / hors fenêtre)
             // RUN 3 : chaque arène vaincue RECHARGE l'énergie JUSQU'À son plafond (500→600→700→800→1000), sans
             //   jamais dépasser ni réduire la réserve → top-up = max(0, plafond - réserve actuelle). Seule source
             //   avec les 500 de départ. Forcé (le run 3 bloque les gains non-forcés).
             if (badgeAwarded && effectiveRunWorld() === "run3") { // REJEU run 3 inclus : la recharge d'arène est la SEULE source d'énergie
                 const r3arena = run3ArenaForBoss(storeState.trainer.trainerId)
-                if (r3arena) {
-                    const topUp = r3arena.energy - getPlayer().reps
+                // Le BATEAU (badge ANCRE) n'a pas de boss figé → son palier dédié (800, entre le Feu et l'Électrik).
+                const palier = r3arena?.energy ?? (badgeAwarded === BOAT_BADGE ? RUN3_BOAT_ENERGY : 0)
+                if (palier > 0) {
+                    const topUp = palier - getPlayer().reps
                     if (topUp > 0) grantReps(topUp, true)
                 }
-                // BONUS BADGE 4 (elec, arène Dragon) du run 3 : +100 reps EN PLUS de la recharge, pour TOUT LE MONDE
+                // BONUS de l'arène ÉLECTRIK (arène Dragon ; 4e badge avant le bateau, 5e depuis) : +100 reps EN PLUS de la recharge, pour TOUT LE MONDE
                 //   (choix Sartay 08/09). Forcé (le run 3 bloque les gains non-forcés) ; 1×/run (le badge est one-shot).
-                if (badgeAwarded === "elec") logEnergyIncome("🏅 Badge 4 run 3", grantReps(100, true))
+                if (badgeAwarded === "elec") logEnergyIncome("🏅 Badge Électrik run 3", grantReps(100, true))
             }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
@@ -1455,6 +1469,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const mvName = getMove(getCt("ct61")?.moveId ?? "")?.name ?? "Voile de Givre"
                 rematchReward = { npcId: storeState.trainer.trainerId, npcName: "FRÈRES GLAÇON", lines: ["Les CINQ frères Glaçon sont vaincus !", `🎁 Tu reçois la CT « ${mvName} » — enseigne-la à un Daemon Glace (poche CT). Cadeau unique !`] }
             }
+            // ⚓ BATEAU conquis : le CAPITAINE remet le badge ANCRE et la CLÉ (dialogue post-combat, quel que soit le dernier vaincu).
+            if (boatKeyHandover) rematchReward = { npcId: BOAT_BOSS_IDS[0], npcName: "CAPITAINE VAGUE", lines: [...BOAT_KEY_LINES] }
             // 🎁 RUN 2 (NG+) : le boss offre SA CT signature EXCLUSIVE (ct53→57, introuvable ailleurs) + son ticket
             //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
             const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined
@@ -1776,6 +1792,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         const tid = storeState.trainer.trainerId
         const r3 = run3ArenaForBoss(tid)
         const isLeague = tid.startsWith("y_ligue_")
+        // ⚓ Le BATEAU (arène 4) et le gardien des clés NE COMPTENT PAS, comme les gardes : seuls les 5 boss figés + la
+        //   Ligue font le score → classement comparable avec ceux qui ont fini le concours avant le 21/10/2026.
         if (r3 || isLeague) {
             const newly: { key: string; level: number }[] = []
             b.enemy.team.forEach((e, i) => {

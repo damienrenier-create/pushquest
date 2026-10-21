@@ -17,7 +17,7 @@ import { healCapApplies, healAllowed } from "../data/healCap"
 import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./talentEffects"
 import { typeEffectiveness, effectivenessMessage, moveCategoryOf, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
-import { obedienceCap, disobeyChance } from "./obedience"
+import { obedienceCap, disobeyChance, MAX_OBEDIENCE_BADGES } from "./obedience"
 import { pinchBerry } from "./berries"
 import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, chooseReplacementIndex, type AiLevel } from "./ai"
@@ -129,6 +129,8 @@ export interface BattleState {
     /** OBÉISSANCE : nb de badges du joueur, injecté par le store à la création (PvE). Pilote le cap de
      *  niveau au-dessus duquel un Daemon ÉCHANGÉ peut DÉSOBÉIR. Absent → obéissance totale (aucun gate). */
     playerBadgeCount?: number
+    /** OBÉISSANCE : monde RUN 3 (concours) → barème « à soi » relevé (cf. obedience.ts). Absent → barème standard. */
+    obedienceRun3?: boolean
     /** VŒU DU GÉNIE (Zyran) — charges de réinitialisation d'EV encore disponibles DANS CE COMBAT. Décrémentées
      *  à chaque K.O. porté par le joueur ; le solde durable vit dans la save (evResetCharges). */
     evResetLeft?: number
@@ -236,7 +238,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; costMult?: number; playerBadgeCount?: number; evResetCharges?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; costMult?: number; playerBadgeCount?: number; obedienceRun3?: boolean; evResetCharges?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -267,6 +269,7 @@ export function createBattle(
         expMult: opts.expMult ?? 1,
         costMult: opts.costMult ?? 1,
         playerBadgeCount: opts.playerBadgeCount,
+        obedienceRun3: opts.obedienceRun3 || undefined,
         evResetLeft: Math.max(0, Math.floor(opts.evResetCharges ?? 0)) || undefined,
     }
 }
@@ -451,7 +454,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
                     disobeyed = true
                     events.push({ kind: "message", text: `${displayName(cur)} refuse catégoriquement de t'obéir… 😈 (Daemon frappé par le vœu maudit)` })
                 } else {
-                    const cap = obedienceCap(cur.traded, state.playerBadgeCount ?? 5)
+                    const cap = obedienceCap(cur.traded, state.playerBadgeCount ?? MAX_OBEDIENCE_BADGES, state.obedienceRun3 === true)
                     if (cur.level > cap && rng.chance(disobeyChance(cur.level, cap))) {
                         disobeyed = true
                         const why = cur.traded === true

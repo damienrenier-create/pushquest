@@ -13,6 +13,7 @@ import { getSpecies, SPECIES, registerCustomSpecies } from "./species"
 import { buildCustomSpecies, buildNemesis, type StoredCustomDaemon } from "../create/customSpecies"
 import { POKE_TYPES, type PokeType, type MonInstance, type StatKey } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
+import { withImpliedAncre } from "./boatArena"
 import { YELLOW_MAPS } from "../maps"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { isBlockingTile } from "../../mapEngine"
@@ -60,10 +61,12 @@ export function registerRegistryCustoms(players: RegistryPlayer[]): void {
 /** Nombre d'adversaires affichés dans une arène (les plus proches de notre niveau). */
 export const ARENA_OPPONENTS = 6
 
-/** Les 5 badges du Nexus. Les posséder TOUS débloque les arènes joueurs (= après ONDINE, eau étant le dernier). */
-export const ALL_BADGES = ["feu", "plante", "eau", "roche", "elec"] as const
+/** Les 6 badges du Nexus (le bateau = badge ANCRE depuis le 21/10/2026). Les posséder TOUS débloque les arènes joueurs
+ *  (= après ONDINE, eau étant le dernier). Une save d'avant le bateau (Électrik/Eau sans ANCRE) compte l'ANCRE d'office. */
+export const ALL_BADGES = ["feu", "plante", "eau", "roche", "elec", "ancre"] as const
 export function hasAllBadges(badges: readonly string[]): boolean {
-    return ALL_BADGES.every((b) => badges.includes(b))
+    const b = withImpliedAncre(badges)
+    return ALL_BADGES.every((x) => b.includes(x))
 }
 
 /** Route Nord : arène de reflets RÉSERVÉE aux comptes « fun » (lien nexus-fun-2026), dès le run 1, dans les

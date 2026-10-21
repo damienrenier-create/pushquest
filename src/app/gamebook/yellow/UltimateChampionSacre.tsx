@@ -188,7 +188,7 @@ export default function UltimateChampionSacre({ roster, palmares, quests, onClos
                         <Tile label="Victoires" value={<><Counter value={palmares.wins} run={act === 2} /> <span style={dim}>/ {palmares.battles.toLocaleString("fr-FR")}</span></>} />
                         <Tile label="Daemons capturés" value={<Counter value={palmares.captures} run={act === 2} />} />
                         <Tile label="Pokédex" value={<><Counter value={palmares.dexCount} run={act === 2} /> <span style={dim}>esp.</span></>} />
-                        <Tile label="Badges d'arène" value={<>{palmares.badges} <span style={dim}>/ 5</span></>} />
+                        <Tile label="Badges d'arène" value={<>{palmares.badges} <span style={dim}>/ 6</span></>} />
                         <Tile label="Titres du Dôme" value={`${palmares.dome} 🏆`} />
                         <Tile label="Shinies ✨" value={<Counter value={palmares.shiny} run={act === 2} />} />
                         <Tile label="XP cumulée" value={<Counter value={palmares.xpTotal} run={act === 2} duration={1700} />} />

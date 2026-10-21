@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getTrainer } from "@/lib/gamebook/yellow/data/trainers"
 import { NGPLUS_ARENA_NPCS } from "@/lib/gamebook/yellow/data/ngplusArenas"
+import { KEY_GUARD_NPC_ID, KEY_GUARD_TRAINER_ID, KEY_GUARD_SPRITE } from "@/lib/gamebook/yellow/data/boatArena"
 import { effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 
 // Pause de réflexion (ms) des dialogues « slow » (GAG cadeau canne) — aligné sur FASHION_REFLECT_MS du store.
@@ -66,11 +67,13 @@ export default function DialogueBox() {
     //   par activeNpcs). La bulle suit : nom du run 2 + portrait découpé dans la planche. Avant le 20/10/2026 elle montrait
     //   les PNJ du RUN 1 (Druide, gardes Plante…) et leur ancien nom, quel que soit l'appelant.
     const r2 = effectiveRunWorld() === "ngplus" ? NGPLUS_ARENA_NPCS[dialogue.npcId] : undefined
-    const portrait = r2 ? undefined : DIALOGUE_PORTRAITS[dialogue.npcId]
+    // Planche Gen 3 servant de portrait : re-skin du run 2, ou PNJ qui n'existe QU'EN planche (le GARDIEN DES CLÉS).
+    const gen3Sheet = r2?.gen3 ?? GEN3_PORTRAITS[dialogue.npcId]
+    const portrait = gen3Sheet ? undefined : DIALOGUE_PORTRAITS[dialogue.npcId]
     const npcName = r2?.name ?? dialogue.npcName
     // Garde / dresseur SANS portrait image → on affiche son emoji de sprite en filigrane
     // DERRIÈRE le texte (look "on voit qui parle"). Non-dresseurs : pas de filigrane.
-    const trainerEmoji = !portrait && !r2 ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
+    const trainerEmoji = !portrait && !gen3Sheet ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
 
     return (
         <>
@@ -78,7 +81,7 @@ export default function DialogueBox() {
             {portrait && (
                 <img src={portrait} alt={npcName} style={portraitStyle} />
             )}
-            {r2 && <div role="img" aria-label={npcName} style={{ ...portraitStyle, ...gen3PortraitStyle(r2.gen3) }} />}
+            {gen3Sheet && <div role="img" aria-label={npcName} style={{ ...portraitStyle, ...gen3PortraitStyle(gen3Sheet) }} />}
             <div style={boxStyle}>
                 {trainerEmoji && <span style={spriteWatermarkStyle} aria-hidden>{trainerEmoji}</span>}
                 <div style={nameStyle}>{npcName}</div>
@@ -87,6 +90,12 @@ export default function DialogueBox() {
             </div>
         </>
     )
+}
+
+/** PNJ dont le seul visuel est une planche Gen 3 (portrait découpé dedans). */
+const GEN3_PORTRAITS: Record<string, string> = {
+    [KEY_GUARD_NPC_ID]: KEY_GUARD_SPRITE,     // le GARDIEN DES CLÉS devant le GYM (sprite fourni par Sartay, 21/10/2026)
+    [KEY_GUARD_TRAINER_ID]: KEY_GUARD_SPRITE, // … et son dialogue d'après-combat
 }
 
 // PORTRAIT tiré d'une planche PNJ Gen 3 (760×160 = 19 × 4 cellules de 40 px, cf. MapView) : pose NEUTRE de face =

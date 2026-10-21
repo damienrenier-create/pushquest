@@ -58,7 +58,7 @@ describe("Multi-profils — création (Rejouer run 1) & bascule (NON-destructif)
         expect(profileCount()).toBe(2)
         const a = getAltProfileSummaries()[0]
         expect(a.isChampion).toBe(true)
-        expect(a.badges).toBe(5)
+        expect(a.badges).toBe(6) // ses 5 badges + l'ANCRE reprise au chargement (badge Électrik = étape du bateau franchie)
         expect(a.dex).toBe(2) // cerfeuillu (équipe) + pyrokoss (PC) : les Daemons POSSÉDÉS comptent au dex (réconciliation applyServerSave)
     })
 

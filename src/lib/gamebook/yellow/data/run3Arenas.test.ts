@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { run3ArenaEnergy, RUN3_ARENA_ENERGY, RUN3_ARENAS, RUN3_ARENA_BADGES, run3ArenaForBoss, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
+import { run3ArenaEnergy, RUN3_ARENA_ENERGY, RUN3_BOAT_ENERGY, RUN3_ARENAS, RUN3_ARENA_BADGES, run3ArenaForBoss, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
 import { run3ArenaInfo, arenaInfo } from "./arenaInfos"
 
 const SLOTS = ["feu", "plante", "eau", "roche", "elec"] as const
@@ -9,11 +9,12 @@ describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
         expect(RUN3_ARENAS.map((a) => a.badge)).toEqual(["plante", "roche", "feu", "elec", "eau"])
         expect(RUN3_ARENA_BADGES).toEqual(["plante", "roche", "feu", "elec", "eau"])
         expect(RUN3_ARENAS.map((a) => a.guardType)).toEqual(["Glace", "Combat", "Poison/Spectre", "Dragon", "Multi"])
-        expect(RUN3_ARENAS.map((a) => a.order)).toEqual([1, 2, 3, 4, 5])
+        expect(RUN3_ARENAS.map((a) => a.order)).toEqual([1, 2, 3, 5, 6]) // le BATEAU (sans boss figé) est l'arène 4
     })
     it("chaque arène connaît son plafond de recharge (cohérent avec RUN3_ARENA_ENERGY)", () => {
         expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([...RUN3_ARENA_ENERGY])
-        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([500, 600, 700, 800, 1000])
+        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([500, 600, 700, 800, 1000]) // inchangés depuis le début du concours
+        expect(RUN3_BOAT_ENERGY).toBe(800) // paliers en jeu : 500 → 600 → 700 → 800 (bateau) → 800 → 1000
     })
     it("run3ArenaForBoss : retrouve l'arène par son boss ; null si inconnu", () => {
         expect(run3ArenaForBoss("y_feuarena_boss")?.guardType).toBe("Poison/Spectre")
@@ -23,7 +24,7 @@ describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
 })
 
 describe("RUN 3 — plafonds de recharge d'arène", () => {
-    it("500 → 1000 par arène (index 0..4), 0 hors bornes", () => {
+    it("500 → 1000 par arène à boss figé (index 0..4), 0 hors bornes", () => {
         expect(RUN3_ARENA_ENERGY).toEqual([500, 600, 700, 800, 1000])
         expect(run3ArenaEnergy(0)).toBe(500)
         expect(run3ArenaEnergy(4)).toBe(1000)
@@ -93,8 +94,9 @@ describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
         expect(info.team.every((m) => m.name.length > 0)).toBe(true)
         expect(info.team[info.team.length - 1].isBoss).toBe(true)
     })
-    it("arène 4 (elec) : gardiens DRAGON, boss = Embi, recharge 800", () => {
+    it("arène 5 (elec) : gardiens DRAGON, boss = Embi, recharge 800 (inchangée)", () => {
         const info = run3ArenaInfo("elec")!
+        expect(info.order).toBe(5)
         expect(info.guardType).toBe("Dragon")
         expect(info.bossPlayer).toBe("Embi")
         expect(info.energyPalier).toBe(800)

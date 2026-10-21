@@ -220,17 +220,17 @@ export const SBIRE_TIPS: string[][] = [
     ],
     // 15 — Badges d'arène
     [
-        "Cinq arènes, cinq chefs, cinq badges.",
+        "Six arènes, six badges — et l'une d'elles est un BATEAU, de l'autre côté de la Grotte Gelée.",
         "Chaque badge agrandit ton portefeuille de reps, gonfle ton énergie par combat et débloque de nouvelles CT.",
-        "Réunis les cinq et la Ligue t'ouvrira ses portes.",
+        "Réunis les six et la Ligue t'ouvrira ses portes.",
     ],
     // 16 — OBÉISSANCE (les badges = ton autorité)
     [
         "Écoute bien, car peu le savent : un Daemon trop PUISSANT pour tes badges n'en fera qu'à sa tête !",
         "En plein combat, il peut IGNORER ton ordre — tour perdu. Ton autorité de Dresseur se mérite avec les badges.",
-        "Tes PROPRES Daemons sont les plus exigeants : garde-les proches du niveau de tes arènes — ≈20 sans badge, puis 30, 40, 50, 65 badge après badge.",
+        "Tes PROPRES Daemons sont les plus exigeants : garde-les proches du niveau de tes arènes — ≈20 sans badge, puis 30, 40, 50, 55, 65 badge après badge (au concours du run 3 : 55, 65 puis 75 dès le 3ᵉ badge).",
         "Un Daemon ÉCHANGÉ, reçu d'un ami, t'obéit un peu plus haut (35, 50, 65, 80…) — mais lui aussi te lâchera s'il te dépasse trop.",
-        "La seule voie : décroche plus de BADGES. Les cinq réunis, et TOUS t'obéissent jusqu'au niveau 100. 🍝",
+        "La seule voie : décroche plus de BADGES. Les six réunis, et TOUS t'obéissent jusqu'au niveau 100. 🍝",
     ],
     // 17 — CT (Capsules Techniques)
     [
@@ -308,9 +308,9 @@ const SBIRE_TIPS_FUN_OVERRIDES: Record<number, string[]> = {
         "Affaiblis-le bien avant de lancer ta meilleure ball.",
     ],
     14: [
-        "Cinq arènes, cinq chefs, cinq badges.",
+        "Six arènes, six badges — et l'une d'elles est un BATEAU, de l'autre côté de la Grotte Gelée.",
         "Chaque badge agrandit ta jauge d'énergie, gonfle ton énergie par combat et débloque de nouvelles CT — mais en mode fun, tes attaques coûtent aussi un peu plus.",
-        "Réunis les cinq et la Ligue t'ouvrira ses portes.",
+        "Réunis les six et la Ligue t'ouvrira ses portes.",
     ],
     16: [
         "Les CT enseignent de nouvelles attaques à tes Daemons, contre de l'énergie.",

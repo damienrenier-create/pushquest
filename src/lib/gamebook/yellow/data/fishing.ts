@@ -68,11 +68,12 @@ export function fishingTier(rand: number, repsMult: number, geauckeAvailable: bo
 }
 
 // ── NIVEAU DES RARES (Osquille/Rô) : 50 % bande de badges, 50 % niveau moyen d'équipe ────────────────────────
-const FISHING_BADGE_BANDS: ReadonlyArray<readonly [number, number]> = [[5, 15], [15, 30], [30, 45], [45, 60], [60, 75]]
-/** Niveau d'un rare : 50 % → bande selon le nb de badges du run (1→5-15 … 5→60-75) ; 50 % → niveau moyen d'équipe. */
+// 6 bandes depuis le 21/10/2026 (le bateau = 6e badge) : la 4e (bateau) et la 5e (Électrik) se partagent l'ancienne 30-60.
+const FISHING_BADGE_BANDS: ReadonlyArray<readonly [number, number]> = [[5, 15], [15, 30], [30, 40], [40, 48], [48, 60], [60, 75]]
+/** Niveau d'un rare : 50 % → bande selon le nb de badges du run (1→5-15 … 6→60-75) ; 50 % → niveau moyen d'équipe. */
 export function fishingRareLevel(badges: number, avgLevel: number, useAvgRand: number, bandRand: number): number {
     if (Math.max(0, Math.min(0.999999, useAvgRand)) < 0.5) return Math.max(2, Math.min(100, Math.round(avgLevel)))
-    const b = Math.max(1, Math.min(5, Math.floor(badges)))
+    const b = Math.max(1, Math.min(FISHING_BADGE_BANDS.length, Math.floor(badges)))
     const [lo, hi] = FISHING_BADGE_BANDS[b - 1]
     return Math.max(2, Math.min(100, lo + Math.floor(Math.max(0, Math.min(0.999999, bandRand)) * (hi - lo + 1))))
 }

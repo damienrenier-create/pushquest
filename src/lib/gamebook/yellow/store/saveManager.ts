@@ -12,6 +12,8 @@ import type { MonInstance } from "../battle/types"
 import type { BadgeId } from "../data/cts"
 import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 import { giftNoteLines } from "../data/energyGiftNote"
+import { migrateBoatBadge, withImpliedAncre } from "../data/boatArena"
+import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
@@ -56,7 +58,12 @@ function liveWorldOf(save: YellowSave): YellowSave {
 
 /** Hydrate les stores (joueur + Pokédex) depuis UN monde. `customDaemons` est GLOBAL (partagé entre les
  *  2 mondes) → toujours fourni depuis le haut niveau de la save. */
-function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[]): void {
+function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[], fixedCapWorld = false): void {
+    // ⚓ REPRISE « arène 4 = le bateau » (21/10/2026) : un monde qui a déjà dépassé ce point (badge Électrik/Eau) reçoit le
+    //   badge ANCRE (+ le plafond d'un badge, sauf monde à plafond FIXE = run 3) ; tout l'équipage déjà battu → badge +
+    //   CLÉ. Idempotent (badge déjà là → rien), re-persisté au prochain save. Cf. data/boatArena.migrateBoatBadge.
+    const boat = migrateBoatBadge(w, fixedCapWorld ? 0 : BADGE_REPS_CAP_BONUS)
+    if (boat.changed) w = { ...w, badges: boat.badges, items: boat.items, repsCap: boat.repsCap, ananasLastBadgeCount: boat.ananasLastBadgeCount }
     hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, casinoSpentToday: w.casinoSpentToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, champBattlesToday: w.champBattlesToday, consultsToday: w.consultsToday, archivisteMatchesToday: w.archivisteMatchesToday, archivisteWinsToday: w.archivisteWinsToday, badgeRepsClaimed: w.badgeRepsClaimed, badgeRepsToday: w.badgeRepsToday, comparisonConsultsToday: w.comparisonConsultsToday, sageSaiyanPointsToday: w.sageSaiyanPointsToday, ananasLastBadgeCount: w.ananasLastBadgeCount, ananasDate: w.ananasDate, ananasPeakLevel: w.ananasPeakLevel, capturesToday: w.capturesToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, domeStats: w.domeStats, towerStats: w.towerStats, factoryStats: w.factoryStats, domeTierRecord: w.domeTierRecord, stats: w.stats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, leagueSixShiny: w.leagueSixShiny, mirrorWinHigherLevel: w.mirrorWinHigherLevel, berrySecretKnown: w.berrySecretKnown, berryHarvestDay: w.berryHarvestDay, berryHarvestPicked: w.berryHarvestPicked, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, chenGiftClaims: w.chenGiftClaims, funDefis: w.funDefis, achTrack: w.achTrack, pnj5Wins: w.pnj5Wins, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, pokerFirstGameDone: w.pokerFirstGameDone, pokerBossStacks: w.pokerBossStacks, pokerCashCap: w.pokerCashCap, pokerCashDate: w.pokerCashDate, casinoNetToday: w.casinoNetToday, casinoNetDate: w.casinoNetDate, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, ngplusStartedAt: w.ngplusStartedAt, playtimeMs: w.playtimeMs, leaguePotions: w.leaguePotions, ngplusUsed: w.ngplusUsed, run3Used: w.run3Used, ngplusMaitreBeaten: w.ngplusMaitreBeaten, run3StarterBase: w.run3StarterBase, ngplusStarterBase: w.ngplusStarterBase, genieArcSeen: w.genieArcSeen, genesisMode: w.genesisMode, run3Defeated: w.run3Defeated, run3EnergyByArena: w.run3EnergyByArena, caughtThisRun: w.caughtThisRun, seenThisRun: w.seenThisRun, fichesUnlockedThisRun: w.fichesUnlockedThisRun, collectionneurDexGiven: w.collectionneurDexGiven, fusionRoster: w.fusionRoster, fusionNames: w.fusionNames, fusionMoveOrders: w.fusionMoveOrders, fusionTypeChoices: w.fusionTypeChoices, fusionHistory: w.fusionHistory, energyLog: w.energyLog, messageLog: w.messageLog, run3LavapetitSeen: w.run3LavapetitSeen, run3LavapetitCaught: w.run3LavapetitCaught, mimimoyReturned: w.mimimoyReturned, mimimoyAppearances: w.mimimoyAppearances, ballLockRemaining: w.ballLockRemaining, evResetCharges: w.evResetCharges, shinyWish: w.shinyWish, dexWish: w.dexWish, galijahDaily: w.galijahDaily, shinyFrenzy: w.shinyFrenzy, shopSurtax: w.shopSurtax, luxeOutcomeQueue: w.luxeOutcomeQueue, bertieOutcomeQueue: w.bertieOutcomeQueue, forcedEncounter: w.forcedEncounter, fusionLeagueCarry: w.fusionLeagueCarry, curseAbundanceStart: w.curseAbundanceStart, curseFreeItemsTaken: w.curseFreeItemsTaken, curseFreeItemDate: w.curseFreeItemDate, potionBuysToday: w.potionBuysToday, jcEnergyBuysToday: w.jcEnergyBuysToday, casinoCapToday: w.casinoCapToday, fusionLeagueDefeats: w.fusionLeagueDefeats, grotteShopBuys: w.grotteShopBuys, chosenAvatar: w.chosenAvatar, clan: w.clan, clanDaemonUid: w.clanDaemonUid, clanCtGiven: w.clanCtGiven, clanTransGiven: w.clanTransGiven, clanVisitDate: w.clanVisitDate, clanTrainByClan: w.clanTrainByClan, craftedItems: w.craftedItems, craftsUsed: w.craftsUsed, craftReady: w.craftReady, megaInLigue: w.megaInLigue, fusionLeagueTryDate: w.fusionLeagueTryDate, fusionChampionRoster: w.fusionChampionRoster, fusionChampionAvatar: w.fusionChampionAvatar, domeChampionships: w.domeChampionships, customDaemons })
     // POKÉDEX : PAS hydraté ici — il est GLOBAL/cumulatif (persiste d'un run à l'autre) → hydraté UNE SEULE FOIS
     // au chargement (applyServerSave, union de tous les mondes) et jamais réinitialisé par une bascule de monde.
@@ -95,7 +102,8 @@ export function applyServerSave(save: YellowSave): void {
     if (aw === "ngplus") activeData.items = fixNgplusFusioBalls(activeData.items ?? {})
     // PALIER PLATINE : quiconque a déjà bouclé l'OR voit la porte du trône s'ouvrir, sans refaire la Ligue.
     activeData.defeatedTrainers = openPlatineIfOrCleared(activeData.defeatedTrainers ?? [])
-    hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
+    // Run 3 (et son rejeu) : plafond d'énergie FIXE (paliers d'arène) → la reprise du badge ANCRE n'y ajoute pas de plafond.
+    hydrateFromWorld(activeData, save.customDaemons, aw === "run3" || (aw === "replay" && save.replayRun === "run3")) // customDaemons GLOBAL (haut niveau)
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
     // RÉCONCILIATION Pokédex ← Daemons POSSÉDÉS : un Daemon DONNÉ (starter, échange) ne passe pas par la capture
@@ -750,7 +758,7 @@ export async function exitReplay(): Promise<void> {
     //   intermédiaire → on désarme le temps de restaurer + flusher.
     suppressAutosave = true
     if (timer) { clearTimeout(timer); timer = null }
-    hydrateFromWorld(world, getPlayer().customDaemons ?? world.customDaemons ?? [])
+    hydrateFromWorld(world, getPlayer().customDaemons ?? world.customDaemons ?? [], ret === "run3") // retour en run 3 : plafond fixe (reprise du bateau sans bonus)
     reregisterCustomDaemons() // rend les Daemons custom résolvables en combat après restauration (aligne les 6 chemins d'hydratation)
     setActiveWorld(ret)
     // Le monde restauré vit désormais dans les stores → son slot stash redevient null.
@@ -770,7 +778,7 @@ export const MAX_ALT_PROFILES = 3
 /** Résumé LÉGER d'un profil (pour le sélecteur — n'expose pas le save complet). */
 export interface ProfileSummary { badges: number; isChampion: boolean; ngplusUsed: boolean; run3Used: boolean; dex: number; teamLead: string | null }
 function summarize(s: YellowSave): ProfileSummary {
-    return { badges: s.badges?.length ?? 0, isChampion: !!s.isChampion, ngplusUsed: !!s.ngplusUsed, run3Used: !!s.run3Used, dex: s.pokedex?.caught?.length ?? 0, teamLead: s.team?.[0]?.speciesId ?? null }
+    return { badges: withImpliedAncre(s.badges ?? []).length, isChampion: !!s.isChampion, ngplusUsed: !!s.ngplusUsed, run3Used: !!s.run3Used, dex: s.pokedex?.caught?.length ?? 0, teamLead: s.team?.[0]?.speciesId ?? null }
 }
 /** Résumés des profils INACTIFS (pour le sélecteur). Vide s'il n'y a qu'un profil. */
 export function getAltProfileSummaries(): ProfileSummary[] { return altProfilesStash.map(summarize) }

@@ -6,7 +6,9 @@
 
 import { trainersOnMap, type TrainerMonSpec } from "./trainers"
 import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS } from "./ngplusArenas"
-import { RUN3_ARENAS } from "./run3Arenas"
+import { RUN3_ARENAS, RUN3_BOAT_ENERGY } from "./run3Arenas"
+import { SIGHT_RUN_TEAMS } from "./sightRunTeams"
+import { BOAT_BOSS_IDS } from "./boatArena"
 import { RUN3_BOSS_TEAMS, run3ArenaBossTeam } from "./run3Bosses"
 import { getSpecies } from "./species"
 import { POKE_TYPES, type PokeType } from "../battle/types"
@@ -20,6 +22,7 @@ const BADGE_MAP_ID: Record<BadgeId, string> = {
     feu: "yellow_arena_feu",
     elec: "yellow_arena_elec",
     eau: "yellow_arena_eau",
+    ancre: "yellow_aqua_arena", // ARÈNE 4 = le BATEAU (21/10/2026)
 }
 
 /** Ordre des arènes du gym de Ville Jaune (l'arène EAU est à Cendreville, à part). */
@@ -39,8 +42,9 @@ export interface ArenaInfo {
     guardCount: number
 }
 
-const teamFor = (t: { id: string; team: TrainerMonSpec[] }, isRun2: boolean): TrainerMonSpec[] =>
-    (isRun2 && NGPLUS_ARENA_TEAMS[t.id]) ? NGPLUS_ARENA_TEAMS[t.id] : t.team
+// Run 2/3 : équipes re-typées des arènes (NGPLUS_ARENA_TEAMS) ou, pour le BATEAU, celles des dresseurs à vue (SIGHT_RUN_TEAMS).
+const teamFor = (t: { id: string; team: TrainerMonSpec[] }, isRun2: boolean, isRun3 = false): TrainerMonSpec[] =>
+    (isRun2 && (NGPLUS_ARENA_TEAMS[t.id] ?? SIGHT_RUN_TEAMS.ngplus[t.id])) || (isRun3 && SIGHT_RUN_TEAMS.run3[t.id]) || t.team
 
 const toMon = (spec: TrainerMonSpec, isBoss: boolean): ArenaTeamMon => {
     const sp = getSpecies(spec.speciesId)
@@ -48,18 +52,20 @@ const toMon = (spec: TrainerMonSpec, isBoss: boolean): ArenaTeamMon => {
 }
 
 /** Renvoie les infos stratégiques d'une arène (null si arène introuvable). `isRun2` = monde NG+. */
-export function arenaInfo(badge: BadgeId, isRun2 = false): ArenaInfo | null {
+export function arenaInfo(badge: BadgeId, isRun2 = false, isRun3 = false): ArenaInfo | null {
     const mapId = BADGE_MAP_ID[badge]
     const trainers = trainersOnMap(mapId)
-    const boss = trainers.find((t) => t.badge === badge)
+    // Le BATEAU n'a pas de dresseur porteur de badge (le badge tombe avec TOUT l'équipage) : son « boss » de référence
+    //   = le CAPITAINE VAGUE, le reste de l'équipage (dont le 2e boss) compte comme gardes.
+    const boss = badge === "ancre" ? trainers.find((t) => t.id === BOAT_BOSS_IDS[0]) : trainers.find((t) => t.badge === badge)
     if (!boss) return null
-    const guards = trainers.filter((t) => !t.badge)
+    const guards = trainers.filter((t) => t !== boss && !t.badge)
 
-    const bossTeam = teamFor(boss, isRun2).map((s) => toMon(s, true))
+    const bossTeam = teamFor(boss, isRun2, isRun3).map((s) => toMon(s, true))
     const ace = bossTeam[bossTeam.length - 1] // le dernier = l'ACE (la « couleur » de l'arène)
     const themeTypes = ace?.types ?? []
 
-    const allLevels = [...guards.flatMap((g) => teamFor(g, isRun2)), ...teamFor(boss, isRun2)].map((s) => s.level)
+    const allLevels = [...guards.flatMap((g) => teamFor(g, isRun2, isRun3)), ...teamFor(boss, isRun2, isRun3)].map((s) => s.level)
     const recommend = themeTypes.length ? POKE_TYPES.filter((t) => typeEffectiveness(t, themeTypes) >= 2) : []
     const avoid = themeTypes.length ? POKE_TYPES.filter((t) => typeEffectiveness(t, themeTypes) <= 0.5) : []
 
@@ -84,8 +90,9 @@ export function currentGymBadge(badges: readonly string[]): BadgeId {
     return GYM_BADGE_ORDER.find((b) => !badges.includes(b)) ?? "elec"
 }
 
-// PANTHÉON DES ARÈNES — ORDRE COMPLET des 5 arènes (l'eau/Cendreville en dernier) + état d'une arène selon les badges.
-export const FULL_BADGE_ORDER: BadgeId[] = ["plante", "roche", "feu", "elec", "eau"]
+// PANTHÉON DES ARÈNES — ORDRE COMPLET des 6 arènes (le BATEAU en 4e depuis le 21/10/2026, l'eau/Cendreville en dernier)
+//   + état d'une arène selon les badges.
+export const FULL_BADGE_ORDER: BadgeId[] = ["plante", "roche", "feu", "ancre", "elec", "eau"]
 export type ArenaGate = "beaten" | "next" | "reachable" | "locked"
 /** beaten = badge obtenu (grisé, plus affrontable) · next = prochain objectif (XP ×2) · reachable = 1 cran au-dessus
  *  (XP normale) · locked = 2 crans ou + au-dessus (trop fort, inaccessible). */
@@ -130,6 +137,11 @@ function bestOffensiveTypesVs(team: ArenaTeamMon[]): PokeType[] {
 
 /** Infos stratégiques d'une arène en RUN 3 (gardiens re-typés Ligue + boss = équipe figée d'un vrai joueur). */
 export function run3ArenaInfo(badge: BadgeId): Run3ArenaInfo | null {
+    // Le BATEAU (arène 4) n'a pas de boss figé : ses équipes sont celles du run 3 (SIGHT_RUN_TEAMS.run3).
+    if (badge === "ancre") {
+        const base = arenaInfo("ancre", false, true)
+        return base ? { ...base, order: 4, bossPlayer: "", guardType: "équipage", guardTypes: base.themeTypes, guardRecommend: base.recommend, bossBestTypes: bestOffensiveTypesVs(base.team), energyPalier: RUN3_BOAT_ENERGY } : null
+    }
     const arenaDef = RUN3_ARENAS.find((a) => a.badge === badge)
     const bossData = RUN3_BOSS_TEAMS[badge]
     if (!arenaDef || !bossData) return null

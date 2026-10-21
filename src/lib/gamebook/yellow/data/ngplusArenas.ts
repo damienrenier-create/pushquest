@@ -120,15 +120,17 @@ export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     ],
 
     // ===== ARÈNE ÉLEC → BESTIOLES & SPECTRES (Volta) =====
-    y_elecarena_g1: [{ speciesId: "formiguer", level: 16 }, { speciesId: "revemante", level: 16 }, { speciesId: "necarabee", level: 30 }, { speciesId: "brook", level: 30 }],
-    y_elecarena_g2: [{ speciesId: "formiguer", level: 15 }, { speciesId: "lampignon", level: 15 }, { speciesId: "bouh", level: 25 }, { speciesId: "regnantaur", level: 36 }],
-    y_elecarena_g3: [{ speciesId: "gloutanoir", level: 35 }, { speciesId: "necarabee", level: 20 }, { speciesId: "glacirex", level: 28, moves: ["morsure", "coup_d_givre", "draco_souffle", "charge"] }, { speciesId: "formiguer", level: 30 }],
-    y_elecarena_g4: [{ speciesId: "brook", level: 30 }, { speciesId: "necarabee", level: 32 }, { speciesId: "gloutanoir", level: 34 }],
+    // (+4 du 21/10/2026 ramenés aux stades naturels : Brook → Brookhante au niv 32, Formiguer → Regnantaur au niv 34 ;
+    //  Revemante reste à 19, son dernier niveau avant évolution, Nécarabée étant déjà dans l'équipe.)
+    y_elecarena_g1: [{ speciesId: "formiguer", level: 20 }, { speciesId: "revemante", level: 19 }, { speciesId: "necarabee", level: 34 }, { speciesId: "brookhante", level: 34 }],
+    y_elecarena_g2: [{ speciesId: "formiguer", level: 19 }, { speciesId: "lampignon", level: 19 }, { speciesId: "bouh", level: 29 }, { speciesId: "regnantaur", level: 40 }],
+    y_elecarena_g3: [{ speciesId: "gloutanoir", level: 39 }, { speciesId: "necarabee", level: 24 }, { speciesId: "glacirex", level: 32, moves: ["morsure", "coup_d_givre", "draco_souffle", "charge"] }, { speciesId: "regnantaur", level: 34 }],
+    y_elecarena_g4: [{ speciesId: "brookhante", level: 34 }, { speciesId: "necarabee", level: 36 }, { speciesId: "gloutanoir", level: 38 }],
     y_elecarena_boss: [
-        { speciesId: "regnantaur", level: 38 },
-        { speciesId: "ombrapanthe", level: 35 },
-        { speciesId: "gloutanoir", level: 36 },
-        { speciesId: "regnantaur", level: 40, moves: ["essaim_vorace", "dard_mortel", "vague_mentale", "choc_mental"], opening: ["essaim_vorace"] }, // AS
+        { speciesId: "regnantaur", level: 42 },
+        { speciesId: "ombrapanthe", level: 39 },
+        { speciesId: "gloutanoir", level: 40 },
+        { speciesId: "regnantaur", level: 44, moves: ["essaim_vorace", "dard_mortel", "vague_mentale", "choc_mental"], opening: ["essaim_vorace"] }, // AS
     ],
 
     // ===== ARÈNE EAU → GAUNTLET DES FINALS INÉDITS (Ondine) =====
@@ -168,10 +170,10 @@ export const RUN3_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     y_feuarena_g3: [{ speciesId: "corvenin", level: 28 }, { speciesId: "necarabee", level: 28 }, { speciesId: "chouhante", level: 28 }],
     y_feuarena_g4: [{ speciesId: "chouhante", level: 29 }],
     // ── ARÈNE 4 → DRAGON (Draclet/Wyverion, Carlinou/Carlembre/Dracarlin, Glacirex/Cryotyran) ──
-    y_elecarena_g1: [{ speciesId: "draclet", level: 16 }, { speciesId: "carlinou", level: 16 }, { speciesId: "wyverion", level: 30 }, { speciesId: "carlembre", level: 30 }],
-    y_elecarena_g2: [{ speciesId: "draclet", level: 15 }, { speciesId: "carlinou", level: 15 }, { speciesId: "wyverion", level: 25 }, { speciesId: "dracarlin", level: 36 }],
-    y_elecarena_g3: [{ speciesId: "cryotyran", level: 35 }, { speciesId: "wyverion", level: 20 }, { speciesId: "carlembre", level: 28 }, { speciesId: "glacirex", level: 30 }],
-    y_elecarena_g4: [{ speciesId: "wyverion", level: 30 }, { speciesId: "carlembre", level: 32 }, { speciesId: "glacirex", level: 34 }],
+    y_elecarena_g1: [{ speciesId: "wyverion", level: 20 }, { speciesId: "carlembre", level: 20 }, { speciesId: "wyverion", level: 34 }, { speciesId: "carlembre", level: 34 }],
+    y_elecarena_g2: [{ speciesId: "draclet", level: 19 }, { speciesId: "carlembre", level: 19 }, { speciesId: "wyverion", level: 29 }, { speciesId: "dracarlin", level: 40 }],
+    y_elecarena_g3: [{ speciesId: "cryotyran", level: 39 }, { speciesId: "wyverion", level: 24 }, { speciesId: "carlembre", level: 32 }, { speciesId: "glacirex", level: 34 }],
+    y_elecarena_g4: [{ speciesId: "wyverion", level: 34 }, { speciesId: "dracarlin", level: 36 }, { speciesId: "cryotyran", level: 38 }],
     // ── ARÈNE 5 → MULTI (mélange de FINALS variés, façon gauntlet) ──
     y_eauarena_g1: [{ speciesId: "maitrezenc", level: 43 }, { speciesId: "mycedruide", level: 43 }, { speciesId: "dracarlin", level: 43 }, { speciesId: "gekosmic", level: 43 }], // run 3 : Nécrocorbe → GÉKOSMIC (Centrale Psy)
     y_eauarena_g2: [{ speciesId: "hebulmin", level: 44 }, { speciesId: "omnhippo", level: 46 }, { speciesId: "regnantaur", level: 47 }],                                          // run 3 : Cryotyran → OMNHIPPO (Centrale Psy)

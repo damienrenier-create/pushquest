@@ -183,6 +183,36 @@ export const TRAINERS: TrainerData[] = [
             "Ha ! Marché conclu — le trésor est à toi.",
         ],
     },
+    // ⚓→🗝️ GARDIEN DES CLÉS (21/10/2026) : garde la porte du GYM (arène 5, Électrik) tant que le joueur n'a pas rapporté la
+    //   CLÉ volée, retrouvée sur le BATEAU (arène 4). Le PNJ posé devant le GYM est dynamique (gameStore.activeNpcs,
+    //   id KEY_GUARD_NPC_ID) ; ce dresseur, lui, est HORS CARTE (comme le Colporteur) et ne sert qu'au combat.
+    //   Niveau = celui du champion du bateau du run : run 1 Électrik 38-40 ici ; runs 2/3 dans SIGHT_RUN_TEAMS.
+    //   BATCHU (Électrik/Vol) : la seule espèce qu'AUCUN dresseur n'utilisait et que le Dex montre dès le run 1
+    //   (toutes les autres « inédites » sont réservées aux runs 2/3 ou à l'après-Ligue : les montrer ici les dévoilerait).
+    {
+        id: "y_gardien_cle",
+        name: "GARDIEN DES CLÉS",
+        title: "Portier du GYM",
+        sprite: { emoji: "🗝️", color: "#8a6a2a" },
+        mapId: "__gardien_cle__", // carte fictive : le PNJ visible est posé dynamiquement devant le GYM
+        x: -1,
+        y: -1,
+        team: [
+            { speciesId: "batchu", level: 38 },
+            { speciesId: "zappeureal", level: 38 },
+            { speciesId: "leviathonn", level: 39 },
+            { speciesId: "thundah", level: 40 },
+        ],
+        reward: 0,
+        aiLevel: "ace",
+        training: "elite",
+        intro: ["« En garde ! »"],
+        defeat: ["« La porte est ouverte. Va, l'arène t'attend. »"],
+        victory: [
+            "« Tu as l'étoffe d'un vrai dresseur. Je reprends ma clé… »",
+            "*Le gardien déverrouille la porte du GYM et s'écarte. L'arène suivante t'attend !*",
+        ],
+    },
     {
         id: "y_trainer_mia",
         name: "EXPLORATRICE MIA",
@@ -503,7 +533,7 @@ export const TRAINERS: TrainerData[] = [
         reward: 340,
         aiLevel: "trainer",
         intro: ["*Le second te barre la route de la dunette.*", "Nul n'approche des CAPITAINES sans me vaincre. En garde !"],
-        victory: ["Tu es digne d'affronter nos maîtres.", "Monte sur la passerelle… et choisis ton adversaire."],
+        victory: ["Tu es digne d'affronter nos maîtres.", "Monte sur la passerelle. Pour le BADGE ANCRE, il te faudra vaincre nos DEUX capitaines."],
         defeat: ["La passerelle reste gardée !"],
     },
     {
@@ -521,7 +551,7 @@ export const TRAINERS: TrainerData[] = [
         aiLevel: "ace",
         training: "elite",
         intro: ["*Le Capitaine tient la barre, impassible.*", "Cette Aqua Arena est MON navire. Peu de dresseurs se présentent sur la plaque… encore moins en repartent.", "Montre-moi ta valeur !"],
-        victory: ["*Le Capitaine s'incline devant les flots.*", "Tu as dompté l'Aqua Arena. Le MANOIR HANTÉ, jadis scellé, t'est désormais ouvert.", "Bon vent, dresseur."],
+        victory: ["*Le Capitaine s'incline devant les flots.*", "Tu m'as battu à la barre. Le MANOIR HANTÉ, jadis scellé, t'est désormais ouvert.", "Le BADGE ANCRE, lui, revient à qui bat TOUT l'équipage, les deux capitaines compris. Bon vent, dresseur."],
         defeat: ["Reviens quand la mer t'aura endurci."],
     },
     {
@@ -539,7 +569,7 @@ export const TRAINERS: TrainerData[] = [
         aiLevel: "ace",
         training: "elite",
         intro: ["*Le Maître d'équipage surgit de la soute royale.*", "Tu t'es posté sur MA plaque ? Courageux. Ou inconscient.", "Que la marée décide !"],
-        victory: ["*Il rend les armes dans un fracas d'acier.*", "Bien combattu. L'Aqua Arena reconnaît ta force — le MANOIR HANTÉ t'ouvre ses portes.", "Va, et ne te noie pas."],
+        victory: ["*Il rend les armes dans un fracas d'acier.*", "Bien combattu. L'Aqua Arena reconnaît ta force — le MANOIR HANTÉ t'ouvre ses portes.", "Le BADGE ANCRE ? Seulement quand TOUT l'équipage sera à terre, les deux capitaines compris. Va, et ne te noie pas."],
         defeat: ["La soute ne se rend pas si vite !"],
     },
 
@@ -1072,19 +1102,19 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "⚡", color: "#ffcc33" },
         mapId: "yellow_arena_elec", x: 4, y: 3, run3X: 2, run3Y: 5,
         team: [
-            { speciesId: "trolystrik", level: 16 },
-            { speciesId: "boltah", level: 16 },
-            { speciesId: "heatah", level: 30 },
-            { speciesId: "brutetrik", level: 30 },
+            { speciesId: "trolystrik", level: 16 }, // 16 = dernier niveau avant son évolution (Brutetrik est déjà dans l'équipe)
+            { speciesId: "boltah", level: 20 },
+            { speciesId: "heatah", level: 34 },
+            { speciesId: "brutetrik", level: 34 },
         ],
         reward: 220, aiLevel: "trainer",
         intro: ["*Un gamin recharge une bobine en faisant crépiter ses doigts.*", "La Tour Hertz ne laisse passer que ceux qui encaissent le courant. À toi !"],
         defeat: ["Court-circuit… passe à l'étage suivant."],
         rematch: {
             team: [
-                { speciesId: "boltah", level: 33 },
-                { speciesId: "heatah", level: 36 },
-                { speciesId: "brutetrik", level: 36 },
+                { speciesId: "boltah", level: 37 },
+                { speciesId: "heatah", level: 40 },
+                { speciesId: "hebulmin", level: 40 }, // Brutetrik évolue au niv 38
             ],
             reward: 50,
             intro: ["*BOBINE claque une bobine flambant neuve, l'œil brillant.*", "Revanche ! Mes nouveaux Daemons sont taillés pour la VITESSE. Suis le rythme si tu peux !"],
@@ -1096,19 +1126,19 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "⚡", color: "#ffcc33" },
         mapId: "yellow_arena_elec", x: 10, y: 2, run3X: 12, run3Y: 5,
         team: [
-            { speciesId: "electroatiss", level: 15 },
-            { speciesId: "belunode", level: 15 },
-            { speciesId: "couranti", level: 25 },
-            { speciesId: "zappeureal", level: 36 },
+            { speciesId: "electroatiss", level: 15 }, // 15 = dernier niveau avant son évolution (Couranti est déjà dans l'équipe)
+            { speciesId: "sonarque", level: 19 }, // Bélunode évolue au niv 16
+            { speciesId: "couranti", level: 29 },
+            { speciesId: "zappeureal", level: 40 },
         ],
         reward: 240, aiLevel: "trainer",
         intro: ["Je règle la résistance de chaque câble de cette tour. La tienne va lâcher !"],
         defeat: ["Surtension imprévue… tu conduis mieux que je pensais."],
         rematch: {
             team: [
-                { speciesId: "sonarque", level: 30 },
-                { speciesId: "leviathonn", level: 36 },
-                { speciesId: "zappeureal", level: 36 },
+                { speciesId: "sonarque", level: 33 }, // 33 = dernier niveau avant son évolution (Léviathonn est déjà dans l'équipe)
+                { speciesId: "leviathonn", level: 40 },
+                { speciesId: "zappeureal", level: 40 },
             ],
             reward: 50,
             intro: ["*OHM replonge ses câbles dans un bassin d'eau salée.*", "Eau ET foudre : cette fois je conduis le courant à pleine puissance. Revanche !"],
@@ -1120,20 +1150,20 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "⚡", color: "#ffcc33" },
         mapId: "yellow_arena_elec", x: 11, y: 3, run3X: 4, run3Y: 7,
         team: [
-            { speciesId: "oragron", level: 35 },
-            { speciesId: "fulguror", level: 20 }, // teaser: Fulguror (ÉLEC) remplace un pantheon redondant
-            { speciesId: "namicha", level: 28 },
-            { speciesId: "voltapanthe", level: 30 },
+            { speciesId: "oragron", level: 39 },
+            { speciesId: "fulguror", level: 24 }, // teaser: Fulguror (ÉLEC) remplace un pantheon redondant
+            { speciesId: "namizeus", level: 32 }, // Namicha évolue au niv 30
+            { speciesId: "voltapanthe", level: 34 },
         ],
         reward: 270, aiLevel: "trainer",
         intro: ["*Le vent s'engouffre dans la tour, chargé d'électricité statique.*", "Mon Oragron frappe avant l'orage. Tu ne le verras pas venir."],
         defeat: ["Foudroyé en plein vol…"],
         rematch: {
             team: [
-                { speciesId: "oragron", level: 35 },
-                { speciesId: "namizeus", level: 35 },
-                { speciesId: "jerbiwat", level: 35 },
-                { speciesId: "voltapanthe", level: 35 },
+                { speciesId: "oragron", level: 39 },
+                { speciesId: "namizeus", level: 39 },
+                { speciesId: "jerbiwat", level: 39 },
+                { speciesId: "voltapanthe", level: 39 },
             ],
             reward: 50,
             intro: ["*FOUDRE siffle ; des ombres électriques rampent à ses pieds.*", "Revanche ! Mes spectres frappent vite et se font insaisissables. Bonne chance pour les toucher."],
@@ -1145,18 +1175,18 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "⚡", color: "#ffcc33" },
         mapId: "yellow_arena_elec", x: 12, y: 4, run3X: 10, run3Y: 7,
         team: [
-            { speciesId: "brutetrik", level: 30 },
-            { speciesId: "couranti", level: 32 },
-            { speciesId: "voltapanthe", level: 34 },
+            { speciesId: "brutetrik", level: 34 },
+            { speciesId: "zappeureal", level: 36 }, // Couranti évolue au niv 36
+            { speciesId: "voltapanthe", level: 38 },
         ],
         reward: 300, aiLevel: "trainer",
         intro: ["Cent mille volts gardent ce palier. Touche le garde-fou si tu l'oses."],
         defeat: ["Disjoncté… VOLTA t'attend au sommet de la Tour."],
         rematch: {
             team: [
-                { speciesId: "thundah", level: 40 },
-                { speciesId: "leviathonn", level: 36 },
-                { speciesId: "namizeus", level: 38 },
+                { speciesId: "thundah", level: 44 },
+                { speciesId: "leviathonn", level: 40 },
+                { speciesId: "namizeus", level: 42 },
             ],
             reward: 50,
             intro: ["*ARC pousse le voltage de la Tour à son maximum.*", "Dernier garde-fou avant VOLTA. Ma revanche te disjonctera à coup sûr !"],
@@ -1172,11 +1202,11 @@ export const TRAINERS: TrainerData[] = [
         requiresRematch: ["y_elecarena_g1", "y_elecarena_g2", "y_elecarena_g3", "y_elecarena_g4"],
         team: [
             // Movesets explicites : chaque Daemon de la Tour a au moins UNE attaque ÉLEC (arène élec oblige).
-            { speciesId: "hebulmin", level: 38, moves: ["fulgurance", "crochet_maitre", "etincelle", "vive_attaque"] },
-            { speciesId: "oragron", level: 35, moves: ["fulgurance", "fonce_bec", "etincelle", "vive_attaque"] },
-            { speciesId: "zappeureal", level: 36, moves: ["fulgurance", "etincelle", "cage_eclair", "vive_attaque"] },
+            { speciesId: "hebulmin", level: 42, moves: ["fulgurance", "crochet_maitre", "etincelle", "vive_attaque"] },
+            { speciesId: "oragron", level: 39, moves: ["fulgurance", "fonce_bec", "etincelle", "vive_attaque"] },
+            { speciesId: "zappeureal", level: 40, moves: ["fulgurance", "etincelle", "cage_eclair", "vive_attaque"] },
             // L'AS : ouvre sur sa SIGNATURE Surtension (charge → décharge foudroyante à haut critique).
-            { speciesId: "voltapanthe", level: 40, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
+            { speciesId: "voltapanthe", level: 44, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
         ],
         // Phase 1 = Badge. Puis ENCHAÎNEMENT DIRECT sur la phase 2 (rematch) sans ressortir (chainRematch).
         reward: 0, aiLevel: "trainer", badge: "elec", chainRematch: true,
@@ -1194,12 +1224,12 @@ export const TRAINERS: TrainerData[] = [
             // gardes étaient déjà requises pour l'atteindre). Deux fauves OUVRENT sur Mirage
             // (esquive) → l'AS Voltapanthe reste sur Surtension. Récompense : les 2 CT signature.
             team: [
-                { speciesId: "hebulmin", level: 41, moves: ["fulgurance", "crochet_maitre", "etincelle", "seisme"] },
-                { speciesId: "jerbiwat", level: 42, moves: ["fulgurance", "vague_mentale", "etincelle", "vive_attaque"] },
-                { speciesId: "leviathonn", level: 43, moves: ["fulgurance", "hydrocanon", "etincelle", "lame_eau"] },
-                { speciesId: "thundah", level: 44, moves: ["mirage", "fulgurance", "flamme_ardente", "etincelle"], opening: ["mirage"] },
-                { speciesId: "namizeus", level: 45, moves: ["mirage", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["mirage"] },
-                { speciesId: "voltapanthe", level: 46, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
+                { speciesId: "hebulmin", level: 45, moves: ["fulgurance", "crochet_maitre", "etincelle", "seisme"] },
+                { speciesId: "jerbiwat", level: 46, moves: ["fulgurance", "vague_mentale", "etincelle", "vive_attaque"] },
+                { speciesId: "leviathonn", level: 47, moves: ["fulgurance", "hydrocanon", "etincelle", "lame_eau"] },
+                { speciesId: "thundah", level: 48, moves: ["mirage", "fulgurance", "flamme_ardente", "etincelle"], opening: ["mirage"] },
+                { speciesId: "namizeus", level: 49, moves: ["mirage", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["mirage"] },
+                { speciesId: "voltapanthe", level: 50, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
             ],
             giftCts: ["ct22", "ct25"], // Surtension + Mirage, remises ensemble
             intro: [
@@ -1295,7 +1325,7 @@ export const TRAINERS: TrainerData[] = [
         ],
         defeat: [
             "Balayée… par une vague plus haute que la mienne.",
-            "Le Badge Eau est à toi — et avec lui, TES CINQ BADGES sont enfin réunis !",
+            "Le Badge Eau est à toi — et avec lui, TES SIX BADGES sont enfin réunis !",
             "*ONDINE dépose une capsule ruisselante au creux de ta main.*",
             "Garde ma DÉFERLANTE : que la marée porte tes pas jusqu'au trône du Nexus !",
             "*Les eaux du sanctuaire se mettent à refléter d'autres dresseurs…*",

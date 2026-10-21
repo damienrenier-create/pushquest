@@ -160,6 +160,7 @@ export function wildLevelCap(badges: readonly string[]): number {
     if (!badges.includes("plante")) return 12
     if (!badges.includes("roche")) return 17
     if (!badges.includes("feu")) return 30
+    if (!badges.includes("ancre")) return 40 // le BATEAU (arène 4, 21/10/2026) s'intercale entre le Feu et l'Électrik
     if (!badges.includes("elec")) return 45
     return 60
 }

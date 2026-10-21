@@ -117,7 +117,7 @@ function EnergyPage() {
         return (
             <>
                 <P>🎉 En <b>mode fun</b>, ton énergie de combat vient des <b>DÉFIS</b> (onglet <b>« 🎉 Défis »</b> du labo, à l'étage).</P>
-                <P><b>Démarrage offert</b> : 10 000⚡ + 10 Nexus-Ball — un gros pécule pour t'élancer. Ensuite tu recharges via <b>Blitz d'arène</b> (100→300⚡, boosté par le niveau de ton équipe), <b>Sprint de capture</b> (75×N⚡) et le <b>Pokémon du jour</b> (40-160⚡). Le casino (jetons au sol, roulette, blackjack), les <b>duels de reflets</b> et tes <b>hauts faits</b> rechargent aussi. Le <b>Prof. Chen</b> à l'étage offre 2 cadeaux.</P>
+                <P><b>Démarrage offert</b> : 10 000⚡ + 10 Nexus-Ball — un gros pécule pour t'élancer. Ensuite tu recharges via <b>Blitz d'arène</b> (100→350⚡, boosté par le niveau de ton équipe), <b>Sprint de capture</b> (75×N⚡) et le <b>Pokémon du jour</b> (40-160⚡). Le casino (jetons au sol, roulette, blackjack), les <b>duels de reflets</b> et tes <b>hauts faits</b> rechargent aussi. Le <b>Prof. Chen</b> à l'étage offre 2 cadeaux.</P>
                 <P>Chaque combat t'ouvre une <b>réserve</b> d'énergie qui <b>grandit avec tes badges</b> (200 +150 par badge) ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             </>
         )
@@ -179,7 +179,7 @@ export const TOPICS: { t: string; body: ReactNode }[] = [
     {
         t: "📊 Niveau de l'équipe", body: <>
             <P>Avant le badge <b>Roche</b>, les Daemons sauvages se calent sur ton Daemon de <b>tête</b> (le 1er de l'équipe) ; ensuite, sur la <b>moyenne</b> de ton équipe.</P>
-            <P>Chaque <b>badge d'arène</b> relève le <b>plafond</b> de niveau des sauvages : <b>12 → 17 → 30 → 45 → 60</b>. Tes tout premiers combats sont volontairement plus doux.</P>
+            <P>Chaque <b>badge d'arène</b> relève le <b>plafond</b> de niveau des sauvages : <b>12 → 17 → 30 → 40 → 45 → 60</b>. Tes tout premiers combats sont volontairement plus doux.</P>
         </>,
     },
     {

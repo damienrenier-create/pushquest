@@ -110,9 +110,10 @@ describe("sbire — conseils du mode FUN", () => {
         expect(sbireExplanation(1).slice(0, SBIRE_TIPS[0].length)).toEqual(SBIRE_TIPS[0])
         expect(sbireExplanation(6, true).at(-1)).toBe(SBIRE_CLAN_TIPS_FUN[5])
     })
-    it("le conseil d'arène parle des CINQ arènes (plus de « trois salles »)", () => {
+    it("le conseil d'arène parle des SIX arènes, dont le bateau (plus de « trois salles »)", () => {
         expect(SBIRE_TIPS.flat().join(" ")).not.toContain("Trois salles")
-        expect(SBIRE_TIPS_FUN.flat().join(" ")).toContain("Cinq arènes")
+        expect(SBIRE_TIPS.flat().join(" ")).toContain("Six arènes")
+        expect(SBIRE_TIPS_FUN.flat().join(" ")).toContain("Six arènes")
     })
     it("le client passe le mode de jeu au sbire", () => {
         const ui = fs.readFileSync(path.join(process.cwd(), "src/app/gamebook/yellow/YellowDevClient.tsx"), "utf8")

@@ -7,11 +7,15 @@
 //   - À la victoire d'une arène : palier d'ÉNERGIE (700 → 1500), seule source d'énergie du run avec les 500
 //     de départ. Données pures, React-free.
 
-/** PLAFOND de RECHARGE d'énergie à la victoire de chaque arène (index 0 = arène 1 … index 4 = arène 5).
- *  NOUVELLE RÈGLE (équilibrage) : l'arène ne DONNE PAS un palier additif — elle RECHARGE la réserve JUSQU'À
- *  ce plafond (jamais au-dessus, jamais en-dessous de la réserve actuelle). Le joueur quitte donc l'arène N
- *  avec AU PLUS cap[N] : 500 → 500 → 600 → 700 → 800 → 1000. Empêche l'accumulation (700 + reste = trop). */
+/** PLAFOND de RECHARGE d'énergie à la victoire de chaque arène À BOSS FIGÉ (index = ordre de RUN3_ARENAS :
+ *  Plante, Roche, Feu, Électrik, Eau) — INCHANGÉS depuis le début du concours (scores « Survivant » comparables).
+ *  Le BATEAU (arène 4 depuis le 21/10/2026, sans boss figé) recharge à RUN3_BOAT_ENERGY : l'étape de l'Électrik
+ *  démarre ainsi à 800 (le gardien des clés en plus) au lieu de 700 avant → même budget qu'avant, à un combat près.
+ *  RÈGLE (équilibrage) : l'arène ne DONNE PAS un palier additif — elle RECHARGE la réserve JUSQU'À ce plafond
+ *  (jamais au-dessus, jamais en-dessous de la réserve actuelle). Empêche l'accumulation (700 + reste = trop). */
 export const RUN3_ARENA_ENERGY = [500, 600, 700, 800, 1000] as const
+/** Palier de recharge du BATEAU (badge ANCRE, arène 4) au run 3. */
+export const RUN3_BOAT_ENERGY = 800
 
 /** Plafond de recharge à la victoire de l'arène `arenaIndex` (0-based). 0 hors bornes. */
 export function run3ArenaEnergy(arenaIndex: number): number {
@@ -37,8 +41,8 @@ export const RUN3_ARENAS: readonly Run3ArenaDef[] = [
     { order: 1, mapId: "yellow_arena",       bossTrainerId: "y_arena_druide",   badge: "plante", guardType: "Glace",          energy: 500 },
     { order: 2, mapId: "yellow_arena_roche", bossTrainerId: "y_rocharena_boss", badge: "roche",  guardType: "Combat",         energy: 600 },
     { order: 3, mapId: "yellow_arena_feu",   bossTrainerId: "y_feuarena_boss",  badge: "feu",    guardType: "Poison/Spectre", energy: 700 },
-    { order: 4, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 800 },
-    { order: 5, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1000 },
+    { order: 5, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 800 }, // arène 5 (le BATEAU est la 4e, sans boss figé)
+    { order: 6, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1000 },
 ] as const
 
 /** Slots badge des 5 arènes dans l'ordre de jeu → à passer à pickRun3ArenaBosses. */

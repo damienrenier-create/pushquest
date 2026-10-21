@@ -47,24 +47,29 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team, cf. ci-dessous.)
         // AQUA ARENA (bateau) — RUN 2 : thème EAU (remix Sartay). JUSTE MILIEU : ossature de FINALS EAU costauds + UN
         //   clin d'œil PÊCHABLE par matelot (Osquille/Rô/Braisécaille) ; GEAUCKÉ (giga-rare) = trophée du boss final. ACE = Léviabysse + Chant du Naufrageur.
-        y_aqua_n1: [{ speciesId: "razmaree", level: 36 }, { speciesId: "osquille", level: 36 }],
-        y_aqua_n2: [{ speciesId: "naiadrak", level: 36 }, { speciesId: "sonarque", level: 36 }, { speciesId: "ro", level: 36 }],
-        y_aqua_n3: [{ speciesId: "leviathonn", level: 40 }, { speciesId: "braisecaille", level: 37 }],
-        y_aqua_n4: [{ speciesId: "osquille", level: 37 }, { speciesId: "crapotaure", level: 37 }, { speciesId: "ondaloutre", level: 37 }],
-        y_aqua_boss_a: [{ speciesId: "razmaree", level: 38 }, { speciesId: "naiadrak", level: 38 }, { speciesId: "sonarque", level: 38 }, { speciesId: "mobyd", level: 39 }, { speciesId: "leviabysse", level: 40, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
-        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 38 }, { speciesId: "crapotaure", level: 38 }, { speciesId: "naiadrak", level: 39 }, { speciesId: "geaucke", level: 39 }, { speciesId: "leviathonn", level: 40 }],
+        y_aqua_n1: [{ speciesId: "razmaree", level: 39 }, { speciesId: "osquille", level: 39 }],
+        y_aqua_n2: [{ speciesId: "naiadrak", level: 39 }, { speciesId: "sonarque", level: 39 }, { speciesId: "ro", level: 39 }],
+        y_aqua_n3: [{ speciesId: "leviathonn", level: 43 }, { speciesId: "braisecaille", level: 40 }],
+        y_aqua_n4: [{ speciesId: "osquille", level: 40 }, { speciesId: "crapotaure", level: 40 }, { speciesId: "ondaloutre", level: 40 }],
+        y_aqua_boss_a: [{ speciesId: "razmaree", level: 41 }, { speciesId: "naiadrak", level: 41 }, { speciesId: "sonarque", level: 41 }, { speciesId: "mobyd", level: 42 }, { speciesId: "leviabysse", level: 43, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
+        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 41 }, { speciesId: "crapotaure", level: 41 }, { speciesId: "naiadrak", level: 42 }, { speciesId: "geaucke", level: 42 }, { speciesId: "leviathonn", level: 43 }],
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 2 : stades intermédiaires/finaux Glace.
-        y_frere_frisquet: [{ speciesId: "glaceer", level: 46 }, { speciesId: "iorours", level: 47 }],
-        y_frere_grelot: [{ speciesId: "glacirex", level: 48 }, { speciesId: "glaceer", level: 49 }],
-        y_frere_glagla: [{ speciesId: "iorours", level: 50 }, { speciesId: "glaceer", level: 50 }],
-        y_frere_givre: [{ speciesId: "iorours", level: 51 }, { speciesId: "cryotyran", level: 51 }, { speciesId: "panthegel", level: 52 }],
-        y_frere_blizzard: [{ speciesId: "yetiroche", level: 53 }, { speciesId: "auroraur", level: 53 }, { speciesId: "cryotyran", level: 54 }, { speciesId: "orcaline", level: 55 }],
+        y_frere_frisquet: [{ speciesId: "glaceer", level: 19 }, { speciesId: "marmoterre", level: 19 }],
+        y_frere_grelot: [{ speciesId: "glacirex", level: 21 }, { speciesId: "glaceer", level: 21 }],
+        y_frere_glagla: [{ speciesId: "iorours", level: 23 }, { speciesId: "glaceer", level: 23 }],
+        y_frere_givre: [{ speciesId: "iorours", level: 25 }, { speciesId: "glacirex", level: 25 }, { speciesId: "panthegel", level: 26 }],
+        y_frere_blizzard: [{ speciesId: "iorours", level: 27 }, { speciesId: "glaceer", level: 27 }, { speciesId: "glacirex", level: 28 }, { speciesId: "orcaline", level: 29 }],
         // PLAGE (dresseurs à vue) — RUN 2 : thème SPECTRE (remix Sartay ; les spectres ont migré du Manoir vers la crique).
-        y_plage_pecheur: [{ speciesId: "brookhante", level: 50 }, { speciesId: "archibouh", level: 51 }],
+        y_plage_pecheur: [{ speciesId: "brookhante", level: 35 }, { speciesId: "chouhante", level: 36 }],
         // Shadow (NORMAL/SPECTRE) : 2 attaques TÉNÈBRES (devoreur_ombres/onde_obscure) FORCÉES → seules capables de percer
         //   un adversaire Normal/Spectre (ex. Nécrossum de Zyran), sinon immunité mutuelle = combat impossible à finir.
-        y_plage_nageuse: [{ speciesId: "chouhante", level: 50 }, { speciesId: "shadow", level: 51, moves: ["devoreur_ombres", "onde_obscure", "griffe_spectrale", "tranche"] }, { speciesId: "revemante", level: 52 }],
-        y_plage_marin: [{ speciesId: "shadow", level: 50, moves: ["devoreur_ombres", "onde_obscure", "griffe_spectrale", "tranche"] }, { speciesId: "brookhante", level: 51 }],
+        y_plage_nageuse: [{ speciesId: "chouhante", level: 35 }, { speciesId: "shade", level: 36, moves: ["devoreur_ombres","onde_obscure","griffe_spectrale","tranche"] }, { speciesId: "necarabee", level: 37 }],
+        y_plage_marin: [{ speciesId: "shade", level: 36, moves: ["devoreur_ombres","onde_obscure","griffe_spectrale","tranche"] }, { speciesId: "brookhante", level: 37 }],
+        // ⚓ Arène 4 = le bateau (21/10/2026) : SVEN (Grotte Gelée) un cran plus dur, et le GARDIEN DES CLÉS de l'arène 5.
+        y_rouquin_gelee: [{ speciesId: "crocodaillus", level: 28 }, { speciesId: "jerbiwat", level: 28 }, { speciesId: "astracorne", level: 28 }],
+        // GARDIEN DES CLÉS — runs 2/3 : 4 espèces qu'AUCUN autre dresseur n'utilise, toutes visibles au Dex dès le run 2
+        //   (Varovental = run 2 ; Ptérosidhe et Cérébium = après-Ligue). Batchu le suit depuis le run 1.
+        y_gardien_cle: [{ speciesId: "batchu", level: 41 }, { speciesId: "varovental", level: 41 }, { speciesId: "pterosidhe", level: 42 }, { speciesId: "cerebium", level: 43 }],
     },
     // ── RUN 3 ──
     run3: {
@@ -97,21 +102,24 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         ],
         // (Dresseurs B2F : PAS d'entrée ici — équipe unique niv 88 dans TrainerData.team.)
         // AQUA ARENA (bateau) — RUN 3 : thème PLANTE/FEU/ÉLEC. Pas de signature imposée (ACE = finale pure).
-        y_aqua_n1: [{ speciesId: "leviathonn", level: 36 }, { speciesId: "flamkure", level: 35 }],
-        y_aqua_n2: [{ speciesId: "zappeureal", level: 36 }, { speciesId: "cerfeuillu", level: 36 }, { speciesId: "calderont", level: 36 }],
-        y_aqua_n3: [{ speciesId: "thundah", level: 37 }, { speciesId: "druidours", level: 37 }],
-        y_aqua_n4: [{ speciesId: "toucanyon", level: 37 }, { speciesId: "gloutanoir", level: 37 }, { speciesId: "brutetrik", level: 37 }],
-        y_aqua_boss_a: [{ speciesId: "zappeureal", level: 38 }, { speciesId: "leviathonn", level: 38 }, { speciesId: "thundah", level: 38 }, { speciesId: "oragron", level: 39 }, { speciesId: "fulguror", level: 40 }],
-        y_aqua_boss_b: [{ speciesId: "calderont", level: 38 }, { speciesId: "loupyre", level: 38 }, { speciesId: "druidours", level: 38 }, { speciesId: "gloutanoir", level: 39 }, { speciesId: "pyropanthe", level: 40 }],
+        y_aqua_n1: [{ speciesId: "leviathonn", level: 42 }, { speciesId: "pyrokoss", level: 41 }], // Flamkure évolue au niv 36
+        y_aqua_n2: [{ speciesId: "zappeureal", level: 42 }, { speciesId: "cerfeuillu", level: 42 }, { speciesId: "calderont", level: 42 }],
+        y_aqua_n3: [{ speciesId: "thundah", level: 43 }, { speciesId: "druidours", level: 43 }],
+        y_aqua_n4: [{ speciesId: "toucanyon", level: 43 }, { speciesId: "gloutanoir", level: 43 }, { speciesId: "hebulmin", level: 43 }], // Brutetrik évolue au niv 38
+        y_aqua_boss_a: [{ speciesId: "zappeureal", level: 44 }, { speciesId: "leviathonn", level: 44 }, { speciesId: "thundah", level: 44 }, { speciesId: "oragron", level: 45 }, { speciesId: "fulguror", level: 46 }],
+        y_aqua_boss_b: [{ speciesId: "calderont", level: 44 }, { speciesId: "loupyre", level: 44 }, { speciesId: "druidours", level: 44 }, { speciesId: "gloutanoir", level: 45 }, { speciesId: "pyropanthe", level: 46 }],
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 3 : stades finaux + lignée Guizer (run 3) + Givroptère (post-Ligue).
-        y_frere_frisquet: [{ speciesId: "auroraur", level: 55 }, { speciesId: "yetiroche", level: 55 }],
-        y_frere_grelot: [{ speciesId: "cryotyran", level: 56 }, { speciesId: "guizer", level: 55 }, { speciesId: "auroraur", level: 56 }],
-        y_frere_glagla: [{ speciesId: "yetiroche", level: 57 }, { speciesId: "dalugazer", level: 57 }, { speciesId: "morrow", level: 57 }],
-        y_frere_givre: [{ speciesId: "yetiroche", level: 58 }, { speciesId: "cryotyran", level: 58 }, { speciesId: "mobyd", level: 58 }, { speciesId: "morrow", level: 59 }],
-        y_frere_blizzard: [{ speciesId: "yetiroche", level: 60 }, { speciesId: "auroraur", level: 60 }, { speciesId: "cryotyran", level: 61 }, { speciesId: "givroptere", level: 61 }, { speciesId: "orcaline", level: 62 }],
+        y_frere_frisquet: [{ speciesId: "glaceer", level: 19 }, { speciesId: "marmoterre", level: 19 }],
+        y_frere_grelot: [{ speciesId: "glacirex", level: 21 }, { speciesId: "guizer", level: 21 }, { speciesId: "glaceer", level: 21 }],
+        y_frere_glagla: [{ speciesId: "iorours", level: 23 }, { speciesId: "dalugazer", level: 23 }, { speciesId: "morrow", level: 23 }],
+        y_frere_givre: [{ speciesId: "iorours", level: 25 }, { speciesId: "glacirex", level: 25 }, { speciesId: "dalugazer", level: 26 }, { speciesId: "morrow", level: 26 }],
+        y_frere_blizzard: [{ speciesId: "iorours", level: 27 }, { speciesId: "glaceer", level: 27 }, { speciesId: "glacirex", level: 28 }, { speciesId: "givroptere", level: 29 }, { speciesId: "orcaline", level: 29 }],
         // PLAGE (dresseurs à vue) — RUN 3.
-        y_plage_pecheur: [{ speciesId: "razmaree", level: 58 }, { speciesId: "crapotaure", level: 59 }],
-        y_plage_nageuse: [{ speciesId: "naiadrak", level: 58 }, { speciesId: "oragron", level: 59 }, { speciesId: "leviathonn", level: 60 }],
-        y_plage_marin: [{ speciesId: "aquilothan", level: 58 }, { speciesId: "necrocorbe", level: 59 }],
+        y_plage_pecheur: [{ speciesId: "razmaree", level: 38 }, { speciesId: "crapotaure", level: 39 }],
+        y_plage_nageuse: [{ speciesId: "naiadrak", level: 38 }, { speciesId: "oragron", level: 39 }, { speciesId: "leviathonn", level: 40 }],
+        y_plage_marin: [{ speciesId: "aquilothan", level: 39 }, { speciesId: "necrocorbe", level: 40 }],
+        // ⚓ Arène 4 = le bateau (21/10/2026) : SVEN (Grotte Gelée) un cran plus dur, et le GARDIEN DES CLÉS de l'arène 5.
+        y_rouquin_gelee: [{ speciesId: "crocodaillus", level: 28 }, { speciesId: "jerbiwat", level: 28 }, { speciesId: "astracorne", level: 28 }],
+        y_gardien_cle: [{ speciesId: "batchu", level: 44 }, { speciesId: "varovental", level: 44 }, { speciesId: "pterosidhe", level: 45 }, { speciesId: "cerebium", level: 46 }],
     },
 }

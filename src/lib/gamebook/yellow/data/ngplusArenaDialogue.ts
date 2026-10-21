@@ -104,7 +104,7 @@ export const RUN2_DIALOGUE: Record<string, Run2Dialogue> = {
         defeat: [
             "Toi… tu as fait VACILLER des colosses. Bien peu en sont capables.",
             "Reçois la FRAPPE ATLAS : elle inflige TOUJOURS ton niveau en dégâts, quoi qu'il arrive. Le poids du monde dans un seul poing.",
-            "Les cinq badges re-typés sont à toi. Ce qui t'attend au-delà… dépasse l'entendement.",
+            "Les six badges du Remix sont à toi. Ce qui t'attend au-delà… dépasse l'entendement.",
         ],
     },
 }

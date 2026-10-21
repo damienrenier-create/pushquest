@@ -59,6 +59,8 @@ import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { ALL_BADGE_IDS } from "../data/badges"
+import { BOAT_BADGE, KEY_GUARD_TRAINER_ID, KEY_GUARD_NPC_ID, KEY_GUARD_NAME, KEY_GUARD_SPRITE, KEY_GUARD_MAP_ID, KEY_GUARD_POS, KEY_GUARD_STORY_LINES, KEY_GUARD_CHALLENGE_LINES, keyGuardActive, withImpliedAncre, gymBadgeCount } from "../data/boatArena"
 import { run2ArenaIntro, run2ArenaDefeat } from "../data/ngplusArenaDialogue"
 import { clanChiefPressA, executeClanJoin } from "./clanChief"
 import type { ClanKey } from "../data/clans"
@@ -253,6 +255,23 @@ export function activeNpcs() {
             initialX: NEMESIS_CHALLENGE_POS.x,
             initialY: NEMESIS_CHALLENGE_POS.y,
             dialoguesAfter: nemesisIntroLines(nemesisRewardName(nemCfg.rewardSpecies)),
+        }]
+    }
+    // 🗝️ GARDIEN DES CLÉS (21/10/2026) : devant la porte du GYM de la Ville Jaune tant que la prochaine arène du GYM est
+    //   l'Électrik (badge Feu, pas Électrik) et qu'il n'a pas été battu. Sa clé a été volée → elle est sur le BATEAU
+    //   (arène 4). Planche Gen 3 fournie par Sartay (rendue par MapView via npc.gen3). Cf. data/boatArena.
+    if (keyGuardActive(getPlayerSave().badges, isTrainerDefeated(KEY_GUARD_TRAINER_ID))) {
+        list = [...list, {
+            id: KEY_GUARD_NPC_ID,
+            name: KEY_GUARD_NAME,
+            mapId: KEY_GUARD_MAP_ID,
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "🗝️", color: "#8a6a2a" }, // repli si la planche Gen 3 manque
+            gen3: { url: KEY_GUARD_SPRITE },
+            initialX: KEY_GUARD_POS.x,
+            initialY: KEY_GUARD_POS.y,
+            dialoguesAfter: [...KEY_GUARD_STORY_LINES],
         }]
     }
     // FASHION VICTIM — à VILLE JAUNE, visible SEULEMENT à partir du 1er badge d'arène (elle n'existe pas avant : un tout
@@ -525,7 +544,9 @@ function villeJauneSageSpots(): [number, number][] {
         reach.push(cur)
         stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
     }
-    sageSpotsCache = reach.filter(([x, y]) => m.tiles[y][x] !== "grassTall") // spot final : pas de hautes herbes
+    // Cases RÉSERVÉES : la place du GARDIEN DES CLÉS (devant le GYM) et les PORTES (un PNJ posé dessus bloquerait l'entrée).
+    const reserved = new Set([`${KEY_GUARD_POS.x},${KEY_GUARD_POS.y}`, ...(m.buildings ?? []).map((b) => `${b.x + b.doorX},${b.y + b.doorY}`)])
+    sageSpotsCache = reach.filter(([x, y]) => m.tiles[y][x] !== "grassTall" && !reserved.has(`${x},${y}`)) // spot final : pas de hautes herbes
     if (!sageSpotsCache.length) sageSpotsCache = reach.length ? reach : [[18, 18]]
     return sageSpotsCache
 }
@@ -1093,6 +1114,15 @@ function aceGiftKind(): "pantheon" | "nemesis" {
     return getActiveWorld() === "ngplus" && getNgplusNemesisSpeciesId() ? "nemesis" : "pantheon"
 }
 
+/** 🗝️ Dialogue du GARDIEN DES CLÉS (PNJ ou porte du GYM) : l'histoire du voleur sans le badge ANCRE ; avec, le défi
+ *  — le combat se lance à la fermeture du dialogue (pendingTrainerId, comme les dresseurs d'arène). */
+function keyGuardDialogue(): { dialogue: ActiveDialogue; pendingTrainerId?: string; pendingRematch?: boolean } {
+    if (!getPlayerSave().badges.includes(BOAT_BADGE)) {
+        return { dialogue: { npcId: KEY_GUARD_NPC_ID, npcName: KEY_GUARD_NAME, lineIndex: 0, lines: [...KEY_GUARD_STORY_LINES] } }
+    }
+    return { dialogue: { npcId: KEY_GUARD_NPC_ID, npcName: KEY_GUARD_NAME, lineIndex: 0, lines: [...KEY_GUARD_CHALLENGE_LINES] }, pendingTrainerId: KEY_GUARD_TRAINER_ID, pendingRematch: false }
+}
+
 function arenaIntroLines(t: { id: string; intro: string[]; introFun?: string[] }): string[] {
     // MODE FUN : intro sans allusion à l'effort réel quand le dresseur en a une (cf. Trainer.introFun).
     const intro = getGameMode() === "fun" && t.introFun ? t.introFun : t.intro
@@ -1248,7 +1278,8 @@ function tryLaunchAce(): ActiveDialogue | null {
     // RUN 3 : ACE sort le STARTER qui CONTRE le tien (triangle) comme némésis, rétro-évolué à son niveau.
     const run3 = getActiveWorld() === "run3"
     const nemesisSpeciesId = ngplus ? (getNgplusNemesisSpeciesId() ?? undefined) : run3 ? (getRun3AceNemesis() ?? undefined) : undefined
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length, ngplus, run3, nemesisSpeciesId })
+    // ⚓ Panthères d'ACE : paliers calibrés sur 5 arènes (3 → 1 évoluée, 4 → 2, 5 → 3) → le badge du bateau n'en compte pas.
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: gymBadgeCount(getPlayerSave().badges), ngplus, run3, nemesisSpeciesId })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
@@ -1744,6 +1775,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 : exit.targetMapId
             let spawnX = exit.targetSpawnX
             let spawnY = exit.targetSpawnY
+            // 🗝️ ARÈNE 5 (Électrik, porte du GYM) FERMÉE tant que le GARDIEN DES CLÉS n'est pas battu : sans le badge
+            //   ANCRE, il raconte le vol de la clé (partie sur le BATEAU) ; avec, il défie le joueur (combat à la fermeture).
+            if (targetMapId === "yellow_arena_elec" && keyGuardActive(getPlayerSave().badges, isTrainerDefeated(KEY_GUARD_TRAINER_ID))) {
+                set({ player: next, ...keyGuardDialogue() })
+                scheduleSave(next)
+                return
+            }
             // SALLE ULTIME — la porte droite du miroir (présente au SEUL palier OR) ne mène à la salle ultime (ton reflet
             //   argent) qu'APRÈS avoir vaincu le Dieu Spaghetti DANS CETTE run (flag transient). Sinon (boss pas encore
             //   battu, ou save d'avant la feature) → porte SCELLÉE : CUL-DE-SAC (on annule le pas). Bronze/argent n'ont PAS
@@ -1840,7 +1878,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // du contenu ici (au lieu d'un simple mur). Pas de téléportation : on reste sur place.
             if (targetMapId === "yellow_ligue_glace" && player.mapId === "yellow_cendreville") {
                 const badges = getPlayerSave().badges
-                const allBadges = (["plante", "roche", "feu", "eau", "elec"] as const).every((b) => badges.includes(b))
+                // Les SIX badges (dont l'ANCRE du bateau) ; une save d'avant le bateau compte son badge Électrik/Eau pour l'ancre.
+                const allBadges = ALL_BADGE_IDS.every((b) => withImpliedAncre(badges).includes(b))
                 if (!allBadges) {
                     set({
                         player: next,
@@ -3083,6 +3122,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // DÉFI NÉMÉSIS (vœu de Jacanon). Déjà tenté → le PNJ a normalement disparu (gate !done dans activeNpcs) ;
         //   filet défensif : si on l'atteint encore, il rappelle l'issue. Sinon → avertissement puis combat (1 essai,
         //   armé via pendingNemesis, lancé à la fermeture du dialogue). L'essai n'est consommé qu'au win/lose (finishBattle).
+        // 🗝️ GARDIEN DES CLÉS (devant le GYM) : histoire du voleur, ou défi si la clé est rapportée (cf. keyGuardDialogue).
+        if (npc.id === KEY_GUARD_NPC_ID) {
+            set(keyGuardDialogue())
+            return
+        }
         if (npc.id === NEMESIS_CHALLENGE_TRAINER_ID) {
             const nemCfg = nemesisChallengeFor(currentNickname)
             const rewardName = nemesisRewardName(nemCfg?.rewardSpecies ?? "")

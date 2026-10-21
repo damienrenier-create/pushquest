@@ -68,13 +68,13 @@ export const FUN_SPRINT_WINDOW_MS = 10 * 60 * 1000   // 10 min
 export const FUN_DAILY_WINDOW_MS = 60 * 60 * 1000    // 1 h
 
 // ── Récompenses (chiffres Sartay) ─────────────────────────────────────────────────────────────────────────────
-/** ARÈNES d'un run : le Blitz récompense la conquête d'une NOUVELLE arène (100 → 300 selon son numéro), donc 5 réussites
- *  au plus par run. Une fois les 5 badges du monde en poche, il n'est plus proposé : avant le 20/10/2026 il se lançait quand
- *  même et ne pouvait JAMAIS réussir (refaire une arène déjà conquise ne donne pas de badge — question de Rob du 08/09). */
-export const FUN_ARENA_COUNT = 5
+/** ARÈNES d'un run : le Blitz récompense la conquête d'une NOUVELLE arène (100 → 350 selon son numéro), donc 6 réussites
+ *  au plus par run (6 arènes depuis le 21/10/2026 : le bateau est la 4e). Une fois les 6 badges du monde en poche, il n'est
+ *  plus proposé : avant le 20/10/2026 il se lançait quand même et ne pouvait JAMAIS réussir (question de Rob du 08/09). */
+export const FUN_ARENA_COUNT = 6
 export function funArenaOpen(badgeCount: number): boolean { return Math.max(0, Math.floor(badgeCount || 0)) < FUN_ARENA_COUNT }
-/** ARÈNE : 100 (1re) → 300 (5e). `badgeCount` = nb de badges APRÈS la victoire (1..5). */
-export function funArenaReward(badgeCount: number): number { return 50 + 50 * Math.max(1, Math.min(5, badgeCount)) }
+/** ARÈNE : 100 (1re) → 350 (6e). `badgeCount` = nb de badges APRÈS la victoire (1..6). */
+export function funArenaReward(badgeCount: number): number { return 50 + 50 * Math.max(1, Math.min(FUN_ARENA_COUNT, badgeCount)) }
 
 // ── Bonus de niveau MODÉRÉ (récompense ARÈNE uniquement) ──────────────────────────────────────────────────────
 // L'arène est un défi de COMBAT : plus l'équipe monte, plus chaque attaque coûte cher → à niv 50 un Blitz pouvait

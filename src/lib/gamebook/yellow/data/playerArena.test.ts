@@ -45,11 +45,12 @@ describe("Arène joueurs — classement par niveau", () => {
 })
 
 describe("Arène joueurs — déblocage & placement", () => {
-    it("hasAllBadges exige les 5 badges", () => {
-        expect(hasAllBadges(["feu", "plante", "eau", "roche", "elec"])).toBe(true)
-        expect(hasAllBadges(["feu", "plante", "eau", "roche"])).toBe(false) // manque élec
+    it("hasAllBadges exige les 6 badges (une save d'avant le bateau compte son badge Électrik pour l'ANCRE)", () => {
+        expect(hasAllBadges(["feu", "plante", "eau", "roche", "elec", "ancre"])).toBe(true)
+        expect(hasAllBadges(["feu", "plante", "eau", "roche", "elec"])).toBe(true)  // save pas encore reprise : ancre implicite
+        expect(hasAllBadges(["feu", "plante", "roche", "ancre", "elec"])).toBe(false) // manque eau
         expect(hasAllBadges([])).toBe(false)
-        expect(ALL_BADGES.length).toBe(5)
+        expect(ALL_BADGES.length).toBe(6)
     })
 
     it("placement : Viridian = reflets EXACTS (roaming) ; arène eau = reflets INVERSÉS (fixe)", () => {

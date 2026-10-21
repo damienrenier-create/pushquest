@@ -13,6 +13,7 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 import { parseSave } from "@/lib/gamebook/yellow/storage/save"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
 import { activeClanOf } from "@/lib/gamebook/yellow/clanFervor"
+import { withImpliedAncre } from "@/lib/gamebook/yellow/data/boatArena"
 
 export const dynamic = "force-dynamic"
 
@@ -63,7 +64,7 @@ export async function GET() {
                 //   combat du reflet) au lieu de la jeter. Sans ça, un Daemon custom/canonisé d'un autre joueur = MISSINGNO.
                 customDaemons: s.customDaemons ?? [],
                 dexCaught: s.pokedex.caught.length,
-                badges: s.badges,
+                badges: withImpliedAncre(s.badges), // ⚓ save pas encore reprise (Électrik/Eau sans ANCRE) : badge du bateau implicite
                 pvp: { wins: s.pvpStats.wins, losses: s.pvpStats.losses },
                 aceWins: s.aceWins,
                 favoriteDaemon: topKey(s.pvpStats.daemonUse),

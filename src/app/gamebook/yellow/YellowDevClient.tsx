@@ -79,6 +79,8 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, duelGiftEnergy, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { nextArenaHint, gymBadgeCount, BOAT_BADGE } from "@/lib/gamebook/yellow/data/boatArena"
+import { ALL_BADGE_IDS } from "@/lib/gamebook/yellow/data/badges"
 import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
 import { repsUnit, repsIcon, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
@@ -561,7 +563,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             //   0 victoire = base, puis +3 niv/Daemon et +45 pts Saiyan par victoire (1 → +3/50 · 4 → +12/185).
             const { levelBonus, saiyanPoints } = archivisteEscalation(archivisteWinsToday())
             // DIFFICULTÉ par progression d'arène : facile avant l'arène 1, « notre niveau » à l'arène 3, un peu au-dessus après.
-            const badgeOffset = archivisteBadgeLevelOffset(getPlayer().badges.length)
+            const badgeOffset = archivisteBadgeLevelOffset(gymBadgeCount(getPlayer().badges)) // ⚓ paliers calibrés sur 5 arènes : hors badge du bateau
             const enemy = buildArchivisteTeam(getPokedex().seen, Math.max(1, mean + badgeOffset), seed, team.length, levelBonus, saiyanPoints)
             if (enemy.length === 0) { showDialogue("archiviste", ARCHIVISTE_NAME, ["Tu n'as encore croisé aucun Daemon digne d'être fiché ! Reviens quand tu en auras rencontré quelques-uns."]); return }
             const now = new Date()
@@ -1189,7 +1191,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         //   d'autant plus gros qu'il est à la traîne (peu de badges) + une Super Ball par consolation.
                         let duelBalls = 0, duelCatchup = 0
                         if (duel.length > 0) {
-                            duelCatchup = Math.max(0, 5 - (getPlayer().badges?.length ?? 0)) * 30 // 0 (5 badges) → 150 (débutant)
+                            duelCatchup = Math.round(Math.max(0, ALL_BADGE_IDS.length - (getPlayer().badges?.length ?? 0)) * 150 / ALL_BADGE_IDS.length) // 0 (6 badges) → 150 (débutant), comme avant le bateau
                             if (duelCatchup > 0) grantBonusEnergyUncapped(duelCatchup)
                             duelBalls = duel.length
                             addItem("super_ball", duelBalls)
@@ -1235,7 +1237,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         //   Run 3 déjà exclu plus haut (aucun cadeau).
                         // NON-FUN (7 potes) : formule historique inchangée (1/3 du quota, plafond 1000/sacre).
                         const per = getGameMode() === "fun"
-                            ? 200 * Math.min(5, Math.max(1, getPlayer().badges.length))
+                            ? 200 * Math.min(5, Math.max(1, getPlayer().badges.length)) // jackpot 1000 inchangé (atteint dès 5 badges depuis le bateau)
                             : Math.min(1000, Math.floor(getPlayer().repsCap / 3))
                         const got = grantReps(per * grants); logEnergyIncome("🏛️ Sacre (champion)", got)
                         persistYellowSave()
@@ -1831,8 +1833,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // RUN 3 : les arènes sont re-typées aux GARDIENS (aperçu de la Ligue) → on annonce l'arène par ce type,
             //   pas par son type du run 1. Et on ne promet NI CT NI ticket (le concours n'a ni boutique ni casino).
             const labels: Record<string, string> = run3
-                ? { plante: "GLACE", roche: "COMBAT", feu: "SPECTRE", elec: "DRAGON", eau: "PRISME" }
-                : { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE", roche: "ROCHE", elec: "ÉCLAIR" }
+                ? { plante: "GLACE", roche: "COMBAT", feu: "SPECTRE", ancre: "ANCRE", elec: "DRAGON", eau: "PRISME" }
+                : { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE", roche: "ROCHE", ancre: "ANCRE", elec: "ÉCLAIR" }
             const lbl = labels[badgeAwarded] ?? badgeAwarded.toUpperCase()
             const lines: string[] = []
             if (run3) {
@@ -1843,14 +1845,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 lines.push(`🎖️ Tu obtiens le BADGE ${lbl} !`)
                 if (getGameMode() === "fun") {
                     // FUN : pas de « reps » ; et la vraie contrepartie d'un badge en fun = des attaques plus chères (playerAttackQuota).
-                    const nb = getPlayer().badges.length
-                    const pricier = playerAttackQuota(nb) > playerAttackQuota(nb - 1)
+                    // ⚓ Le badge du bateau n'augmente pas le coût des attaques (paliers calibrés sur les 5 arènes du GYM/Cendreville).
+                    const nb = gymBadgeCount(getPlayer().badges)
+                    const pricier = badgeAwarded !== BOAT_BADGE && playerAttackQuota(nb) > playerAttackQuota(nb - 1)
                     lines.push(`Ta jauge d'énergie s'agrandit (+250⚡) et de nouvelles CT s'ouvrent à la boutique.${pricier ? " Contrepartie : tes attaques coûtent un peu plus cher." : ""}`)
                 } else lines.push("Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.")
                 if (giftMove) lines.push(`🎁 Tu reçois la CT « ${giftMove} » ! Apprends-la à un Daemon compatible — cadeau unique.`)
                 lines.push(`🎟️ Et un ticket roulette de ${ARENA_TICKET_VALUE} énergies — joue-le à ta prochaine connexion !`)
             }
-            showDialogue("y_gym_sign", "ARÈNE", lines)
+            // 🧭 OÙ EST LA SUIVANTE (« forcer les gens à voyager », Sartay 21/10/2026) : même porte du GYM, bateau, clé, Cendreville…
+            const hint = nextArenaHint(badgeAwarded)
+            if (hint) lines.push(hint)
+            // Le boss prend la parole dans le même flush (rematchReward : discours de victoire, CT signature du run 2, remise
+            //   de la clé au bateau) et showDialogue REMPLACE le dialogue en cours → la fenêtre du badge (et son indice)
+            //   était écrasée. Elle passe donc JUSTE APRÈS le discours du boss (cf. effet deferredBadgeLines ci-dessous).
+            if (rematchReward) setDeferredBadgeLines(lines)
+            else showDialogue("y_gym_sign", "ARÈNE", lines)
             // 🛡️ FERVEUR DE CLAN : badge gagné AVEC le Daemon-clan (ou son évolution) en équipe → une Super Pasta pour
             //   TOUS les alliés (fan-out serveur). Best-effort, jamais en run 3 (concours) ni en rejeu (bulle jetable).
             if (getActiveWorld() !== "run3" && getActiveWorld() !== "replay" && getClan() && getPlayer().team.some((m) => clanOfSpecies(m.speciesId) === getClan())) {
@@ -1861,7 +1871,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             clearBadgeAwarded()
         }
-    }, [badgeAwarded, battle, evolutions.length, showDialogue, activeWorld])
+    }, [badgeAwarded, battle, evolutions.length, showDialogue, activeWorld, rematchReward])
+
+    // Fenêtre « badge obtenu » DIFFÉRÉE : affichée dès que le discours du boss est refermé (écran libre).
+    const [deferredBadgeLines, setDeferredBadgeLines] = useState<string[] | null>(null)
+    useEffect(() => {
+        if (!deferredBadgeLines) return
+        if (battle || evolutions.length > 0 || rematchReward || dialogue) return
+        showDialogue("y_gym_sign", "ARÈNE", deferredBadgeLines)
+        setDeferredBadgeLines(null)
+    }, [deferredBadgeLines, battle, evolutions.length, rematchReward, dialogue, showDialogue])
 
     // PIERRE GÉKROC : don de la Pierre d'Évolution après avoir battu/capturé Gékroc (Centrale) →
     // notification claire post-combat (sinon le don, objet "objet clé", passait totalement inaperçu).
@@ -2309,7 +2328,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             getGameMode() === "fun"
                 ? "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de cadeaux, pas de récompenses d'énergie : chaque attaque puise dans ta réserve. »"
                 : "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
-            "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800, et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
+            "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800 (au bateau comme à l'arène suivante), et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
             "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Le concours s'achève quand tu tombes à 0⚡ OU quand tu terrasses LE MAÎTRE de la Ligue. »",
             "« Et alors seulement — MÉGA-FUSION : ton run 1, ton run 2 ET ce run 3 n'en feront plus qu'un. D'ici là, tes deux vies passées restent gelées. Pas de retour. »",
             "« Que la légende commence, Maître. 🍝🔥 »",
@@ -3449,7 +3468,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     </div>
                                     <div style={{ fontSize: 12, opacity: 0.9 }}>🗡️ <b>{n}</b> Daemon{n > 1 ? "s" : ""} ennemi{n > 1 ? "s" : ""} vaincu{n > 1 ? "s" : ""} (boss d'arène + Ligue), compté{n > 1 ? "s" : ""} une seule fois.</div>
                                     <div style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.4 }}>
-                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables. Le concours s'arrête quand ton énergie tombe à 0⚡ : ton score est alors gravé.
+                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables (le bateau et les gardes ne comptent pas). Le concours s'arrête quand ton énergie tombe à 0⚡ : ton score est alors gravé.
                                     </div>
                                 </div>
                             )
@@ -5492,7 +5511,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
                                         {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>{repsIcon(funWords)} {attackCost(m ?? null, live.level, getGameMode() === "fun" ? playerAttackQuota(player.badges.length) : effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>{repsIcon(funWords)} {attackCost(m ?? null, live.level, getGameMode() === "fun" ? playerAttackQuota(gymBadgeCount(player.badges)) : effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
                                     </div>
                                 )
                             })}

@@ -35,6 +35,13 @@ describe("run3Feats — guide du concours", () => {
         expect(evaluateRun3Feats({ ...empty, caughtThisRun: thirty }).feats.find((f) => f.id === "r3_dex30")?.earned).toBe(true)
     })
 
+    it("le guide passe par le bateau (badge ANCRE) entre le Feu et l'Électrik", () => {
+        const ids = RUN3_FEATS.filter((f) => f.cat === "progression").map((f) => f.id)
+        expect(ids.indexOf("r3_ancre")).toBe(ids.indexOf("r3_feu") + 1)
+        expect(ids.indexOf("r3_elec")).toBe(ids.indexOf("r3_ancre") + 1)
+        expect(evaluateRun3Feats({ ...empty, badges: ["plante", "roche", "feu", "ancre"] }).feats.find((f) => f.id === "r3_ancre")?.earned).toBe(true)
+    })
+
     it("arènes lues depuis badges", () => {
         const r = evaluateRun3Feats({ ...empty, badges: ["plante", "feu"] })
         expect(r.feats.find((f) => f.id === "r3_plante")?.earned).toBe(true)
@@ -55,7 +62,7 @@ describe("run3Feats — guide du concours", () => {
         const dex30 = ["flamarokto", "onirail", "karmaki", ...Array.from({ length: 27 }, (_, k) => `sp${k}`)]
         const full: Run3FeatInput = {
             caughtThisRun: dex30,
-            badges: ["plante", "roche", "feu", "elec", "eau"],
+            badges: ["plante", "roche", "feu", "ancre", "elec", "eau"],
             isChampion: true,
             ownedCts: ["ct58"],
             markers: [NEMESIS_DONE_MARKER],

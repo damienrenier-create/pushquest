@@ -17,7 +17,7 @@ import { fanOutSponsorGift } from "@/lib/gamebook/yellow/sponsorGift"
 
 export const dynamic = "force-dynamic"
 
-const VALID_BADGES = new Set(["feu", "plante", "eau", "roche", "elec"])
+const VALID_BADGES = new Set(["feu", "plante", "eau", "roche", "elec", "ancre"]) // « ancre » = l'arène 4, le bateau (21/10/2026)
 // RUN 2/3 : arènes re-typées → badge préfixé "ngplus:" / "run3:" (HoF séparé par run, visible du run concerné).
 function isValidBadge(b: string): boolean {
     if (VALID_BADGES.has(b)) return true

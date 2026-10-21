@@ -207,7 +207,7 @@ describe("Badges run 1 — socle", () => {
         } as unknown as Parameters<typeof badgeInputFromSave>[0]
         const i = badgeInputFromSave(save)
         expect(i.mons.filter((m) => m.shiny).length).toBe(2)
-        expect(i.arenaBadges).toBe(4)
+        expect(i.arenaBadges).toBe(5) // feu/plante/eau/elec + l'ANCRE implicite (badge Électrik = étape du bateau franchie)
         expect(i.hasMasterBall).toBe(true)
         const r = evaluateBadges(i)
         // gros paquet de badges gagnés (champion, arènes, gékroc, dôme or, ace7, master ball, sylvebarbe…)

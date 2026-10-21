@@ -11,6 +11,7 @@ describe("défis fun — récompenses (fonctions pures)", () => {
         expect(funArenaReward(2)).toBe(150)
         expect(funArenaReward(3)).toBe(200)
         expect(funArenaReward(5)).toBe(300)
+        expect(funArenaReward(6)).toBe(350) // 6e arène (le bateau s'est intercalé le 21/10/2026)
     })
     it("sprint : 75 × N", () => {
         expect(funSprintReward(3)).toBe(225)
@@ -52,14 +53,14 @@ describe("défis fun — sprint (échelle + crédit auto)", () => {
 })
 
 describe("défis fun — Blitz d'arène (20/10/2026 : il se lançait à 5 badges et ne pouvait jamais réussir, question de Rob)", () => {
-    it("ouvert tant qu'il reste une arène à conquérir dans le monde, fermé à 5 badges", () => {
-        expect(FUN_ARENA_COUNT).toBe(5)
+    it("ouvert tant qu'il reste une arène à conquérir dans le monde, fermé à 6 badges (le bateau = 4e arène)", () => {
+        expect(FUN_ARENA_COUNT).toBe(6)
         expect(funArenaOpen(0)).toBe(true)
-        expect(funArenaOpen(4)).toBe(true)
-        expect(funArenaOpen(5)).toBe(false)
+        expect(funArenaOpen(5)).toBe(true)
+        expect(funArenaOpen(6)).toBe(false)
     })
-    it("⚠️ à 5 badges, « Lancer » ne crée plus de défi impossible ; avec une arène à conquérir, il se lance", () => {
-        hydratePlayer({ badges: ["plante", "roche", "feu", "elec", "eau"] }); abandonFunDefi()
+    it("⚠️ à 6 badges, « Lancer » ne crée plus de défi impossible ; avec une arène à conquérir, il se lance", () => {
+        hydratePlayer({ badges: ["plante", "roche", "feu", "ancre", "elec", "eau"] }); abandonFunDefi()
         startFunDefi("arena")
         expect(getFunDefis().active).toBeNull()
         hydratePlayer({ badges: ["plante"] })
@@ -67,9 +68,9 @@ describe("défis fun — Blitz d'arène (20/10/2026 : il se lançait à 5 badges
         expect(getFunDefis().active?.kind).toBe("arena")
         abandonFunDefi()
     })
-    it("la carte du labo ne propose plus « Lancer » quand les 5 arènes sont conquises, et le dit", () => {
+    it("la carte du labo ne propose plus « Lancer » quand toutes les arènes sont conquises, et le dit", () => {
         const lab = fs.readFileSync(path.join(process.cwd(), "src/app/gamebook/yellow/LabPanel.tsx"), "utf8")
         expect(lab).toContain("{funArenaOpen(player.badges.length)")
-        expect(lab).toContain("Les 5 arènes de ce monde sont déjà conquises")
+        expect(lab).toContain("Les {FUN_ARENA_COUNT} arènes de ce monde sont déjà conquises")
     })
 })

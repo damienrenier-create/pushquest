@@ -205,6 +205,12 @@ export const ITEMS: Record<string, ItemData> = {
         id: "lampe_rouillee", name: "Lampe rouillée", category: "MISC",
         description: "Une vieille lampe sale et poussiéreuse. On dirait qu'un bon frottage ne lui ferait pas de mal…", price: 0,
     },
+    // CLÉ DE L'ARÈNE — remise par le capitaine du BATEAU (arène 4) quand tout l'équipage est battu ; rendue au GARDIEN
+    //   DES CLÉS devant le GYM (qui ouvre alors l'arène Électrik). Objet CLÉ (MISC pur) → poche « Objets clés ».
+    cle_arene: {
+        id: "cle_arene", name: "Clé de l'arène", category: "MISC",
+        description: "Une clé dorée, volée au gardien du GYM de la Ville Jaune et retrouvée à fond de cale du bateau. Rapporte-la au GARDIEN DES CLÉS, devant le GYM.", price: 0,
+    },
     // CANNE À PÊCHE — offerte par la Fashion Victim (Grotte 1F) avec le nouveau skin. OUTIL réutilisable : à utiliser
     //   depuis le sac en étant FACE À UN PLAN D'EAU → ferre un Daemon aquatique. Cf. data/fishing.ts + castFishingRod().
     canne_a_peche: {

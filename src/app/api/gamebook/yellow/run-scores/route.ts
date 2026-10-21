@@ -21,6 +21,7 @@ import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/f
 import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES, medalForRank, medalMult } from "@/lib/gamebook/yellow/data/run1Badges"
+import { hasAllBadges } from "@/lib/gamebook/yellow/data/playerArena"
 
 /** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
 function run1BadgeScore(f: Record<string, unknown>, caught?: readonly string[]): { score: number; factors: ScoreFactor[] } {
@@ -180,7 +181,8 @@ async function viewerHasFinishedRun1(userId: string): Promise<boolean> {
             select: { flags: true },
         })
         const flags = row?.flags as { badges?: unknown } | null
-        return Array.isArray(flags?.badges) && (flags!.badges as unknown[]).length >= 5
+        // Les 6 badges (ANCRE implicite pour les saves d'avant le bateau) : 5 badges sur 6 ne suffisent plus depuis le 21/10/2026.
+        return Array.isArray(flags?.badges) && hasAllBadges((flags!.badges as unknown[]).filter((b): b is string => typeof b === "string"))
     } catch { return false }
 }
 

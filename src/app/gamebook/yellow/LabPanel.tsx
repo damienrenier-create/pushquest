@@ -17,7 +17,7 @@ import {
     physWinCount, recordPhysWin, casinoPillar, useActiveWorld,
     getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
-import { funSprintReward, funArenaRewardScaled, funLevelMultiplier, funArenaOpen } from "@/lib/gamebook/yellow/data/funDefis"
+import { funSprintReward, funArenaRewardScaled, funLevelMultiplier, funArenaOpen, FUN_ARENA_COUNT } from "@/lib/gamebook/yellow/data/funDefis"
 import { chenLabRoute } from "@/lib/gamebook/yellow/data/labDialogues"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave, canAbandonNgplus } from "@/lib/gamebook/yellow/store/saveManager"
@@ -183,7 +183,7 @@ export default function LabPanel() {
                                     const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000)
                                     const expired = left <= 0
                                     const title = a.kind === "arena" ? "🏆 Bats une arène (de A à Z)" : a.kind === "sprint" ? `🎯 Capture ${a.target} espèces différentes` : `⭐ Capture ${dailyName}`
-                                    const prog = a.kind === "sprint" ? `${a.caught.length}/${a.target} espèces capturées` : a.kind === "arena" ? (funArenaOpen(player.badges.length) ? "Gagne le badge d'une arène" : "Tes 5 arènes sont déjà conquises : ce Blitz ne peut plus réussir. Abandonne-le et lance un autre défi.") : "Trouve-le à l'état sauvage"
+                                    const prog = a.kind === "sprint" ? `${a.caught.length}/${a.target} espèces capturées` : a.kind === "arena" ? (funArenaOpen(player.badges.length) ? "Gagne le badge d'une arène" : `Tes ${FUN_ARENA_COUNT} arènes sont déjà conquises : ce Blitz ne peut plus réussir. Abandonne-le et lance un autre défi.`) : "Trouve-le à l'état sauvage"
                                     return (
                                         <div style={cardStyle}>
                                             <div style={{ fontWeight: 800, color: INK, fontSize: 14 }}>{title}</div>
@@ -198,11 +198,11 @@ export default function LabPanel() {
                                     <div style={{ display: "flex", flexDirection: "column" }}>
                                         <div style={{ fontSize: 12, color: INK, opacity: 0.85, lineHeight: 1.5, marginBottom: 8 }}>🎉 En mode fun, ton énergie vient de ces <b>défis chronométrés</b>. Un seul à la fois — la récompense est créditée dès que tu réussis.</div>
                                         <div style={cardStyle}>
-                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+{funArenaRewardScaled(1, funAvgLvl)} → +{funArenaRewardScaled(5, funAvgLvl)}⚡</span></div>
-                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (les 4 gardes + le boss) dans l'<b>heure</b>.{funLevelMultiplier(funAvgLvl) > 1 ? <> Récompense <b>boostée ×{funLevelMultiplier(funAvgLvl).toFixed(2)}</b> par le niveau de ton équipe.</> : <> La récompense grimpe avec le niveau de ton équipe (jusqu'à ×2).</>}</div>
+                                            <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+{funArenaRewardScaled(1, funAvgLvl)} → +{funArenaRewardScaled(FUN_ARENA_COUNT, funAvgLvl)}⚡</span></div>
+                                            <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (gardes et boss ; au bateau, tout l&apos;équipage) dans l'<b>heure</b>.{funLevelMultiplier(funAvgLvl) > 1 ? <> Récompense <b>boostée ×{funLevelMultiplier(funAvgLvl).toFixed(2)}</b> par le niveau de ton équipe.</> : <> La récompense grimpe avec le niveau de ton équipe (jusqu'à ×2).</>}</div>
                                             {funArenaOpen(player.badges.length)
                                                 ? <button onClick={() => { startFunDefi("arena"); persistYellowSave() }} style={primary}>Lancer (1 h)</button>
-                                                : <div style={{ fontSize: 11, color: INK, opacity: 0.85, textAlign: "center", fontWeight: 700 }}>✅ Les 5 arènes de ce monde sont déjà conquises : le Blitz récompense la conquête d&apos;une NOUVELLE arène.</div>}
+                                                : <div style={{ fontSize: 11, color: INK, opacity: 0.85, textAlign: "center", fontWeight: 700 }}>✅ Les {FUN_ARENA_COUNT} arènes de ce monde sont déjà conquises : le Blitz récompense la conquête d&apos;une NOUVELLE arène.</div>}
                                         </div>
                                         <div style={cardStyle}>
                                             <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🎯 Sprint de capture — <span style={{ color: "#2a7d2a" }}>+{funSprintReward(f.ladder)}⚡</span></div>

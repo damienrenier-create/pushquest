@@ -13,7 +13,7 @@ import { NEMESIS_DONE_MARKER } from "./nemesisChallenge"
 
 export interface Run3FeatInput {
     caughtThisRun: readonly string[]   // espèces capturées CE run (overlay dex run 3)
-    badges: readonly string[]          // badges d'arène du run 3 (plante/roche/feu/elec/eau)
+    badges: readonly string[]          // badges d'arène du run 3 (plante/roche/feu/ancre/elec/eau)
     isChampion: boolean                // sacre du concours (Ligue/Dieu Spaghetti battus)
     ownedCts: readonly string[]        // CT possédées (ct58 = récompense Maison du Combat)
     markers: readonly string[]         // defeatedTrainers (marqueurs d'événement — dont némésis)
@@ -36,6 +36,7 @@ export const RUN3_FEATS: readonly Run3Feat[] = [
     { id: "r3_plante", cat: "progression", emoji: "🌿", label: "Vaincre l'arène Plante", done: (i) => i.badges.includes("plante") },
     { id: "r3_roche", cat: "progression", emoji: "🪨", label: "Vaincre l'arène Roche", done: (i) => i.badges.includes("roche") },
     { id: "r3_feu", cat: "progression", emoji: "🔥", label: "Vaincre l'arène Feu", done: (i) => i.badges.includes("feu") },
+    { id: "r3_ancre", cat: "progression", emoji: "⚓", label: "Vaincre l'arène du bateau (tout l'équipage)", done: (i) => i.badges.includes("ancre") },
     { id: "r3_elec", cat: "progression", emoji: "⚡", label: "Vaincre l'arène Électrik", done: (i) => i.badges.includes("elec") },
     { id: "r3_eau", cat: "progression", emoji: "💧", label: "Vaincre l'arène Eau", done: (i) => i.badges.includes("eau") },
     { id: "r3_champion", cat: "progression", emoji: "👑", label: "Remporter le concours (sacre)", done: (i) => i.isChampion },

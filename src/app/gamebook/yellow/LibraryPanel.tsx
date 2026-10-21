@@ -25,7 +25,7 @@ interface RegistryPlayer {
 }
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
-const BADGE_ICON: Record<string, string> = { plante: "🌿", roche: "🪨", eau: "💧", feu: "🔥", elec: "⚡", glace: "❄️" }
+const BADGE_ICON: Record<string, string> = { plante: "🌿", roche: "🪨", eau: "💧", feu: "🔥", elec: "⚡", ancre: "⚓", glace: "❄️" }
 
 type SortKey = "dex" | "badges" | "pvp" | "ace"
 const SORTS: { key: SortKey; label: string }[] = [

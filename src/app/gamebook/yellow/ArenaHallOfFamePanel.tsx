@@ -18,6 +18,7 @@ const ARENAS: ArenaMeta[] = [
     { id: "plante", nom: "Bosquet Sacré", boss: "Druide Sylvain", emoji: "🌿", color: "#3aa54a" },
     { id: "roche", nom: "Caverne Minière", boss: "Maître Granit", emoji: "🪨", color: "#b08d57" },
     { id: "feu", nom: "La Caldeira", boss: "Pyra", emoji: "🔥", color: "#e0502a" },
+    { id: "ancre", nom: "Le Bateau", boss: "Capitaine Vague", emoji: "⚓", color: "#2a6ea0" }, // arène 4 depuis le 21/10/2026
     { id: "elec", nom: "Tour Hertz", boss: "Volta", emoji: "⚡", color: "#f6c640" },
     { id: "eau", nom: "Sanctuaire des Marées", boss: "Ondine", emoji: "💧", color: "#3a8ee0" },
 ]
@@ -28,6 +29,7 @@ const ARENAS_RUN2: ArenaMeta[] = [
     { id: "plante", nom: "Arène Vol", boss: "Druide Sylvain", emoji: "🕊️", color: "#8fb8e0" },
     { id: "roche", nom: "Arène Psy", boss: "Maître Granit", emoji: "🔮", color: "#e070b0" },
     { id: "feu", nom: "Cabinet Inédit", boss: "Pyra", emoji: "🎭", color: "#d59030" },
+    { id: "ancre", nom: "Le Bateau (Eau)", boss: "Capitaine Vague", emoji: "⚓", color: "#2a6ea0" },
     { id: "elec", nom: "Bestioles & Spectres", boss: "Volta", emoji: "🕸️", color: "#93b025" },
     { id: "eau", nom: "Gauntlet des Finals", boss: "Ondine", emoji: "🏆", color: "#8fb0c8" },
 ]
@@ -36,6 +38,7 @@ const ARENAS_RUN3: ArenaMeta[] = [
     { id: "plante", nom: "Arène Glace", boss: "Champion figé", emoji: "❄️", color: "#7fd4ff" },
     { id: "roche", nom: "Arène Combat", boss: "Champion figé", emoji: "🥊", color: "#e08030" },
     { id: "feu", nom: "Arène Spectre", boss: "Champion figé", emoji: "👻", color: "#a060d0" },
+    { id: "ancre", nom: "Le Bateau", boss: "Capitaine Vague", emoji: "⚓", color: "#2a6ea0" },
     { id: "elec", nom: "Arène Dragon", boss: "Champion figé", emoji: "🐉", color: "#5a6fe0" },
     { id: "eau", nom: "Arène Prisme", boss: "Champion figé", emoji: "🌈", color: "#40c0a0" },
 ]
@@ -137,7 +140,7 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
                     </div>
                 )}
 
-                {/* Onglets des 5 arènes */}
+                {/* Onglets des 6 arènes (le bateau en 4e) */}
                 <div style={tabsRow}>
                     {arenaList.map((a) => {
                         const n = byBadge[a.id]?.length ?? 0
