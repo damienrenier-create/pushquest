@@ -23,7 +23,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave, canAbandonNgplus } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
-    ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
+    ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, CT_DEFI_POWER_MULT, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
     physScaledTarget, physScaledReward, pushupDefiVariant,
 } from "@/lib/gamebook/yellow/data/labDefis"
 import { postLabDefiStart, postLabDefiCheck } from "@/lib/gamebook/yellow/labDefiApi"
@@ -58,7 +58,10 @@ export default function LabPanel() {
     const run3 = world === "run3"     // run 3 (concours) : casino/roulette FERMÉS
     const pv = pushupDefiVariant(ngplus)         // { exercise, word: "pompes"|"squats", growth }
     const isFun = getGameMode() === "fun"
-    const [tab, setTab] = useState<"phys" | "ct" | "surprise" | "fun">(isFun ? "fun" : "phys")
+    const [tabState, setTab] = useState<"phys" | "ct" | "surprise" | "fun">(isFun ? "fun" : "phys")
+    // Le panneau est MONTÉ avant que le mode de jeu soit connu (setGameMode au chargement de la save) : l'onglet initial
+    //   valait alors « phys » pour un joueur fun, qui voyait les défis de pompes. L'onglet affiché suit donc TOUJOURS le mode.
+    const tab = isFun ? (tabState === "phys" ? "fun" : tabState) : (tabState === "fun" ? "phys" : tabState)
     const [ctType, setCtType] = useState<PokeType | null>(null)
     const [casino, setCasino] = useState(false)
     const [ticketsOpen, setTicketsOpen] = useState(false)
@@ -193,7 +196,7 @@ export default function LabPanel() {
                                 }
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column" }}>
-                                        <div style={{ fontSize: 12, color: INK, opacity: 0.85, lineHeight: 1.5, marginBottom: 8 }}>🎉 En mode fun, ton énergie vient de ces <b>défis chronométrés</b> (fini les pompes à encoder !). Un seul à la fois — la récompense est créditée dès que tu réussis.</div>
+                                        <div style={{ fontSize: 12, color: INK, opacity: 0.85, lineHeight: 1.5, marginBottom: 8 }}>🎉 En mode fun, ton énergie vient de ces <b>défis chronométrés</b>. Un seul à la fois — la récompense est créditée dès que tu réussis.</div>
                                         <div style={cardStyle}>
                                             <div style={{ fontWeight: 800, color: INK, fontSize: 13 }}>🏆 Blitz d'arène — <span style={{ color: "#2a7d2a" }}>+{funArenaRewardScaled(1, funAvgLvl)} → +{funArenaRewardScaled(5, funAvgLvl)}⚡</span></div>
                                             <div style={{ fontSize: 11, color: INK, opacity: 0.8, margin: "4px 0 6px" }}>Bats une arène complète (les 4 gardes + le boss) dans l'<b>heure</b>.{funLevelMultiplier(funAvgLvl) > 1 ? <> Récompense <b>boostée ×{funLevelMultiplier(funAvgLvl).toFixed(2)}</b> par le niveau de ton équipe.</> : <> La récompense grimpe avec le niveau de ton équipe (jusqu'à ×2).</>}</div>
@@ -259,7 +262,7 @@ export default function LabPanel() {
                                 </ActiveBox>
                             ) : (
                                 <>
-                                    <Hint>Choisis un <b>type</b>, puis une CT. Inflige <b>puissance × 100</b> dégâts de ce type en combat (indépendant d'un défi physique). Max {CT_PER_TYPE_MAX}/type (la 2ᵉ coûte ×2).</Hint>
+                                    <Hint>Choisis un <b>type</b>, puis une CT. Inflige <b>puissance × {CT_DEFI_POWER_MULT.toLocaleString("fr-FR")}</b> dégâts de ce type en combat ({isFun ? "en parallèle de tes défis fun" : "indépendant d'un défi physique"}). Max {CT_PER_TYPE_MAX}/type (la 2ᵉ coûte ×2).</Hint>
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginBottom: 10 }}>
                                         {POKE_TYPES.map((t) => (
                                             <button key={t} onClick={() => setCtType(t)} title={t} style={{ ...typeBtn, ...(ctType === t ? typeOn : {}) }}>{TYPE_EMOJI[t]}</button>

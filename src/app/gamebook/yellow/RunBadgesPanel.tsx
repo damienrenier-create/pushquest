@@ -49,7 +49,7 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     if (isRun2) {
         // RUN 2 « Remix » : chaque haut fait CRÉDITE des reps (⚡) en mode fun (les points ne servent qu'au prestige des
         //   non-funs). Barème fun 8 paliers, photo de save scopée au monde Remix (caughtThisRun).
-        const r2 = evaluateRun2Badges(badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))
+        const r2 = evaluateRun2Badges(badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"), fun) // fun : variantes jouables sans reps encodées
         const valOf = (id: string, pts: number) => (fun ? (RUN2_BADGE_REPS[id] ?? 0) : pts) // fun → reps ; non-fun → points
         rows = r2.badges.map((st) => ({ id: st.id, label: st.label, cat: st.cat, emoji: st.emoji, color: TIER_COLOR_FUN[st.funTier], points: valOf(st.id, st.points), earned: st.earned, revealed: fun ? true : st.revealed, todo: st.todo }))
         const earnable = r2.badges.filter((b) => !b.todo) // les `todo` (Phase 2) n'entrent pas dans le dénominateur

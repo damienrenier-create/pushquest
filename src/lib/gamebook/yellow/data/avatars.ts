@@ -159,3 +159,6 @@ export const FASHION_ROD_GIFT_LINES = [
     "« Ne la perds JAMAIS. C'est un cadeau en or, chéri — tu me remercieras la première fois qu'un truc mordra. »",
     "*Tu reçois la CANNE À PÊCHE ! 🎣 (Sac → Pêche.) Utilise-la face à un plan d'eau. Un sacré cadeau — prends-en soin !*",
 ]
+/** MODE FUN : même gag, sans « l'argent de tes reps » (un fun n'encode aucune rep — il paie en énergie). */
+export const FASHION_ROD_GIFT_LINES_FUN: string[] = FASHION_ROD_GIFT_LINES.map((l) =>
+    l === "« Non. NON. Chéri… tu as VRAIMENT choisi ÇA ? Avec l'argent de tes reps ?! »" ? "« Non. NON. Chéri… tu as VRAIMENT choisi ÇA ? Avec toute ton énergie ?! »" : l)

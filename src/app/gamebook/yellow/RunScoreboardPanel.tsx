@@ -142,7 +142,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                             ) : f.max <= 0 ? (
                                 <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
                                     <span>{f.label}</span>
-                                    <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>reps</span></span>
+                                    <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>⚡</span></span>
                                 </div>
                             ) : (
                                 <div key={f.key} style={{ fontSize: 10.5 }}>
@@ -255,7 +255,7 @@ function Run2RulesBox() {
             <div style={chipRow}>{axes.map(([e, p]) => <span key={e} style={chip}>{e} <b>{p}</b></span>)}</div>
             <div style={sub}>Bonus RANG-À-FINIR (ordre d&apos;arrivée entre funs)</div>
             <div style={chipRow}>{finish.map(([e, m]) => <span key={e} style={chip}>{e} <b>{m}</b></span>)}</div>
-            <div style={{ marginTop: 7 }}>🏁 <b>Finir</b> = battre la Ligue puis <b>ton double</b> (Salle Dorée). Score <b>en direct</b> 🟢 tant que tu joues le Remix, <b>figé</b> ⚪ quand tu passes à la Ligue de Fusion.</div>
+            <div style={{ marginTop: 7 }}>🏁 <b>Finir</b> = battre la Ligue… et l&apos;ultime surprise qui t&apos;attend au sommet 😉. Score <b>en direct</b> 🟢 tant que tu joues le Remix, <b>figé</b> ⚪ quand tu passes à la Ligue de Fusion.</div>
             <div style={{ marginTop: 6 }}>⚖️ <b>Égalité de score ?</b> On départage par l&apos;<b>énergie dépensée</b> sur tout le Remix (affichée entre parenthèses) : <b>moins tu en dépenses, mieux tu es classé</b>.</div>
             <div style={{ marginTop: 6, color: "#ffd54a" }}>⚡ En plus du classement, <b>chaque haut fait du Remix te verse de l&apos;énergie</b> (un Remix complet = 15 320⚡, versés SANS plafond au fil de tes connexions).</div>
         </div>

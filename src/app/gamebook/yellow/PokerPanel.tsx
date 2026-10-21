@@ -6,7 +6,7 @@
 // ⚠️ À TESTER EN LIVE à plusieurs (le réseau/UI ne se valident qu'avec de vrais joueurs connectés).
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, grantReps, creditReps, casinoBetAllowed, recordCasinoSpend } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, grantReps, creditReps, casinoBetAllowed, recordCasinoSpend, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCasinoPoker } from "@/lib/gamebook/yellow/multiplayer/useCasinoPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -71,12 +71,12 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
                 {/* Contrôles */}
                 {!me ? (
                     <div style={controls}>
-                        <span style={{ fontSize: 12 }}>Reps : <b>{player.reps} ⚡</b></span>
+                        <span style={{ fontSize: 12 }}>{getGameMode() === "fun" ? "Énergie" : "Reps"} : <b>{player.reps} ⚡</b></span>
                         <input type="number" min={MIN_BUYIN} max={5000} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
                         <button style={{ ...bigBtn, background: "#4cd964", color: "#0a2a12" }} disabled={busy || player.reps < Math.max(MIN_BUYIN, buyin)} onClick={sitDown}>S'asseoir ({Math.max(MIN_BUYIN, buyin || 0)} ⚡)</button>
                         {player.reps < Math.max(MIN_BUYIN, buyin) && (
                             <span style={{ fontSize: 10.5, color: "#e0a0a0", width: "100%", textAlign: "center" }}>
-                                Pas assez de reps (min {MIN_BUYIN} ⚡ · tu as {player.reps}).
+                                Pas assez {getGameMode() === "fun" ? "d'énergie" : "de reps"} (min {MIN_BUYIN} ⚡ · tu as {player.reps}).
                             </span>
                         )}
                     </div>

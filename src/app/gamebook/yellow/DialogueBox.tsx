@@ -9,6 +9,8 @@
 import { useEffect, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getTrainer } from "@/lib/gamebook/yellow/data/trainers"
+import { NGPLUS_ARENA_NPCS } from "@/lib/gamebook/yellow/data/ngplusArenas"
+import { effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 
 // Pause de réflexion (ms) des dialogues « slow » (GAG cadeau canne) — aligné sur FASHION_REFLECT_MS du store.
 const SLOW_REFLECT_MS = 650
@@ -60,25 +62,46 @@ export default function DialogueBox() {
 
     const line = dialogue.lines[dialogue.lineIndex]
     const isLast = dialogue.lineIndex >= dialogue.lines.length - 1
-    const portrait = DIALOGUE_PORTRAITS[dialogue.npcId]
+    // RUN 2 : les dresseurs des 5 arènes sont RE-SKINNÉS (nouveau nom + planche Gen 3, cf. NGPLUS_ARENA_NPCS, appliqués
+    //   par activeNpcs). La bulle suit : nom du run 2 + portrait découpé dans la planche. Avant le 20/10/2026 elle montrait
+    //   les PNJ du RUN 1 (Druide, gardes Plante…) et leur ancien nom, quel que soit l'appelant.
+    const r2 = effectiveRunWorld() === "ngplus" ? NGPLUS_ARENA_NPCS[dialogue.npcId] : undefined
+    const portrait = r2 ? undefined : DIALOGUE_PORTRAITS[dialogue.npcId]
+    const npcName = r2?.name ?? dialogue.npcName
     // Garde / dresseur SANS portrait image → on affiche son emoji de sprite en filigrane
     // DERRIÈRE le texte (look "on voit qui parle"). Non-dresseurs : pas de filigrane.
-    const trainerEmoji = !portrait ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
+    const trainerEmoji = !portrait && !r2 ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
 
     return (
         <>
             <style>{`@keyframes yellowBlink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }`}</style>
             {portrait && (
-                <img src={portrait} alt={dialogue.npcName} style={portraitStyle} />
+                <img src={portrait} alt={npcName} style={portraitStyle} />
             )}
+            {r2 && <div role="img" aria-label={npcName} style={{ ...portraitStyle, ...gen3PortraitStyle(r2.gen3) }} />}
             <div style={boxStyle}>
                 {trainerEmoji && <span style={spriteWatermarkStyle} aria-hidden>{trainerEmoji}</span>}
-                <div style={nameStyle}>{dialogue.npcName}</div>
+                <div style={nameStyle}>{npcName}</div>
                 <div style={lineStyle}>{line}</div>
                 <div style={{ ...blinkArrowStyle, ...(slow && !canAdvance ? { animation: "none", opacity: 0.45 } : {}) }}>{slow && !canAdvance ? "⋯" : isLast ? "▣" : "▼"}</div>
             </div>
         </>
     )
+}
+
+// PORTRAIT tiré d'une planche PNJ Gen 3 (760×160 = 19 × 4 cellules de 40 px, cf. MapView) : pose NEUTRE de face =
+//   colonne 1, ligne 0 ; le perso occupe x 12-27 / y 15-35 de sa cellule → on cadre x 10-30 / y 13-37, agrandi ×3.
+const G3_SCALE = 3
+function gen3PortraitStyle(url: string): React.CSSProperties {
+    const x0 = 40 + 10, y0 = 13, w = 20, h = 24
+    return {
+        width: w * G3_SCALE,
+        height: h * G3_SCALE,
+        backgroundImage: `url(${url})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${760 * G3_SCALE}px ${160 * G3_SCALE}px`,
+        backgroundPosition: `-${x0 * G3_SCALE}px -${y0 * G3_SCALE}px`,
+    }
 }
 
 // Portrait posé juste au-dessus de la boîte de dialogue (coin droit), look "VN".

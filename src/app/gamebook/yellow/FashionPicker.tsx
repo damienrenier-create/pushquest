@@ -9,7 +9,8 @@
 // Au 1ER ACHAT du run : gag non-skippable + cadeau de la CANNE (géré côté store).
 
 import { useEffect, useMemo, useState } from "react"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { repsUnit, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { FASHION_AVATARS, avatarSheet, parseAvatarTint, rollAvatarTint, personalFashionOffer, randomFashionSeed, FASHION_DAILY_COUNT, FASHION_PRICES, FASHION_CATALOG_PRICE, fashionRevertCost, FASHION_REVERT_MARKER } from "@/lib/gamebook/yellow/data/avatars"
 import { getCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
@@ -87,7 +88,7 @@ export default function FashionPicker() {
                             <div style={cellStyle(previewBase, 72, filter)} />
                         </div>
                         <div style={{ flex: 1, fontSize: 11.5, color: INK, lineHeight: 1.4 }}>
-                            {curBase ? "« Voilà TON look, chéri. Ajuste la teinte gratis, ou claque des reps pour une nouvelle tenue ! »" : "« Tu te balades sans style ?! Choisis vite une tenue ci-dessous, chéri. »"}
+                            {curBase ? (getGameMode() === "fun" ? "« Voilà TON look, chéri. Ajuste la teinte gratis, ou claque de l'énergie pour une nouvelle tenue ! »" : "« Voilà TON look, chéri. Ajuste la teinte gratis, ou claque des reps pour une nouvelle tenue ! »") : "« Tu te balades sans style ?! Choisis vite une tenue ci-dessous, chéri. »"}
                         </div>
                     </div>
                     {msg && <div style={errStyle}>{msg}</div>}
@@ -105,12 +106,12 @@ export default function FashionPicker() {
                     </div>
 
                     {/* TENUES DU JOUR — 5 tirées, prix par rang */}
-                    <div style={{ fontSize: 11, color: INK, fontWeight: 800, margin: "14px 0 6px" }}>👗 TENUES DU MOMENT <span style={{ fontWeight: 600, opacity: 0.65 }}>· tirage au hasard · en ⚡ reps</span></div>
+                    <div style={{ fontSize: 11, color: INK, fontWeight: 800, margin: "14px 0 6px" }}>👗 TENUES DU MOMENT <span style={{ fontWeight: 600, opacity: 0.65 }}>· tirage au hasard · en {getGameMode() === "fun" ? "énergie ⚡" : "⚡ reps"}</span></div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                         {offer.map((url, i) => {
                             const price = FASHION_PRICES[i], owned = curBase === url, afford = player.reps >= price
                             return (
-                                <button key={url} onClick={() => askBuy(url, price)} disabled={!afford && !owned} title={`${price} reps`}
+                                <button key={url} onClick={() => askBuy(url, price)} disabled={!afford && !owned} title={`${price}${repsUnit(getGameMode() === "fun")}`}
                                     style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: 5, background: "#fff8e8", border: `2px solid ${owned ? ACCENT : DARK}`, borderRadius: 8, cursor: afford || owned ? "pointer" : "not-allowed", opacity: afford || owned ? 1 : 0.5 }}>
                                     <div style={cellStyle(url, 42, "")} />
                                     <span style={{ fontSize: 9.5, fontWeight: 800, color: owned ? ACCENT : afford ? INK : "#a33" }}>{owned ? "✓ à toi" : `${price}⚡`}</span>
@@ -121,14 +122,14 @@ export default function FashionPicker() {
 
                     {/* CATALOGUE COMPLET — 1000 reps la tenue */}
                     <button onClick={() => setShowCatalog((v) => !v)} style={{ ...linkBtn, marginTop: 12 }}>
-                        {showCatalog ? "▲ masquer le catalogue" : `🌈 Catalogue complet — ${FASHION_CATALOG_PRICE} reps la tenue ▾`}
+                        {showCatalog ? "▲ masquer le catalogue" : `🌈 Catalogue complet — ${FASHION_CATALOG_PRICE}${repsUnit(getGameMode() === "fun")} la tenue ▾`}
                     </button>
                     {showCatalog && (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5, marginTop: 8 }}>
                             {FASHION_AVATARS.map((url) => {
                                 const owned = curBase === url, afford = player.reps >= FASHION_CATALOG_PRICE
                                 return (
-                                    <button key={url} onClick={() => askBuy(url, FASHION_CATALOG_PRICE)} disabled={!afford && !owned} title={`${FASHION_CATALOG_PRICE} reps`}
+                                    <button key={url} onClick={() => askBuy(url, FASHION_CATALOG_PRICE)} disabled={!afford && !owned} title={`${FASHION_CATALOG_PRICE}${repsUnit(getGameMode() === "fun")}`}
                                         style={{ padding: 3, background: "#fff8e8", border: `2px solid ${owned ? ACCENT : DARK}`, borderRadius: 6, cursor: afford || owned ? "pointer" : "not-allowed", opacity: afford || owned ? 1 : 0.55 }}>
                                         <div style={cellStyle(url, 34, "")} />
                                     </button>
@@ -137,7 +138,7 @@ export default function FashionPicker() {
                         </div>
                     )}
 
-                    <button onClick={doReset} style={resetBtn}>↩︎ Revenir au look par défaut ({revertCost} reps)</button>
+                    <button onClick={doReset} style={resetBtn}>↩︎ Revenir au look par défaut ({revertCost}{repsUnit(getGameMode() === "fun")})</button>
                 </div>
                 {canLeave
                     ? <button onClick={close} style={closeBtn}>FERMER</button>
@@ -151,7 +152,7 @@ export default function FashionPicker() {
                             </div>
                             <div style={{ fontSize: 13, color: INK, textAlign: "center", fontWeight: 700, lineHeight: 1.4 }}>
                                 Adopter cette tenue pour <b style={{ color: "#a05" }}>{pendingBuy.price} ⚡</b> ?
-                                {player.reps < pendingBuy.price && <div style={{ color: "#a33", fontSize: 11, marginTop: 4 }}>Pas assez de reps.</div>}
+                                {player.reps < pendingBuy.price && <div style={{ color: "#a33", fontSize: 11, marginTop: 4 }}>{notEnoughReps(getGameMode() === "fun")}</div>}
                             </div>
                             <div style={{ display: "flex", gap: 10, width: "100%" }}>
                                 <button onClick={() => setPendingBuy(null)} style={{ ...miniBtn, flex: 1 }}>Annuler</button>

@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { arenaInfo, run3ArenaInfo, type Run3ArenaInfo } from "@/lib/gamebook/yellow/data/arenaInfos"
+import { getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { markSeen } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import type { BadgeId } from "@/lib/gamebook/yellow/data/cts"
@@ -118,7 +119,7 @@ export default function ArenaInfoPanel({ badge, isRun2, isRun3, onClose }: { bad
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: INK, lineHeight: 1.55, fontWeight: 600 }}>
                 <li>Les <b>gardiens</b> sont de type <b style={{ color: "#8a4bd0" }}>{r3.guardType}</b> : frappe-les avec {r3.guardRecommend.map((t) => TYPE_META[t].fr).join("/") || "de la couverture variée"}.</li>
                 <li>Le <b>boss</b>, c'est l'équipe RÉELLE de <b>{r3.bossPlayer}</b> (variée !) : {r3.bossBestTypes.length ? <>tes meilleures armes = <b>{r3.bossBestTypes.map((t) => TYPE_META[t].fr).join("/")}</b>.</> : <>prévois de la couverture large.</>}</li>
-                <li style={{ color: "#b8860b" }}>⚡ <b>Énergie = ta vie du run.</b> Chaque attaque coûte, et tu n'as QUE tes 500 + les paliers ({r3.energyPalier}⚡ à la victoire ici). Pas de casino, pas de reps : <b>sois efficace, gaspille rien.</b></li>
+                <li style={{ color: "#b8860b" }}>⚡ <b>Énergie = ta vie du run.</b> Chaque attaque coûte, et tu n'as QUE tes 500 + les paliers ({r3.energyPalier}⚡ à la victoire ici). Pas de casino, {getGameMode() === "fun" ? "pas de récompenses d'énergie" : "pas de reps"} : <b>sois efficace, gaspille rien.</b></li>
                 <li>🏆 Chaque Daemon ennemi <b>vaincu</b> ajoute son niveau à ton <b>score</b> (arène + Ligue). Va le plus loin possible avant de tomber à 0⚡.</li>
                 <li>Vise des Daemons <b>niveau ~{info.levelMax}+</b> pour ne pas te faire distancer par ce boss.</li>
             </ul>

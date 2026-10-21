@@ -37,6 +37,12 @@ export interface Run2Badge {
     cat: "progression" | "collection" | "exploration" | "fusion" | "social" | "rencontres" | "shiny" | "dome"
     /** Gagné ? (photo de save run 2). */
     earned: (i: BadgeInput) => boolean
+    /** Libellé affiché TANT QUE le haut fait n'est pas gagné, quand le vrai libellé gâcherait une SURPRISE (ex. le double
+     *  de la Salle Dorée). Une fois gagné, le vrai libellé apparaît. */
+    teaser?: string
+    /** MODE FUN : libellé et condition propres, quand l'original exige des reps encodées (impossible en fun). Même palier,
+     *  donc même énergie : le total du Remix ne bouge pas. */
+    fun?: { label: string; earned: (i: BadgeInput) => boolean }
     /** Révélé dans la liste même si non gagné (sinon secret jusqu'à obtention). */
     reveal?: (i: BadgeInput) => boolean
     /** Points VARIABLES (ex. starter_ko = niveau) ; sinon barème du palier. */
@@ -50,7 +56,8 @@ const F = false as const
 /** Les 54 hauts faits du run 2 fun. `todo` = à instrumenter (Phase 2). */
 export const RUN2_BADGES: readonly Run2Badge[] = [
     // ─────────── 💎💎💎 250 — Pinacle ───────────
-    { id: "r2_double", label: "Battre ton DOUBLE à la Salle Dorée (re-sacre)", funTier: "d3", cat: "progression", earned: (i) => i.isChampion },
+    // ⚠️ Le DOUBLE est une SURPRISE (Sartay 20/10/2026) : la liste (toute révélée en fun) n'en montre que le teaser avant la victoire.
+    { id: "r2_double", label: "Battre ton DOUBLE à la Salle Dorée (re-sacre)", teaser: "🎁 Le défi SURPRISE, au sommet de la Ligue (re-sacre)", funTier: "d3", cat: "progression", earned: (i) => i.isChampion },
     { id: "r2_dex_complete", label: "Pokédex du REMIX complet", funTier: "d3", cat: "collection", earned: () => F, reveal: () => true, todo: true }, // liste d'espèces run-2 à figer (Phase 2)
     { id: "r2_resacre_6shiny", label: "Re-sacre avec 6 shiny (Salle Dorée)", funTier: "d3", cat: "shiny", earned: (i) => i.isChampion === true && i.leagueSixShiny === true },
 
@@ -93,7 +100,9 @@ export const RUN2_BADGES: readonly Run2Badge[] = [
     { id: "r2_arena_revanche", label: "Gagner une REVANCHE d'arène (équipe run-1 boostée)", funTier: "s3", cat: "rencontres", earned: (i) => hasMk(i, "ach_arena_revanche"), reveal: () => true }, // marqueur posé par battleStore (revanche boss run 2)
     { id: "r2_plage_hantee", label: "Dompter la Plage HANTÉE (Spectres, Remix)", funTier: "s3", cat: "exploration", earned: (i) => hasAllMk(i, PLAGE_SPECTRES), reveal: (i) => hasAnyMk(i, PLAGE_SPECTRES) }, // les 3 dresseurs Spectre vaincus (markers de dresseur)
     { id: "r2_berry_phenix_survive", label: "Un Daemon survit grâce à une Baie Phénix", funTier: "s3", cat: "rencontres", earned: (i) => hasMk(i, "ach_berry:baie_phenix_survive"), reveal: () => true }, // marqueur posé par battleStore (__phoenixUsed)
-    { id: "r2_lab_defi", label: "Compléter un défi du Labo (vrai workout)", funTier: "s3", cat: "rencontres", earned: (i) => i.labDefiDone === true },
+    { id: "r2_lab_defi", label: "Compléter un défi du Labo (vrai workout)", funTier: "s3", cat: "rencontres", earned: (i) => i.labDefiDone === true,
+        // FUN : le défi physique (150 squats en 1 série) est impossible sans encodage → le défi du labo d'un fun = le défi CT.
+        fun: { label: "Gagner une CT au défi du Labo (onglet 💿 CT)", earned: (i) => (i.labCtWins ?? 0) >= 1 } },
 
     // ─────────── ⭐⭐ 10 — Facile ───────────
     { id: "r2_team6", label: "Reformer une équipe de 6 (Remix)", funTier: "s2", cat: "progression", earned: (i) => i.teamSize >= 6 },
@@ -126,22 +135,27 @@ export interface Run2BadgeResult { badges: Run2BadgeState[]; totalPoints: number
 
 /** Évalue TOUS les hauts faits run 2 (barème 8 paliers). `points` = base SANS médaille (la médaille est appliquée
  *  au niveau du score serveur, par rang). Les badges `todo` ne comptent jamais tant qu'ils ne sont pas instrumentés. */
-export function evaluateRun2Badges(i: BadgeInput): Run2BadgeResult {
+export function evaluateRun2Badges(i: BadgeInput, fun = false): Run2BadgeResult {
     let totalPoints = 0
     let earnedCount = 0
-    const badges = RUN2_BADGES.map((b) => {
+    const badges = RUN2_BADGES.map((b) => run2BadgeFor(b, fun)).map((b) => {
         const earned = !b.todo && b.earned(i)
         const points = b.points ? Math.max(0, Math.round(b.points(i))) : TIER_POINTS_FUN[b.funTier]
         const revealed = earned || !!b.todo || (b.reveal ? b.reveal(i) : false)
         if (earned) { totalPoints += points; earnedCount++ }
-        return { id: b.id, label: b.label, funTier: b.funTier, emoji: TIER_EMOJI_FUN[b.funTier], cat: b.cat, points, earned, revealed, todo: !!b.todo }
+        return { id: b.id, label: earned || !b.teaser ? b.label : b.teaser, funTier: b.funTier, emoji: TIER_EMOJI_FUN[b.funTier], cat: b.cat, points, earned, revealed, todo: !!b.todo }
     })
     return { badges, totalPoints, earnedCount }
 }
 
 /** Ids gagnés (hors `todo`) — sert au DRIP de reps (chaque haut fait du Remix crédite de l'énergie). */
-export function run2EarnedBadgeIds(i: BadgeInput): string[] {
-    return RUN2_BADGES.filter((b) => !b.todo && b.earned(i)).map((b) => b.id)
+export function run2EarnedBadgeIds(i: BadgeInput, fun = false): string[] {
+    return RUN2_BADGES.map((b) => run2BadgeFor(b, fun)).filter((b) => !b.todo && b.earned(i)).map((b) => b.id)
+}
+
+/** Le haut fait tel que le voit ce joueur : sa variante FUN (libellé + condition) s'il en a une, sinon l'original. */
+function run2BadgeFor(b: Run2Badge, fun: boolean): Run2Badge {
+    return fun && b.fun ? { ...b, label: b.fun.label, earned: b.fun.earned } : b
 }
 
 /** Total maxi théorique de POINTS (×1) — indicatif de prestige (le classement run 2 = performance /1000, cf. route). */
@@ -160,3 +174,5 @@ export const RUN2_TOTAL_REPS = RUN2_BADGES.reduce((s, b) => s + RUN2_TIER_REPS[b
 
 /** Libellés des hauts faits run 2 (id → label), pour les toasts/affichages (drip Dieu Spaghetti, panneaux). */
 export const RUN2_BADGE_LABELS: Record<string, string> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, b.label]))
+/** Idem, libellés du MODE FUN (variante `fun` quand elle existe). */
+export const RUN2_BADGE_LABELS_FUN: Record<string, string> = Object.fromEntries(RUN2_BADGES.map((b) => [b.id, b.fun?.label ?? b.label]))

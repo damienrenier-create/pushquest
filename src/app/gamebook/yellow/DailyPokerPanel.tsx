@@ -163,7 +163,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                             <li>Tu peux <b>encaisser</b> ton tapis et partir quand tu veux.</li>
                         </ul>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0" }}>
-                            <span style={{ fontSize: 12 }}>Reps : <b>{player.reps} ⚡</b> · Buy-in :</span>
+                            <span style={{ fontSize: 12 }}>{getGameMode() === "fun" ? "Énergie" : "Reps"} : <b>{player.reps} ⚡</b> · Buy-in :</span>
                             <input type="number" min={MIN_BUYIN} max={Math.min(player.reps, MAX_BUYIN)} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
                             <button style={{ ...btn, background: "#334", padding: "6px 9px" }} onClick={() => setBuyin(Math.max(MIN_BUYIN, Math.min(player.reps, MAX_BUYIN)))}>max</button>
                         </div>
@@ -172,7 +172,7 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                         <button style={{ ...bigBtn, background: allowance > 0 ? "#4cd964" : "#334", color: allowance > 0 ? "#0a2a12" : "#889", width: "100%" }} disabled={allowance <= 0 || player.reps < seatBuyin} onClick={start}>
                             S'asseoir ({seatBuyin} ⚡)
                         </button>
-                        {player.reps < seatBuyin && <div style={{ fontSize: 10.5, color: "#e0a0a0", textAlign: "center", marginTop: 4 }}>Pas assez de reps (min {MIN_BUYIN} ⚡).</div>}
+                        {player.reps < seatBuyin && <div style={{ fontSize: 10.5, color: "#e0a0a0", textAlign: "center", marginTop: 4 }}>Pas assez {getGameMode() === "fun" ? "d'énergie" : "de reps"} (min {MIN_BUYIN} ⚡).</div>}
                         <button style={{ ...btn, background: "#334", width: "100%", marginTop: 6 }} onClick={onDone}>Fermer</button>
                     </div>
                 )}

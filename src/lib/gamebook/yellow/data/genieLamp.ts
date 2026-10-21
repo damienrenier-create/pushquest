@@ -73,3 +73,22 @@ export function genieFxMarker(n: number, round?: number | null): string {
     const r = Math.max(0, Math.floor(Number(round) || 0))
     return r > 0 ? `genie_fx${n}_r${r}` : `genie_fx${n}`
 }
+
+/** UN VŒU SE PAIE UNE SEULE FOIS PAR JOUEUR, quel que soit le monde (run 1, run 2, rejeu…). Les marqueurs genieFxMarker
+ *  vivent dans les marqueurs DU MONDE ; un monde neuf (run 2, bulle de rejeu) les a vides. Avant le 20/10/2026, chaque vœu
+ *  exaucé se REJOUAIT donc en entier à l'entrée du run 2 : Kingme +15 000⚡ une 2e fois, TomGotrails 3 Pâtes de Bertie de
+ *  plus, défi Blaziper de DaKumba réarmé (et perdu → Blaziper scellé dans son run 2).
+ *  Désormais, un vœu déjà appliqué dans un AUTRE monde ne rejoue QUE ses effets PERMANENTS ci-dessous (bonus/malus portés
+ *  par un marqueur, idempotents : ils doivent suivre le joueur dans chaque monde). Tous les autres sont des DONS UNIQUES. */
+//   casino_cap n'en fait PAS partie : son seul cas réel (Jacanon) a été LEVÉ par le canal pendingEffects (casino_uncap,
+//   15/10/2026), qui ne se rejoue jamais → le rejouer dans un monde neuf le re-bannirait à tort.
+export const GENIE_PERSISTENT_EFFECT_KINDS: ReadonlySet<string> = new Set([
+    "league_level_boost", "casino_uncap", "ace_daily_cap", "attack_cost_extended", "minitel_unlock",
+])
+/** Les DONS UNIQUES connus (énergie, objets, défi némésis, pâtes, rencontres, charges, surtaxe, malédiction datée…) :
+ *  jamais reversés dans un 2e monde. Un effet inconnu des deux listes est traité comme un don unique (prudence). */
+export const GENIE_ONCE_EFFECT_KINDS: ReadonlySet<string> = new Set([
+    "energy", "ball_lock", "item", "cap", "casino_cap", "energy_drain", "level_drain", "luxe_pasta_batch", "bertie_crochue_batch",
+    "force_encounter", "nemesis_challenge", "abundance_curse", "dex_wish_days", "shop_surtax", "shiny_frenzy",
+    "ephemeral_shiny_days", "ev_reset_charges",
+])

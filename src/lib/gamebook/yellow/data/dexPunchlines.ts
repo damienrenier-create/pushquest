@@ -128,7 +128,15 @@ export const DEX_PUNCHLINES: Record<string, string> = {
     thundah: "Le Daemon le plus rapide du Nexus. Cligne des yeux et tu l'as raté.",
 }
 
-/** Punchline humoristique d'une espèce (null si non définie). */
-export function getPunchline(id: string): string | null {
-    return DEX_PUNCHLINES[id] ?? null
+/** MODE FUN : remplace les punchlines qui supposent une vraie séance de sport (le joueur fun n'encode aucun effort). */
+export const DEX_PUNCHLINES_FUN: Record<string, string> = {
+    feuillichot: "Refuse de pousser les jours où tu oublies de venir jouer.",
+    flamkure: "Chauffe d'autant plus qu'il s'échauffe. Garde tes distances, prudemment.",
+    fennaise: "Grandes oreilles : entend le combat que tu comptais fuir.",
+    marteloutan: "Frappe comme une enclume, et juge ta technique de lancer de Ball.",
+}
+
+/** Punchline humoristique d'une espèce (null si non définie). `fun` : variante du mode fun quand elle existe. */
+export function getPunchline(id: string, fun = false): string | null {
+    return (fun ? DEX_PUNCHLINES_FUN[id] : undefined) ?? DEX_PUNCHLINES[id] ?? null
 }

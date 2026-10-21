@@ -118,8 +118,15 @@ export const ACE_NO_CALEPIN_TEASES = [
 /** Nargue si le joueur GAGNE sans avoir encore reçu le CALEPIN (offert seulement à la 1re défaite contre ACE). */
 export function aceNoCalepinTease(): string { return acePick(ACE_NO_CALEPIN_TEASES) }
 /** Ligne teaser du cadeau selon le nb de victoires : compte à rebours, ou ligne d'après-cadeau. */
-export function aceGiftLine(aceWins: number): string {
+/** RUN 2 : ACE lègue son NÉMÉSIS (forgé contre ta création) au lieu du Panthéon — cf. battleStore (cadeau de la 7e victoire). */
+export const ACE_GIFT_TEASER_NEMESIS = "« Encore {n} et je te lègue mon NÉMÉSIS — oui, celui que j'ai forgé contre toi. Considère ça comme un héritage anticipé. »"
+export const ACE_GIFT_DONE_RUN2 = "« T'as déjà eu mon cadeau. J'en ai pas d'autre dans la poche — j'ai l'air d'un fossoyeur ? Reviens te battre quand même : j'aime te voir tomber. »"
+
+/** Réplique-cadeau d'ACE. `gift` = ce qu'il lèguera VRAIMENT à la 7e victoire : « nemesis » au run 2 quand ta création
+ *  est en équipe (getNgplusNemesisSpeciesId non nul), sinon « pantheon ». */
+export function aceGiftLine(aceWins: number, gift: "pantheon" | "nemesis" = "pantheon"): string {
     const left = ACE_PANTHEON_WIN - aceWins
+    if (gift === "nemesis") return left > 0 ? ACE_GIFT_TEASER_NEMESIS.replace("{n}", `${left} victoire${left > 1 ? "s" : ""}`) : ACE_GIFT_DONE_RUN2
     return left > 0 ? ACE_GIFT_TEASER.replace("{n}", `${left} victoire${left > 1 ? "s" : ""}`) : ACE_GIFT_DONE
 }
 
@@ -301,13 +308,15 @@ export const ACE_PANTHEON_WIN = 7
 /** Récompense à la n-ième victoire (1-indexée). Messages en humour noir (la concession d'ACE est ajoutée à part).
  *  RUN 3 (concours) : ACE peut offrir des BALLS et le Panthéon (une espèce), mais JAMAIS de reps/énergie ni de
  *  remboursement — le run n'a qu'une seule source d'énergie (les paliers d'arène). On retire donc reps/refund. */
-export function aceReward(winNumber: number, run3 = false): AceReward {
+export function aceReward(winNumber: number, run3 = false, fun = false): AceReward {
+    // MODE FUN : la même énergie, dite « énergies » (un fun n'encode aucune rep).
+    const unit = fun ? "énergies" : "reps"
     if (winNumber <= 3) return run3
-        ? { itemId: "poke_ball_plus", message: "« Tiens : une Nexus-Ball +. Pas de reps — ton concours interdit les cadeaux d'énergie. Ramasse toujours un cadavre de plus avec ça. »" }
-        : { itemId: "poke_ball_plus", reps: 100, message: "« Tiens : une Nexus-Ball + et 100 reps. De quoi décorer ton caveau jusqu'à ta prochaine défaite. »" }
+        ? { itemId: "poke_ball_plus", message: `« Tiens : une Nexus-Ball +. ${fun ? "Rien d'autre" : "Pas de reps"} — ton concours interdit les cadeaux d'énergie. Ramasse toujours un cadavre de plus avec ça. »` }
+        : { itemId: "poke_ball_plus", reps: 100, message: `« Tiens : une Nexus-Ball + et 100 ${unit}. De quoi décorer ton caveau jusqu'à ta prochaine défaite. »` }
     if (winNumber <= 6) return run3
         ? { itemId: "super_ball", message: "« Super Nexus-Ball. Rien de plus : ici l'énergie ne tombe pas du ciel, elle se mérite en arène. Contente-toi de la Ball, rival. »" }
-        : { itemId: "super_ball", reps: 150, message: "« Super Nexus-Ball et 150 reps. Des fleurs sur ta future tombe, rival. Tu t'accroches, c'est touchant. »" }
+        : { itemId: "super_ball", reps: 150, message: `« Super Nexus-Ball et 150 ${unit}. Des fleurs sur ta future tombe, rival. Tu t'accroches, c'est touchant. »` }
     if (winNumber === ACE_PANTHEON_WIN) return { gift: "pantheon", message: "« Sept fois. Sept. Voilà ton Panthéon — fais-le évoluer comme tu veux. Il te survivra, c'est sûr. »" }
     return run3
         ? { message: "« Plus de cadeau. Et pas d'énergie à te rendre — c'est la règle de TON concours, pas la mienne. Reviens quand même : j'aime te voir tomber. »" }

@@ -7,7 +7,7 @@
 // paroles. La VUE DE TABLE (felt, cartes qui flippent, jetons, glow) est partagée avec la table multi.
 
 import { useEffect, useRef, useState } from "react"
-import { settleCasinoNet, usePlayer, creditReps, logEnergyIncome, markPokerFirstGameDone } from "@/lib/gamebook/yellow/store/playerStore"
+import { settleCasinoNet, usePlayer, creditReps, logEnergyIncome, markPokerFirstGameDone, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useLocalPoker } from "@/lib/gamebook/yellow/multiplayer/useLocalPoker"
 import { FIRST_GAME_GIFT } from "@/lib/gamebook/yellow/poker/soloSession"
@@ -92,7 +92,7 @@ export default function SoloPokerPanel({ onDone, myUserId }: { onDone: () => voi
                         <p style={{ margin: "4px 0" }}>Pour t'initier, la maison t'<b>avance {FIRST_GAME_GIFT} ⚡</b> — un crédit pour jouer, en solo contre 3 adversaires. Tu es <b>obligé de les jouer</b> (au moins une main).</p>
                         <ul style={{ margin: "6px 0", paddingLeft: 18, opacity: 0.9 }}>
                             <li>C'est un <b>crédit</b> : si tu repars avec un gros tapis, tu rembourses l'avance — <b>100 ⚡</b> au-dessus de 200, <b>200 ⚡</b> (avec intérêts) au-dessus de 500.</li>
-                            <li><b>Risque nul</b> : ce sont les jetons de la maison. Tu ne peux <b>rien perdre</b> de tes reps — tu ne fais qu'<b>encaisser</b> tes gains.</li>
+                            <li><b>Risque nul</b> : ce sont les jetons de la maison. Tu ne peux <b>rien perdre</b> de {getGameMode() === "fun" ? "ton énergie" : "tes reps"} — tu ne fais qu'<b>encaisser</b> tes gains.</li>
                         </ul>
                         <button style={{ ...bigBtn, background: "#4cd964", color: "#0a2a12", width: "100%", marginTop: 6 }} onClick={start}>Recevoir {FIRST_GAME_GIFT} ⚡ et jouer</button>
                         <button style={{ ...btn, background: "#334", width: "100%", marginTop: 6 }} onClick={onDone}>Plus tard</button>

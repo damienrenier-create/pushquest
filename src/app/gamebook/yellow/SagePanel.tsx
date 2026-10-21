@@ -45,6 +45,8 @@ const RULES =
 const RULES_FUN =
     "« Retire un point d'une stat, replace-le dans une autre — pas un de perdu, pas un de créé. Mais l'énergie ne se déplace pas gratis : 1 ⚡ pour le 1ᵉʳ point du jour, 2 pour le 2ᵉ… jusqu'à 20 points. Au-delà, reviens demain. »"
 const DONE = "« VOILÀ. Sens-tu cette harmonie ? Tes points sont enfin là où ils comptent. File t'entraîner. »"
+// MODE FUN : les points Saiyan viennent des NIVEAUX (+1 fixe par niveau, saveManager), pas d'un entraînement réel.
+const DONE_FUN = "« VOILÀ. Sens-tu cette harmonie ? Tes points sont enfin là où ils comptent. File au combat : chaque niveau gagné t'en rapporte un nouveau. »"
 const EXHAUSTED = "« Doucement, jeune bouillonnant : tu as déjà déplacé tes 20 points aujourd'hui. La salle de gravité t'attendra demain. »"
 const NO_TEAM = "« Une équipe VIDE ? On ne sculpte pas le néant, gamin. Reviens avec un Daemon. »"
 
@@ -104,7 +106,7 @@ export default function SagePanel() {
             return
         }
         void persistYellowSave()
-        setFlash(`${DONE} (−${r.cost ?? cost}⚡)`)
+        setFlash(`${getGameMode() === "fun" ? DONE_FUN : DONE} (−${r.cost ?? cost}⚡)`)
         // Le respec est appliqué : on repart de la nouvelle allocation (budget & reps déjà mis à jour dans le store).
         setWorking(allocOf({ ...mon, allocated: { ...(mon.allocated ?? {}) } }))
         setPickedUid(null)

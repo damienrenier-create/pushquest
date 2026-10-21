@@ -6,7 +6,8 @@
 
 import { useEffect, useState } from "react"
 import { SPECIES_IDS, getSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
-import { getPlayer, spendReps, grantReps, listMonForTrade } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, spendReps, grantReps, listMonForTrade, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchWanted, postWanted, cancelWanted, offerWanted, counterWanted, cancelOffer, acceptWanted, type WantedState, type WantedAd, type WantedOffer, type PriceKind } from "@/lib/gamebook/yellow/frontier/wantedApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -16,7 +17,9 @@ const SPECIES_SORTED = [...SPECIES_IDS].filter((id) => !DEX_ULTRA_SECRET.has(id)
 const box: React.CSSProperties = { background: "#20202c", border: "1px solid #3a3550", borderRadius: 8, padding: 8, marginBottom: 6 }
 const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#15151f", border: "none", borderRadius: 7, padding: "5px 9px", cursor: "pointer", fontWeight: 800, fontSize: 11 })
 const sect: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: "#e0a458", margin: "10px 0 5px", textTransform: "uppercase", letterSpacing: 0.4 }
-const priceLabel = (k: PriceKind, n: number) => `${n} ${k === "reps" ? "reps ⚡" : "JC 💠"}`
+// MODE FUN : la monnaie « reps » s'affiche ⚡ (un fun n'encode aucune rep) — même monnaie, même valeur.
+const repsWord = () => (getGameMode() === "fun" ? "⚡" : "reps ⚡")
+const priceLabel = (k: PriceKind, n: number) => `${n} ${k === "reps" ? repsWord() : "JC 💠"}`
 const monName = (raw: unknown) => { const m = raw as MonInstance; const sp = getSpecies(m?.speciesId); return sp ? `${m.shiny ? "✨" : ""}${m.nickname || sp.name} N.${m.level}` : "Daemon" }
 
 export default function WantedTab({ onToast, claim }: { onToast?: (m: string) => void; claim: () => Promise<void> }) {
@@ -59,7 +62,7 @@ export default function WantedTab({ onToast, claim }: { onToast?: (m: string) =>
     const buyerCounter = (o: WantedOffer, price: number) => guard(async () => {
         const net = price - o.escrowedByBuyer // variation de reps bloqués (>0 = bloquer plus, <0 = rendre)
         if (o.priceKind === "reps") {
-            if (net > 0 && getPlayer().reps < net) { setNote("Pas assez de reps pour bloquer ce prix."); return }
+            if (net > 0 && getPlayer().reps < net) { setNote(getGameMode() === "fun" ? "Pas assez d'énergie pour bloquer ce prix." : "Pas assez de reps pour bloquer ce prix."); return }
             if (net > 0) spendReps(net); else if (net < 0) grantReps(-net); persistYellowSave()
         }
         const r = await counterWanted(o.id, price)
@@ -68,7 +71,7 @@ export default function WantedTab({ onToast, claim }: { onToast?: (m: string) =>
     })
     // ── ACHETEUR : accepter le prix du vendeur (paie MAINTENANT ; reps débités côté client) ──
     const buyerAccept = (o: WantedOffer) => guard(async () => {
-        if (o.priceKind === "reps") { if (getPlayer().reps < o.price) { setNote("Pas assez de reps."); return } spendReps(o.price); persistYellowSave() }
+        if (o.priceKind === "reps") { if (getPlayer().reps < o.price) { setNote(notEnoughReps(getGameMode() === "fun")); return } spendReps(o.price); persistYellowSave() }
         const r = await acceptWanted(o.id)
         if (!r?.ok) { if (o.priceKind === "reps") { grantReps(o.price); persistYellowSave() } setNote(r?.reason === "insufficient" ? "Pas assez de JC." : "Indisponible."); return }
         onToast?.("✅ Échange conclu ! Daemon reçu."); await refresh()
@@ -101,7 +104,7 @@ export default function WantedTab({ onToast, claim }: { onToast?: (m: string) =>
                 {editing ? (
                     <div style={{ display: "flex", gap: 4, marginTop: 6, alignItems: "center" }}>
                         <input type="number" value={counterFor!.price} onChange={(e) => setCounterFor({ offer: o, price: e.target.value })} style={{ width: 70, background: "#15151f", color: "#fff", border: "1px solid #3a3550", borderRadius: 6, padding: "4px 6px", fontSize: 12 }} />
-                        <span style={{ fontSize: 10, opacity: 0.7 }}>{o.priceKind === "reps" ? "reps" : "JC"}</span>
+                        <span style={{ fontSize: 10, opacity: 0.7 }}>{o.priceKind === "reps" ? (getGameMode() === "fun" ? "⚡" : "reps") : "JC"}</span>
                         <button disabled={busy} onClick={() => { const p = Math.max(0, parseInt(counterFor!.price) || 0); side === "buyer" ? buyerCounter(o, p) : sellerCounter(o, p) }} style={btn("#7ac98a")}>Envoyer</button>
                         <button disabled={busy} onClick={() => setCounterFor(null)} style={{ ...btn("#555"), color: "#fff" }}>✕</button>
                     </div>
@@ -148,7 +151,7 @@ export default function WantedTab({ onToast, claim }: { onToast?: (m: string) =>
                     <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
                         <input type="number" value={newAd.price} onChange={(e) => setNewAd({ ...newAd, price: e.target.value })} style={{ width: 70, background: "#15151f", color: "#fff", border: "1px solid #3a3550", borderRadius: 6, padding: "5px 6px", fontSize: 12 }} />
                         <button onClick={() => setNewAd({ ...newAd, kind: "jc" })} style={{ ...btn(newAd.kind === "jc" ? "#ffd54a" : "#332e4a"), color: newAd.kind === "jc" ? "#15151f" : "#fff" }}>JC 💠</button>
-                        <button onClick={() => setNewAd({ ...newAd, kind: "reps" })} style={{ ...btn(newAd.kind === "reps" ? "#ffd54a" : "#332e4a"), color: newAd.kind === "reps" ? "#15151f" : "#fff" }}>reps ⚡</button>
+                        <button onClick={() => setNewAd({ ...newAd, kind: "reps" })} style={{ ...btn(newAd.kind === "reps" ? "#ffd54a" : "#332e4a"), color: newAd.kind === "reps" ? "#15151f" : "#fff" }}>{repsWord()}</button>
                     </div>
                     <input value={newAd.note} onChange={(e) => setNewAd({ ...newAd, note: e.target.value })} maxLength={120} placeholder="Note (optionnel)" style={{ width: "100%", boxSizing: "border-box", background: "#15151f", color: "#fff", border: "1px solid #3a3550", borderRadius: 6, padding: "5px 6px", fontSize: 11, marginBottom: 6 }} />
                     <div style={{ display: "flex", gap: 6 }}>

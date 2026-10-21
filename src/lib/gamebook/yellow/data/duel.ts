@@ -39,16 +39,27 @@ const WIN_LINES: readonly string[] = [
     "Magnifique ! Tu as essoré le reflet de %O comme une botte de spaghettis. Régale-toi.",
     "Par tous les coudes de macaronis ! Le reflet de %O n'a pas tenu une louche face à toi.",
 ]
-/** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. */
-export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string; chips?: number }): string[] {
+/** Plafond ANTI-TRICHE du cadeau versé au joueur dont on a battu le reflet (jamais atteint en jeu légitime). */
+export const DUEL_GIFT_MAX = 50000
+/** Énergie que le SERVEUR verse au vrai joueur dont on a battu le reflet (duel-gift/route.ts) : le DOUBLE de l'énergie
+ *  dépensée par le vainqueur, sans plancher, plafonnée à DUEL_GIFT_MAX ; montant fixe `fallback` si rien n'a été dépensé.
+ *  SOURCE UNIQUE : le dialogue de victoire annonce ce même montant (avant le 20/10/2026, il affichait la dépense bornée
+ *  à [30, 3000], pas le vrai versement). */
+export function duelGiftEnergy(energySpent: number, fallback: number): number {
+    return Number.isFinite(energySpent) && energySpent > 0 ? Math.min(DUEL_GIFT_MAX, Math.floor(energySpent * 2)) : fallback
+}
+
+/** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. `fun` : sans « sueur »
+ *  (un joueur fun n'encode aucun effort réel). */
+export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string; chips?: number }, fun = false): string[] {
     const gifts = ["✨ XP DOUBLÉE", `🎁 ${r.ballLabel}`]
-    if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (tu as sué pour cette victoire !)`)
+    if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (${fun ? "tu as bien galéré" : "tu as sué"} pour cette victoire !)`)
     if (r.chips && r.chips > 0) gifts.push(`🎰 +${r.chips} jetons casino (tente ta chance à la roulette !)`)
     if (r.ctDropped) gifts.push("🌑 la CT60 « Reflet Fatal » — une relique INÉDITE des ténèbres !")
     return [
         fill(pick(WIN_LINES), oppNick),
         "🎉 Pour ta bravoure : " + gifts.join(" · ") + " !",
-        `Et par équité de la Grande Marmite, le reflet de ${oppNick} récupère ${r.energyToOpp} énergie de ta sueur. Régale-toi, champion !`,
+        `Et par équité de la Grande Marmite, le reflet de ${oppNick} reçoit le double de ${fun ? "l'énergie que tu as dépensée" : "l'énergie de ta sueur"} : ${r.energyToOpp}⚡ (un seul cadeau de toi en attente à la fois). Régale-toi, champion !`,
     ]
 }
 

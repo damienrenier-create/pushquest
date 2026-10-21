@@ -1109,7 +1109,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const aceLastTypes = aceLast ? (getSpecies(aceLast.speciesId)?.types ?? []) : []
             const winNum = recordAceDefeat(avg, aceLastTypes, aceLast?.level ?? avg)
             const run3 = getActiveWorld() === "run3"
-            const r = aceReward(winNum, run3) // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie)
+            const r = aceReward(winNum, run3, getGameMode() === "fun") // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie) ; fun : « énergies »
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) logEnergyIncome("⚔️ Rival (ACE)", grantReps(r.reps))
             let gaveNemesis = false

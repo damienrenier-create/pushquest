@@ -78,7 +78,9 @@ import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun,
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
-import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, duelGiftEnergy, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
+import { repsUnit, repsIcon, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
@@ -92,7 +94,7 @@ import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
-import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS } from "@/lib/gamebook/yellow/data/run2Badges"
+import { run2EarnedBadgeIds, RUN2_BADGE_REPS, RUN2_BADGE_LABELS, RUN2_BADGE_LABELS_FUN } from "@/lib/gamebook/yellow/data/run2Badges"
 import { syncOwnedEvoSprites } from "@/lib/gamebook/yellow/data/fusionEvoSpriteClient"
 import { isEvolvedFusionStage, fusionStageNeedsGenSprite } from "@/lib/gamebook/yellow/data/fusionEvoSprites"
 import DomeMasters from "./DomeMasters"
@@ -1101,7 +1103,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 //   complet = 15 320⚡) SANS plafond/jour (uncapped). Drip idempotent (badgeRepsClaimed global : ids r2_* distincts).
                 const isFunRun2 = getGameMode() === "fun" && getActiveWorld() === "ngplus"
                 if (isFunRun2) {
-                    for (const id of run2EarnedBadgeIds(badgeInputFromSave(p as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"))) {
+                    for (const id of run2EarnedBadgeIds(badgeInputFromSave(p as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun, "fun"), true)) { // true : variantes FUN (sans reps encodées)
                         extraIds.push(id); extraReps[id] = RUN2_BADGE_REPS[id] ?? 0
                     }
                 }
@@ -1110,7 +1112,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 if (granted.length) {
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",
-                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${RUN2_BADGE_LABELS[g.id] ?? rewardLabel(g.id)} » !`),
+                        ...granted.map((g) => `🍝 +${g.reps}⚡ pour « ${(isFunRun2 ? RUN2_BADGE_LABELS_FUN : RUN2_BADGE_LABELS)[g.id] ?? rewardLabel(g.id)} » !`),
                         "« Retrouve TOUS tes trophées dans le menu (Pause) → 🏆 PALMARÈS → 🎖️ TROPHÉES & HAUTS FAITS. »",
                     ])
                     persistYellowSave()
@@ -1591,15 +1593,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (refund > 0) grantReps(refund)
             // Drop 5 % : CT60 « Reflet Fatal » (inédite, jamais en vente). grantCt renvoie false si déjà possédée.
             const ctDropped = Math.random() < 0.05 && grantCt("ct60")
-            // Énergie reversée au reflet = énergie dépensée, bornée comme le serveur ([30, 3000]) pour un affichage cohérent.
-            const energyToOpp = Math.max(30, Math.min(3000, Math.floor(duelResult.energySpent)))
+            // Énergie reversée au reflet : la formule du SERVEUR (duel-gift), partagée → le dialogue annonce le vrai versement
+            //   (×2 la dépense, plafond anti-triche). Avant le 20/10/2026 : la dépense bornée à [30, 3000], un autre montant.
+            const energyToOpp = duelGiftEnergy(duelResult.energySpent, MIRROR_GIFT_ENERGY)
             persistYellowSave()
             // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant) — il reçoit l'énergie du vainqueur.
             fetch("/api/gamebook/yellow/duel-gift", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
             }).catch(() => {})
-            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label, chips: duelChips }))
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label, chips: duelChips }, getGameMode() === "fun"))
         } else {
             logEnergyIncome("⚔️ Consolation de duel", grantReps(DUEL_LOSS_CONSOLE_REPS))
             persistYellowSave()
@@ -1838,7 +1841,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             } else {
                 const giftMove = getGiftCtMove()
                 lines.push(`🎖️ Tu obtiens le BADGE ${lbl} !`)
-                lines.push("Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.")
+                if (getGameMode() === "fun") {
+                    // FUN : pas de « reps » ; et la vraie contrepartie d'un badge en fun = des attaques plus chères (playerAttackQuota).
+                    const nb = getPlayer().badges.length
+                    const pricier = playerAttackQuota(nb) > playerAttackQuota(nb - 1)
+                    lines.push(`Ta jauge d'énergie s'agrandit (+250⚡) et de nouvelles CT s'ouvrent à la boutique.${pricier ? " Contrepartie : tes attaques coûtent un peu plus cher." : ""}`)
+                } else lines.push("Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.")
                 if (giftMove) lines.push(`🎁 Tu reçois la CT « ${giftMove} » ! Apprends-la à un Daemon compatible — cadeau unique.`)
                 lines.push(`🎟️ Et un ticket roulette de ${ARENA_TICKET_VALUE} énergies — joue-le à ta prochaine connexion !`)
             }
@@ -2298,7 +2306,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const nm = getSpecies(starterId)?.name ?? "Ton champion"
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte incandescente. ${nm} s'éveille à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
-            "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
+            getGameMode() === "fun"
+                ? "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de cadeaux, pas de récompenses d'énergie : chaque attaque puise dans ta réserve. »"
+                : "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
             "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800, et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
             "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Le concours s'achève quand tu tombes à 0⚡ OU quand tu terrasses LE MAÎTRE de la Ligue. »",
             "« Et alors seulement — MÉGA-FUSION : ton run 1, ton run 2 ET ce run 3 n'en feront plus qu'un. D'ici là, tes deux vies passées restent gelées. Pas de retour. »",
@@ -2337,10 +2347,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (getPlayer().ngplusUsed) { setToast("Tu as déjà accompli ta seconde vie. Pour en relancer une, il faut recommencer le run 1 (réinitialiser le chapitre)."); return }
         let starter
         try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) }
-        catch { setToast("Ton Daemon custom est introuvable/corrompu — NG+ impossible."); return }
+        catch { setToast("Ton Daemon custom est introuvable/corrompu — run 2 impossible."); return }
         const oldTeam = freezeTeam(getPlayer().team)
         const ok = await startNewGamePlus(starter, oldTeam)
-        if (!ok) { setToast("New Game+ réservé aux Champions du Nexus."); return }
+        if (!ok) { setToast("Le run 2 est réservé aux Champions du Nexus."); return }
         void generateCustomSpritesInBackground(stored) // NON bloquant : le run 2 démarre tout de suite, les sprites arrivent après (MISSINGNO en attendant)
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le NG+ démarre au tout début
@@ -2353,12 +2363,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "« Des Daemons jamais vus rôdent sur les routes, les types ont basculé, et des CT INÉDITES t'attendent. Rien ne sera comme avant, Maître. »",
             ...(getGameMode() === "fun" ? [
                 "« Ton SCORE du Remix = ta PERFORMANCE, notée sur 1000 : ton Pokédex du Remix, ton taux de victoire et les niveaux de ton équipe. »",
-                "« Et cette fois, chaque HAUT FAIT du Remix te verse de l'ÉNERGIE — SANS plafond, au fil de tes connexions ! Sois le PLUS RAPIDE de tes amis à BOUCLER le Remix (Ligue + ton double) : gros bonus de score. »",
+                "« Et cette fois, chaque HAUT FAIT du Remix te verse de l'ÉNERGIE — SANS plafond, au fil de tes connexions ! Sois le PLUS RAPIDE de tes amis à BOUCLER le Remix : gros bonus de score. »",
             ] : [
                 "« Ton défi de gloire : rallier la Ligue et la vaincre. Ton SCORE = ta PERFORMANCE — Pokédex, taux de victoire et niveaux d'équipe, notée sur 1000. La trace que tu graves dans le Nexus. »",
             ]),
             `« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création${getGameMode() === "fun" ? ", les 1000⚡ ET les Nexus-Balls" : " ET les 10000⚡"} à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »`,
-            "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
+            // ⚠️ Le DOUBLE (ton ancienne équipe, Salle Dorée) est une SURPRISE (Sartay 20/10/2026) : ne jamais l'annoncer ici.
+            "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi. »",
             "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",
         ])
     }
@@ -2589,6 +2600,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     }
     // Le handler clavier (effet plus haut) appelle toujours la dernière version via ce ref.
     goBackRef.current = goBack
+
+    // VOCABULAIRE DE L'ÉNERGIE (boutique, offres) : « reps » en muscu, « ⚡ » en mode fun — un joueur fun n'encode aucune rep
+    //   (règle Sartay 20/10/2026). Même monnaie, même valeur : seul le mot change.
+    const funWords = getGameMode() === "fun"
+    const RU = repsUnit(funWords)
 
     return (
         <div style={pageStyle}>
@@ -3317,7 +3333,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "stats" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "run3" ? "concours (run 3)" : activeWorld === "ngplus" ? "run NG+" : "run principal"}</div>
+                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "run3" ? "concours (run 3)" : activeWorld === "ngplus" ? "run 2" : "run principal"}</div>
                         {(() => {
                             const s = getPlayer().stats
                             const winrate = s.battles > 0 ? Math.round((s.wins / s.battles) * 100) : 0
@@ -3364,8 +3380,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             return (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 8px" }}>
                                     {row("🎮 Temps de jeu", formatDuration(sc.playtimeMs), "temps passé actif dans l'app — plus bas = mieux")}
+                                    {funWords ? <>
+                                        {row("⚡ Énergie utilisée (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "énergie dépensée sur TOUT le run 2 (attaques, boutique, casino) — comptée depuis le début")}
+                                        {row("🏆 Énergie utilisée (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "énergie dépensée en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
+                                    </> : <>
                                     {row("⚡ Reps utilisés (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "reps dépensés sur TOUT le run 2 (attaques, boutique, casino) — compté depuis le début")}
                                     {row("🏆 Reps utilisés (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "reps dépensés en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
+                                    </>}
                                     {/* NOTE GLOBALE /1000 (courante) + MEILLEUR du run + détail des facteurs (rendu dynamique) */}
                                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
@@ -4257,7 +4278,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔁 REJOUER UN RUN</div>
                         <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 6, lineHeight: 1.35 }}>
-                            RUN 1 & 3 : bulle ISOLÉE (améliore ton score + complète ton Pokédex, ton monde reste intact, classement « {nickname || "Toi"}² »). RUN 2 : ADDITIF — repars avec ton starter perso (niv 5, 10 000⚡) et les Daemons capturés REJOIGNENT ta collection.
+                            RUN 1 & 3 : bulle ISOLÉE (améliore ton score + complète ton Pokédex, ton monde reste intact, classement « {nickname || "Toi"}² »). RUN 2 : ADDITIF — repars avec ton starter perso (niv 5, {funWords ? "1 000⚡ + 10 Nexus-Balls" : "10 000⚡"}) et les Daemons capturés REJOIGNENT ta collection.
                         </div>
                         <div style={{ fontSize: 11, fontWeight: 800, textAlign: "center", marginBottom: 8, color: replayNextCost ? "#c9a227" : "#3ad06a" }}>
                             💠 Prochain rejeu : {replayNextCost === null ? "…" : replayNextCost === 0 ? "GRATUIT" : `${replayNextCost} JC`}
@@ -4405,7 +4426,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {abandonConfirm && (
                 <div style={menuOverlayStyle} onClick={() => setAbandonConfirm(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>⚠️ ABANDONNER LE NEW GAME+ ?</div>
+                        <div style={menuTitleStyle}>⚠️ ABANDONNER LE RUN 2 ?</div>
                         <div style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.6, opacity: 0.9, marginBottom: 4 }}>
                             Tu rends ton Daemon créé et {getGameMode() === "fun" ? <>tes <b>1000⚡</b> et tes <b>10 Nexus-Balls</b></> : <>tes <b>10000⚡</b></>} — <b style={{ color: "#c83030" }}>perdus À JAMAIS</b>.<br />
                             En échange, tu récupères ta partie de <b>Champion</b>, la <b>Daemonflûte</b> et l&apos;accès à la <b>Zone de Combat</b>.
@@ -4419,9 +4440,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     "*Le Prof. CHEN récupère ton Daemon avec un soupir mélancolique, puis te tend un instrument de bois ouvragé.*",
                                     "« Décision sage, peut-être. Voici la Daemonflûte — l'œuvre de ma vie. Va réveiller le colosse au SUD : la ZONE DE COMBAT t'attend, Champion. »",
                                 ])
-                            } else setToast("Trop tard : tu es déjà engagé dans le New Game+.")
+                            } else setToast("Trop tard : tu es déjà engagé dans le run 2.")
                         }}>🔥 OUI, j&apos;abandonne (perte définitive)</button>
-                        <button style={menuBtnDimStyle} onClick={() => setAbandonConfirm(false)}>← NON, je continue mon NG+</button>
+                        <button style={menuBtnDimStyle} onClick={() => setAbandonConfirm(false)}>← NON, je continue mon run 2</button>
                     </div>
                 </div>
             )}
@@ -4625,7 +4646,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={closeShop}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>BOUTIQUE</span><span>💪 {player.reps}/{player.repsCap} reps</span>
+                            <span>BOUTIQUE</span><span>{repsIcon(funWords)} {player.reps}/{player.repsCap}{funWords ? "" : " reps"}</span>
                         </div>
                         {shopSurtaxFactor() > 1 && (
                             <div style={{ fontSize: 11, color: "#ffb0a0", background: "rgba(255,90,70,0.12)", border: "1px solid rgba(255,90,70,0.35)", borderRadius: 8, padding: "6px 8px", margin: "4px 0 6px", lineHeight: 1.4 }}>
@@ -4681,9 +4702,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 >
                                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
-                                                        <span>{curse ? "GRATUIT" : `${price} reps`}</span>
+                                                        <span>{curse ? "GRATUIT" : `${price}${RU}`}</span>
                                                     </span>
-                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}{it.id === "fusio_ball" ? " — Prix progressif : +1000 reps à chaque Fusio-Ball achetée." : ""}</span>
+                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}{it.id === "fusio_ball" ? ` — Prix progressif : +1000${RU} à chaque Fusio-Ball achetée.` : ""}</span>
                                                 </button>
                                             )
                                         })}
@@ -4706,7 +4727,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 >
                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                         <span>🍝 Super Pasta (+1 niv.)</span>
-                                        <span>{price} reps</span>
+                                        <span>{price}{RU}</span>
                                     </span>
                                 </button>
                             )
@@ -4744,9 +4765,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 <button style={{ ...menuBtnDimStyle, width: 48, fontSize: 20 }} onClick={() => setBuyQty((q) => q + 1)}>+</button>
                             </div>
                             <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
-                                Total : <b>{total} reps</b>{canAfford ? "" : " — insuffisant"}
+                                Total : <b>{total}{RU}</b>{canAfford ? "" : " — insuffisant"}
                             </div>
-                            {isFusio && <div style={{ textAlign: "center", marginTop: -6, marginBottom: 10, fontSize: 11, opacity: 0.7 }}>Prix progressif : {Array.from({ length: buyQty }, (_, k) => fusioBallShopPrice(fusioBoughtNow + k)).join(" + ")} reps</div>}
+                            {isFusio && <div style={{ textAlign: "center", marginTop: -6, marginBottom: 10, fontSize: 11, opacity: 0.7 }}>Prix progressif : {Array.from({ length: buyQty }, (_, k) => fusioBallShopPrice(fusioBoughtNow + k)).join(" + ")}{RU}</div>}
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
@@ -4768,17 +4789,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>✨ Dieu Spaghetti</div>
                             <div style={{ textAlign: "center", margin: "8px 0", fontSize: 13, lineHeight: 1.5 }}>
-                                « Maître de la Chimère ! Pour capturer les Daemons fusionnés à l&apos;état sauvage, il te faut une <b>FUSIO-BALL</b>. Je t&apos;en cède une pour <b>1000 reps</b>. Marché conclu ? »
+                                « Maître de la Chimère ! Pour capturer les Daemons fusionnés à l&apos;état sauvage, il te faut une <b>FUSIO-BALL</b>. Je t&apos;en cède une pour <b>1000{RU}</b>. Marché conclu ? »
                             </div>
                             <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
-                                💪 {player.reps}/{player.repsCap}{canAfford ? "" : " — insuffisant"}
+                                {repsIcon(funWords)} {player.reps}/{player.repsCap}{canAfford ? "" : " — insuffisant"}
                             </div>
                             {!fusioArmed && <div style={{ textAlign: "center", marginBottom: 8, fontSize: 11, opacity: 0.6 }}>⏳ Un instant…</div>}
                             <button
                                 style={(canAfford && fusioArmed) ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford || !fusioArmed}
                                 onClick={() => { if (player.ballLockRemaining > 0) { setFusioBallModal(false); return } if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) { addItem("fusio_ball", 1); clearTrainerMarker(FUSIOBALL_OWED_MARKER) } setFusioBallModal(false) }}
-                            >✅ Oui, acheter (1000 reps)</button>
+                            >✅ Oui, acheter (1000{RU})</button>
                             <button style={menuBtnDimStyle} disabled={!fusioArmed} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
                         </div>
                     </div>
@@ -4863,7 +4884,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setSellMode(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>REVENDRE</span><span>💪 {player.reps}/{player.repsCap}</span>
+                            <span>REVENDRE</span><span>{repsIcon(funWords)} {player.reps}/{player.repsCap}</span>
                         </div>
                         {(() => {
                             if (activeWorld === "run3") return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Pas de revente pendant le CONCOURS — aucune énergie ne rentre en run 3.</div>
@@ -4875,7 +4896,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 return (
                                     <button key={it.id} style={menuBtnStyle} onClick={() => { if (consumeItem(it.id)) grantReps(refund) }}>
                                         <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span>{it.name} (×{n})</span><span>+{refund} reps</span>
+                                            <span>{it.name} (×{n})</span><span>+{refund}{RU}</span>
                                         </span>
                                     </button>
                                 )
@@ -4911,7 +4932,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                     <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                         <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv && mv.accuracy > 0 ? ` · Préc ${mv.accuracy}` : ""}{mv?.description ? ` — ${mv.description}` : ""}</span></span>
-                                                        <span>{isGift ? "✨ Cadeau" : `${ctPrice} reps`}</span>
+                                                        <span>{isGift ? "✨ Cadeau" : `${ctPrice}${RU}`}</span>
                                                     </span>
                                                 </button>
                                             )
@@ -4944,7 +4965,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 onClick={() => {
                                                     const r = teachCt(m.uid, ct.id)
                                                     if (r.ok) { setToast(r.queued ? `${displayName(m)} : choisis une attaque à oublier.` : `${displayName(m)} apprend ${mv?.name} !`); persistYellowSave(); setCtShop(false); setCtPick(null) }
-                                                    else if (r.reason === "reps") setToast("Pas assez de reps.")
+                                                    else if (r.reason === "reps") setToast(notEnoughReps(funWords))
                                                 }}>
                                                 <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                     <span>{displayName(m)}{known ? " (déjà apprise)" : compatible ? "" : " (incompatible)"}</span><span>N.{m.level}</span>
@@ -4968,7 +4989,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => setPastaPick(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>🍝 QUEL DAEMON ?</span><span>{pastaFree ? `🎁 gratuit ×${player.items[SUPER_PASTA_ITEM_ID] ?? 0}` : `${superPastaPrice()} reps`}</span>
+                            <span>🍝 QUEL DAEMON ?</span><span>{pastaFree ? `🎁 gratuit ×${player.items[SUPER_PASTA_ITEM_ID] ?? 0}` : `${superPastaPrice()}${RU}`}</span>
                         </div>
                         {player.team.map((m) => (
                             <button
@@ -4984,7 +5005,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         else { setPastaPick(false); setPastaFree(false) }
                                         void processSaiyanPoints() // convertit le niveau gagné en points Saiyan
                                     } else if (r.reason === "reps") {
-                                        setToast("Pas assez de reps.")
+                                        setToast(notEnoughReps(funWords))
                                     } else if (r.reason === "none") {
                                         setToast("Tu n'as plus de Super Pasta.")
                                         setPastaPick(false); setPastaFree(false)
@@ -5254,7 +5275,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 confirmForfeit ? (
                     <div style={pvpForfeitBoxStyle}>
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Abandonner ?</div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Les reps déjà dépensés ce combat sont perdus.</div>
+                        {/* Le PvP ne coûte de l'énergie QU'EN RUN 3 (hors équipe éphémère de fusion) — cf. battleStore submitPvpAction.
+                            Ailleurs, rien n'a été dépensé : l'avertissement était faux (corrigé le 20/10/2026). */}
+                        {effectiveRunWorld() === "run3" && !pvpCtx.ephemeralTeam && <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>{funWords ? "L'énergie ⚡ déjà dépensée ce combat est perdue." : "Les reps déjà dépensés ce combat sont perdus."}</div>}
                         <button style={miniBtn} onClick={() => pvpForfeitNow()}>Oui, abandonner</button>
                         <button style={miniBtn} onClick={() => setConfirmForfeit(false)}>Non</button>
                     </div>
@@ -5376,7 +5399,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {(live.capturedLevel != null || live.capturedAt || live.capturedMapId) && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
-                                    🎣 Capturé{live.capturedLevel != null ? ` au N.${live.capturedLevel}` : ""}{live.capturedAt ? ` le ${live.capturedAt}` : ""}{live.capturedMapId && YELLOW_MAPS[live.capturedMapId] ? ` — ${YELLOW_MAPS[live.capturedMapId].name}` : ""}{live.capturedQuotaReached ? " · 🏆 quota atteint" : ""}
+                                    🎣 Capturé{live.capturedLevel != null ? ` au N.${live.capturedLevel}` : ""}{live.capturedAt ? ` le ${live.capturedAt}` : ""}{live.capturedMapId && YELLOW_MAPS[live.capturedMapId] ? ` — ${YELLOW_MAPS[live.capturedMapId].name}` : ""}{live.capturedQuotaReached && !funWords ? " · 🏆 quota atteint" : ""}
                                 </div>
                             )}
                             {live.traded && (
@@ -5441,7 +5464,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                     )
                                                 })}
                                                 <div style={{ fontSize: 9, opacity: 0.6, marginTop: 5, lineHeight: 1.35 }}>
-                                                    +{EV_YIELD_PER_WIN} EV par victoire, dans la stat-forte du Daemon vaincu. La contribution « +X » s'ajoute dans le calcul de la stat (montée avec le niveau). Plafond {EV_STAT_CAP}/stat, {cap} au total.{boosted ? ` ✨ Plafond relevé (+${cap - EV_TOTAL_CAP}) : capturé après la Ligue, à bas niveau et/ou à fort potentiel génétique.` : ""}
+                                                    +{EV_YIELD_PER_WIN} EV par victoire, dans la stat-forte du Daemon vaincu. La contribution « +X » s'ajoute dans le calcul de la stat (montée avec le niveau). Plafond {EV_STAT_CAP}/stat, {cap} au total.{boosted ? (funWords
+                                                        // FUN : evCapBoost est posé dès le run 1 (addCaught / ensureFunEvCapBoost) — « après la Ligue » serait faux.
+                                                        ? ` ✨ Plafond relevé (+${cap - EV_TOTAL_CAP}) : bonus du mode fun, actif dès le run 1 — il grimpe avec le potentiel génétique (IV) et quand le Daemon est capturé à bas niveau${live.shiny ? ", +10 % pour un shiny" : ""}.`
+                                                        : ` ✨ Plafond relevé (+${cap - EV_TOTAL_CAP}) : capturé après la Ligue, à bas niveau et/ou à fort potentiel génétique.`) : ""}
                                                 </div>
                                             </div>
                                         )}
@@ -5466,7 +5492,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
                                         {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, getGameMode() === "fun" ? playerAttackQuota(player.badges.length) : effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>{repsIcon(funWords)} {attackCost(m ?? null, live.level, getGameMode() === "fun" ? playerAttackQuota(player.badges.length) : effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
                                     </div>
                                 )
                             })}

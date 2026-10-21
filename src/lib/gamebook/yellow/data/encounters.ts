@@ -13,7 +13,7 @@ import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes
 import { rollIvs, funRollIvs } from "./ivConfig"
 import { speciesAtLevel, levelEvosRemaining } from "./ace"
 import { getSpecies, SPECIES } from "./species"
-import { SPECIAL_OBTAIN } from "./captureSpecial"
+import { SPECIAL_OBTAIN, SPECIAL_OBTAIN_FUN_HOW } from "./captureSpecial"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5, GIGA_RARE = 2
@@ -296,13 +296,16 @@ function grotteLadderHints(speciesId: string): string[] {
     return out
 }
 
-export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false, eclaireurBeaten: boolean = false): CaptureGuide {
+/** `fun` (mode fun) : aucun effort encodé → le guide ne parle JAMAIS d'exercices ; il annonce le créneau horaire du type. */
+export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false, eclaireurBeaten: boolean = false, fun: boolean = false): CaptureGuide {
     const sp = getSpecies(speciesId)
     if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
     const matches = guideMatchesRun(speciesId, run, hideEndgame)
     const where: string[] = []
     const how = new Set<string>()
     let modulated = false // biomes (Route Nord/Grotte) ou effort (tag player) → le % affiché n'est qu'indicatif
+    let biomeModulated = false // biomes seuls : la seule modulation qui existe aussi en mode fun (l'effort n'y compte jamais)
+    const funSlots = new Set<number>() // MODE FUN : créneaux horaires qui boostent VRAIMENT une entrée de pop de ce Daemon
     for (const m of matches) {
         // Taux : % réel (base/Σbase) si connu, sinon bande qualitative (légendaire/dragon = pré-rolls, pas de %).
         const rate = m.pct != null ? fmtPct(m.pct) : rarityBand(m.e.base)
@@ -317,12 +320,15 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (m.e.requiresFusionLeague) parts.push("après la Ligue de Fusion")
         if (m.e.catchOnce) parts.push("1 seule capture possible")
         where.push(parts.join(" · "))
-        if ((m.mapId === "yellow_route_nord" || m.mapId === "yellow_grotte") || (m.e as { player?: unknown }).player) modulated = true
+        if (m.mapId === "yellow_route_nord" || m.mapId === "yellow_grotte") { modulated = true; biomeModulated = true }
+        else if ((m.e as { player?: unknown }).player) modulated = true
         if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
         if (m.e.captureRequiresDamage) how.add("Capture IMPOSSIBLE à pleins PV : inflige-lui au moins un coup avant de lancer une Ball.")
         if (m.e.captureMinBallBonus) how.add(`Exige une Ball puissante (ballBonus ≥ ${m.e.captureMinBallBonus}).`)
         if (m.e.captureMult && m.e.captureMult < 1) how.add("Très coriace : descends-le à 1 PV + statut avant de lancer.")
         if (m.gridType) how.add(`Aux Hautes Herbes de Cendreville, le carré du type ${m.gridType} ne sort que certains jours (rotation quotidienne).`)
+        // Légendaire / dragon des hautes herbes = PRÉ-TIRAGES, hors pondération horaire → aucun créneau pour eux.
+        if (fun && !m.legend && !m.dragon) for (const i of funBoostSlotsOfEntry(m.e)) funSlots.add(i)
     }
     // ÉCLAIREUR vaincu → localisation PRÉCISE dans la Grotte Puzzle : la coord de l'échelle du couloir de pop.
     //   Uniquement si l'espèce a un vrai match B1F CE run (sinon pas de hint fantôme hors-run).
@@ -341,18 +347,23 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
     if (where.length === 0) {
         // Pas sauvage dans cette run → obtention SPÉCIALE curée (pierre/objet/échange/cadeau/boss/rôdeur).
         const special = SPECIAL_OBTAIN[speciesId]
-        if (special) return { where: special.where ?? [], how: special.how ?? [], note: special.note ?? null }
+        if (special) return { where: special.where ?? [], how: (fun ? SPECIAL_OBTAIN_FUN_HOW[speciesId] : undefined) ?? special.how ?? [], note: special.note ?? null }
         // Sinon : repli sur le pré-évolué (récursif — trouve la base sauvage OU sa propre obtention spéciale).
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
-            const base = captureGuide(preEvo.id, run, hideEndgame, champion, eclaireurBeaten)
+            const base = captureGuide(preEvo.id, run, hideEndgame, champion, eclaireurBeaten, fun)
             if (base.where.length > 0 || base.how.length > 0) {
                 return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
             }
         }
         return { where: [], how: [], note: `${sp.name} ne se croise pas dans cette run — cadeau, boss, ou pas encore accessible.` }
     }
-    if (modulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce et selon tes exercices (pompes/squats).")
+    if (fun) {
+        // MODE FUN : le pop suit le biotope et l'HEURE (créneaux de types, timeTypeMult) — jamais les exercices.
+        if (biomeModulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce.")
+        const slots = [...funSlots].sort((a, b) => a - b).map(funSlotLabel)
+        if (slots.length) how.add(`🕐 Mode fun : il sort plus souvent ${slots.join(" et ")} (pop ×${String(TIME_TYPE_MULT).replace(".", ",")}). Le % affiché est hors bonus.`)
+    } else if (modulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce et selon tes exercices (pompes/squats).")
     how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
     return { where, how: [...how], note: null }
 }
@@ -1045,6 +1056,30 @@ const TIME_TYPE_BOOST: readonly { range: readonly [number, number]; types: reado
     { range: [21, 5],  types: ["SPECTRE", "POISON", "TENEBRES", "GLACE", "FEE"] }, // 🌙 nuit (enjambe minuit)
 ]
 const TIME_TYPE_MULT = 1.5
+
+/** MODE FUN — indices des créneaux TIME_TYPE_BOOST qui boostent VRAIMENT cette ENTRÉE de pop (guide de capture) : un type
+ *  de l'espèce TIRÉE (entry.speciesId, ce que lit timeTypeMult — pas forcément l'espèce cherchée, qui peut en être
+ *  l'évolution) est dans le créneau, et, si l'entrée a une fenêtre horaire (poids 0 en dehors), au moins une heure du
+ *  créneau tombe dans cette fenêtre. */
+export function funBoostSlotsOfEntry(e: WildEntry): number[] {
+    const types = getSpecies(e.speciesId)?.types ?? []
+    const out: number[] = []
+    TIME_TYPE_BOOST.forEach((t, i) => {
+        if (!types.some((ty) => t.types.includes(ty))) return
+        if (e.hourRange) {
+            let open = false
+            for (let h = 0; h < 24 && !open; h++) open = inHourRange(h, t.range as [number, number]) && inHourRange(h, e.hourRange)
+            if (!open) return
+        }
+        out.push(i)
+    })
+    return out
+}
+/** Libellé d'un créneau TIME_TYPE_BOOST (« de 13h à 17h »). */
+export function funSlotLabel(i: number): string {
+    const r = TIME_TYPE_BOOST[i].range
+    return `de ${r[0]}h à ${r[1]}h`
+}
 
 /** Multiplicateur de pop lié à l'heure — FUN uniquement. 1 si non-fun, heure absente, hors fenêtre, ou type non concerné. */
 function timeTypeMult(speciesId: string, hour?: number, fun?: boolean): number {

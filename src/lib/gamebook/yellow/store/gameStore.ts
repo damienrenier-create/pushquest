@@ -74,7 +74,8 @@ import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTr
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, SURFER_GALIJAH_HINT, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock, sudGateBlockedByRun, SUD_GATE_NPC, SUD_GATE_NPC_NAME, SUD_GATE_WRONG_RUN_LINES } from "../data/sylvebarbeBlock"
 import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, ananasIntroLines, ANANAS_NO_TEAM_LINES } from "../data/ananas"
-import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
+import { repsUnit, notEnoughReps } from "../data/energyWords"
+import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_ROD_GIFT_LINES_FUN, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -181,7 +182,7 @@ export function activeNpcs() {
             sprite: { emoji: "🥋", color: "#c0392b" }, // repli si le sprite Gen3 manque
             initialX: 9,
             initialY: 3,
-            dialoguesAfter: ["« Un Daemon a oublié une capacité de sa lignée ? Je peux la lui réapprendre… contre quelques reps. »"],
+            dialoguesAfter: ["« Un Daemon a oublié une capacité de sa lignée ? Je peux la lui réapprendre… contre un peu d'énergie. »"],
         }]
     }
     // DAEMOMANIAQUE (guide de capture) : présent à CENDREVILLE DÈS LE RUN 1 (le panneau adapte ses infos selon la
@@ -1086,9 +1087,17 @@ function platineOpponentIntro(): string[] | null {
     return [PLATINE_THRONE_INTRO.replace("{nick}", opp.holder.nickname).replace("{days}", since)]
 }
 
-function arenaIntroLines(t: { id: string; intro: string[] }): string[] {
-    if (t.id === "y_fusion_platine") return platineOpponentIntro() ?? t.intro
-    return (effectiveRunWorld() === "ngplus" ? run2ArenaIntro(t.id, getPlayerSave().team) : null) ?? t.intro
+/** Ce qu'ACE lèguera VRAIMENT à sa 7e défaite (même test que le cadeau, battleStore) : son NÉMÉSIS au run 2 quand une
+ *  création est en équipe, sinon le Panthéon. Sa réplique-cadeau annonce donc le bon cadeau. */
+function aceGiftKind(): "pantheon" | "nemesis" {
+    return getActiveWorld() === "ngplus" && getNgplusNemesisSpeciesId() ? "nemesis" : "pantheon"
+}
+
+function arenaIntroLines(t: { id: string; intro: string[]; introFun?: string[] }): string[] {
+    // MODE FUN : intro sans allusion à l'effort réel quand le dresseur en a une (cf. Trainer.introFun).
+    const intro = getGameMode() === "fun" && t.introFun ? t.introFun : t.intro
+    if (t.id === "y_fusion_platine") return platineOpponentIntro() ?? intro
+    return (effectiveRunWorld() === "ngplus" ? run2ArenaIntro(t.id, getPlayerSave().team) : null) ?? intro
 }
 function arenaDefeatLines(t: { id: string; defeat: string[] }): string[] {
     return (effectiveRunWorld() === "ngplus" ? run2ArenaDefeat(t.id) : null) ?? t.defeat
@@ -1578,13 +1587,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     cancelFishing: () => set({ fishing: null }),
     buyFashionOutfit: (base, priceReps) => {
         if (!isValidAvatar(base)) return { ok: false, reason: "Tenue inconnue." }
-        if (priceReps > 0 && !spendReps(priceReps)) return { ok: false, reason: "Pas assez de reps." }
+        if (priceReps > 0 && !spendReps(priceReps)) return { ok: false, reason: notEnoughReps(getGameMode() === "fun") }
         setChosenAvatar(avatarSheet(base)) // adopte la BASE propre (teinte neutre) — la teinte se règle ensuite, gratis
         markTrainerDefeated("ach_fashion") // HAUT FAIT : 1er achat de tenue chez la Fashion Victim
         // GAG 1×/run : au 1er achat, séquence non-skippable + canne ; c'est ELLE qui se relooke (le picker se ferme).
         const got = claimFishingRod()
         persistYellowSave()
-        if (got) { slowDlgLineAt = Date.now(); set({ fashionOpen: false, dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: FASHION_ROD_GIFT_LINES, slow: true } }) }
+        if (got) { slowDlgLineAt = Date.now(); set({ fashionOpen: false, dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: getGameMode() === "fun" ? FASHION_ROD_GIFT_LINES_FUN : FASHION_ROD_GIFT_LINES, slow: true } }) }
         return { ok: true }
     },
     setFashionTint: (h, s, b) => {
@@ -1599,7 +1608,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Fort déterrent : revenir au look par défaut coûte cher (2000 → 200 → 20). Compteur via marqueurs (sans champ save).
         const done = getPlayerSave().defeatedTrainers.filter((t) => t.startsWith(FASHION_REVERT_MARKER)).length
         const cost = fashionRevertCost(done)
-        if (!spendReps(cost)) return { ok: false, reason: `Il faut ${cost} reps pour revenir au look par défaut.` }
+        if (!spendReps(cost)) return { ok: false, reason: `Il faut ${cost}${repsUnit(getGameMode() === "fun")} pour revenir au look par défaut.` }
         markTrainerDefeated(`${FASHION_REVERT_MARKER}${done + 1}`)
         setChosenAvatar(undefined)
         persistYellowSave()
@@ -2489,7 +2498,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({
                 dialogue: {
                     npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0,
-                    lines: aceAvailableToday() ? [...aceIntro(), aceGiftLine(getPlayerSave().aceWins)] : ACE_GATE_LINES,
+                    lines: aceAvailableToday() ? [...aceIntro(), aceGiftLine(getPlayerSave().aceWins, aceGiftKind())] : ACE_GATE_LINES,
                 },
                 pendingAce: aceAvailableToday(),
             })
@@ -2755,7 +2764,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const cur = getPlayerSave().chosenAvatar
             // Pas encore de skin + pas assez de reps → refus (le picker exigerait un achat impayable).
             if (!cur && getPlayerSave().reps < FASHION_PRICES[0]) {
-                set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]} reps et je m'occupe de ton cas. »`] } })
+                set({ dialogue: { npcId: FASHION_VICTIM_NPC_ID, npcName: "FASHION VICTIM", lineIndex: 0, lines: [`« Chéri, je ne travaille pas GRATIS ! Reviens avec au moins ${FASHION_PRICES[0]}${repsUnit(getGameMode() === "fun")} et je m'occupe de ton cas. »`] } })
                 return
             }
             // Boutique ouverte : le joueur choisit + confirme (pas d'auto-achat). Sans skin, le picker impose le choix.
@@ -2979,7 +2988,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ACE_DONE_LINES, lineIndex: 0 } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: [...aceIntro(), aceGiftLine(getPlayerSave().aceWins)], lineIndex: 0 }, pendingAce: true })
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: [...aceIntro(), aceGiftLine(getPlayerSave().aceWins, aceGiftKind())], lineIndex: 0 }, pendingAce: true })
             return
         }
 
@@ -3327,7 +3336,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // sa revanche = son équipe RUN 1 d'origine +N. Une seule fois (rematchedTrainers, per-monde).
                 if (inNgplus && arenaRevancheBoost(trainer.id) != null && !isTrainerRematched(trainer.id)) {
                     set({
-                        dialogue: { npcId: npc.id, npcName: npc.name, lines: arenaRevancheIntro(trainer.name, !!trainer.badge), lineIndex: 0 },
+                        dialogue: { npcId: npc.id, npcName: npc.name, lines: arenaRevancheIntro(npc.name, !!trainer.badge), lineIndex: 0 }, // npc.name = nom RE-SKINNÉ du run 2 (ex. ZÉPHYRA), pas celui du run 1
                         pendingTrainerId: trainer.id, pendingRematch: true,
                     })
                     return

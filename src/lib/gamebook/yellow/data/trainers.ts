@@ -46,6 +46,8 @@ export interface TrainerData {
     aiLevel: AiLevel
     /** Réplique(s) avant le combat. */
     intro: string[]
+    /** MODE FUN : intro de remplacement quand `intro` parle de l'effort réel (sueur…) — le joueur fun n'encode rien. */
+    introFun?: string[]
     /** Réplique(s) une fois battu (ré-interaction ultérieure). */
     defeat: string[]
     /** Réplique(s) jouée(s) JUSTE APRÈS la victoire, en dialogue post-combat (via rematchReward
@@ -875,6 +877,11 @@ export const TRAINERS: TrainerData[] = [
             "*Le Doyen lève son bâton feuillu ; tout le Bosquet bruisse.*",
             "Je suis SYLVAIN, gardien du Bosquet Sacré.",
             "La nature absorbe tout — même ta sueur. Montre-moi ta racine !",
+        ],
+        introFun: [
+            "*Le Doyen lève son bâton feuillu ; tout le Bosquet bruisse.*",
+            "Je suis SYLVAIN, gardien du Bosquet Sacré.",
+            "La nature absorbe tout — même ta peur. Montre-moi ta racine !",
         ],
         defeat: [
             "Tu as grandi plus vite que mes ronces…",

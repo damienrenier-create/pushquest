@@ -41,7 +41,7 @@ function CapturePage() {
             </table>
             <P>Les <b>peu communs / rares</b> et les <b>hauts niveaux</b> sont plus durs → monte d'une ball, ou affaiblis encore plus.</P>
             <P>➕ <b>Statut</b> : Sommeil/Gel <b>×2,5</b>, Poison/Para/Brûlure <b>×1,5</b>. {!fun && <><b>Quota</b> du jour atteint : <b>×1,3</b>. </>}<b>Master-Éclair</b> : infaillible.</P>
-            {fun && <P>🎉 <b>Mode fun</b> : pas de bonus quota. En revanche, <b>plus les IV du sauvage sont hauts, plus il résiste</b> — un beau spécimen se mérite (monte d'une ball ou affaiblis-le à fond).</P>}
+            {fun && <P>🎉 <b>Mode fun</b> : <b>plus les IV du sauvage sont hauts, plus il résiste</b> — un beau spécimen se mérite (monte d'une ball ou affaiblis-le à fond).</P>}
         </>
     )
 }
@@ -113,10 +113,10 @@ function EnergyPage() {
         )
     }
     if (mode === "fun") {
-        // MODE FUN : pas de pompes à encoder → l'énergie vient des DÉFIS (labo), plus des reps.
+        // MODE FUN : rien à encoder → l'énergie vient des DÉFIS (labo). Aucun mot sur les pompes/reps (règle Sartay 20/10/2026).
         return (
             <>
-                <P>🎉 En <b>mode fun</b>, pas de pompes à encoder : ton énergie de combat vient des <b>DÉFIS</b> (onglet <b>« 🎉 Défis »</b> du labo, à l'étage).</P>
+                <P>🎉 En <b>mode fun</b>, ton énergie de combat vient des <b>DÉFIS</b> (onglet <b>« 🎉 Défis »</b> du labo, à l'étage).</P>
                 <P><b>Démarrage offert</b> : 10 000⚡ + 10 Nexus-Ball — un gros pécule pour t'élancer. Ensuite tu recharges via <b>Blitz d'arène</b> (100→300⚡, boosté par le niveau de ton équipe), <b>Sprint de capture</b> (75×N⚡) et le <b>Pokémon du jour</b> (40-160⚡). Le casino (jetons au sol, roulette, blackjack), les <b>duels de reflets</b> et tes <b>hauts faits</b> rechargent aussi. Le <b>Prof. Chen</b> à l'étage offre 2 cadeaux.</P>
                 <P>Chaque combat t'ouvre une <b>réserve</b> d'énergie qui <b>grandit avec tes badges</b> (200 +150 par badge) ; une <i>Charge Désespérée</i> gratuite reste dispo à sec.</P>
             </>
@@ -145,9 +145,9 @@ function QuotaPage() {
     if (getGameMode() === "fun") {
         return (
             <>
-                <P>🎉 <b>Pas de quota</b> en mode fun. À la place, les sauvages <b>tournent selon l'HEURE et le JOUR</b> :</P>
+                <P>🎉 En mode fun, les sauvages <b>tournent selon l'HEURE et le JOUR</b> :</P>
                 <P>• Chaque <b>créneau</b> met un groupe de <b>types</b> à l'honneur (🌅 Plante/Insecte/Vol · ☀️ Normal/Combat/Sol/Roche · 🌤️ Eau/Élec/Métal · 🌆 Feu/Dragon/Psy · 🌙 Spectre/Poison/Ténèbres/Glace/Fée). Ces types popent un peu plus dans leur fenêtre — <b>les autres restent présents</b>.<br />• Les <b>hautes herbes</b> renouvellent aussi leurs espèces <b>chaque jour</b>.</P>
-                <P>Leurs <b>IV sont tirés AU HASARD</b> (aucun bonus d'effort) : l'IV moyen est le plus fréquent, un beau ou un mauvais est rare, un <b>PARFAIT</b> très rare → <b>enchaîne les rencontres</b> pour tomber sur la perle. À <b>plusieurs en ligne</b>, la chance d'excellents IV grimpe (chasse groupée) !</P>
+                <P>Leurs <b>IV sont tirés AU HASARD</b> : l'IV moyen est le plus fréquent, un beau ou un mauvais est rare, un <b>PARFAIT</b> très rare → <b>enchaîne les rencontres</b> pour tomber sur la perle. À <b>plusieurs en ligne</b>, la chance d'excellents IV grimpe (chasse groupée) !</P>
                 <P>Pour <b>viser la rareté</b> : le <b>Pokémon du jour</b> (onglet « 🎉 Défis » du labo) te désigne une cible qui rapporte des ⚡.</P>
             </>
         )
@@ -159,6 +159,16 @@ function QuotaPage() {
             <P><b>Dépasse</b> ton quota pour des potentiels génétiques (IV) encore meilleurs sur les sauvages.</P>
         </>
     )
+}
+
+/** MODE FUN : titre AFFICHÉ des fiches dont le titre classique parle de reps ou de quota. La clé `t` ne change pas
+ *  (c'est elle que le Calepin mémorise) : seul l'affichage passe par topicTitle(). */
+const TOPIC_TITLES_FUN: Record<string, string> = {
+    "⚡ Reps → Énergie": "⚡ D'où vient l'énergie",
+    "🏆 Le quota du jour": "🕐 L'heure et le jour",
+}
+export function topicTitle(t: string): string {
+    return getGameMode() === "fun" ? (TOPIC_TITLES_FUN[t] ?? t) : t
 }
 
 export const TOPICS: { t: string; body: ReactNode }[] = [
@@ -252,7 +262,7 @@ export default function ParkSignPanel() {
     return (
         <div onClick={close} style={overlay}>
             <div onClick={(e) => e.stopPropagation()} style={box}>
-                <div style={header}>📜 {cur.t}</div>
+                <div style={header}>📜 {topicTitle(cur.t)}</div>
                 <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
                     {cur.body}
                 </div>

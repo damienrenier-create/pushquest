@@ -29,7 +29,7 @@ const SLIDES: { title: string; body: React.ReactNode }[] = [
 // MODE FUN : pas de quota à boucler → la 3ᵉ slide parle de HASARD (loterie de génes) au lieu d'effort.
 const SLIDES_FUN: { title: string; body: React.ReactNode }[] = SLIDES.map((s, k) => k !== 2 ? s : {
     title: "🎲 Des gènes tirés au hasard",
-    body: <>En <b>mode fun</b>, les gènes des sauvages sont <b>ALÉATOIRES</b> (pas de quota à boucler). Chaque rencontre est une <b>loterie</b> : l'IV moyen est le plus fréquent, un beau tirage est rare… mais enchaîne les rencontres et tu finiras par croiser un <b style={{ color: "#e0c020" }}>PARFAIT</b> ! Et à <b>plusieurs en ligne</b>, la chance grimpe — chassez ensemble ! 🤝</>,
+    body: <>En <b>mode fun</b>, les gènes des sauvages sont <b>ALÉATOIRES</b>. Chaque rencontre est une <b>loterie</b> : l'IV moyen est le plus fréquent, un beau tirage est rare… mais enchaîne les rencontres et tu finiras par croiser un <b style={{ color: "#e0c020" }}>PARFAIT</b> ! Et à <b>plusieurs en ligne</b>, la chance grimpe — chassez ensemble ! 🤝</>,
 })
 
 export default function GeneIntroCarousel({ onDone }: { onDone: () => void }) {

@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
@@ -95,12 +95,12 @@ export default function DaemomaniaquePanel() {
     const pick = (sp: SpeciesData) => {
         setErr(null)
         if (!infoAllowed(sp.id)) { setErr("Le Daemomaniaque ne parle que des Daemons que tu as déjà croisés."); return }
-        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) }); return }
+        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun") }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
         if (r.paid) setSpendFx((n) => n + 1) // consultation PAYANTE → on montre l'énergie qui part
         setRevealed((s) => new Set(s).add(sp.id))
-        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten) })
+        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun") })
     }
 
     const left = freeConsultsLeft()

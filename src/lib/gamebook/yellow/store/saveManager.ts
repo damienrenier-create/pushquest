@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
+import { setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -34,6 +34,16 @@ let suppressAutosave = false
 let liveStash: YellowSave | null = null      // run 1, stashé quand actif ≠ live
 let ngplusStash: YellowSave | null = null    // run 2, stashé quand actif ≠ ngplus (null si jamais lancé)
 let run3Stash: YellowSave | null = null      // run 3, stashé quand actif ≠ run3 (null si jamais lancé)
+/** Marqueur posé dans un monde STASHÉ (run 1 / run 2 / run 3 non actifs — dont le vrai monde pendant une bulle de rejeu).
+ *  Branché dans playerStore pour les vœux du génie : un vœu déjà payé dans un autre monde ne se repaie pas (20/10/2026). */
+export function markerInOtherWorld(marker: string): boolean {
+    // + les PROFILS inactifs (même compte, donc même joueur : un vœu se paie une fois par COMPTE). Ils sont gardés
+    //   OPAQUES (non normalisés) → gardes Array.isArray ; chacun porte son run 1 à plat + ses mondes imbriqués.
+    const has = (w: unknown) => { const dt = (w as { defeatedTrainers?: unknown } | null | undefined)?.defeatedTrainers; return Array.isArray(dt) && dt.includes(marker) }
+    if ([liveStash, ngplusStash, run3Stash].some(has)) return true
+    return altProfilesStash.some((p) => { const q = p as unknown as Record<string, unknown>; return has(q) || has(q?.ngplusWorld) || has(q?.run3World) || has(q?.replayWorld) })
+}
+setOtherWorldMarkerCheck(markerInOtherWorld)
 // MULTI-PROFILS : profils COMPLETS inactifs (chacun un YellowSave à part entière). Le profil ACTIF vit dans les
 // stores + les 3 slots ci-dessus ; les AUTRES profils sont stashés ici, OPAQUES, réémis tels quels par snapshot.
 let altProfilesStash: YellowSave[] = []
@@ -256,7 +266,9 @@ export async function loadYellowSave(): Promise<void> {
             //   Jamais en run 3 (énergie source unique, fenêtre de shiny hors sujet).
             {
                 const rawFx = typeof j?.ctx?.pendingEffects === "string" ? j.ctx.pendingEffects : ""
-                if (rawFx && getActiveWorld() !== "run3" && applyExternalEffects(rawFx)) {
+                // Seulement dans un VRAI monde (run 1 / run 2) : appliqués dans une bulle de rejeu, ils seraient acquittés
+                //   puis PERDUS avec la bulle (seuls les Daemons choisis en reviennent). En run 3 / rejeu → ils attendent.
+                if (rawFx && (getActiveWorld() === "live" || getActiveWorld() === "ngplus") && applyExternalEffects(rawFx)) {
                     const savedFx = await persistNow()
                     if (savedFx) {
                         try {

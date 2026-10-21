@@ -18,7 +18,7 @@ export const CHEN_LAB_LINES = [
  *  les 10000⚡ (perdus À JAMAIS) contre le retour à la partie de Champion + la flûte + la Zone de Combat. */
 export const CHEN_ABANDON_OFFER_LINES = [
     "« Ah… toi. La recrue au Daemon si singulier. Ton regard hésite, mélomane d'un jour. »",
-    "« Si ce New Game+ te pèse, je peux tout arrêter : rends-moi ton starter et tes 10000 énergies — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
+    "« Si ce run 2 te pèse, je peux tout arrêter : rends-moi ton starter et tes 10000 énergies — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
     "« Mais réfléchis bien : tu abandonnerais les Daemons inédits, les CT que personne d'autre ne possède, et surtout la chance de graver ton SCORE au sommet de la Ligue. Rares sont les Maîtres qui reviennent, une fois ce chemin entamé… »",
     "« Décide-toi vite : encore quelques combats et il sera trop tard. Alors… tu renonces ? »",
 ]
@@ -107,7 +107,7 @@ export const LAB_ASSISTANT_LINES_RUN3 = [
  *  unique, plus Apothéose) ; les signatures de boss se méritent en arène. Le pilier casino est MEROREM (Poison/Insecte). */
 export const LAB_ASSISTANT_LINES_NGPLUS = [
     "« Salut ! L'assistant du Prof. CHEN, toujours au poste. Le terminal, tu connais : inflige assez de dégâts d'un type et tu repars avec une CT. »",
-    "« Au CASINO, en NEW GAME+, le BLACKJACK te réserve UNE récompense unique : dès 1000 d'énergie NETTE gagnée, tu choisis N'IMPORTE QUELLE CT — une seule pour tout le run, alors choisis bien ! Seules les signatures des boss t'échappent : celles-là se méritent en terrassant les arènes re-typées. »",
+    "« Au CASINO, au RUN 2, le BLACKJACK te réserve UNE récompense unique : dès 1000 d'énergie NETTE gagnée, tu choisis N'IMPORTE QUELLE CT — une seule pour tout le run, alors choisis bien ! Seules les signatures des boss t'échappent : celles-là se méritent en terrassant les arènes re-typées. »",
     "« Un conseil : une CT ne cogne fort que si elle colle au TYPE de ton Daemon. Souviens-toi que chaque attaque tape sur l'ATTAQUE ou le SPÉCIAL selon son type — ne gâche pas ta meilleure stat. »",
     "« Côté pilier, ici ce n'est plus Tonytony mais son cousin MEROREM. 1000 d'énergie cumulée au casino et ce Poison/Insecte increvable rejoint ton équipe — soigneur et coriace, comme l'autre. »",
     "« Le Prof., lui, refaçonne son instrument pour réveiller, encore une fois, le colosse endormi au sud… S'il réussit, de nouvelles routes s'ouvriront à toi, Champion d'un autre monde ! »",
@@ -119,7 +119,7 @@ export const CHEN_FUN_GIFT_REPS = 300
 /** MODE FUN — CHEN offre le cadeau. `added` = reps réellement crédités, `left` = cadeaux restants APRÈS celui-ci,
  *  `shared` = énergie que reçoivent tous les AUTRES joueurs fun grâce à ce cadeau (200 au 1er, 500 au 2e). */
 export const CHEN_FUN_GIFT_LINES = (added: number, left: number, shared: number): string[] => [
-    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, pas besoin de compter tes pompes, on est là pour s'amuser. »",
+    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, on est là pour s'amuser. »",
     `« Tiens, un coup de pouce : +${added}⚡ pour toi. Et comme tu passes me voir, TOUS tes potes du mode fun reçoivent +${shared}⚡ à leur prochaine connexion — c'est ça, l'esprit d'équipe ! »`,
     left > 0
         ? "« Repasse me voir quand tu veux : j'ai encore un cadeau en réserve (et tes potes en profiteront ENCORE plus). »"
@@ -127,7 +127,7 @@ export const CHEN_FUN_GIFT_LINES = (added: number, left: number, shared: number)
 ]
 /** MODE FUN — OFFRE (explication + contrepartie), AVANT de créditer : le joueur confirme ensuite (modale Oui/Non). */
 export const CHEN_FUN_GIFT_OFFER_LINES = (reps: number, shared: number): string[] => [
-    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, pas besoin de compter tes pompes, on est là pour s'amuser. »",
+    "« Ah, une recrue du Nexus en mode DÉTENTE ! Bienvenue — ici, on est là pour s'amuser. »",
     `« Je peux te filer un coup de pouce : +${reps}⚡ rien que pour toi. La contrepartie ? C'est du bon karma : TOUS tes potes du mode fun reçoivent alors +${shared}⚡ à leur prochaine connexion — l'esprit d'équipe ! »`,
     "« Mais l'énergie, ça se mérite un peu : je ne te la donne QUE si tu en manques vraiment. Alors — tu veux ce cadeau ? »",
 ]

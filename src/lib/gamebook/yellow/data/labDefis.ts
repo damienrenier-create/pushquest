@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — DÉFIS DU LABO (étage du Centre Pokémon = labo scientifique).
 // Ce module porte le MODÈLE D'ÉTAT persistant (`labDefi`) regroupant tous les défis :
 //   - 3 défis PHYSIQUES (vraies reps PushQuest) : 50 pompes/1h, 150 squats/1 série, quota×2 → demain×3
-//   - 1 défi CT (infliger puissance×100 dégâts d'un type → CT du type, 2 max/type, 2e ×2)
+//   - 1 défi CT (infliger puissance×CT_DEFI_POWER_MULT (1000) dégâts d'un type → CT du type, 2 max/type, 2e ×2)
 //   - 1 défi SURPRISE (casino pattern-spin : gagner 1000 énergies cumulées → Tonytony)
 // Tout vit dans GamebookProgress.flags de la ligne chapterId="yellow" (aucune migration SQL).
 
@@ -26,7 +26,7 @@ export interface LabActiveDefi {
     ctType?: PokeType
     /** Attaque de la CT visée (pour info/affichage). */
     ctMoveId?: string
-    /** Seuil de dégâts à atteindre (= puissance × 100, ×2 si c'est la 2e CT du type). */
+    /** Seuil de dégâts à atteindre (= puissance × CT_DEFI_POWER_MULT, ×2 si c'est la 2e CT du type). */
     ctThreshold?: number
     /** Id de la CT à remettre à la réussite. */
     ctTargetCtId?: string

@@ -20,8 +20,8 @@ type Page = { t: string; rows: [string, string][] }
 // astuce quota → rotation heure/jour + IV au hasard, formule Saiyan → +1 fixe. Les autres modes rendent tel quel.
 function funifyRow(k: string, v: string): string {
     let out = v.replace(/(\d+)\s*reps/g, "$1 ⚡") // la monnaie fun = énergie (pas de reps encodées)
-    if (k.includes("Astuce") && /quota/i.test(v)) out = "Les sauvages changent selon l'HEURE et le JOUR, et leurs IV sont tirés au HASARD → enchaîne les rencontres (et chasse à plusieurs pour de meilleurs génes)."
-    if (k === "Combien") out = "En mode fun : +1 point Saiyan par niveau (pas de quota à boucler)."
+    if (k.includes("Astuce") && /quota/i.test(v)) out = "Les sauvages changent selon l'HEURE et le JOUR, et leurs IV sont tirés au HASARD → enchaîne les rencontres (et chasse à plusieurs pour de meilleurs gènes)."
+    if (k === "Combien") out = "En mode fun : +1 point Saiyan par niveau gagné."
     return out
 }
 

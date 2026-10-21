@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { getTodayISO } from "@/lib/challenge"
 import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
+import { duelGiftEnergy } from "@/lib/gamebook/yellow/data/duel"
 
 export const dynamic = "force-dynamic"
 
@@ -83,12 +84,9 @@ export async function POST(req: NextRequest) {
     // Énergie reversée au joueur mirouté = ×2 l'énergie dépensée par le vainqueur (boost « rattrapage », Sartay 02/08),
     //   SANS PLANCHER (choix Sartay 15/08) : purement proportionnel — un micro-duel = un micro-cadeau, un gros duel un
     //   gros cadeau. Fallback = montant fixe GIFT_ENERGY si le client n'envoie pas la dépense (rétro-compat vieux clients).
-    //   Le garde-fou ci-dessous est purement ANTI-TRICHE (valeur absurde, jamais atteinte en jeu légitime) contre une
-    //   énergie injectée par un client falsifié.
-    const ANTI_CHEAT_MAX = 50000
-    const energy = typeof body.energy === "number" && isFinite(body.energy) && body.energy > 0
-        ? Math.min(ANTI_CHEAT_MAX, Math.floor(body.energy * 2))
-        : GIFT_ENERGY
+    //   Le garde-fou (DUEL_GIFT_MAX = 50 000) est purement ANTI-TRICHE (valeur absurde, jamais atteinte en jeu légitime)
+    //   contre une énergie injectée par un client falsifié. Formule PARTAGÉE avec le dialogue de victoire (data/duel).
+    const energy = duelGiftEnergy(typeof body.energy === "number" ? body.energy : 0, GIFT_ENERGY)
 
     try {
         const dg = (prisma as any).duelGift // table gated (cf. advisor/), créée par db:push

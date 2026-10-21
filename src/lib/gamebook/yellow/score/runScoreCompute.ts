@@ -110,9 +110,10 @@ export function regradeRun2FromFactors(factors: unknown): number | null {
     return seen > 0 ? Math.round(sum) : null
 }
 
-/** Ligne INFO (hors note /1000) « 🏆 Reps en Ligue » (#6) — max:0 = rendue sans barre par les panneaux. */
+/** Ligne INFO (hors note /1000) « 🏆 Énergie en Ligue » (#6) — max:0 = rendue sans barre par les panneaux. Dite en
+ *  ÉNERGIE (⚡) pour tous : c'est l'énergie dépensée, et le classement du Remix est lu par des joueurs fun (sans reps). */
 export function leagueRepsFactor(leagueReps: number): ScoreFactor {
-    return { key: "info:league_reps", label: "🏆 Reps en Ligue", ratio: 0, max: 0, points: leagueReps, detail: `${leagueReps.toLocaleString("fr-FR")} reps dépensés en combats de Ligue` }
+    return { key: "info:league_reps", label: "🏆 Énergie en Ligue", ratio: 0, max: 0, points: leagueReps, detail: `${leagueReps.toLocaleString("fr-FR")}⚡ dépensés en combats de Ligue` }
 }
 
 /** Ligne INFO (hors note) « ⚡ Énergie consommée » — pour le run 1 (frugalité retirée, énergie affichée à part). */

@@ -10,7 +10,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getPunchline } from "@/lib/gamebook/yellow/data/dexPunchlines"
 import { dexLore } from "@/lib/gamebook/yellow/data/dexLore"
 import { dexSize, computeMensuration, formatSize, formatWeight, sizeTag } from "@/lib/gamebook/yellow/data/dexMensurations"
-import { renameDaemon, getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { renameDaemon, getPlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 
@@ -23,7 +23,7 @@ export default function DexEntryScreen({ entry, onDone }: { entry: { speciesId: 
     const [done, setDone] = useState(false) // anti double-clic
 
     if (!sp) { onDone(); return null }
-    const punch = getPunchline(entry.speciesId)
+    const punch = getPunchline(entry.speciesId, getGameMode() === "fun")
 
     const finish = (withName: boolean) => {
         if (done) return

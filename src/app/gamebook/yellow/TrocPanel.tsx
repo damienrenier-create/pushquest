@@ -12,7 +12,7 @@ import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
-import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, grantReps, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchTroc, postTrocDeposit, postTrocWithdraw, postTrocOffer, postTrocCancelOffer, postTrocRespond, postTrocClaim, postTrocAck, type TrocState, type TrocListing, type TrocOffer } from "@/lib/gamebook/yellow/frontier/trocApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -83,7 +83,7 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
             if (d.reps > 0) { grantReps(d.reps); repsGot += d.reps }       // MARKET WANTED : paiement/remboursement en reps
         }
         persistYellowSave()
-        if (repsGot > 0) onToast?.(`⚡ +${repsGot} reps reçus (échange).`)
+        if (repsGot > 0) onToast?.(getGameMode() === "fun" ? `⚡ +${repsGot} énergie reçue (échange).` : `⚡ +${repsGot} reps reçus (échange).`)
         await postTrocAck(ds.map((d) => d.id)) // acquittement APRÈS persistance (au pire on réapplique → doublon, jamais perte)
         if (received > 0) onToast?.(`📦 ${received} Daemon(s) reçu(s) au PC !`)
     }

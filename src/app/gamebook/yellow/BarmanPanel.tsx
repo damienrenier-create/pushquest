@@ -5,7 +5,7 @@
 // Le barman suggère seulement que "payer plus porte chance".
 
 import { useState } from "react"
-import { usePlayer, buyBarmanPotion, barmanPotionBasePrice, casinoTicketCount, redeemCasinoTicket, grantRouletteTicket, spendReps, grantReps, logEnergyIncome } from "@/lib/gamebook/yellow/store/playerStore"
+import { getGameMode, usePlayer, buyBarmanPotion, barmanPotionBasePrice, casinoTicketCount, redeemCasinoTicket, grantRouletteTicket, spendReps, grantReps, logEnergyIncome } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 
 // Valeurs de ticket casino disponibles à la conversion (reps → ticket). Bornées comme les tickets roulette.
@@ -17,6 +17,8 @@ const BUY_LINES = [
     "Tiens. On dit que les généreux ont… de la veine. Hé hé.",
     "*Il range les reps sous le comptoir.* Reviens quand tu veux.",
 ]
+// MODE FUN : même comptoir, sans « reps » (un fun n'encode aucune rep — il paie en énergie).
+const BUY_LINES_FUN = BUY_LINES.map((l) => l.replace("*Il range les reps sous le comptoir.*", "*Il range ton énergie sous le comptoir.*"))
 
 export default function BarmanPanel({ close }: { close: () => void }) {
     const player = usePlayer()
@@ -37,7 +39,7 @@ export default function BarmanPanel({ close }: { close: () => void }) {
     const inc = () => setPrice((p) => Math.min(base * 9, p + base))
     const buy = () => {
         const r = buyBarmanPotion(price)
-        if (r.ok) { persistYellowSave(); setMsg(BUY_LINES[tick % BUY_LINES.length]); setTick((t) => t + 1) }
+        if (r.ok) { persistYellowSave(); setMsg((getGameMode() === "fun" ? BUY_LINES_FUN : BUY_LINES)[tick % BUY_LINES.length]); setTick((t) => t + 1) }
         else setMsg(r.reason === "energy" ? "« Pas assez d'énergie, mon grand. »" : `« C'est ${base} ⚡ minimum. »`)
     }
     // Convertir des reps en ticket casino (= mettre des reps à l'abri du plafond).

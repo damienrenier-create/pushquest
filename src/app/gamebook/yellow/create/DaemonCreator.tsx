@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react"
 import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
-import { addCustomDaemon } from "@/lib/gamebook/yellow/store/playerStore"
+import { addCustomDaemon, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
@@ -138,20 +138,22 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
             <div style={S.overlay} onClick={forced ? undefined : close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
                     <div style={S.h}>🧬 Daemon envoyé au labo !</div>
-                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ pour l&apos;instant — son vrai visage arrive sous peu{isLoop ? ", une fois de retour au Nexus" : ", une fois ton New Game+ lancé"}).</p>
-                    {nemFinal && (
+                    <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ pour l&apos;instant — son vrai visage arrive sous peu{isLoop || isGenesis ? ", une fois de retour au Nexus" : ", une fois ton run 2 lancé"}).</p>
+                    {/* Le NÉMÉSIS n'existe qu'au RUN 2 (getNgplusNemesisSpeciesId, monde « ngplus ») : ni en boucle (rejeu du
+                        run 1), ni en genèse → l'encadré n'est montré qu'aux créations qui ouvrent un run 2. */}
+                    {nemFinal && !isLoop && !isGenesis && (
                         <div style={{ ...S.errBox, background: "#f3e6f6", border: "2px solid #8a4a9a", color: "#4a1c54", marginBottom: 8 }}>
                             <b>👹 Le Némésis d&apos;ACE</b> — une lignée forgée pour te contrer :
                             <div style={{ marginTop: 4, fontWeight: 700 }}>
                                 {nemFinal.types.map((t) => <span key={t} style={{ ...S.miniChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t]}</span>)} · BST {nemFinal.bst}
                             </div>
-                            <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>Bats ACE en 1ʳᵉ ville pour te l&apos;approprier.</div>
+                            <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>ACE l&apos;alignera contre toi pendant tout le run 2. Bats-le 7 fois (1 combat par jour, en 1ʳᵉ ville) avec ta création dans ton équipe, et il te le lègue.</div>
                         </div>
                     )}
-                    <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>{isLoop ? "Il t'accompagnera comme starter dans une nouvelle traversée du Nexus (bulle de rejeu — ton vrai monde reste intact)." : "Phase 2 : sauvegarde en base, New Game+ (6000 ⚡), puis fusion des comptes après avoir battu ta propre équipe."}</p>
+                    {!isGenesis && <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>{isLoop ? "Il t'accompagnera comme starter dans une nouvelle traversée du Nexus (bulle de rejeu — ton vrai monde reste intact)." : (getGameMode() === "fun" ? "Il ouvre ton run 2, avec 1 000 ⚡ et 10 Nexus-Balls de départ." : "Il ouvre ton run 2, avec 10 000 ⚡ de départ.")}</p>}
                     {forced ? (
                         <button style={{ ...S.primary, fontSize: 15, padding: "12px 0", background: "#e0a020", borderColor: "#e0a020" }} onClick={() => onCreated!(effSpec)}>
-                            {isLoop ? "🔁 REPARTIR AU NEXUS AVEC LUI !" : "🚀 COMMENCER TON NEW GAME+"}
+                            {isLoop ? "🔁 REPARTIR AU NEXUS AVEC LUI !" : isGenesis ? "✅ VALIDER CETTE CRÉATION" : "🚀 COMMENCER TON RUN 2"}
                         </button>
                     ) : (
                         <>

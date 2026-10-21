@@ -4,9 +4,9 @@
 //   l'ordre reçu (triable), avec des NOTES PERSO annotables. Contenu = mêmes fiches TOPICS que le Manuel.
 
 import { Fragment, useState, type ReactNode, type CSSProperties } from "react"
-import { TOPICS, topicCat } from "./ParkSignPanel"
+import { TOPICS, topicCat, topicTitle } from "./ParkSignPanel"
 import { getCalepin, setCalepinNote } from "@/lib/gamebook/yellow/store/calepinStore"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { messageSource, type MessageSource } from "@/lib/gamebook/yellow/data/messageJournal"
 import { mapLabel } from "@/lib/gamebook/yellow/data/mapLabels"
 import { VILLE_JAUNE_TIPS } from "@/lib/gamebook/yellow/data/villeJauneTips"
@@ -38,8 +38,8 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
 
     // Carnet VIERGE au départ : n'affiche QUE les astuces réellement CROISÉES en jeu (cal.tips), dans l'ordre reçu.
     const received = cal.tips.map((t) => CATALOG.find((x) => x.t === t)).filter((x): x is (typeof CATALOG)[number] => !!x)
-    const list = sort === "alpha" ? [...received].sort((a, b) => a.t.localeCompare(b.t))
-        : sort === "theme" ? [...received].sort((a, b) => catOf(a.t).localeCompare(catOf(b.t)) || a.t.localeCompare(b.t))
+    const list = sort === "alpha" ? [...received].sort((a, b) => topicTitle(a.t).localeCompare(topicTitle(b.t)))
+        : sort === "theme" ? [...received].sort((a, b) => catOf(a.t).localeCompare(catOf(b.t)) || topicTitle(a.t).localeCompare(topicTitle(b.t)))
             : received
     const topic = open ? CATALOG.find((x) => x.t === open) : null
 
@@ -63,7 +63,7 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                 {tab === "astuces" && (topic ? (
                     <>
                         <button onClick={() => { saveNote(); setOpen(null) }} style={{ background: "transparent", color: INK, border: `1px solid ${DARK}`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 800, fontSize: 11, marginBottom: 10 }}>← Mes astuces</button>
-                        <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 8 }}>{topic.t}</div>
+                        <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 8 }}>{topicTitle(topic.t)}</div>
                         <div>{topic.body}</div>
                         <div style={{ fontWeight: 800, fontSize: 12, margin: "10px 0 4px" }}>✍️ Ma note</div>
                         <textarea value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={saveNote} maxLength={300} rows={3}
@@ -92,7 +92,7 @@ export default function CalepinPanel({ userId, onClose }: { userId: string; onCl
                                     <Fragment key={t.t}>
                                         {showHeader && <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase", opacity: 0.65, margin: "6px 0 1px" }}>{catOf(t.t)}</div>}
                                         <button onClick={() => openTip(t.t)} style={{ textAlign: "left", background: "#fff8e6", border: `1px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer", color: INK, fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-                                            📌 {t.t}{hasNote && <span title="Note perso"> ✍️</span>}
+                                            📌 {topicTitle(t.t)}{hasNote && <span title="Note perso"> ✍️</span>}
                                         </button>
                                     </Fragment>
                                 )
@@ -190,7 +190,7 @@ function EnergyJournal({ log }: { log: { ts: number; source: string; amount: num
         return (
             <div style={{ textAlign: "center", padding: "26px 14px", fontSize: 13, lineHeight: 1.6, opacity: 0.85 }}>
                 ⚡ Aucune <b>entrée d&apos;énergie</b> enregistrée pour l&apos;instant.<br />
-                Fais du sport, gagne des combats, ouvre des cadeaux… chaque gain d&apos;énergie viendra s&apos;inscrire ici.
+                {getGameMode() === "fun" ? "Relève les défis du labo, gagne des combats, ouvre des cadeaux…" : "Fais du sport, gagne des combats, ouvre des cadeaux…"} chaque gain d&apos;énergie viendra s&apos;inscrire ici.
             </div>
         )
     }

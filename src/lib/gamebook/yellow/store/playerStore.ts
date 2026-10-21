@@ -26,7 +26,7 @@ import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
-import { LAMP_ITEM_ID, genieFxMarker } from "../data/genieLamp"
+import { LAMP_ITEM_ID, genieFxMarker, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -1774,6 +1774,7 @@ export function applyAcceptedGenieWishEffects(row: {
     effect1?: string | null; effect2?: string | null; effect3?: string | null
     condition1?: string | null; condition2?: string | null; condition3?: string | null
     round?: number | null // TOUR de vœux (0 = les 3 premiers) → marqueurs genieFxMarker
+    history?: string | null // TOURS ARCHIVÉS (JSON [{ round, acceptedN, effectN… }]) → leurs effets PERMANENTS seulement
 } | null | undefined): boolean {
     if (!row || getActiveWorld() === "run3") return false
     const wishes = [
@@ -1786,18 +1787,51 @@ export function applyAcceptedGenieWishEffects(row: {
         if (w.acc !== true || !w.fx || st.defeatedTrainers.includes(w.mark)) continue
         let effects: GenieEffect[]
         try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue } // JSON invalide → on saute (pas de crash)
+        // DÉJÀ VERSÉ dans un AUTRE monde (vœu exaucé au run 1, joueur désormais au run 2 ou dans un rejeu) : un vœu ne se
+        //   paie qu'UNE fois par joueur → seuls ses effets PERMANENTS sont rejoués ici (cf. GENIE_PERSISTENT_EFFECT_KINDS) ;
+        //   les dons uniques (énergie, objets, défi némésis…) ne sont JAMAIS reversés. Bug corrigé le 20/10/2026.
+        const elsewhere = markerInOtherWorld(w.mark)
+        // BULLE DE REJEU : un vœu NEUF attend le retour dans un vrai monde (comme le run 3) — payé dans la bulle, il serait
+        //   repayé au retour (la bulle et son marqueur sont jetés). Un vœu déjà payé ailleurs y rejoue ses perks, normal.
+        if (getActiveWorld() === "replay" && !elsewhere) continue
         let handled = false
-        for (const e of effects) { if (runGenieEffect(e)) handled = true }
+        for (const e of effects) {
+            if (elsewhere && !GENIE_PERSISTENT_EFFECT_KINDS.has(e.kind)) { handled = true; continue } // don unique déjà reçu ailleurs
+            if (runGenieEffect(e)) handled = true
+        }
         if (!handled) continue // aucun effet RECONNU (build antérieur à ce type) → NE PAS marquer → re-tenté après déploiement
         st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark] } // marker one-shot par vœu
         changed = true
         // ANNONCE : quand un vœu ACCEPTÉ (ou IMPOSÉ) s'applique, on empile son message du génie → le client l'affiche
         //   au chargement (« informé, pas le choix »). Le RustyLampModal, lui, jette la file (déjà montrée à l'accept).
-        if (w.cond && w.cond.trim()) pendingGenieAnnouncements.push(w.cond)
+        //   Déjà appliqué ailleurs → déjà annoncé : pas de seconde annonce.
+        if (!elsewhere && w.cond && w.cond.trim()) pendingGenieAnnouncements.push(w.cond)
+    }
+    // TOURS ARCHIVÉS (GenieWish.history, ex. tour 0 de Rob) : leurs dons sont payés depuis longtemps ; seuls leurs effets
+    //   PERMANENTS (ex. « ACE 7×/jour ») doivent aussi exister dans un monde neuf. Uniquement s'ils ont été payés AILLEURS ;
+    //   jamais de don, jamais d'annonce.
+    let archived: Record<string, unknown>[] = []
+    try { const h = row.history ? JSON.parse(row.history) : []; archived = Array.isArray(h) ? h.filter((x) => x && typeof x === "object") : [] } catch { archived = [] }
+    for (const h of archived) for (const n of [1, 2, 3]) {
+        const fx = h[`effect${n}`]
+        if (h[`accepted${n}`] !== true || typeof fx !== "string" || !fx) continue
+        const mark = genieFxMarker(n, typeof h.round === "number" ? h.round : 0)
+        if (st.defeatedTrainers.includes(mark) || !markerInOtherWorld(mark)) continue
+        let effects: GenieEffect[]
+        try { const parsed = JSON.parse(fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue }
+        for (const e of effects) if (e && GENIE_PERSISTENT_EFFECT_KINDS.has(e.kind)) runGenieEffect(e)
+        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, mark] }
+        changed = true
     }
     if (changed) emit()
     return changed
 }
+
+/** Ce marqueur est-il posé dans un AUTRE monde que l'actif (run 1 / run 2 / run 3 stashés) ? BRANCHÉ par saveManager, qui
+ *  détient les mondes stashés (setOtherWorldMarkerCheck, au chargement du module) : tout appelant en profite sans rien
+ *  passer. Par défaut (tests unitaires, pas de saveManager) : aucun autre monde. */
+let markerInOtherWorld: (marker: string) => boolean = () => false
+export function setOtherWorldMarkerCheck(fn: (marker: string) => boolean) { markerInOtherWorld = fn }
 
 /** File des messages du génie à ANNONCER (vœux imposés/accepted appliqués). Consommée par le client. */
 let pendingGenieAnnouncements: string[] = []

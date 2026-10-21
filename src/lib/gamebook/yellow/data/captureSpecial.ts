@@ -57,7 +57,7 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     },
     morrow: {
         note: "Obtenu par ÉCHANGE — run 2 uniquement.",
-        how: ["Échange un Roctaur au Brocanteur de Cendreville (NG+)."],
+        how: ["Échange un Roctaur au Brocanteur de Cendreville (run 2)."],
     },
     crocavern: {
         note: "Obtenu par ÉCHANGE.",
@@ -87,7 +87,7 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     },
     merorem: {
         note: "Cadeau du casino — run 2.",
-        how: ["Comme Tonytony mais en NG+ : 1000⚡ nettes au casino, récupéré au Labo."],
+        how: ["Comme Tonytony mais au run 2 : 1000⚡ nettes au casino, récupéré au Labo."],
     },
 
     // ── BOSS statiques capturables (+ rachat boutique) ──
@@ -162,4 +162,12 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
         note: "Évolution d'un Braisécaille pêché.",
         how: ["Pêche un Braisécaille (canne, plan d'eau), puis fais-le évoluer (niv 32)."],
     },
+}
+
+/** MODE FUN — « comment » de remplacement là où le texte classique parle des reps du jour (le joueur fun n'en encode
+ *  aucune). Pêche : sans reps, la chance de RARE reste la base fixe FISHING_RARE_BASE = 12 % par lancer (data/fishing.ts,
+ *  repsMult = 1 + dépassement de quota = 1 en fun), soit environ 1 lancer sur 8. */
+export const SPECIAL_OBTAIN_FUN_HOW: Record<string, string[]> = {
+    osquille: ["Canne à pêche face à un plan d'eau, de 8h à 20h. RARE (environ 1 lancer sur 8) ; DURE à capturer : affaiblis-la d'abord. Présente aux 3 runs."],
+    ro: ["Canne à pêche face à un plan d'eau, de 20h à 8h. RARE (environ 1 lancer sur 8) ; DURE à capturer : affaiblis-la d'abord. Présente aux 3 runs."],
 }

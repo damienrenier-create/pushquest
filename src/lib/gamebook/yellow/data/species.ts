@@ -29,7 +29,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         ],
         evolution: { toId: "broutame", method: { kind: "LEVEL", level: 16 } },
         catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Starter Plante — endurant",
-        description: "Pousse-lapin espiègle. Plus son dresseur transpire, plus elle verdit.",
+        description: "Pousse-lapin espiègle. Plus son dresseur se démène, plus elle verdit.",
         sprite: "/yellow/sprites/dex/feuillichot.png",
     },
     broutame: {

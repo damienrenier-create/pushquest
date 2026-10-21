@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react"
 import type { EpilogueQuest } from "@/lib/gamebook/yellow/data/fusionEpilogue"
+import { getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 
 export interface SacreRosterMon {
     name: string; sprite: string; types: string[]; level: number; bst: number
@@ -210,7 +211,7 @@ export default function UltimateChampionSacre({ roster, palmares, quests, onClos
                     <div style={{ ...sectionTitle, color: "#ffe36b" }}>UN MOT DU DIEU SPAGHETTI</div>
                     <p style={{ fontSize: 15, lineHeight: 1.65, maxWidth: 360, color: "#fff" }}>
                         « Mortel… tu as gravé ton nom au firmament du Nexus. Aucun dresseur n'était allé si loin.<br /><br />
-                        <span style={{ color: "#ffd54a" }}>De la première pompe à ce sacre ultime</span>, chaque combat, chaque capture, chaque fusion t'ont mené ici.<br /><br />
+                        <span style={{ color: "#ffd54a" }}>{getGameMode() === "fun" ? "De ton premier pas dans le Nexus à ce sacre ultime" : "De la première pompe à ce sacre ultime"}</span>, chaque combat, chaque capture, chaque fusion t'ont mené ici.<br /><br />
                         Le Nexus tout entier s'incline. <b>Merci d'avoir tout donné.</b> ✦ »
                     </p>
                     <div style={{ marginTop: 16, fontSize: 12, opacity: 0.85, lineHeight: 1.7 }}>

@@ -75,6 +75,7 @@ export interface BadgeInput {
     sbireWins: number
     hasMasterBall: boolean
     labDefiDone: boolean                               // un défi du Labo (workout réel) complété
+    labCtWins?: number                                 // CT gagnées au défi CT du Labo (labDefi.ctEarned) — le défi du labo des joueurs fun
     berrySecretKnown: boolean
     // ── à INSTRUMENTER (optionnels, défaut non-gagné) ──
     evolutions?: number
@@ -447,6 +448,7 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         //   Marqueur ach_master_ball (permanent, survit à l'usage) OU présence en sac (rétroactif : master_ball ou super_mega).
         hasMasterBall: (s.defeatedTrainers?.includes("ach_master_ball") ?? false) || (s.items?.["master_ball"] ?? 0) > 0 || (s.items?.["super_mega_nexus_ball"] ?? 0) > 0,
         labDefiDone: s.labDefi?.squat150Done === true,
+        labCtWins: (s.labDefi?.ctEarned ?? []).length,
         berrySecretKnown: s.berrySecretKnown === true,
         // ── compteurs « propres » (Phase 2) ──
         // Évoluer : DÉRIVÉ (posséder une forme évoluée, team+PC) → pas de nouveau champ save. Casino : DÉRIVÉ de
