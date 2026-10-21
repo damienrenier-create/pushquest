@@ -21,9 +21,9 @@ describe("obéissance — 2 barèmes (à soi / échangé) + proba de désobéiss
         expect(obedienceCap(true, 4, true)).toBe(80)
         expect(mayDisobey(false, 60, 4, true)).toBe(false) // obéit au run 3…
         expect(mayDisobey(false, 60, 4)).toBe(true)        // …pas au run 1
-        // Marge au-dessus du plus fort adversaire de l'étape (bateau 46 · Électrik 53 · Eau 62 au run 3) : ≥ 9 niveaux.
+        // Marge au-dessus du plus fort adversaire de l'étape (bateau 46 · Électrik 48 · Eau 62 au run 3) : ≥ 9 niveaux.
         expect(obedienceCapOwned(3, true) - 46).toBeGreaterThanOrEqual(9)
-        expect(obedienceCapOwned(4, true) - 53).toBeGreaterThanOrEqual(9)
+        expect(obedienceCapOwned(4, true) - 48).toBeGreaterThanOrEqual(9)
         expect(obedienceCapOwned(5, true) - 62).toBeGreaterThanOrEqual(9)
     })
 

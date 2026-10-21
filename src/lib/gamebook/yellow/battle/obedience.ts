@@ -7,7 +7,7 @@
 //     bateau s'intercale ; les anciennes parties reçoivent son badge à la reprise → personne ne perd d'obéissance.)
 //   - ÉCHANGÉ (reçu d'un pote) : PERMISSIF (barème historique) — 0→20 · 1→35 · 2→50 · 3→65 · 4→80 · 5→95 · 6→100.
 //   - RUN 3 (concours), À SOI : RELEVÉ dès le 3ᵉ badge — 0→20 · 1→30 · 2→40 · 3→55 · 4→65 · 5→75 · 6→100. À badges égaux,
-//     le bateau (≈ 46), l'Électrik (≈ 53) et l'Eau (≈ 62) y sont bien plus forts qu'au run 1 : on garde la même marge
+//     le bateau (≈ 46), l'Électrik (≈ 48) et l'Eau (≈ 62) y sont bien plus forts qu'au run 1 : on garde la même marge
 //     qu'au run 1 (≈ 10 niveaux au-dessus du plus fort adversaire de l'étape). Demande Sartay du 21/10/2026.
 // Ne s'applique QU'en PvE (jamais en PvP miroir). La règle est expliquée en jeu par la Sbire du dieu Spaghetti.
 
