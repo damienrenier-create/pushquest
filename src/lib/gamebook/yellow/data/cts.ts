@@ -195,6 +195,11 @@ export const CTS: CtData[] = [
     { id: "ct77", label: "CT77", moveId: "fracas_acier", price: 0, offShop: true },      // MÉTAL 100 (PC de Chen / défi)
     { id: "ct78", label: "CT78", moveId: "astre_feerique", price: 0, offShop: true },    // FÉE 100 (PC de Chen / défi)
     { id: "ct79", label: "CT79", moveId: "vortex_obscur", price: 0, offShop: true },     // TÉNÈBRES 100 (PC de Chen / défi)
+    // --- CT du BATEAU (arène 4 depuis le 21/10/2026) : UNE par run, remise avec la clé par le Capitaine Vague. Signatures
+    //     des capitaines, jamais en vente ni ailleurs (22/10/2026). ---
+    { id: "ct80", label: "CT80", moveId: "sig_chant_naufrageur", price: 0, gift: true, alsoTypes: ["EAU", "SPECTRE"] }, // RUN 1 — Psy, sirènes et abysses
+    { id: "ct81", label: "CT81", moveId: "sig_maelstrom_vorace", price: 0, gift: true },                                // RUN 2 — Eau, les léviathans
+    { id: "ct82", label: "CT82", moveId: "sig_arc_plasma", price: 0, gift: true, alsoTypes: ["FEU"] },                 // RUN 3 — Électrik ET Feu, les deux fauves
 ]
 
 /** CT DES CLANS (Chapelle de Nouillon) — octroyées UNIQUEMENT par le chef de clan (niv 50 = CT du clan, niv 80 =
@@ -206,6 +211,8 @@ export const CLAN_CT_IDS: readonly string[] = ["ct67", "ct68", "ct69", "ct70"]
  *  ni en boutique (gift), ni au défi CT du labo (CT_DEFI_EXCLUDED), ni en Zone de Combat/Usine
  *  (ctRewardOptions). Seul octroi = victoire du boss en ngplus (cf. NGPLUS_BOSS_GIFTS). Source unique. */
 export const NGPLUS_EXCLUSIVE_CT_IDS: readonly string[] = ["ct53", "ct54", "ct55", "ct56", "ct57"]
+/** CT exclusives du BATEAU : run 1, run 2, run 3 (cf. data/boatArena.boatCtForRun). */
+export const BOAT_CT_IDS: readonly string[] = ["ct80", "ct81", "ct82"]
 
 /** CT DU MAÎTRE (Dôme / Usine / Tour) — le champion de CHAQUE facilité en choisit UNE, jamais 2× la même (les CT déjà
  *  possédées sortent du choix). Un triple-champion en décroche donc 3/4. Source UNIQUE (jamais en vente ni au labo). */
@@ -238,7 +245,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
  *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
  *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
 export function run2BlackjackCtPool(): string[] {
-    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, ...CLAN_CT_IDS, "ct52", "ct58", "ct61", "ct66"]) // signatures de boss + CT de clan + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon) + Surf (surfeur)
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, ...CLAN_CT_IDS, ...BOAT_CT_IDS, "ct52", "ct58", "ct61", "ct66"]) // signatures de boss (arènes + bateau) + CT de clan + Apothéose + Mitra-Poing (run 3) + Voile de Givre (frères Glaçon) + Surf (surfeur)
     return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 

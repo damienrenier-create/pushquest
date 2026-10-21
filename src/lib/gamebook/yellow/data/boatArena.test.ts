@@ -3,8 +3,11 @@ import fs from "node:fs"
 import path from "node:path"
 import {
     BOAT_BADGE, BOAT_TRAINER_IDS, BOAT_BOSS_IDS, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, KEY_GUARD_SPRITE,
-    isBoatTrainer, boatArenaCleared, keyGuardActive, withImpliedAncre, migrateBoatBadge, nextArenaHint, gymBadgeCount,
+    isBoatTrainer, boatArenaCleared, keyGuardActive, withImpliedAncre, migrateBoatBadge, nextArenaHint, gymBadgeCount, boatCtForRun,
 } from "./boatArena"
+import { CTS, BOAT_CT_IDS, getCt, purchasableCts, run2BlackjackCtPool } from "./cts"
+import { getMove } from "./moves"
+import { SPECIES } from "./species"
 import { getSpecies } from "./species"
 import { run3MaxScore, run3EnergyMaxScore, run3BoatBossesMax, run3BoatPlayed, boatBossSlot } from "./run3Score"
 import { ALL_BADGE_IDS, BADGE_REPS_CAP_BONUS } from "./badges"
@@ -131,6 +134,42 @@ describe("indication de la prochaine arène (« forcer les gens à voyager »)",
         const c = read("src/app/gamebook/yellow/YellowDevClient.tsx")
         expect(c).toContain("if (rematchReward) setDeferredBadgeLines(lines)")
         expect(c).toContain("if (battle || evolutions.length > 0 || rematchReward || dialogue) return")
+    })
+})
+
+describe("la CT EXCLUSIVE du bateau, une par run (22/10/2026)", () => {
+    it("run 1 Chant Naufrageur · run 2 Maelström Vorace · run 3 Arc Plasma : cadeaux, jamais en vente ni au blackjack", () => {
+        expect([boatCtForRun("live"), boatCtForRun("ngplus"), boatCtForRun("run3")]).toEqual([...BOAT_CT_IDS])
+        expect(BOAT_CT_IDS.map((id) => getMove(getCt(id)!.moveId)?.name)).toEqual(["Chant Naufrageur", "Maelström Vorace", "Arc Plasma"])
+        for (const id of BOAT_CT_IDS) expect(getCt(id)?.gift, id).toBe(true)
+        expect(getCt("ct82")?.alsoTypes).toContain("FEU") // l'as du Maître d'équipage du run 3 est Feu
+        expect(purchasableCts(["plante", "roche", "feu", "ancre", "elec", "eau"]).some((c) => BOAT_CT_IDS.includes(c.id))).toBe(false)
+        expect(run2BlackjackCtPool().some((id) => BOAT_CT_IDS.includes(id))).toBe(false)
+    })
+    it("les deux nouvelles attaques sont uniques : aucun learnset, une seule CT chacune", () => {
+        for (const mv of ["sig_maelstrom_vorace", "sig_arc_plasma"]) {
+            expect(getMove(mv), mv).toBeTruthy()
+            expect(Object.values(SPECIES).some((s) => s.learnset.some((l) => l.moveId === mv)), mv).toBe(false)
+            expect(CTS.filter((c) => c.moveId === mv), mv).toHaveLength(1)
+        }
+        expect(getMove("sig_maelstrom_vorace")?.effect?.drainPct).toBe(50)
+        expect(getMove("sig_arc_plasma")?.effect?.oneOf?.map((e) => e.inflictStatus)).toEqual(["BURN", "PARALYSIS"])
+    })
+    it("taillées pour les AS des deux capitaines de leur run : 4 attaques, ouverture sur la signature", () => {
+        for (const [w, mv] of [["ngplus", "sig_maelstrom_vorace"], ["run3", "sig_arc_plasma"]] as const) for (const id of BOAT_BOSS_IDS) {
+            const team = SIGHT_RUN_TEAMS[w][id]
+            const ace = team[team.length - 1]
+            expect(ace.moves, `${w} ${id}`).toContain(mv)
+            expect(ace.moves?.length, `${w} ${id}`).toBe(4)
+            expect(ace.opening, `${w} ${id}`).toEqual([mv])
+            for (const m of ace.moves ?? []) expect(getMove(m), m).toBeTruthy()
+        }
+    })
+    it("remise avec la clé (battleStore) et rattrapage pour qui avait déjà battu tout l'équipage (client)", () => {
+        expect(read("src/lib/gamebook/yellow/store/battleStore.ts")).toContain("const boatCt = boatCtForRun(effectiveRunWorld())")
+        const c = read("src/app/gamebook/yellow/YellowDevClient.tsx")
+        expect(c).toContain("boatArenaCleared((id) => p.defeatedTrainers.includes(id))")
+        expect(c).toContain("showDialogue(BOAT_BOSS_IDS[0], \"CAPITAINE VAGUE\", boatCtBackfillLines(")
     })
 })
 

@@ -30,7 +30,7 @@ import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
 import { run3ArenaBossTeam } from "../data/run3Bosses"
 import { run3ArenaForBoss, RUN3_BOAT_ENERGY } from "../data/run3Arenas"
 import { bossEnemyKey, leagueEnemyKey, boatBossSlot } from "../data/run3Score"
-import { BOAT_BADGE, BOAT_BOSS_IDS, BOAT_KEY_LINES, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, isBoatTrainer, boatArenaCleared, gymBadgeCount } from "../data/boatArena"
+import { BOAT_BADGE, BOAT_BOSS_IDS, BOAT_KEY_LINES, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, isBoatTrainer, boatArenaCleared, gymBadgeCount, boatCtForRun, boatCtLine } from "../data/boatArena"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies, registerCustomSpecies } from "../data/species"
@@ -1470,7 +1470,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 rematchReward = { npcId: storeState.trainer.trainerId, npcName: "FRÈRES GLAÇON", lines: ["Les CINQ frères Glaçon sont vaincus !", `🎁 Tu reçois la CT « ${mvName} » — enseigne-la à un Daemon Glace (poche CT). Cadeau unique !`] }
             }
             // ⚓ BATEAU conquis : le CAPITAINE remet le badge ANCRE et la CLÉ (dialogue post-combat, quel que soit le dernier vaincu).
-            if (boatKeyHandover) rematchReward = { npcId: BOAT_BOSS_IDS[0], npcName: "CAPITAINE VAGUE", lines: [...BOAT_KEY_LINES] }
+            //   + la CT EXCLUSIVE du bateau, propre au run (ct80 Chant Naufrageur · ct81 Maelström Vorace · ct82 Arc Plasma).
+            if (boatKeyHandover) {
+                const boatCt = boatCtForRun(effectiveRunWorld())
+                const boatMv = boatCt && grantCt(boatCt) ? (getMove(getCt(boatCt)?.moveId ?? "")?.name ?? null) : null
+                if (boatMv) giftCtMove = boatMv
+                rematchReward = { npcId: BOAT_BOSS_IDS[0], npcName: "CAPITAINE VAGUE", lines: [...BOAT_KEY_LINES, ...(boatMv ? [boatCtLine(boatMv)] : [])] }
+            }
             // 🎁 RUN 2 (NG+) : le boss offre SA CT signature EXCLUSIVE (ct53→57, introuvable ailleurs) + son ticket
             //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
             const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined

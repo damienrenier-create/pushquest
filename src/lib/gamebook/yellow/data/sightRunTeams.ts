@@ -51,8 +51,8 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_aqua_n2: [{ speciesId: "naiadrak", level: 39 }, { speciesId: "sonarque", level: 39 }, { speciesId: "ro", level: 39 }],
         y_aqua_n3: [{ speciesId: "leviathonn", level: 43 }, { speciesId: "braisecaille", level: 40 }],
         y_aqua_n4: [{ speciesId: "osquille", level: 40 }, { speciesId: "crapotaure", level: 40 }, { speciesId: "ondaloutre", level: 40 }],
-        y_aqua_boss_a: [{ speciesId: "razmaree", level: 41 }, { speciesId: "naiadrak", level: 41 }, { speciesId: "sonarque", level: 41 }, { speciesId: "mobyd", level: 42 }, { speciesId: "leviabysse", level: 43, moves: ["sig_chant_naufrageur"], opening: ["sig_chant_naufrageur"] }],
-        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 41 }, { speciesId: "crapotaure", level: 41 }, { speciesId: "naiadrak", level: 42 }, { speciesId: "geaucke", level: 42 }, { speciesId: "leviathonn", level: 43 }],
+        y_aqua_boss_a: [{ speciesId: "razmaree", level: 41 }, { speciesId: "naiadrak", level: 41 }, { speciesId: "sonarque", level: 41 }, { speciesId: "mobyd", level: 42 }, { speciesId: "leviabysse", level: 43, moves: ["sig_maelstrom_vorace", "sig_chant_naufrageur", "deferlante", "devoreur_ombres"], opening: ["sig_maelstrom_vorace"] }], // AS : signature run 2 (CT81)
+        y_aqua_boss_b: [{ speciesId: "ondaloutre", level: 41 }, { speciesId: "crapotaure", level: 41 }, { speciesId: "naiadrak", level: 42 }, { speciesId: "geaucke", level: 42 }, { speciesId: "leviathonn", level: 43, moves: ["sig_maelstrom_vorace", "fulgurance", "etincelle", "repos"], opening: ["sig_maelstrom_vorace"] }], // AS : signature run 2 (CT81)
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 2 : stades intermédiaires/finaux Glace.
         y_frere_frisquet: [{ speciesId: "glaceer", level: 19 }, { speciesId: "marmoterre", level: 19 }],
         y_frere_grelot: [{ speciesId: "glacirex", level: 21 }, { speciesId: "glaceer", level: 21 }],
@@ -106,8 +106,8 @@ export const SIGHT_RUN_TEAMS: Record<"ngplus" | "run3", Record<string, TrainerMo
         y_aqua_n2: [{ speciesId: "zappeureal", level: 42 }, { speciesId: "cerfeuillu", level: 42 }, { speciesId: "calderont", level: 42 }],
         y_aqua_n3: [{ speciesId: "thundah", level: 43 }, { speciesId: "druidours", level: 43 }],
         y_aqua_n4: [{ speciesId: "toucanyon", level: 43 }, { speciesId: "gloutanoir", level: 43 }, { speciesId: "hebulmin", level: 43 }], // Brutetrik évolue au niv 38
-        y_aqua_boss_a: [{ speciesId: "zappeureal", level: 44 }, { speciesId: "leviathonn", level: 44 }, { speciesId: "thundah", level: 44 }, { speciesId: "oragron", level: 45 }, { speciesId: "fulguror", level: 46 }],
-        y_aqua_boss_b: [{ speciesId: "calderont", level: 44 }, { speciesId: "loupyre", level: 44 }, { speciesId: "druidours", level: 44 }, { speciesId: "gloutanoir", level: 45 }, { speciesId: "pyropanthe", level: 46 }],
+        y_aqua_boss_a: [{ speciesId: "zappeureal", level: 44 }, { speciesId: "leviathonn", level: 44 }, { speciesId: "thundah", level: 44 }, { speciesId: "oragron", level: 45 }, { speciesId: "fulguror", level: 46, moves: ["sig_arc_plasma", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["sig_arc_plasma"] }], // AS : signature run 3 (CT82)
+        y_aqua_boss_b: [{ speciesId: "calderont", level: 44 }, { speciesId: "loupyre", level: 44 }, { speciesId: "druidours", level: 44 }, { speciesId: "gloutanoir", level: 45 }, { speciesId: "pyropanthe", level: 46, moves: ["sig_arc_plasma", "lance_flammes", "vive_attaque", "focalisation"], opening: ["sig_arc_plasma"] }], // AS : signature run 3 (CT82)
         // FRÈRES GLAÇON (Grotte Gelée) — RUN 3 : stades finaux + lignée Guizer (run 3) + Givroptère (post-Ligue).
         y_frere_frisquet: [{ speciesId: "glaceer", level: 19 }, { speciesId: "marmoterre", level: 19 }],
         y_frere_grelot: [{ speciesId: "glacirex", level: 21 }, { speciesId: "guizer", level: 21 }, { speciesId: "glaceer", level: 21 }],

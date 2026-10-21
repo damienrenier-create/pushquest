@@ -72,6 +72,23 @@ export const BOAT_KEY_LINES: readonly string[] = [
     "« Et tiens : on a attrapé un voleur à fond de cale, avec CETTE CLÉ. Elle ouvre l'arène de la Ville Jaune. Rapporte-la au GARDIEN DES CLÉS, devant le GYM. »",
 ]
 
+// ── La CT EXCLUSIVE du bateau (22/10/2026) : une par run, remise avec la clé ─────────────────────────────────────
+/** CT du bateau selon le run : run 1 = Chant Naufrageur (ct80), run 2 = Maelström Vorace (ct81), run 3 = Arc Plasma (ct82). */
+const BOAT_CT_BY_RUN: Record<"live" | "ngplus" | "run3", string> = { live: "ct80", ngplus: "ct81", run3: "ct82" }
+export function boatCtForRun(run: string): string | null { return (BOAT_CT_BY_RUN as Record<string, string>)[run] ?? null }
+/** Réplique du Capitaine Vague, ajoutée à la remise de la clé. */
+export function boatCtLine(moveName: string): string {
+    return `« Et prends ceci : la CT ${moveName.toUpperCase()}, la botte secrète de mon équipage. Personne d'autre ne te l'apprendra ! »`
+}
+/** Pour qui avait DÉJÀ battu tout l'équipage avant que la CT existe : elle arrive par la mer. */
+export function boatCtBackfillLines(moveName: string): string[] {
+    return [
+        "*Une bouteille à la mer s'échoue à tes pieds, scellée à la cire bleue du Capitaine Vague.*",
+        `« Tu as vaincu tout mon équipage avant même que j'aie de quoi te récompenser ! Voici ton dû : la CT ${moveName.toUpperCase()}, la botte secrète de l'Aqua Arena. »`,
+        `🎁 Tu reçois la CT « ${moveName} » ! Apprends-la à un Daemon compatible — cadeau unique.`,
+    ]
+}
+
 /** Où se trouve la PROCHAINE arène, annoncé dans la fenêtre « badge obtenu » (« forcer les gens à voyager »). */
 export function nextArenaHint(badge: string): string | null {
     switch (badge) {

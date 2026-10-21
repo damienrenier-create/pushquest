@@ -79,7 +79,7 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, duelRewardBall, duelGiftEnergy, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { nextArenaHint, gymBadgeCount, BOAT_BADGE } from "@/lib/gamebook/yellow/data/boatArena"
+import { nextArenaHint, gymBadgeCount, BOAT_BADGE, BOAT_BOSS_IDS, boatCtForRun, boatArenaCleared, boatCtBackfillLines } from "@/lib/gamebook/yellow/data/boatArena"
 import { ALL_BADGE_IDS } from "@/lib/gamebook/yellow/data/badges"
 import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
 import { repsUnit, repsIcon, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
@@ -1881,6 +1881,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         showDialogue("y_gym_sign", "ARÈNE", deferredBadgeLines)
         setDeferredBadgeLines(null)
     }, [deferredBadgeLines, battle, evolutions.length, rematchReward, dialogue, showDialogue])
+
+    // ⚓ CT EXCLUSIVE du BATEAU (22/10/2026) pour qui avait DÉJÀ battu tout l'équipage avant qu'elle existe : remise UNE
+    //   fois, écran libre, avec un mot du Capitaine Vague. Les nouvelles conquêtes la reçoivent au badge (battleStore).
+    useEffect(() => {
+        if (!hydrated || battle || evolutions.length > 0 || rematchReward || dialogue || deferredBadgeLines) return
+        const ctId = boatCtForRun(effectiveRunWorld())
+        const p = getPlayer()
+        if (!ctId || p.ownedCts.includes(ctId) || p.boughtCts.includes(ctId) || !boatArenaCleared((id) => p.defeatedTrainers.includes(id))) return
+        if (!grantCt(ctId)) return
+        persistYellowSave()
+        showDialogue(BOAT_BOSS_IDS[0], "CAPITAINE VAGUE", boatCtBackfillLines(getMove(getCt(ctId)?.moveId ?? "")?.name ?? ctId))
+    }, [hydrated, battle, evolutions.length, rematchReward, dialogue, deferredBadgeLines, showDialogue, activeWorld])
 
     // PIERRE GÉKROC : don de la Pierre d'Évolution après avoir battu/capturé Gékroc (Centrale) →
     // notification claire post-combat (sinon le don, objet "objet clé", passait totalement inaperçu).
