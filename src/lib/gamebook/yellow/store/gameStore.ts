@@ -19,6 +19,7 @@ import { currentGymBadge } from "../data/arenaInfos"
 import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
+import { safeWanderSpots } from "../data/townSpots"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, startClanChiefBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, fusionParentFromInstance, type BuiltFusion } from "../data/fusionMon"
@@ -278,10 +279,14 @@ export function activeNpcs() {
     //   nouveau compte ne doit pas la croiser). Spot tiré au hasard parmi TOUTES les cases WALKABLE de la ville
     //   (flood-fill, comme le Sage) → elle bouge vraiment d'une visite à l'autre (fini les 2 spots fixes). Look re-tiré aussi.
     if (getPlayerSave().badges.length >= 1) {
-        const fashionSpots = villeJauneSageSpots()
-        if (fashionSpotIdx < 0) fashionSpotIdx = Math.floor(Math.random() * fashionSpots.length)
+        // Elle évite AUSSI la case du Sage s'il est en ville : à deux, ils ne doivent pas pouvoir boucher un passage.
+        if (!fashionSpot) {
+            const sageTile = sageSpotIdx >= 0 ? villeJauneSageSpots()[sageSpotIdx % villeJauneSageSpots().length] : null
+            const fashionSpots = villeJauneSageSpots(sageTile ? [sageTile] : [])
+            fashionSpot = fashionSpots[Math.floor(Math.random() * fashionSpots.length)]
+        }
         if (fashionSpriteIdx < 0) fashionSpriteIdx = Math.floor(Math.random() * FASHION_VICTIM_SPRITES.length)
-        const [fvx, fvy] = fashionSpots[fashionSpotIdx % fashionSpots.length]
+        const [fvx, fvy] = fashionSpot
         // GAG : après le cadeau (canne obtenue CE RUN), c'est ELLE qui s'est relookée → planche « post-gag » fixe.
         const postGagIdx = FASHION_VICTIM_SPRITES.indexOf(FASHION_POST_GAG_SPRITE)
         const fvHasRod = (getPlayerSave().items[FISHING_ROD_ITEM_ID] ?? 0) > 0
@@ -525,34 +530,24 @@ let daemoSpotIdx = -1
 // VIEUX SAGE SAIYAN : spot tiré au hasard parmi TOUTES les cases marchables ATTEIGNABLES de Ville Jaune (BFS depuis un
 //   spot central connu → jamais dans une poche isolée ; hautes herbes exclues pour ne pas déclencher de rencontre à ses
 //   pieds). Re-tiré à CHAQUE entrée à Ville Jaune (cf. setMap) → il change de place d'une visite à l'autre.
-let sageSpotsCache: [number, number][] | null = null
-function villeJauneSageSpots(): [number, number][] {
-    if (sageSpotsCache) return sageSpotsCache
-    const m = YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
-    const inBuildingWall = (x: number, y: number) => (m.buildings ?? []).some((b) => {
-        if (!(x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return false
-        const dw = b.doorW ?? 1
-        return !(x >= b.x + b.doorX && x < b.x + b.doorX + dw && y === b.y + b.doorY) // dans le bâtiment mais pas sur la porte
-    })
-    const walkable = (x: number, y: number) => x >= 0 && y >= 0 && x < m.width && y < m.height && !isBlockingTile(m.tiles[y][x]) && !inBuildingWall(x, y)
-    const seen = new Set<string>(); const stack: [number, number][] = [[18, 18]]; const reach: [number, number][] = []
-    while (stack.length) {
-        const cur = stack.pop()!; const [x, y] = cur; const k = `${x},${y}`
-        if (seen.has(k)) continue
-        seen.add(k)
-        if (!walkable(x, y)) continue
-        reach.push(cur)
-        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
-    }
-    // Cases RÉSERVÉES : la place du GARDIEN DES CLÉS (devant le GYM) et les PORTES (un PNJ posé dessus bloquerait l'entrée).
-    const reserved = new Set([`${KEY_GUARD_POS.x},${KEY_GUARD_POS.y}`, ...(m.buildings ?? []).map((b) => `${b.x + b.doorX},${b.y + b.doorY}`)])
-    sageSpotsCache = reach.filter(([x, y]) => m.tiles[y][x] !== "grassTall" && !reserved.has(`${x},${y}`)) // spot final : pas de hautes herbes
-    if (!sageSpotsCache.length) sageSpotsCache = reach.length ? reach : [[18, 18]]
-    return sageSpotsCache
+// ⚠️ Signalement DaKumba (21/10/2026) : la Fashion Victim, tirée devant la porte du GYM, « bloquait l'arène ». Les
+//   baladeurs (Sage, Fashion Victim) ne se posent plus ni près d'une porte, ni au bord de la carte, ni sur un passage
+//   obligé, en comptant comme murs les PNJ fixes, le gardien des clés et l'autre baladeur (data/townSpots).
+const sageSpotsCache = new Map<string, [number, number][]>()
+export const VILLE_JAUNE_SPOT_START: readonly [number, number] = [18, 18]
+function villeJauneSageSpots(extraOccupied: readonly (readonly [number, number])[] = []): [number, number][] {
+    const ck = extraOccupied.map(([x, y]) => `${x},${y}`).join(";")
+    const hit = sageSpotsCache.get(ck)
+    if (hit) return hit
+    const fixedNpcs = YELLOW_NPCS.filter((n) => n.mapId === YELLOW_ENTRANCE_MAP_ID).map((n) => [n.initialX, n.initialY] as const)
+    const occupied = [[KEY_GUARD_POS.x, KEY_GUARD_POS.y] as const, ...fixedNpcs, ...extraOccupied]
+    const spots = safeWanderSpots(YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID], isBlockingTile, VILLE_JAUNE_SPOT_START, occupied)
+    sageSpotsCache.set(ck, spots)
+    return spots
 }
 let sageSpotIdx = -1
 // FASHION VICTIM (Grotte 1F, Mools only) : spot + look (sprite) tirés au hasard, STABLES par session (comme SAGE).
-let fashionSpotIdx = -1
+let fashionSpot: [number, number] | null = null // case tirée UNE fois par visite (ne saute pas si le Sage s'en va)
 let fashionSpriteIdx = -1
 // GAG cadeau canne : pause de réflexion (ms) par ligne d'un dialogue `slow` (non-skippable). Horodatage de la ligne courante.
 const FASHION_REFLECT_MS = 650
@@ -3490,7 +3485,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
-        if (mapId === "yellow_entrance") { sageSpotIdx = -1; fashionSpotIdx = -1; fashionSpriteIdx = -1 } // SAGE + FASHION VICTIM : re-tirent leur spot (+ look) à CHAQUE entrée à Ville Jaune → ils bougent d'une visite à l'autre
+        if (mapId === "yellow_entrance") { sageSpotIdx = -1; fashionSpot = null; fashionSpriteIdx = -1 } // SAGE + FASHION VICTIM : re-tirent leur spot (+ look) à CHAQUE entrée à Ville Jaune → ils bougent d'une visite à l'autre
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null, fishing: null }) // fishing null : garde-fou anti-session-bloquée à la transition de carte
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
