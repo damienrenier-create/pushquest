@@ -13,8 +13,8 @@ describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
     })
     it("chaque arène connaît son plafond de recharge (cohérent avec RUN3_ARENA_ENERGY)", () => {
         expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([...RUN3_ARENA_ENERGY])
-        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([500, 600, 700, 800, 1000]) // inchangés depuis le début du concours
-        expect(RUN3_BOAT_ENERGY).toBe(800) // paliers en jeu : 500 → 600 → 700 → 800 (bateau) → 800 → 1000
+        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([500, 600, 700, 900, 1000])
+        expect(RUN3_BOAT_ENERGY).toBe(800) // 6 paliers en jeu : 500 → 600 → 700 → 800 (bateau) → 900 → 1000
     })
     it("run3ArenaForBoss : retrouve l'arène par son boss ; null si inconnu", () => {
         expect(run3ArenaForBoss("y_feuarena_boss")?.guardType).toBe("Poison/Spectre")
@@ -25,7 +25,7 @@ describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
 
 describe("RUN 3 — plafonds de recharge d'arène", () => {
     it("500 → 1000 par arène à boss figé (index 0..4), 0 hors bornes", () => {
-        expect(RUN3_ARENA_ENERGY).toEqual([500, 600, 700, 800, 1000])
+        expect(RUN3_ARENA_ENERGY).toEqual([500, 600, 700, 900, 1000])
         expect(run3ArenaEnergy(0)).toBe(500)
         expect(run3ArenaEnergy(4)).toBe(1000)
         expect(run3ArenaEnergy(5)).toBe(0)
@@ -94,12 +94,12 @@ describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
         expect(info.team.every((m) => m.name.length > 0)).toBe(true)
         expect(info.team[info.team.length - 1].isBoss).toBe(true)
     })
-    it("arène 5 (elec) : gardiens DRAGON, boss = Embi, recharge 800 (inchangée)", () => {
+    it("arène 5 (elec) : gardiens DRAGON, boss = Embi, recharge 900", () => {
         const info = run3ArenaInfo("elec")!
         expect(info.order).toBe(5)
         expect(info.guardType).toBe("Dragon")
         expect(info.bossPlayer).toBe("Embi")
-        expect(info.energyPalier).toBe(800)
+        expect(info.energyPalier).toBe(900)
         expect(info.guardRecommend).toContain("GLACE") // Glace/Dragon/Fée frappent Dragon
     })
     it("arène 5 (Multi) : REPREND le thème de l'arène eau du run 2 (au lieu d'un varié sans info)", () => {

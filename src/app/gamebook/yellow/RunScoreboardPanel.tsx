@@ -12,7 +12,9 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import PlayerBadgesModal from "./PlayerBadgesModal"
 
-interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number; fun?: boolean; energySpent?: number }
+interface ScoreRow { userId?: string; me?: boolean; nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number; fun?: boolean; energySpent?: number; patched?: boolean }
+/** ✱ Run 3 joué AVEC le bateau (arène 4 depuis le 21/10/2026) : une arène de plus → pas comparable aux anciens scores. */
+const PATCH_NOTE = "✱ = score fait avec le BATEAU, arène ajoutée au run 3 le 21/10/2026 : une arène de plus, donc pas comparable aux scores d'avant."
 interface FusionChamp { userId: string; nickname: string; wonAt: string; tier: string }
 /** Une fiche de MAÎTRE DU NEXUS (palier platine). `isHolder` = assis sur la chaise en ce moment (👑, c'est lui
  *  qu'on affronte) ; `isEmperor` = tête du classement (le plus de challengers repoussés). Les deux peuvent
@@ -24,7 +26,7 @@ type Data = { run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run1", label: "🥇 RUN 1", unit: "pts", hint: "DÉCOUVERTE : Σ des points de HAUTS FAITS débloqués au run 1. Le + haut gagne. Clique une ligne pour voir les trophées d'un joueur." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "PERFORMANCE (note /1000) : Pokédex (×500) + % de victoire (×300) + niveaux d'équipe (×200). Score live tant qu'on est en run 2, figé une fois terminé. Clique 👤 pour le profil, la ligne pour le détail des axes." },
-    { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
+    { id: "run3", label: "🏆 RUN 3", unit: "niv.", hint: "CONQUÉRANT : Σ des NIVEAUX de tous les Daemons ennemis vaincus (chefs d'arène, capitaines du bateau + Ligue). Plus tu vas loin et bats des équipes hautes, plus ton score grimpe. Clique une ligne pour le profil." },
     { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT : à la fin de CHAQUE arène (et de la Ligue) on relève ton énergie RESTANTE, et on additionne. Récompense l'efficacité — moins tu dépenses, plus il t'en reste. C'est le 2ᵉ score du run 3." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "RÉPUTATION PvP : ton bilan de duels, tes Daemons/attaques fétiches, et le classement du DUELLISTE (reflets d'autres joueurs battus, cumul tous runs)." },
     { id: "run4", label: "🐉 LIGUE", unit: "", hint: "LIGUE DE FUSION — l'ULTIME épreuve. Les Maîtres de la Chimère, classés par palier puis par ANCIENNETÉ du sacre : le PREMIER à vaincre le Dieu Spaghetti trône en tête. Personne encore ? Sois-le ! 🐉" },
@@ -120,7 +122,9 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                         <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
                             style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢" : "⚪"}</span>
                     )}
-                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span>{r.energySpent !== undefined && (
+                    <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{dispUnit}</span>{r.patched && (
+                        <span title={PATCH_NOTE} style={{ color: "#ffd54a", fontSize: 10, marginLeft: 2 }}>✱</span>
+                    )}{r.energySpent !== undefined && (
                         <span title="énergie totale dépensée sur ce run — départage les égalités (moins = mieux)" style={{ fontSize: 9, opacity: 0.7, marginLeft: 4, whiteSpace: "nowrap" }}>(⚡{r.energySpent.toLocaleString("fr-FR")})</span>
                     )}</span>
                     {canExpand && clickable && (
@@ -203,6 +207,7 @@ export default function RunScoreboardPanel({ close, hasRun2, hasRun3 }: { close:
                                     {renderRow(fullList[myIdx], myIdx)}
                                 </>
                             )}
+                            {fullList.some((r) => r.patched) && <div style={{ fontSize: 9.5, opacity: 0.75, lineHeight: 1.4, marginTop: 6 }}>{PATCH_NOTE}</div>}
                         </div>
                 )}
 

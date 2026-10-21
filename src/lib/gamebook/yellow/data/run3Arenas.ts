@@ -8,12 +8,11 @@
 //     de départ. Données pures, React-free.
 
 /** PLAFOND de RECHARGE d'énergie à la victoire de chaque arène À BOSS FIGÉ (index = ordre de RUN3_ARENAS :
- *  Plante, Roche, Feu, Électrik, Eau) — INCHANGÉS depuis le début du concours (scores « Survivant » comparables).
- *  Le BATEAU (arène 4 depuis le 21/10/2026, sans boss figé) recharge à RUN3_BOAT_ENERGY : l'étape de l'Électrik
- *  démarre ainsi à 800 (le gardien des clés en plus) au lieu de 700 avant → même budget qu'avant, à un combat près.
+ *  Plante, Roche, Feu, Électrik, Eau). Le BATEAU (arène 4 depuis le 21/10/2026, sans boss figé) recharge à
+ *  RUN3_BOAT_ENERGY → 6 paliers en jeu : 500 → 600 → 700 → 800 (bateau) → 900 → 1000.
  *  RÈGLE (équilibrage) : l'arène ne DONNE PAS un palier additif — elle RECHARGE la réserve JUSQU'À ce plafond
  *  (jamais au-dessus, jamais en-dessous de la réserve actuelle). Empêche l'accumulation (700 + reste = trop). */
-export const RUN3_ARENA_ENERGY = [500, 600, 700, 800, 1000] as const
+export const RUN3_ARENA_ENERGY = [500, 600, 700, 900, 1000] as const
 /** Palier de recharge du BATEAU (badge ANCRE, arène 4) au run 3. */
 export const RUN3_BOAT_ENERGY = 800
 
@@ -41,7 +40,7 @@ export const RUN3_ARENAS: readonly Run3ArenaDef[] = [
     { order: 1, mapId: "yellow_arena",       bossTrainerId: "y_arena_druide",   badge: "plante", guardType: "Glace",          energy: 500 },
     { order: 2, mapId: "yellow_arena_roche", bossTrainerId: "y_rocharena_boss", badge: "roche",  guardType: "Combat",         energy: 600 },
     { order: 3, mapId: "yellow_arena_feu",   bossTrainerId: "y_feuarena_boss",  badge: "feu",    guardType: "Poison/Spectre", energy: 700 },
-    { order: 5, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 800 }, // arène 5 (le BATEAU est la 4e, sans boss figé)
+    { order: 5, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 900 }, // arène 5 (le BATEAU est la 4e, sans boss figé)
     { order: 6, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1000 },
 ] as const
 

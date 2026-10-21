@@ -6,7 +6,7 @@ import {
     isBoatTrainer, boatArenaCleared, keyGuardActive, withImpliedAncre, migrateBoatBadge, nextArenaHint, gymBadgeCount,
 } from "./boatArena"
 import { getSpecies } from "./species"
-import { run3MaxScore, run3EnergyMaxScore } from "./run3Score"
+import { run3MaxScore, run3EnergyMaxScore, run3BoatBossesMax, run3BoatPlayed, boatBossSlot } from "./run3Score"
 import { ALL_BADGE_IDS, BADGE_REPS_CAP_BONUS } from "./badges"
 import { getTrainer, TRAINERS } from "./trainers"
 import { getItem } from "./items"
@@ -46,12 +46,25 @@ describe("arène 4 = le bateau — badge ANCRE", () => {
         expect(bs).toContain("storeState.trainer.trainerId === KEY_GUARD_TRAINER_ID) consumeItem(ARENA_KEY_ITEM_ID)")
         expect(bs).toContain("badgeAwarded === BOAT_BADGE ? RUN3_BOAT_ENERGY")
     })
-    it("run 3 : le bateau ne compte PAS au score (classement comparable avec ceux qui ont déjà fini le concours)", () => {
+    it("run 3 : le bateau recharge l'énergie ET compte au score (2 capitaines + 1 relevé Survivant au badge)", () => {
         const bs = read("src/lib/gamebook/yellow/store/battleStore.ts")
-        expect(bs).not.toContain("boatBossSlot")
-        expect(bs).toContain("if (r3 || isLeague) {")
-        expect(run3MaxScore()).toBe(2257) // = le score de Franss et de Jacanon (21/10/2026)
-        expect(run3EnergyMaxScore()).toBe(10_000)
+        expect(bs).toContain("const boatSlot = boatBossSlot(tid)")
+        expect(bs).toContain("if (badgeAwarded === BOAT_BADGE) addRun3EnergySnapshot(`arena:${BOAT_BADGE}`, energyAtKo)")
+        expect(boatBossSlot(BOAT_BOSS_IDS[0])).toBe("ancre_a")
+        expect(boatBossSlot(BOAT_BOSS_IDS[1])).toBe("ancre_b")
+        expect(boatBossSlot("y_aqua_n1")).toBeNull() // les matelots = des gardes
+        expect(run3BoatBossesMax()).toBe(446)
+        expect(run3MaxScore()).toBe(2723) // 2257 avant le bateau (Franss, Jacanon) + 446 du bateau + 20 du boss Électrik
+        expect(run3EnergyMaxScore()).toBe(11_000)
+    })
+    it("✱ classement : un score fait avec le bateau est repéré, pas un score d'avant", () => {
+        expect(run3BoatPlayed({ run3Defeated: [{ key: "boss:ancre_a:0", level: 44 }] })).toBe(true)
+        expect(run3BoatPlayed({ run3EnergyByArena: { "arena:ancre": 312 } })).toBe(true)
+        expect(run3BoatPlayed({ badges: ["plante", "roche", "feu", "ancre", "elec"], run3Defeated: [{ key: "boss:elec:0", level: 33 }] })).toBe(false) // badge offert à la reprise
+        expect(run3BoatPlayed(null)).toBe(false)
+        const route = read("src/app/api/gamebook/yellow/run-scores/route.ts")
+        expect(route).toContain("if (boat) factors = [{ key: RUN3_BOAT_PATCH_FACTOR")
+        expect(read("src/app/gamebook/yellow/RunScoreboardPanel.tsx")).toContain("{r.patched && (")
     })
     it("la CLÉ est un objet clé, et ne passe pas d'un run à l'autre", () => {
         expect(getItem(ARENA_KEY_ITEM_ID)?.category).toBe("MISC")

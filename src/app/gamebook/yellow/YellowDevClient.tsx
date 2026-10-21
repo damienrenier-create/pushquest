@@ -106,7 +106,7 @@ import EspionPanel from "./EspionPanel"
 import TrocPanel from "./TrocPanel"
 import MasterCtChoice from "./MasterCtChoice"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
-import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore, run3EnergyScore, run3BoatPlayed } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { nemesisRewardBlockedMarker } from "@/lib/gamebook/yellow/data/nemesisChallenge"
 import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, consumeGenieAnnouncements, setCustomDaemonSprites, resolveAbundanceCurse, isAbundanceCurseActive, abundanceFreeItemAvailableToday, takeFreeShopItem, ensureFunEvCapBoost, getDexWish, giveEvCandy } from "@/lib/gamebook/yellow/store/playerStore"
@@ -2328,7 +2328,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             getGameMode() === "fun"
                 ? "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de cadeaux, pas de récompenses d'énergie : chaque attaque puise dans ta réserve. »"
                 : "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
-            "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800 (au bateau comme à l'arène suivante), et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
+            "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800 (le bateau), 900, et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
             "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Le concours s'achève quand tu tombes à 0⚡ OU quand tu terrasses LE MAÎTRE de la Ligue. »",
             "« Et alors seulement — MÉGA-FUSION : ton run 1, ton run 2 ET ce run 3 n'en feront plus qu'un. D'ici là, tes deux vies passées restent gelées. Pas de retour. »",
             "« Que la légende commence, Maître. 🍝🔥 »",
@@ -2482,7 +2482,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const { score, factors } = computeReplayScore(run)
                 const posts = [fetch("/api/gamebook/yellow/run-scores", {
                     method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ run: `${run}bis`, score, factors }),
+                    body: JSON.stringify({ run: `${run}bis`, score, factors, boat: run === "run3" && run3BoatPlayed(getPlayer()) }), // ✱ rejeu run 3 joué avec le bateau
                 })]
                 // REJEU run 3 : fige AUSSI le score « Survivant² » (énergie), sinon la bulle jetée l'emporte et le
                 //   classement Survie n'aurait jamais la trace du rejeu (symétrie avec le Conquérant² ci-dessus).
@@ -2490,7 +2490,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const energyScore = run3EnergyScore(getPlayer().run3EnergyByArena)
                     posts.push(fetch("/api/gamebook/yellow/run-scores", {
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ run: "run3energybis", score: energyScore }),
+                        body: JSON.stringify({ run: "run3energybis", score: energyScore, boat: run3BoatPlayed(getPlayer()) }),
                     }))
                 }
                 await Promise.all(posts)
@@ -3468,7 +3468,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     </div>
                                     <div style={{ fontSize: 12, opacity: 0.9 }}>🗡️ <b>{n}</b> Daemon{n > 1 ? "s" : ""} ennemi{n > 1 ? "s" : ""} vaincu{n > 1 ? "s" : ""} (boss d'arène + Ligue), compté{n > 1 ? "s" : ""} une seule fois.</div>
                                     <div style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.4 }}>
-                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables (le bateau et les gardes ne comptent pas). Le concours s'arrête quand ton énergie tombe à 0⚡ : ton score est alors gravé.
+                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés, le même bateau et la même Ligue (les gardes ne comptent pas). ✱ au classement : score fait avec le bateau, ajouté le 21/10/2026. Le concours s'arrête quand ton énergie tombe à 0⚡ : ton score est alors gravé.
                                     </div>
                                 </div>
                             )
@@ -4265,8 +4265,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 //   (Σ énergie). Sans ça, mergeWorlds vide run3World → le classement « Survie » resterait vide
                                 //   pour tous les finisseurs (le pull ne peut plus recalculer). En parallèle, on continue au catch.
                                 await Promise.all([
-                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }),
-                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3energy", score: energyScore }) }),
+                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score, boat: run3BoatPlayed(getPlayer()) }) }), // ✱ fait avec le bateau
+                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3energy", score: energyScore, boat: run3BoatPlayed(getPlayer()) }) }),
                                 ])
                             } catch { /* hors-ligne : scores non remontés, la fusion continue */ }
                             completeRun3().finally(() => {

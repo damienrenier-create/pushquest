@@ -29,7 +29,7 @@ import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
 import { run3ArenaBossTeam } from "../data/run3Bosses"
 import { run3ArenaForBoss, RUN3_BOAT_ENERGY } from "../data/run3Arenas"
-import { bossEnemyKey, leagueEnemyKey } from "../data/run3Score"
+import { bossEnemyKey, leagueEnemyKey, boatBossSlot } from "../data/run3Score"
 import { BOAT_BADGE, BOAT_BOSS_IDS, BOAT_KEY_LINES, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, isBoatTrainer, boatArenaCleared, gymBadgeCount } from "../data/boatArena"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
@@ -1792,20 +1792,25 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         const tid = storeState.trainer.trainerId
         const r3 = run3ArenaForBoss(tid)
         const isLeague = tid.startsWith("y_ligue_")
-        // ⚓ Le BATEAU (arène 4) et le gardien des clés NE COMPTENT PAS, comme les gardes : seuls les 5 boss figés + la
-        //   Ligue font le score → classement comparable avec ceux qui ont fini le concours avant le 21/10/2026.
-        if (r3 || isLeague) {
+        // ⚓ Le BATEAU (arène 4 depuis le 21/10/2026) compte comme une arène : ses 2 CAPITAINES au « Conquérant » (clés
+        //   ancre_a / ancre_b) et UN relevé « Survivant » quand le badge tombe (ci-dessous). Matelots et gardien des clés
+        //   = des gardes (hors score). Ces scores sont marqués ✱ au classement (run3BoatPlayed) : une arène de plus.
+        const boatSlot = boatBossSlot(tid)
+        if (r3 || isLeague || boatSlot) {
             const newly: { key: string; level: number }[] = []
             b.enemy.team.forEach((e, i) => {
-                if (e.currentHp <= 0) newly.push({ key: r3 ? bossEnemyKey(r3.badge, i) : leagueEnemyKey(tid, i), level: e.level })
+                if (e.currentHp <= 0) newly.push({ key: r3 ? bossEnemyKey(r3.badge, i) : boatSlot ? bossEnemyKey(boatSlot, i) : leagueEnemyKey(tid, i), level: e.level })
             })
             if (newly.length) addRun3Defeated(newly)
             // SCORE « SURVIVANT » : boss d'arène/Ligue ENTIÈREMENT vaincu (dernier Daemon KO) → relève l'énergie
             //   (reps) restante à cet instant précis, additionnée arène par arène (1×/arène, cf. dédup par clé).
-            if (b.enemy.team.every((e) => e.currentHp <= 0)) {
+            if ((r3 || isLeague) && b.enemy.team.every((e) => e.currentHp <= 0)) {
                 addRun3EnergySnapshot(r3 ? `arena:${r3.badge}` : `league:${tid}`, energyAtKo)
             }
         }
+        // SURVIVANT du BATEAU : UN seul relevé pour toute l'arène, au K.O. du DERNIER membre de l'équipage (badge ANCRE),
+        //   avant la recharge à son palier — matelot ou capitaine, peu importe l'ordre.
+        if (badgeAwarded === BOAT_BADGE) addRun3EnergySnapshot(`arena:${BOAT_BADGE}`, energyAtKo)
     }
 
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on

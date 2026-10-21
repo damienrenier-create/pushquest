@@ -554,10 +554,10 @@ export function run3BossLevelSum(badge: string): number {
 const RUN3_BOSS_SIZE: Record<string, number> = { plante: 3, roche: 4, feu: 4, elec: 5, eau: 6 }
 // Niveau CIBLE par arène (≈ le boss d'origine du run 1/2). On garde les Daemons les plus PROCHES de ce niveau
 // (Sartay : « pas trop faible, se rapprocher le plus possible du boss original ») → ni les plus faibles, ni les plus forts.
-// ⚠️ NE PAS TOUCHER pendant le concours : ces cibles fixent les Daemons fieldés, donc le SCORE MAX (2257 au 21/10/2026,
-//   atteint par Franss et Jacanon). Le bateau (arène 4 depuis le 21/10) passe avant l'Électrik mais NE COMPTE PAS au
-//   score ; le boss Électrik garde donc exactement la même équipe pour que les scores restent comparables.
-const RUN3_BOSS_TARGET_LVL: Record<string, number> = { plante: 16, roche: 20, feu: 28, elec: 37, eau: 51 }
+// elec 37 → 48 le 21/10/2026 : le BATEAU (arène 4, ≈ 41-46 au run 3) passe avant elle → son boss doit être plus fort.
+//   Avec le bateau au score, le max passe de 2257 à 2723 : les scores faits avec le bateau sont marqués ✱ au classement
+//   (décision Sartay : « pas grave s'il y a un autre classement, on rajoute une petite étoile »).
+const RUN3_BOSS_TARGET_LVL: Record<string, number> = { plante: 16, roche: 20, feu: 28, elec: 48, eau: 51 }
 
 /** Équipe FIGÉE du boss d'une arène run 3, TRONQUÉE à la taille de l'arène : on garde les N Daemons dont le
  *  niveau est le plus proche du boss d'origine (calibrage de difficulté), puis on les ordonne par niveau

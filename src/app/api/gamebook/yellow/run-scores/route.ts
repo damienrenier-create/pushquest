@@ -18,7 +18,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore, run3BoatPlayed, RUN3_BOAT_PATCH_FACTOR } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES, medalForRank, medalMult } from "@/lib/gamebook/yellow/data/run1Badges"
 import { hasAllBadges } from "@/lib/gamebook/yellow/data/playerArena"
@@ -152,7 +152,11 @@ function replayScoreFromBubble(w: unknown, run: string): { score: number; factor
     return run1BadgeScore(world, caught)
 }
 
-interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number; fun?: boolean; energySpent?: number }
+interface LeaderEntry { userId: string; nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number; fun?: boolean; energySpent?: number; patched?: boolean }
+
+/** ✱ Ligne de table figée d'un run 3 joué AVEC le bateau (marqueur posé au POST, cf. RUN3_BOAT_PATCH_FACTOR). */
+const factorsHaveBoat = (factors: unknown): boolean =>
+    Array.isArray(factors) && factors.some((x) => !!x && typeof x === "object" && (x as { key?: unknown }).key === RUN3_BOAT_PATCH_FACTOR)
 
 export const dynamic = "force-dynamic"
 
@@ -263,9 +267,10 @@ export async function GET() {
                 }
                 // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
                 const r3 = run3FromWorld(f.run3World)
-                if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3", energySpent: esOf(f.run3World) })
+                const r3Boat = run3BoatPlayed(f.run3World) // ✱ partie jouée avec le bateau (arène 4 depuis le 21/10/2026)
+                if (r3 !== null) run3Map.set(s.userId, { userId: s.userId, nickname, score: r3, wonAt: null, factors: null, live: world === "run3", energySpent: esOf(f.run3World), patched: r3Boat })
                 const r3e = run3EnergyFromWorld(f.run3World) // score « Survivant » (énergie conservée)
-                if (r3e !== null) run3EnergyMap.set(s.userId, { userId: s.userId, nickname, score: r3e, wonAt: null, factors: null, live: world === "run3" })
+                if (r3e !== null) run3EnergyMap.set(s.userId, { userId: s.userId, nickname, score: r3e, wonAt: null, factors: null, live: world === "run3", patched: r3Boat })
                 // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une
                 //   clé distincte (userId:bis) → il COEXISTE avec l'original gelé (déjà pullé ci-dessus depuis les mondes
                 //   réels stashés). Les deux scores s'affichent, comme demandé.
@@ -273,12 +278,13 @@ export async function GET() {
                     const rb = replayScoreFromBubble(f.replayWorld, f.replayRun)
                     if (rb) {
                         const target = f.replayRun === "run3" ? run3Map : f.replayRun === "run2" ? run2Map : run1Map
-                        target.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps })
+                        const bisBoat = f.replayRun === "run3" && run3BoatPlayed(f.replayWorld)
+                        target.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps, patched: bisBoat || undefined })
                         // REJEU run 3 : le score « Survivant² » de la bulle alimente AUSSI le classement énergie (symétrie
                         //   avec le Conquérant² ci-dessus). run3EnergyByArena est accumulé dans la bulle (runMode()="run3").
                         if (f.replayRun === "run3") {
                             const r3eBis = run3EnergyFromWorld(f.replayWorld)
-                            if (r3eBis !== null) run3EnergyMap.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: r3eBis, wonAt: null, factors: null, live: true })
+                            if (r3eBis !== null) run3EnergyMap.set(s.userId + ":bis", { userId: s.userId, nickname: `${nickname}²`, score: r3eBis, wonAt: null, factors: null, live: true, patched: bisBoat })
                         }
                     }
                 }
@@ -311,7 +317,8 @@ export async function GET() {
             // RUN 2 : un score figé posté sous l'ANCIENNE formule (frugalité incluse) est RE-NOTÉ depuis ses ratios
             //   stockés sous les poids COURANTS → frozen et live comparés sur la même échelle (3 facteurs performance).
             const score = baseRun === "run2" ? (regradeRun2FromFactors(r.factors) ?? r.score) : r.score
-            map.set(key, { userId: r.userId, nickname: isBis ? `${r.nickname}²` : r.nickname, score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
+            const patched = (baseRun === "run3" || baseRun === "run3energy") && factorsHaveBoat(r.factors) ? true : undefined
+            map.set(key, { userId: r.userId, nickname: isBis ? `${r.nickname}²` : r.nickname, score, wonAt: r.wonAt, factors: patched ? null : (r.factors ?? null), live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined, patched })
         }
     } catch { /* table pas encore créée → pull seul */ }
 
@@ -320,7 +327,7 @@ export async function GET() {
     const toList = (m: Map<string, LeaderEntry>) =>
         [...m.values()]
             .sort((a, b) => b.score - a.score || (a.energySpent ?? Number.MAX_SAFE_INTEGER) - (b.energySpent ?? Number.MAX_SAFE_INTEGER))
-            .map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun, energySpent: e.energySpent }))
+            .map((e) => ({ userId: e.userId, me: e.userId === auth.userId, nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps, fun: e.fun, energySpent: e.energySpent, patched: e.patched || undefined }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
     // RUN 1 : ASYMÉTRIQUE — un joueur FUN ne voit QUE les scores fun (barème 8 paliers) ; un NON-FUN voit TOUT (il
@@ -337,11 +344,11 @@ export async function POST(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
 
-    let body: { run?: unknown; score?: unknown; factors?: unknown }
+    let body: { run?: unknown; score?: unknown; factors?: unknown; boat?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
     // Note /1000 (run2 + les rejeux run1bis/run2bis) : détail des axes (display-only) stocké tel quel, borné à 8.
-    const factors = run && isGradeKind(run) && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
+    let factors: unknown[] | null = run && isGradeKind(run) && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
     // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3(bis) = Σ max atteignable + marge ;
     //   les notes /1000 → plafond STRICT 1000. Fallback MAX_SCORE si run inconnu.
     const runCap = !run ? MAX_SCORE : isEnergyKind(run) ? run3EnergyMaxScore() : isRun3Kind(run) ? run3MaxScore() + 200 : 1000
@@ -352,6 +359,18 @@ export async function POST(req: NextRequest) {
         const rs = (prisma as any).yellowRunScore // table gated, créée par db:push
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
+        // ✱ RUN 3 joué AVEC le bateau (arène 4 depuis le 21/10/2026) : marqueur dans `factors` (purement d'affichage,
+        //   aucune incidence sur le score) → le classement figé garde la petite étoile. Indice du client OU lecture de
+        //   la save (monde run 3, ou bulle de rejeu pour les « bis »), pour ne pas dépendre d'un seul des deux.
+        if (isRun3Kind(run) || isEnergyKind(run)) {
+            let boat = body.boat === true
+            if (!boat) {
+                const prog = await prisma.gamebookProgress.findUnique({ where: { userId_chapterId: { userId: auth.userId, chapterId: YELLOW_CHAPTER_ID } }, select: { flags: true } })
+                const fl = (prog?.flags ?? {}) as Record<string, unknown>
+                boat = run3BoatPlayed(run.endsWith("bis") ? fl.replayWorld : fl.run3World)
+            }
+            if (boat) factors = [{ key: RUN3_BOAT_PATCH_FACTOR, label: "Arène du bateau (patch du 21/10/2026)", ratio: 0, max: 0, points: 0, detail: "" }]
+        }
         // RUN 2 = score COURANT (on écrase toujours, note non monotone) ; RUN 3 = MAX (score cumulatif, jamais de régression).
         // On récupère TOUTES les lignes du joueur (pas findFirst) pour COLLAPSE d'éventuels doublons de POST concurrents
         // (mount + arrière-plan) → garantit UNE seule ligne par (joueur, run), sans quoi le GET pourrait figer un doublon périmé.
