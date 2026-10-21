@@ -1660,9 +1660,48 @@ export const DEX_LORE: Record<string, DexLore> = {
     },
 }
 
+/** FICHES des espèces CUSTOM qui doivent quand même en avoir une (hors couverture des espèces officielles) : les
+ *  ANCIENNES NÉMÉSIS générées par ACE au run 2. Clé = id d'espèce custom. Lu par dexLore() en repli de DEX_LORE. */
+export const CUSTOM_LORE: Record<string, DexLore> = {
+    // ── ANCIENNES NÉMÉSIS GÉNÉRÉES (ACE, run 2, avant le 22/10/2026) : lignées forgées contre UNE création de joueur.
+    //    Clé = id d'espèce custom (custom_nem…). Plus aucune n'est créée : ACE prend désormais une lignée existante. ──
+    // Némésis de Chadine (PLANTE/ÉLEC) — forgée contre la Chadine de Kingme (EAU/COMBAT)
+    custom_nemcmuhdss6u0003_nemesisdechadine_s1: {
+        ecology: "Né du Protocole Némésis d'ACE pour une seule proie : Chadine. Un bébé orque de lianes et de mousse, parcouru d'étincelles vertes, qui imite la silhouette de sa cible pour mieux la comprendre. Là où Chadine fonce, lui calcule ; là où elle encaisse les coups, il vise la seule faille qu'elle n'a jamais musclée : son esprit.",
+        dicton: "Pour vaincre quelqu'un, commence par lui ressembler.",
+        note: "Il a nagé à côté de moi pendant une heure sans un bruit, puis il est reparti. J'ai compris plus tard qu'il prenait mes mesures.",
+    },
+    custom_nemcmuhdss6u0003_nemesisdechadine_s2: {
+        ecology: "La forme d'orque se défait : le corps s'allonge en liane-anguille, les nageoires deviennent des feuilles tranchantes, et des arcs de foudre courent le long de son échine. Plante pour boire l'eau de son adversaire, Électrik pour la faire bouillir : chacun de ses deux types frappe Chadine là où elle est faible.",
+        dicton: "Celui qui étudie ta force finit par la retourner contre toi.",
+        note: "Mon étang ne fait plus de vagues depuis qu'il y vit. Les vagues ont peur, je crois.",
+    },
+    custom_nemcmuhdss6u0003_nemesisdechadine_s3: {
+        ecology: "Le reflet achevé : un prédateur élancé, mi-mante mi-anguille électrique, couronné de feuilles-lames qui crépitent de foudre. Rapide, froid, il frappe au Spécial là où les colosses marins n'ont aucune défense. ACE l'a dressé pour une seule raison : que Chadine ne gagne jamais. Il a fini par changer de camp.",
+        dicton: "Le pire ennemi est celui qui a été fait sur mesure.",
+        note: "Son dresseur l'appelle Caros. Quand on lui demande pourquoi, il répond juste : « parce qu'il a perdu contre moi, et pas l'inverse ». ACE ne s'en est pas remis.",
+    },
+    // Némésis de Dracominus (GLACE/SPECTRE) — forgée contre le Dracominus de Rob (DRAGON/SPECTRE)
+    custom_nemcmti9xukc002h_nemesisdedracomi_s1: {
+        ecology: "Forgé par le Protocole Némésis d'ACE contre Dracominus : un dragonnet de givre translucide qui copie la forme de sa proie, mais en froid. Là où Dracominus sème une brume violette, lui répand une brume bleue qui fige l'air. Glace contre le Dragon, Spectre contre le Spectre : il a été pensé pour ne jamais lui laisser d'issue.",
+        dicton: "Le froid ne se bat pas : il attend que tu ralentisses.",
+        note: "Il a soufflé sur ma fenêtre. Le givre a dessiné un petit dragon. Puis il l'a effacé, comme pour dire « bientôt ».",
+    },
+    custom_nemcmti9xukc002h_nemesisdedracomi_s2: {
+        ecology: "Ses ailes de givre se déchirent comme celles de son modèle, ses écailles deviennent du cristal. Lent mais massif, il encaisse les ombres sans broncher et répond par des souffles de glace qui transpercent les écailles de dragon les plus dures.",
+        dicton: "Une ombre se dissipe ; la glace, elle, reste.",
+        note: "J'ai voulu le photographier. L'objectif a gelé. Sur le cliché, il n'y avait que mon reflet, et derrière moi, quelque chose de très froid.",
+    },
+    custom_nemcmti9xukc002h_nemesisdedracomi_s3: {
+        ecology: "Colosse spectral pris dans une armure de givre fissurée, d'où filtre une lueur bleu pâle ; ses ailes sont des stalactites. Il est l'exact opposé de Thanadrak : là où l'un brûle de violet, l'autre gèle de bleu. ACE l'avait forgé pour figer le dragon de Rob en plein vol.",
+        dicton: "Tout ce qui vole finit par se poser. Lui, il attend en bas.",
+        note: "L'été dernier, il a dormi trois jours devant ma porte. Je n'ai plus jamais eu besoin de frigo.",
+    },
+}
+
 /** Lore éditorial « premium » d'une espèce, ou null si pas encore rédigé (→ repli sur `description`). */
 export function dexLore(speciesId: string): DexLore | null {
-    return DEX_LORE[speciesId] ?? null
+    return DEX_LORE[speciesId] ?? CUSTOM_LORE[speciesId] ?? null
 }
 
 /** Une espèce a-t-elle sa fiche premium complète ? (utile pour le suivi de la refonte). */

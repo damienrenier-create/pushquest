@@ -11,6 +11,9 @@ import { useMemo, useState } from "react"
 import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { addCustomDaemon, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { existingNemesisBase } from "@/lib/gamebook/yellow/create/nemesisArchitect"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { speciesAtLevel } from "@/lib/gamebook/yellow/data/ace"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
@@ -131,9 +134,13 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
 
     // ───────── Écran de succès ─────────
     if (created) {
-        // Aperçu du NÉMÉSIS : la contre-lignée qu'ACE forgera (remplace Divin Pâte). Calcul hors JSX (données).
-        let nemFinal: { types: PokeType[]; bst: number } | null = null
-        try { const nem = previewLine(buildNemesis(effSpec), "ace"); const f = nem[nem.length - 1]; nemFinal = f ? { types: f.types, bst: f.bst } : null } catch { nemFinal = null }
+        // Aperçu du NÉMÉSIS : la lignée EXISTANTE qu'ACE alignera contre toi (22/10/2026 : plus de lignée générée).
+        let nemFinal: { name: string; types: PokeType[]; bst: number } | null = null
+        try {
+            const base = existingNemesisBase({ name: effSpec.name, types: [...effSpec.finalTypes], stats: { ...effSpec.finalStats } })
+            const f = base ? getSpecies(speciesAtLevel(base, 100)) : null
+            nemFinal = f ? { name: f.name, types: [...f.types], bst: Object.values(f.baseStats).reduce((a, b) => a + b, 0) } : null
+        } catch { nemFinal = null }
         return (
             <div style={S.overlay} onClick={forced ? undefined : close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
@@ -143,11 +150,11 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated, mod
                         run 1), ni en genèse → l'encadré n'est montré qu'aux créations qui ouvrent un run 2. */}
                     {nemFinal && !isLoop && !isGenesis && (
                         <div style={{ ...S.errBox, background: "#f3e6f6", border: "2px solid #8a4a9a", color: "#4a1c54", marginBottom: 8 }}>
-                            <b>👹 Le Némésis d&apos;ACE</b> — une lignée forgée pour te contrer :
+                            <b>👹 Le Némésis d&apos;ACE</b> — la lignée choisie pour te contrer :
                             <div style={{ marginTop: 4, fontWeight: 700 }}>
-                                {nemFinal.types.map((t) => <span key={t} style={{ ...S.miniChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t]}</span>)} · BST {nemFinal.bst}
+                                {nemFinal.name} · {nemFinal.types.map((t) => <span key={t} style={{ ...S.miniChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t]}</span>)} · BST {nemFinal.bst}
                             </div>
-                            <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>ACE l&apos;alignera contre toi pendant tout le run 2. Bats-le 7 fois (1 combat par jour, en 1ʳᵉ ville) avec ta création dans ton équipe, et il te le lègue.</div>
+                            <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>ACE l&apos;alignera contre toi pendant tout le run 2. Bats-le 7 fois (1 combat par jour, en 1ʳᵉ ville) avec ta création dans ton équipe, et il te lègue un Panthéon.</div>
                         </div>
                     )}
                     {!isGenesis && <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>{isLoop ? "Il t'accompagnera comme starter dans une nouvelle traversée du Nexus (bulle de rejeu — ton vrai monde reste intact)." : (getGameMode() === "fun" ? "Il ouvre ton run 2, avec 1 000 ⚡ et 10 Nexus-Balls de départ." : "Il ouvre ton run 2, avec 10 000 ⚡ de départ.")}</p>}

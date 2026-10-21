@@ -238,3 +238,36 @@ export function profileFromSpecies(id: string): DaemonProfile | null {
     const s = SPECIES[id]; if (!s) return null
     return { name: s.name, types: [...s.types], stats: { ...s.baseStats } }
 }
+
+// ───────── 7. NÉMÉSIS EXISTANTE (décision Sartay du 22/10/2026) ─────────
+// « Je préfère qu'on prenne un némésis qui existe déjà plutôt que d'en créer un » : ACE ne fielde plus de lignée
+// GÉNÉRÉE (sans sprite, sans fiche → MissingNo, cf. « Caros » de Kingme). Pour une création du joueur sans némésis
+// canonique (CANONICAL_NEMESIS), on prend le meilleur CONTRE parmi les espèces EXISTANTES du jeu (findPoolCounters :
+// résiste ses STAB, le frappe ×2 dans sa défense faible), hors légendaires, espèces secrètes, fusions et espèces sans
+// sprite, et hors type FÉE (réservé à Ukognos). On préfère une LIGNÉE (ACE la fait évoluer avec son niveau), puis une espèce visible avant le run 3.
+// Renvoie l'id du STADE 1 de la lignée (speciesAtLevel l'évolue au bon stade). Déterministe : même création → même némésis.
+
+/** Stade 1 d'une lignée canonique (remonte les pré-évolutions). */
+function lineageBaseOf(id: string): string {
+    let cur = id
+    for (let g = 0; g < 6; g++) {
+        const parent = Object.values(SPECIES).find((s) => s.evolution?.toId === cur)
+        if (!parent) break
+        cur = parent.id
+    }
+    return cur
+}
+
+export function existingNemesisBase(p: DaemonProfile): string | null {
+    const eligible = (id: string): boolean => {
+        const s = SPECIES[id] as (SpeciesData & { legendary?: boolean; hiddenUntilCaught?: boolean; exclusive?: boolean; fusionParents?: unknown }) | undefined
+        if (!s || s.legendary || s.hiddenUntilCaught || s.exclusive || s.fusionParents) return false
+        if (s.types.includes("FEE")) return false // FÉE réservée au légendaire Ukognos (même règle que l'ancien buildNemesis)
+        return !!s.sprite && !s.sprite.includes("missingno")
+    }
+    const ranked = findPoolCounters(p, 400).filter((c) => eligible(c.id))
+    const best = ranked.find((c) => !c.flags.includes("run3") && lineageBaseOf(c.id) !== c.id)
+        ?? ranked.find((c) => !c.flags.includes("run3"))
+        ?? ranked[0]
+    return best ? lineageBaseOf(best.id) : null
+}

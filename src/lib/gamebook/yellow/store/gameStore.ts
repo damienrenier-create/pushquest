@@ -1106,7 +1106,7 @@ function platineOpponentIntro(): string[] | null {
 /** Ce qu'ACE lèguera VRAIMENT à sa 7e défaite (même test que le cadeau, battleStore) : son NÉMÉSIS au run 2 quand une
  *  création est en équipe, sinon le Panthéon. Sa réplique-cadeau annonce donc le bon cadeau. */
 function aceGiftKind(): "pantheon" | "nemesis" {
-    return getActiveWorld() === "ngplus" && getNgplusNemesisSpeciesId() ? "nemesis" : "pantheon"
+    return "pantheon" // 22/10/2026 (Sartay) : ACE lègue TOUJOURS un Panthéon, même au run 2 où il joue sa némésis
 }
 
 /** 🗝️ Dialogue du GARDIEN DES CLÉS (PNJ ou porte du GYM) : l'histoire du voleur sans le badge ANCRE ; avec, le défi

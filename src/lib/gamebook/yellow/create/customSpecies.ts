@@ -788,6 +788,12 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmtj184wc00276w9_ewokid: ["/yellow/sprites/dex/ewokid.png", "/yellow/sprites/dex/endorix.png", "/yellow/sprites/dex/wooky.png"],
     // Dracominus → Spectragon → Thanadrak (Rob) : shiny crafté, DRAGON/SPECTRE.
     custom_cmti9xukc002h7k2_dracominus: ["/yellow/sprites/dex/dracominus.png", "/yellow/sprites/dex/spectragon.png", "/yellow/sprites/dex/thanadrak.png"],
+    // ANCIENNES NÉMÉSIS GÉNÉRÉES (léguées par ACE au run 2 avant le 22/10/2026) : sprites générés le 22/10 (générateur du jeu,
+    //   3 stades chaînés) — elles s'affichaient en MissingNo. Plus aucune némésis générée n'est créée depuis (lignées existantes).
+    // Némésis de Chadine (Kingme, « Caros ») : PLANTE/ÉLEC, l'orque-liane électrique qui finit en mante.
+    custom_nemcmuhdss6u0003_nemesisdechadine: ["/yellow/sprites/dex/nem_chadine1.png", "/yellow/sprites/dex/nem_chadine2.png", "/yellow/sprites/dex/nem_chadine3.png"],
+    // Némésis de Dracominus (Rob) : GLACE/SPECTRE, le dragonnet de givre qui finit en colosse de glace.
+    custom_nemcmti9xukc002h_nemesisdedracomi: ["/yellow/sprites/dex/nem_dracominus1.png", "/yellow/sprites/dex/nem_dracominus2.png", "/yellow/sprites/dex/nem_dracominus3.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */

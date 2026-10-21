@@ -18,6 +18,7 @@ import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker }
 import { LEAGUE_PLUS3_MARKER } from "../data/fusionLeague"
 import { clanOfSpecies, type ClanKey } from "../data/clans"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
+import { existingNemesisBase } from "../create/nemesisArchitect"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { setFusionTypeChoiceResolver } from "../data/fusionSpecies"
 import { leagueFusionSpecies } from "../data/leagueFusionDex"
@@ -564,6 +565,10 @@ export function reregisterCustomDaemons(): void {
     registerCustomSpecies(PERMANENT_OFF_DEX_SPECIES.map((s) => { const u = getEvoSpriteFromMemory(s.id); return u ? { ...s, sprite: u } : s }))
     registerCustomSpecies(leagueFusionSpecies()) // FICHES des fusions de la Ligue → résolvables (getSpecies) pour le FUSIODEX (affichées à la rencontre)
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
+    // ANCIENNES NÉMÉSIS GÉNÉRÉES (avant le 22/10/2026) : ACE les léguait au run 2 (ex. « Caros » de Kingme). Elles ne
+    //   n'étaient enregistrées qu'au premier combat contre ACE → après un rechargement, l'espèce était INTROUVABLE
+    //   (MissingNo, sans fiche). On les ré-enregistre donc ici, toujours, pour que les Daemons déjà reçus s'affichent.
+    for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(buildNemesis(d.spec), `nem_${d.ownerId}`)) } catch { /* idem */ } }
 }
 
 /** RUN 3 — le starter qui CONTRE celui du joueur (triangle 🔩Métal›🧚Fée›🦗Combat›🔩Métal) → ACE le fielde en
@@ -586,16 +591,15 @@ export function getNgplusNemesisSpeciesId(): string | null {
     // 1) STARTER CANONIQUE avec némésis dédié (ex. Gavillus → Goatiny/Mouflorage) : ACE field la contre-lignée
     //    canonique (id de STADE 1 ; speciesAtLevel l'évolue au bon stade côté équipe d'ACE / cadeau).
     for (const m of st.team) { const canon = CANONICAL_NEMESIS[m.speciesId]; if (canon) return canon }
-    // 2) Sinon : Daemon CUSTOM (wizard) → némésis auto-généré (buildNemesis, déterministe, idempotent).
+    // 2) Sinon : Daemon CUSTOM (wizard) → le meilleur CONTRE parmi les espèces EXISTANTES du jeu (22/10/2026, Sartay :
+    //    « un némésis qui existe déjà plutôt que d'en créer un ». L'ancienne lignée GÉNÉRÉE n'avait ni sprite ni fiche).
+    //    Déterministe : même création → même némésis.
     const teamCustom = st.team.find((m) => isCustomSpeciesId(m.speciesId))
     if (!teamCustom) return null
     const stored = st.customDaemons.find((d) => teamCustom.speciesId.startsWith(customLineageBaseId(d)))
     if (!stored) return null
     try {
-        const nemSpec = buildNemesis(stored.spec)
-        const nemOwner = `nem_${stored.ownerId}`
-        registerCustomSpecies(buildCustomSpecies(nemSpec, nemOwner)) // idempotent (ré-écrit l'entrée du registre)
-        return customStarterSpeciesId({ ownerId: nemOwner, spec: nemSpec })
+        return existingNemesisBase({ name: stored.spec.name, types: [...stored.spec.finalTypes], stats: { ...stored.spec.finalStats } })
     } catch { return null }
 }
 

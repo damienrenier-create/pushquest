@@ -25,6 +25,7 @@ import { getCompetitiveDangerList } from "@/lib/competitive-danger";
 import { GIFT_RECIPIENT_ID, GIFT_ACTIVE } from "@/lib/gift";
 import { quotaTotalWithGifts, setEffort } from "@/lib/quota";
 import { CANONIZED_CUSTOM_SPRITES } from "@/lib/gamebook/yellow/create/customSpecies";
+import { auditSaveVisuals, generatedReadyIds } from "@/lib/gamebook/yellow/data/visualAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
         // ALERTE SPRITES (ADMIN/Sartay uniquement) : lignées CRÉÉES par les joueurs mais PAS ENCORE canonisées
         // (= sprite placeholder MISSINGNO à générer). Surfacé sur le dashboard → Sartay est prévenu au plus tôt
         //   (il ouvre le dashboard chaque jour pour ses reps). La requête cross-joueurs ne tourne QUE pour un admin.
-        let spriteAlerts: { nickname: string; name: string; baseId: string }[] = [];
+        let spriteAlerts: { nickname: string; name: string; baseId: string; kind?: "audit" }[] = [];
         if ((session.user as any).isAdmin) {
             const slugCustom = (s: string) => s.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "").slice(0, 16) || "daemon";
             const gbRows = await (prisma as any).gamebookProgress.findMany({ where: { chapterId: "yellow" }, select: { flags: true, user: { select: { nickname: true } } } });
@@ -59,6 +60,17 @@ export async function GET(req: Request) {
                     if (!CANONIZED_CUSTOM_SPRITES[baseId]) spriteAlerts.push({ nickname: r.user?.nickname ?? "?", name: c.spec?.name ?? "?", baseId });
                 }
             }
+            // GARDE-FOU « PLUS JAMAIS DE MISSINGNO » (22/10/2026, après Caros) : TOUT Daemon possédé (équipe + PC, tous les
+            //   mondes) dont l'espèce est introuvable ou sans vrai sprite (un sprite généré prêt compte) → alerte ici.
+            try {
+                const readyRows = await (prisma as any).fusionSprite.findMany({ where: { status: "READY" }, select: { pairKey: true } });
+                const ready = generatedReadyIds(readyRows.map((x: { pairKey: string }) => x.pairKey));
+                for (const r of gbRows) {
+                    for (const p of auditSaveVisuals(r.flags, ready)) {
+                        spriteAlerts.push({ nickname: r.user?.nickname ?? "?", name: `${p.name} : ${p.reason} (${p.where})`, baseId: `${p.speciesId}|${p.where}|${r.user?.nickname ?? "?"}`, kind: "audit" });
+                    }
+                }
+            } catch (e) { console.error("Audit sprites:", e); }
         }
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";

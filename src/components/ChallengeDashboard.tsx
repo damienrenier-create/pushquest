@@ -105,7 +105,7 @@ interface DashboardData {
             id: string; totalXP: number; level: number; animal: string; emoji: string; belt: string; xpCurrentLvl: number; xpNextLvl: number; progress: number;
         }
     }
-    spriteAlerts?: Array<{ nickname: string; name: string; baseId: string }> // ADMIN : Daemons créés sans sprite (à générer)
+    spriteAlerts?: Array<{ nickname: string; name: string; baseId: string; kind?: "audit" }> // ADMIN : Daemons créés sans sprite (à générer) + audit « jamais de MissingNo »
 }
 
 // Renvoie une Date dont les composantes LOCALES valent l'heure d'Europe/Paris (le fuseau OFFICIEL du jeu, côté
@@ -686,7 +686,9 @@ export default function ChallengeDashboard() {
                     <div className="font-black text-amber-900 text-sm mb-1.5">🎨 Sprite(s) de Daemon à générer</div>
                     <ul className="text-[12px] font-bold text-amber-800 space-y-1">
                         {data!.spriteAlerts!.map((a) => (
-                            <li key={a.baseId}>• <b>{a.nickname}</b> a créé « {a.name} » <span className="opacity-50 font-mono text-[10px]">({a.baseId})</span></li>
+                            a.kind === "audit"
+                                ? <li key={a.baseId}>• ⚠️ <b>{a.nickname}</b> possède un Daemon mal affiché : {a.name}</li>
+                                : <li key={a.baseId}>• <b>{a.nickname}</b> a créé « {a.name} » <span className="opacity-50 font-mono text-[10px]">({a.baseId})</span></li>
                         ))}
                     </ul>
                 </div>

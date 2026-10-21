@@ -1113,23 +1113,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const r = aceReward(winNum, run3, getGameMode() === "fun") // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie) ; fun : « énergies »
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) logEnergyIncome("⚔️ Rival (ACE)", grantReps(r.reps))
-            let gaveNemesis = false
             if (r.gift === "pantheon") {
                 const lvls = getPlayer().team.map((m) => m.level)
                 const lvl = lvls.length ? Math.min(...lvls) : 5 // niveau du plus faible de l'équipe présente
-                // NG+ : ACE lègue le NÉMÉSIS (contre-lignée) au lieu du Panthéon. Fallback Panthéon si indisponible.
-                const nem = getActiveWorld() === "ngplus" ? getNgplusNemesisSpeciesId() : null
-                let giftId = "pantheon"
-                // speciesAtLevel : le némésis est offert au STADE NATUREL de son niveau (jamais une souche à haut niveau).
-                if (nem) { try { const gid = speciesAtLevel(nem, lvl); createMonInstance(gid, lvl, { owned: true }); giftId = gid; gaveNemesis = true } catch { giftId = "pantheon" } }
+                // TOUS LES RUNS : ACE lègue un PANTHÉON (décision Sartay du 22/10/2026). Au run 2 il JOUE avec sa némésis,
+                //   mais ne la donne plus (ceux qui l'ont déjà reçue la gardent).
+                const giftId = "pantheon"
                 addCaught(createMonInstance(giftId, lvl, { owned: true }))
                 markCaught(giftId); markCaughtThisRun(giftId) // le cadeau ACE entre au Pokédex (comme le cadeau Orcaline)
             }
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum
-            aceRewardMsg = gaveNemesis
-                ? "« Sept fois. Sept. Tu l'as brisé si souvent que je te lègue mon Némésis — ta propre nemesis, forgée contre toi. Ironique, non ? »"
-                : r.message
+            aceRewardMsg = r.message
             // 🎟️ TICKETS ACE : un petit (20) à la 2e victoire ; un gros (50) avant Panthéon (victoire 6) + après (victoire 8).
             //    RUN 3 : AUCUN ticket (le concours n'a ni casino ni roulette) → on saute tout le bloc (sinon le
             //    message annoncerait des énergies qui ne tombent jamais, grantRouletteTicket étant déjà no-op en run3).
