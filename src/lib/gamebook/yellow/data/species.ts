@@ -1414,7 +1414,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     iorours: {
         id: "iorours", dexNo: 90, name: "Iorours", types: ["ROCHE", "GLACE"],
-        baseStats: { hp: 80, atk: 88, def: 70, spe: 50, spc: 80 }, // 26/10/2026 : Atk 80→88, Spé 72→80 (total 352→368)
+        baseStats: { hp: 80, atk: 97, def: 70, spe: 50, spc: 88 }, // 26/10/2026 : Atk 80→88→97, Spé 72→80→88 (+10 % de plus, Sartay) — total 352→385
         learnset: [{ level: 1, moveId: "coup_d_givre" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "eboulis" }, { level: 28, moveId: "belier" }],
         evolution: { toId: "yetiroche", method: { kind: "LEVEL", level: 40 } },
         catchRate: 50, baseExp: 150, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Glace — ourse polaire",
@@ -1423,7 +1423,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     yetiroche: {
         id: "yetiroche", dexNo: 91, name: "Yétiroche", types: ["ROCHE", "GLACE"],
-        baseStats: { hp: 95, atk: 112, def: 80, spe: 55, spc: 105 }, // 26/10/2026 : Atk 100→112, Spé 95→105 (total 425→447, attaquant mixte ; reste lent)
+        baseStats: { hp: 95, atk: 123, def: 80, spe: 55, spc: 116 }, // 26/10/2026 : Atk 100→112→123, Spé 95→105→116 (+10 % de plus, Sartay) — total 425→469, attaquant mixte ; reste lent
         learnset: [{ level: 1, moveId: "souffle_polaire" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "coup_d_givre" }, { level: 40, moveId: "belier" }, { level: 44, moveId: "danse_lames" }, { level: 52, moveId: "carapace_diamant" }, { level: 66, moveId: "blizzard" }],
         catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Glace — yéti (attaquant MIXTE Atk+Spé)",
         description: "Yéti légendaire des sommets ; frappe aussi bien du poing que du souffle glacé.",

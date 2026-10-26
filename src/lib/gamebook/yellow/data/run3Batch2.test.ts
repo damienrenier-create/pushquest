@@ -25,11 +25,11 @@ describe("Marmoterre : UNE seule apparition sauvage (Grotte Gelée run 1, ≈1 %
         expect(enc).toContain("{ speciesId: \"marmoterre\", base: 3, hourRange: [12, 22] }")
         for (const id of ["marmoterre", "iorours", "yetiroche"]) expect(getSpecies(id)!.runThreeOnly, id).toBeFalsy() // de retour au dex run 1
     })
-    it("lignée Iorours : Atk et Spé relevés (252→264, 352→368, 425→447), learnset de Marmoterre comblé (Éboulis @14, Bélier @18)", () => {
+    it("lignée Iorours : Atk et Spé relevés (252→264, 352→385, 425→469 — Iorours/Yétiroche +10 % de plus le soir), learnset de Marmoterre comblé (Éboulis @14, Bélier @18)", () => {
         expect(getSpecies("marmoterre")!.baseStats).toEqual({ hp: 58, atk: 58, def: 52, spe: 42, spc: 54 })
-        expect(getSpecies("iorours")!.baseStats).toEqual({ hp: 80, atk: 88, def: 70, spe: 50, spc: 80 })
-        expect(getSpecies("yetiroche")!.baseStats).toEqual({ hp: 95, atk: 112, def: 80, spe: 55, spc: 105 })
-        expect([bst("marmoterre"), bst("iorours"), bst("yetiroche")]).toEqual([264, 368, 447])
+        expect(getSpecies("iorours")!.baseStats).toEqual({ hp: 80, atk: 97, def: 70, spe: 50, spc: 88 })
+        expect(getSpecies("yetiroche")!.baseStats).toEqual({ hp: 95, atk: 123, def: 80, spe: 55, spc: 116 })
+        expect([bst("marmoterre"), bst("iorours"), bst("yetiroche")]).toEqual([264, 385, 469])
         const ls = getSpecies("marmoterre")!.learnset.map((l) => `${l.moveId}@${l.level}`)
         expect(ls).toContain("eboulis@14"); expect(ls).toContain("belier@18")
     })
