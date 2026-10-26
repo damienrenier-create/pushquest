@@ -1784,6 +1784,8 @@ export function applyExternalEffects(raw: string): boolean {
     return all
 }
 
+/** Effets de vœu autorisés PENDANT le run 3 (ne touchent ni l'énergie, ni le sac, ni les stats — le concours reste scellé). */
+export const GENIE_RUN3_ALLOWED_KINDS: ReadonlySet<string> = new Set(["guaranteed_captures"])
 export function applyAcceptedGenieWishEffects(row: {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null
@@ -1791,7 +1793,11 @@ export function applyAcceptedGenieWishEffects(row: {
     round?: number | null // TOUR de vœux (0 = les 3 premiers) → marqueurs genieFxMarker
     history?: string | null // TOURS ARCHIVÉS (JSON [{ round, acceptedN, effectN… }]) → leurs effets PERMANENTS seulement
 } | null | undefined): boolean {
-    if (!row || getActiveWorld() === "run3") return false
+    if (!row) return false
+    // RUN 3 (concours, économie scellée) : SEULS les effets de GENIE_RUN3_ALLOWED_KINDS s'appliquent — un vœu qui en contient
+    //   un autre reste en attente du retour dans un vrai monde. Avant le 26/10/2026 TOUT était refusé en run 3 : Kingme a
+    //   accepté « 5 captures garanties » en plein concours et n'a jamais reçu ses charges.
+    const inRun3 = getActiveWorld() === "run3"
     const wishes = [
         { acc: row.accepted1, fx: row.effect1, mark: genieFxMarker(1, row.round), cond: row.condition1 },
         { acc: row.accepted2, fx: row.effect2, mark: genieFxMarker(2, row.round), cond: row.condition2 },
@@ -1802,6 +1808,7 @@ export function applyAcceptedGenieWishEffects(row: {
         if (w.acc !== true || !w.fx || st.defeatedTrainers.includes(w.mark)) continue
         let effects: GenieEffect[]
         try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue } // JSON invalide → on saute (pas de crash)
+        if (inRun3 && !effects.every((e) => GENIE_RUN3_ALLOWED_KINDS.has(e.kind))) continue // run 3 : vœu non autorisé → attend un vrai monde
         // DÉJÀ VERSÉ dans un AUTRE monde (vœu exaucé au run 1, joueur désormais au run 2 ou dans un rejeu) : un vœu ne se
         //   paie qu'UNE fois par joueur → seuls ses effets PERMANENTS sont rejoués ici (cf. GENIE_PERSISTENT_EFFECT_KINDS) ;
         //   les dons uniques (énergie, objets, défi némésis…) ne sont JAMAIS reversés. Bug corrigé le 20/10/2026.

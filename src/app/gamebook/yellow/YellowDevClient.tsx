@@ -1364,19 +1364,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             // 🧞 ARC LAMPE & GÉNIE : le génie « revient » quand le créateur a fixé les contreparties (status PROPOSED).
             //   Pop-up une seule fois (?claim=1 marque proposedSeen). Détail + accept/refus dans le menu → 🧞 Vœux.
-            // RUN 3 (concours, économie scellée) : PAS de self-heal d'effets ni d'annonce d'effets — MAIS le RETOUR du génie est
-            //   annoncé quand même : un dilemme posé pendant le concours (Kingme, 26/10/2026) se tranche dans la lampe / le menu 🧞.
+            // RUN 3 (concours, économie scellée) : le self-heal ne laisse passer que les effets GENIE_RUN3_ALLOWED_KINDS (captures
+            //   garanties) — le retour du génie, lui, est annoncé dans tous les mondes (dilemme tranché dans la lampe / le menu 🧞).
             if (!cancelled) {
-                const inRun3 = getActiveWorld() === "run3"
                 try {
                     const r = await fetch("/api/gamebook/yellow/genie-wish") // PEEK — ne consomme PAS proposedSeen
                     const j = r.ok ? await r.json() : null
                     // SELF-HEAL : applique tout effet de vœu ACCEPTÉ mais pas encore appliqué (idempotent) — filet si
                     //   l'application à l'acceptation a été manquée (autre appareil, reload, etc.).
-                    if (!cancelled && !inRun3 && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave()
+                    if (!cancelled && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave() // run 3 : la fonction ne laisse passer que GENIE_RUN3_ALLOWED_KINDS
                     // ANNONCES du génie : un vœu IMPOSÉ/accepté vient de s'appliquer → le génie informe le joueur à
                     //   l'écran (« informé, pas le choix »). Cf. useTiramisu/level_drain imposé (ex. Tom).
-                    if (!inRun3) { const anns = consumeGenieAnnouncements(); if (!cancelled && anns.length) showDialogue(DUEL_DREAM_NPC, "🧞 LE GÉNIE", anns) }
+                    { const anns = consumeGenieAnnouncements(); if (!cancelled && anns.length) showDialogue(DUEL_DREAM_NPC, "🧞 LE GÉNIE", anns) }
                     if (!cancelled && j?.justReturned && j?.wish) {
                         showDialogue(DUEL_DREAM_NPC, "🧞 Le Génie", [
                             "*Ta lampe rougeoie soudain au fond de ton sac…*",
