@@ -70,7 +70,7 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     },
     crocavern: {
         runs: [4],
-        note: "Obtenu par ÉCHANGE.",
+        note: "Obtenu par ÉCHANGE uniquement — jamais sauvage (26/10/2026).",
         how: ["Bats l'Échangeur de la Grotte du Nexus (1F), puis échange ton Daemon de tête contre lui."],
     },
     belunode: {

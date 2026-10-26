@@ -4966,7 +4966,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     pnj6TradingRef.current = true
                                     // Échange IRRÉVERSIBLE one-time → persistance IMMÉDIATE (comme le titre Dôme),
                                     //   pas le débounce 800 ms : sinon fermer l'app juste après annulerait le trade.
-                                    if (executeTrade(lead.uid, makeCrocavernGift())) { markTrainerDefeated(PNJ6_TRADE_DONE_MARKER); void persistYellowSaveNow() }
+                                    if (executeTrade(lead.uid, makeCrocavernGift(lead))) { markTrainerDefeated(PNJ6_TRADE_DONE_MARKER); void persistYellowSaveNow() } // le Crocavern hérite de la brillance du Daemon donné (26/10/2026)
                                     setPnj6Modal(false)
                                 }}
                             >{pnj6Armed ? `✅ Oui, échanger définitivement ${displayName(lead)}` : "⏳ Patiente…"}</button>

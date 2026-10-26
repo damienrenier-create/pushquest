@@ -52,9 +52,14 @@ export function buildPnj6Team(): MonInstance[] {
     })
 }
 
-/** Le Crocavern proposé à l'échange (instance neuve ; l'ownership/traded est posé par executeTrade). */
-export function makeCrocavernGift(): MonInstance {
-    return createMonInstance("crocavern", CROCAVERN_GIFT_LEVEL, { owned: false })
+/** Le Crocavern proposé à l'échange (instance neuve ; l'ownership/traded est posé par executeTrade). `from` = le Daemon
+ *  DONNÉ : il lui transmet sa BRILLANCE (règle « ne jamais détruire un shiny à l'échange », comme le Dénicheur et l'échange
+ *  du Roctaur — Sartay 26/10/2026) et ses points Saiyan. Le niveau, lui, reste fixe (CROCAVERN_GIFT_LEVEL). */
+export function makeCrocavernGift(from?: Pick<MonInstance, "shiny" | "statPoints">): MonInstance {
+    const m = createMonInstance("crocavern", CROCAVERN_GIFT_LEVEL, { owned: false })
+    if (from?.shiny) m.shiny = true
+    if (from?.statPoints) m.statPoints = from.statPoints
+    return m
 }
 
 // ── Dialogues ──

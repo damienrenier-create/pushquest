@@ -145,6 +145,7 @@ const DUO_PAIR_NAMES: Record<string, string> = {
     [pairKey("tenebrir", "loupyre")]: "Ragnapyre",
     [pairKey("namizeus", "brookhante")]: "Yohorage",
     [pairKey("iorours", "druidours")]: "Iordruide", // 26/10/2026 : remplace Pandolmen (Kilipanda × Druidours, retiré — Kilipanda est un Daemon du clan de la Roche)
+    [pairKey("morrow", "crocavern")]: "Morrocroc",  // 26/10/2026 : les deux Daemons qu'on n'obtient QUE par échange
 }
 /** Nom sur mesure d'une paire SYNERGIQUE nommée (paire de clan ou duo), ordre indifférent, ou null. */
 export function synergyPairName(aId?: string, bId?: string): string | null {
@@ -160,6 +161,7 @@ const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("karatame", "bouhbou")]: "la synergie des arts martiaux",   // 2 combattants (Combat × Combat/Spectre)
     [pairKey("namizeus", "brookhante")]: "la synergie des âmes errantes", // 2 spectres (Spectre/Élec × Spectre)
     [pairKey("iorours", "druidours")]: "la synergie des ursidés",          // ourse polaire × ours-druide (26/10/2026 ; remplace Kilipanda × Druidours)
+    [pairKey("morrow", "crocavern")]: "la synergie des troqués",           // Morrow (échange du Roctaur, run 2) × Crocavern (Échangeur de la Grotte du Nexus) : jamais sauvages (26/10/2026)
     [pairKey("colosfer", "coccimperatrice")]: "la synergie de l'impératrice de fer", // starters du run 3 (19/10/2026) : le joueur recrée l'Impérafer officiel de KOGA, boosté — et KOGA aussi : le Conseil profite des synergies (décision Sartay 19/10).
 }
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */

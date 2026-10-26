@@ -62,6 +62,7 @@ export const FUSION_SECRET_RIDDLES: Record<string, string> = {
     "pair:bouhbou|karatame": "Deux arts martiaux.",
     "pair:brookhante|namizeus": "Deux âmes errantes.",
     "pair:druidours|iorours": "Deux ours : l'un des bois, l'autre des glaces.",
+    "pair:crocavern|morrow": "Deux créatures qu'on n'obtient qu'en troquant.",
     "pair:coccimperatrice|colosfer": "L'impératrice et le fer.",
     "mimimoy": "Le plus insignifiant de tous… mais pas en fusion.",
 }

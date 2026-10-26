@@ -604,7 +604,7 @@ const ZONES: Record<string, Zone> = {
         pool: [
             { speciesId: "plumiot", base: COMMON },                                 // l'oiseau Vol commun de la Route Nord
             { speciesId: "draclet", base: UNCOMMON },                               // Vol/Dragon : PLUS commun ici (reste super-rare en Route Nord)
-            { speciesId: "crocavern", base: UNCOMMON },
+            // (Crocavern RETIRÉ du sauvage le 26/10/2026 — Sartay : « uniquement dispo en échange » → l'Échangeur de la Grotte du Nexus, 1F.)
             { speciesId: "sepulcru", base: UNCOMMON, hourRange: [8, 20], postSylvebarbe: true },          // JOUR (8h→20h) — TÉNÈBRES : run 1 SEULEMENT post-Sylvebarbe (endgame)
             { speciesId: "obscurene", base: RARE, rare: true, hourRange: [20, 8], postSylvebarbe: true },  // NUIT (20h→8h) — TÉNÈBRES : run 1 SEULEMENT post-Sylvebarbe. (Pop aussi sur l'île Émeraude, post-Ligue par accès.)
             { speciesId: "karmaki", base: RARE, rare: true, hourRange: [0, 12] },   // rare, matinée (0h→12h)
