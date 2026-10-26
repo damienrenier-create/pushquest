@@ -46,6 +46,11 @@ describe("vœu « captures garanties » (Kingme, 26/10/2026)", () => {
         expect(eng).toContain("|| state.genieCatchGuaranteed === true")
         expect(eng).toContain("wild.currentHp >= maxHpOf(wild) && !isGuaranteedBall(itemId) && !legGuaranteed")
         expect(read("src/lib/gamebook/yellow/store/saveManager.ts")).toContain("if (catchLeft > 0) setGenieCatchCharges(catchLeft)")
+        // Le RETOUR du génie est annoncé même en run 3 (seuls le self-heal et les annonces d'effets restent hors concours).
+        const ydc = read("src/app/gamebook/yellow/YellowDevClient.tsx")
+        expect(ydc).toContain("const inRun3 = getActiveWorld() === \"run3\"")
+        expect(ydc).toContain("if (!cancelled && !inRun3 && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave()")
+        expect(ydc).not.toContain("if (!cancelled && getActiveWorld() !== \"run3\") {\n                try {\n                    const r = await fetch(\"/api/gamebook/yellow/genie-wish\")")
     })
 })
 
