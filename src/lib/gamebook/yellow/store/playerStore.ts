@@ -1195,8 +1195,11 @@ export function startNgPlusWorld(starter: MonInstance) {
  *  starter en équipe, isChampion=false, customDaemons GLOBAUX préservés) mais pose run3Used=true. L'énergie de
  *  départ (500) + le passage activeWorld="run3" sont gérés par saveManager.startRun3. On réutilise ngplusStartedAt
  *  comme horodatage de départ du run (le run 3 n'a pas de champ dédié). */
+/** CONCOURS (run 3) : Nexus-Balls offertes au départ (Sartay 26/10/2026 : « on fait commencer les joueurs avec 2 Nexus Balls »). */
+export const RUN3_START_BALLS = 2
 export function startRun3World(starter: MonInstance) {
-    const carriedItems = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
+    const carried = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
+    const carriedItems = { ...carried, poke_ball: (carried.poke_ball ?? 0) + RUN3_START_BALLS } // + 2 Nexus-Balls de départ
     st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
@@ -1297,7 +1300,9 @@ export function awardBadge(id: BadgeId): boolean {
 /** Remet une CT CADEAU (trophée de boss) → enseignable GRATUITEMENT. true si nouvelle. */
 export function grantCt(ctId: string): boolean {
     if (st.ownedCts.includes(ctId)) return false
-    st = { ...st, ownedCts: [...st.ownedCts, ctId] }
+    // Haut fait « gift_ct » : marqueur PERMANENT (la CT quitte ownedCts dès qu'on l'apprend — audit 26/10/2026).
+    const mk = st.defeatedTrainers.includes("ach_gift_ct") ? st.defeatedTrainers : [...st.defeatedTrainers, "ach_gift_ct"]
+    st = { ...st, ownedCts: [...st.ownedCts, ctId], defeatedTrainers: mk }
     emit()
     return true
 }
@@ -1385,6 +1390,7 @@ export function ensureFunEvCapBoost(): boolean {
 export function executeTrade(giveUid: string, receive: MonInstance): boolean {
     const has = st.team.some((m) => m.uid === giveUid) || st.pc.some((m) => m.uid === giveUid)
     if (!has || !receive?.speciesId) return false
+    const given = st.team.find((m) => m.uid === giveUid) ?? st.pc.find((m) => m.uid === giveUid)
     const team = st.team.filter((m) => m.uid !== giveUid)
     const pc = st.pc.filter((m) => m.uid !== giveUid)
     const got: MonInstance = {
@@ -1397,7 +1403,9 @@ export function executeTrade(giveUid: string, receive: MonInstance): boolean {
     }
     if (team.length < TEAM_MAX) team.push(got)
     else pc.push(got)
-    st = { ...st, team, pc }
+    // Haut fait « shiny_trade » : l'échange JOUEUR↔JOUEUR (Casino) compte, qu'on DONNE ou qu'on REÇOIVE un brillant (26/10/2026).
+    const shinyTrade = (given?.shiny === true || receive.shiny === true) && !st.defeatedTrainers.includes("ach_trade_shiny")
+    st = { ...st, team, pc, defeatedTrainers: shinyTrade ? [...st.defeatedTrainers, "ach_trade_shiny"] : st.defeatedTrainers }
     emit()
     return true
 }
@@ -1433,6 +1441,7 @@ export function applyTradeEvolution(uid: string): EvolutionResult | null {
     const list = [...(where === "team" ? st.team : st.pc)]
     list[idx] = clone
     st = where === "team" ? { ...st, team: list } : { ...st, pc: list }
+    recordEvo3IfFinal(toId) // hauts faits « evolve » + « 6 Daemons au stade final » : l'évolution PAR ÉCHANGE compte aussi (26/10/2026)
     emit()
     return res
 }
@@ -1498,6 +1507,7 @@ export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
     const items = { ...st.items, [MAGNETOR_EVO_ITEM]: (st.items[MAGNETOR_EVO_ITEM] ?? 0) - 1 } // Noyau consommé
     st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
     markCaught("magnetor"); markCaughtThisRun("magnetor") // Magnetor entre au Pokédex (+ « ce run »)
+    recordEvo3IfFinal("magnetor") // hauts faits « evolve » + « 6 Daemons au stade final » : l'évolution chez CHEN compte aussi (26/10/2026)
     emit()
     return res
 }
@@ -3954,6 +3964,8 @@ function evoStage(id: string): number {
 }
 /** HAUT FAIT « 6 Daemons au stade final » : marque `ach_evo3:<racine>` quand une espèce STADE 3 (finale, lignée à 3) est atteinte. */
 export function recordEvo3IfFinal(speciesId: string): void {
+    // TOUTE évolution (combat, échange, Chen) pose le marqueur PERMANENT du haut fait « evolve » (audit 26/10/2026).
+    if (!st.defeatedTrainers.includes("ach_evolved")) { st = { ...st, defeatedTrainers: [...st.defeatedTrainers, "ach_evolved"] }; emit() }
     const sp = getSpecies(speciesId)
     if (!sp || sp.evolution) return          // peut encore évoluer → pas un stade final
     if (evoStage(speciesId) < 3) return       // lignée < 3 stades (mono/2-stades) → ne compte pas
@@ -4013,6 +4025,14 @@ export function recordBattleLoss(trainerId: string, today: string): void {
     if (foeLoss >= 3 && !st.defeatedTrainers.includes("ach_samefoe_loss3")) add.push("ach_samefoe_loss3")
     if (lossCount >= 10 && !st.defeatedTrainers.includes("ach_losses10_day")) add.push("ach_losses10_day")
     st = { ...st, achTrack: { ...t, foeId: trainerId || t.foeId, foeLoss, lossDate: today, lossCount, noKoWins: 0 }, defeatedTrainers: add.length ? [...st.defeatedTrainers, ...add] : st.defeatedTrainers }
+    emit()
+}
+/** VICTOIRE contre un dresseur : casse la série « 3 défaites D'AFFILÉE contre le même » (avant le 26/10/2026,
+ *  perdre/gagner/perdre/gagner/perdre validait le haut fait). */
+export function resetFoeLossStreak(trainerId: string): void {
+    const t = st.achTrack
+    if (!trainerId || t.foeId !== trainerId || t.foeLoss === 0) return
+    st = { ...st, achTrack: { ...t, foeLoss: 0 } }
     emit()
 }
 /** MAÎTRISE « 10 combats dresseur sans un seul KO subi » : série de victoires 0-KO (remise à zéro dès qu'un KO est subi). */
@@ -4177,7 +4197,8 @@ export function equipHeldItem(uid: string, itemId: string): boolean {
     const items = { ...st.items, [itemId]: st.items[itemId] - 1 }
     if (target.heldItem) items[target.heldItem] = (items[target.heldItem] ?? 0) + 1 // l'ancien objet revient au sac
     const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: itemId } : m)
-    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items }
+    const mk = st.defeatedTrainers.includes("ach_held_item") ? st.defeatedTrainers : [...st.defeatedTrainers, "ach_held_item"] // haut fait held_item : permanent (26/10/2026)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items, defeatedTrainers: mk }
     emit()
     return true
 }

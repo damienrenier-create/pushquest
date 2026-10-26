@@ -169,6 +169,17 @@ export function pushupDefiVariant(ngplus: boolean): { exercise: "PUSHUP" | "SQUA
 export function physScaledReward(base: number, wins: number): number {
     return Math.floor(base * Math.pow(PHYS_REWARD_GROWTH, Math.max(0, Math.floor(wins))))
 }
+/** Jour LOCAL (Europe/Paris, AAAA-MM-JJ) d'un instant — pour savoir si le défi « 1 heure » a enjambé minuit. */
+export function parisDayOf(ms: number): string {
+    const d = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "Europe/Paris" }))
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+/** Delta de reps du défi « N reps en 1 heure ». Si le défi a ENJAMBÉ MINUIT, les reps de la veille (après le snapshot)
+ *  comptent aussi — avant le 26/10/2026, delta = total(aujourd'hui) − snapshot(veille) ressortait NÉGATIF → raté à tort. */
+export function pushupDeltaAcrossMidnight(snapshot: number, sameDay: boolean, totalStartDay: number, totalToday: number): number {
+    const snap = Math.max(0, Math.floor(snapshot))
+    return sameDay ? totalToday - snap : Math.max(0, totalStartDay - snap) + totalToday
+}
 
 /** Garde-fou : taille max de l'historique des manches roulette créditées (anti-gonflement save). */
 export const ROULETTE_CLAIMED_MAX = 80

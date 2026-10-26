@@ -1122,7 +1122,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 }
                 const earned = earnedRepsBadgeIds(badgeInputFromSave({ ...p, pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0]))
-                const granted = dripBadgeReps([...earned, ...extraIds], extraReps, { uncapped: isFunRun2 })
+                // REJEU (bulle jetable) : JAMAIS de drip — sinon les reps partent dans le portefeuille jetable et l'id est marqué
+                //   « payé » pour toujours (badgeRepsClaimed est global) → perdu pour le vrai run 1 (audit 26/10/2026).
+                const granted = getActiveWorld() === "replay" ? [] : dripBadgeReps([...earned, ...extraIds], extraReps, { uncapped: isFunRun2 })
                 if (granted.length) {
                     showDialogue("y_dome_spaghetti", "DIEU SPAGHETTI", [
                         "« Ohhhh ! Tes exploits résonnent jusqu'ici, champion ! Laisse-moi te récompenser… »",
@@ -1663,7 +1665,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // 📖 CALEPIN : les infos de fin de run 2 (score, choix fusion / run 3) survivent à la fenêtre (Sartay 26/10/2026).
             logDialogueMessage("spaghetti_fin_run", "🏁 FIN DU RUN 2", [
                 `Tu boucles ta seconde vie avec ${ngplusScore}⚡ en réserve. Ton MEILLEUR score du run 2, ${run2Sc.bestGrade}/1000, est gravé au classement du Nexus.`,
-                "Deux voies : 🍝 FUSIONNER maintenant (tes deux vies n'en font plus qu'une, tous tes anciens Daemons rejoignent ton PC) — OU 🔥 lancer le RUN 3, le concours : 500⚡ pour tout faire, ni casino ni cadeaux, score = Σ des niveaux ennemis vaincus, et la méga-fusion des 3 vies à la fin.",
+                "Deux voies : 🍝 FUSIONNER maintenant (tes deux vies n'en font plus qu'une, tous tes anciens Daemons rejoignent ton PC) — OU 🔥 lancer le RUN 3, le concours : 500⚡ et 2 Nexus-Balls pour tout faire, ni casino ni cadeaux, score = Σ des niveaux ennemis vaincus, et la méga-fusion des 3 vies à la fin.",
                 "Tant que tu n'as pas choisi, la fenêtre revient à chaque connexion.",
             ], getCurrentMapId() ?? undefined)
             persistYellowSave()
@@ -1757,6 +1759,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     //   La grille des médailles s'affiche, elle, dans le panneau Trophées (GET). Best-effort, fun-only.
     useEffect(() => {
         if (getGameMode() !== "fun") return
+        // Attendre l'hydratation (sinon liste vide au montage et, sans badge d'arène, plus jamais de POST) ; jamais depuis un REJEU (26/10/2026).
+        if (!hydrated || getActiveWorld() === "replay") return
         let cancelled = false
         const r = evaluateBadges(badgeInputFromSave({ ...getPlayer(), pokedex: getPokedex() } as Parameters<typeof badgeInputFromSave>[0], undefined, "fun"))
         // Médailles de rapidité = RUN 1 uniquement (le run 2 se classe à la performance /1000 × bonus rang-à-finir ;
@@ -1773,7 +1777,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 if (wins.length) setToast(`🏅 Médaille de rapidité décrochée ! ${wins.join(" · ")}`)
             }).catch(() => {})
         return () => { cancelled = true }
-    }, [player.badges.length])
+    }, [player.badges.length, hydrated])
 
     // RUN 2 (Remix) — MODE FUN : dès que le joueur a BOUCLÉ le Remix (re-sacre à la Salle Dorée = isChampion en run 2),
     //   on enregistre son RANG D'ARRIVÉE côté serveur → bonus de score (1er fun ×1,5 … 5e ×1,1). Idempotent, best-effort.
@@ -4275,7 +4279,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 🍝 <b>Fusionner</b> : tes Daemons du run 1 rejoignent ton PC, le run 2 devient ton compte. C'est fini.
                             </div>
                             <div style={{ margin: "6px 0 0", padding: "8px 10px", background: "rgba(255,120,40,0.12)", borderRadius: 8, fontSize: 12 }}>
-                                🔥 <b>Lancer le RUN 3</b> — le concours ultime (500⚡, source unique). <b style={{ color: "#ff9a5a" }}>⚠️ Ton run 1 ET ton run 2 restent GELÉS</b> : tu récupères TOUT (méga-fusion) seulement à la fin du run 3, à 0⚡. <b>Pas de retour.</b>
+                                🔥 <b>Lancer le RUN 3</b> — le concours ultime (500⚡ + 2 Nexus-Balls, source unique). <b style={{ color: "#ff9a5a" }}>⚠️ Ton run 1 ET ton run 2 restent GELÉS</b> : tu récupères TOUT (méga-fusion) seulement à la fin du run 3, à 0⚡. <b>Pas de retour.</b>
                             </div>
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setRun3Offer(null); setRun3StarterChoice(true) }}>🔥 Lancer le RUN 3</button>
@@ -4759,7 +4763,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             ]
                             // BOURSE : prix dynamiques (heure serveur + Sylvebarbe + inflation perso). Active dès le run 3
                             //   (endgame), ET dès le DÉBUT en mode FUN (le marché évolue aussi en fun run 1 & 2). Sinon = prix de base.
-                            const bourseCtx = { hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
+                            const bourseCtx = { run3Balls: effectiveRunWorld() === "run3", hour: bourseHour ?? new Date().getHours(), sylvebarbeAwake: player.sylvebarbeAwake, potionBuysToday: getPotionBuysToday(), jcEnergyBuysToday: getJcEnergyBuysToday(), active: player.run3Used || getGameMode() === "fun" }
                             const priceOf = (it: { id?: string; price: number; category: string }) => surtaxShopPrice(it.id === "fusio_ball" ? fusioBallShopPrice(fusioBought) : shopPrice(it.price, it.category, bourseCtx)) // Fusio-Ball : progressif (1000 × rang de l'achat), hors Bourse
                             // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
                             // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.

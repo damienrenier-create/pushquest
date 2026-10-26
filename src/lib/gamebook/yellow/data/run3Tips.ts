@@ -24,6 +24,7 @@ export const RUN3_TIP_SHOP_LINES: readonly string[] = [
     "*Le Dieu Spaghetti se matérialise entre deux rayons.* « Bienvenue dans la boutique du concours, concurrent ! »",
     "« Ici, pas d'énergie à vendre : chaque Ball, chaque potion se paie avec TA réserve — la même qui sert à attaquer. »",
     "« Dépense avec discernement : la 1re arène te RECHARGE à 500 ⚡, mais seulement si tu l'emportes avant de tomber à zéro. À 0, le concours s'arrête. »",
+    "« Bonne nouvelle : pendant le concours, toutes les BALLS sont à MOITIÉ PRIX — et tu as déjà 2 Nexus-Balls en poche. »",
     "« Mon conseil : quelques Balls, rien de superflu, et droit au GYM. 🍝 »",
 ]
 
@@ -40,7 +41,7 @@ export function run3RestartOfferAllowed(nickname: string, activeWorld: string, b
 export function run3RestartOfferLines(energy: number): string[] {
     return [
         `« Concurrent… j'ai regardé tes réserves : ${energy} ⚡, aucun badge, et une équipe encore tendre. Même en jouant parfaitement, la 1re arène te coûterait plusieurs centaines d'énergies. Ce concours-ci est perdu d'avance. »`,
-        "« Je te propose une FAVEUR rare : tout recommencer. Nouveau starter, 500 ⚡ pleines, et les règles bien en tête cette fois. »",
+        "« Je te propose une FAVEUR rare : tout recommencer. Nouveau starter, 500 ⚡ pleines, 2 Nexus-Balls en poche, et les règles bien en tête cette fois. »",
         "« Ton Pokédex reste acquis. Ton équipe et tes captures de CE concours, elles, s'effacent. À toi de voir. »",
     ]
 }

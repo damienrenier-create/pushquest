@@ -73,7 +73,10 @@ export async function getSaiyanWindow(userId: string, since: string): Promise<Sa
 
 /** Total des reps d'un exercice AUJOURD'HUI (reps brutes). Sert au snapshot-delta du défi « 50 pompes/1h ». */
 export async function getTodayExerciseTotal(userId: string, exercise: string): Promise<number> {
-    const date = getTodayISO()
+    return getExerciseTotalForDate(userId, exercise, getTodayISO())
+}
+/** Total des reps d'un exercice pour un JOUR donné (AAAA-MM-JJ). Défi « 1 heure » qui enjambe minuit (26/10/2026). */
+export async function getExerciseTotalForDate(userId: string, exercise: string, date: string): Promise<number> {
     const sets = await (prisma as any).exerciseSet.findMany({ where: { userId, date, exercise }, select: { reps: true } })
     return (sets as { reps: number }[]).reduce((a, s) => a + Math.max(0, s.reps), 0)
 }

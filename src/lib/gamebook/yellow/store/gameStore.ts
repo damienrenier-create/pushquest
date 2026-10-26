@@ -16,6 +16,7 @@ import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
 import { YELLOW_MAPS, RUN3_ARENA_MAPS, NGPLUS_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
 import { currentGymBadge } from "../data/arenaInfos"
+import { run3ExclusiveSignLines } from "../data/run3Exclusives"
 import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
@@ -3414,7 +3415,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             dialogue: {
                 npcId: npc.id,
                 npcName: npc.name,
-                lines: npc.dialoguesAfter,
+                // RUN 3 : CHAQUE panneau liste les INÉDITS du concours (Sartay 26/10/2026 : « comme ça le joueur sait comment faire sa team »).
+                lines: npc.name.startsWith("PANNEAU") && effectiveRunWorld() === "run3" ? [...npc.dialoguesAfter, ...run3ExclusiveSignLines()] : npc.dialoguesAfter,
                 lineIndex: 0,
             },
         })

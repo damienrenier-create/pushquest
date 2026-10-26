@@ -19,6 +19,11 @@ import { getTrainer } from "./trainers"
 import { clanOfSpecies } from "./clans"
 import { withImpliedAncre } from "./boatArena"
 import type { YellowSave } from "../storage/save"
+import { CTS } from "./cts"
+
+/** Moves des CT-CADEAUX (`gift`) : un Daemon qui connaît l'un d'eux a forcément reçu une CT-cadeau (RÉTROACTIF — la CT
+ *  quitte `ownedCts` à l'apprentissage, cf. teachCt). Audit du 26/10/2026. */
+const GIFT_CT_MOVE_IDS: ReadonlySet<string> = new Set(CTS.filter((c) => c.gift).map((c) => c.moveId))
 
 /** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
  *  d'elles ⇒ avoir fait évoluer un Daemon. Proxy fidèle pour le badge bronze « évoluer » : capturer une évo à
@@ -48,7 +53,7 @@ export function medalMult(m: FunMedal): number { return m ? MEDAL_MULT[m] : 1 }
  *  (DEX_ULTRA_SECRET : MégamonarX/Galijah, obtention hors-normes) en sont EXCLUS — ils restent dans le Pokédex
  *  (cartes « ??? » capturables) mais ne bloquent pas la complétion. Calculé une fois. */
 const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_ULTRA_SECRET.has(id))
-export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 141 (dont Osquille + Rô, pêchables). Exclut Sylvebarbe(133) &
+export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 147 au 26/10/2026 (dont Osquille + Rô, pêchables ; lignée Iorours sortie : runThreeOnly). Exclut Sylvebarbe(133) &
 // Géckèbre(180) désormais postLeague (endgame post-Ligue / Zone de Combat), comme leurs cousins Gavillus/Goatiny/B2F.
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
 // Lignée Gékroc — les 5 Geckos élémentaires (miroir de GECKO_IDS dans fusionSpecies.ts). Inliné en littéral pour
@@ -424,6 +429,7 @@ export function badgeScore(i: BadgeInput): number {
  *  de rejeu ou un run-1 gelé passent caughtThisRun ; sinon le pokédex global sert de défaut). Champs manquants tolérés. */
 export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly string[], gameMode?: string): BadgeInput {
     const mons = [...(s.team ?? []), ...(s.pc ?? [])]
+    const mk = s.defeatedTrainers ?? [] // marqueurs PERMANENTS `ach_*` (un haut fait gagné ne redevient jamais gris)
     const caughtIds = caught ?? s.pokedex?.caught ?? []
     const seenIds = s.pokedex?.seen ?? []
     return {
@@ -448,13 +454,14 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         // « Choper la Master Ball » = la Ball ULTIME = récompense du dresseur d'Orcaline (super_mega_nexus_ball, niv 95).
         //   Marqueur ach_master_ball (permanent, survit à l'usage) OU présence en sac (rétroactif : master_ball ou super_mega).
         hasMasterBall: (s.defeatedTrainers?.includes("ach_master_ball") ?? false) || (s.items?.["master_ball"] ?? 0) > 0 || (s.items?.["super_mega_nexus_ball"] ?? 0) > 0,
-        labDefiDone: s.labDefi?.squat150Done === true,
+        // 26/10/2026 : TOUT défi physique réussi compte (pompes/squats en 1 h via physWins, quota×2 via le marqueur) — plus seulement les 150 squats.
+        labDefiDone: s.labDefi?.squat150Done === true || Object.values(s.labDefi?.physWins ?? {}).some((n) => (n ?? 0) > 0) || mk.includes("ach_lab_defi"),
         labCtWins: (s.labDefi?.ctEarned ?? []).length,
         berrySecretKnown: s.berrySecretKnown === true,
         // ── compteurs « propres » (Phase 2) ──
         // Évoluer : DÉRIVÉ (posséder une forme évoluée, team+PC) → pas de nouveau champ save. Casino : DÉRIVÉ de
         //   labDefi.casinoTotalWon (déjà persisté). Les 2 sont rétro-actifs (créditent l'existant, additif).
-        evolutions: mons.some((m) => EVOLVED_FORMS.has(m.speciesId)) ? 1 : 0,
+        evolutions: mons.some((m) => EVOLVED_FORMS.has(m.speciesId)) || mk.includes("ach_evolved") ? 1 : 0, // + marqueur permanent (26/10/2026) : relâcher/échanger l'évolué ne retire plus le trophée
         casinoWins: (s.labDefi?.casinoTotalWon ?? 0) > 0 ? 1 : 0,
         // Ligue 6-shiny & reflet niveau-sup : ÉVÉNEMENTS non reconstituables → champs save posés au moment T.
         leagueSixShiny: s.leagueSixShiny === true,
@@ -466,8 +473,9 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         fusionLeagueDefeats: s.fusionLeagueDefeats,
         // ── side quests « plaisir » : dérivés DIRECTS de la save (rétroactifs, aucun nouveau champ) ──
         pokerPlayed: s.pokerFirstGameDone === true,
-        heldItemEquipped: mons.some((m) => !!m.heldItem),
-        giftCts: (s.ownedCts ?? []).length,
+        heldItemEquipped: mons.some((m) => !!m.heldItem) || mk.includes("ach_held_item"), // + marqueur permanent (26/10/2026) : retirer l'objet ne retire plus le trophée
+        // 26/10/2026 : la CT-cadeau est CONSOMMÉE à l'apprentissage (ownedCts vidé) → marqueur permanent + rétro (un Daemon connaît un move de CT-cadeau).
+        giftCts: (s.ownedCts ?? []).length + (mk.includes("ach_gift_ct") || mons.some((m) => (m.moves ?? []).some((mv) => GIFT_CT_MOVE_IDS.has(mv.moveId))) ? 1 : 0),
         ctBought: (s.boughtCts ?? []).length >= 1, // a acheté ≥ 1 CT à la boutique (achat unique persisté)
         dexReceived: s.collectionneurDexGiven === true, // Dex Nexus remis par L'Archiviste
         outfitCustomized: (s.defeatedTrainers ?? []).includes("ach_fashion"), // tenue personnalisée (Fashion Victim)

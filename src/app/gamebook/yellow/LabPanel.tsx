@@ -14,7 +14,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, logEnergyIncome, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
-    physWinCount, recordPhysWin, casinoPillar, useActiveWorld,
+    physWinCount, recordPhysWin, casinoPillar, useActiveWorld, markTrainerDefeated,
     getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { funSprintReward, funArenaRewardScaled, funLevelMultiplier, funArenaOpen, FUN_ARENA_COUNT } from "@/lib/gamebook/yellow/data/funDefis"
@@ -110,6 +110,7 @@ export default function LabPanel() {
             if (r.expired) { clearLabDefi("phys"); persistYellowSave() }
             return
         }
+        markTrainerDefeated("ach_lab_defi") // haut fait « lab_defi » : TOUT défi physique réussi (pompes/squats 1 h, 150 squats, quota×2) — 26/10/2026
         if (activePhys.kind === "quota2x") {
             setTomorrowEnergyMult(QUOTA2X_MULT, addOneDay(today))
             setMsg(`✅ Quota doublé ! Tes énergies de demain seront ×${QUOTA2X_MULT}.`)

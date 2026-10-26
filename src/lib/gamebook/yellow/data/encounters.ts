@@ -461,9 +461,9 @@ const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
     COMBAT: [{ speciesId: "couperin", base: 100 }, { speciesId: "broussours", base: 60 }, { speciesId: "forgeotin", base: 45 }, { speciesId: "brasicow", base: 45 }],
     // Mottoche est proposée ici EN RUN 1 ; en RUN 2 elle est FILTRÉE (exclusive à la Grotte) — cf. rollTrainingGrid.
     SOL: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }],
-    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }], // têtardoc RETIRÉ → PÊCHE
+    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }], // têtardoc RETIRÉ → PÊCHE ; marmoterre RETIRÉE du sauvage (26/10/2026 : lignée Iorours = cadeau du Dénicheur, run 3 seulement)
     POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
-    GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
+    GLACE: [{ speciesId: "auroruff", base: 100 }], // marmoterre RETIRÉE du sauvage (26/10/2026)
     INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
     // jour PSY : lignée Nouillon→Vermisaint→Divinpâte. + VAROVENTAL (Poison/Psy) TRÈS RARE, EXCLUSIF RUN 2 (filtré
     //   hors run 2 par guideGridTypePool/rollTrainingGrid, cf. mottoche en miroir).
@@ -501,7 +501,7 @@ function run3LiveCatchupGrotte(ctx: EncounterCtx, rng: () => number): MonInstanc
 //   difficulté ≈ Sylvebarbe) avec une RAILLERIE au 1er lancer de Ball. Formes finales → noEvolve.
 const NEXUS_FINAL_TAUNT = "Ce sont des créatures rares et fougueuses… tu ne pensais tout de même pas l'attraper aussi facilement ?"
 const NEXUS_POWERFUL_FINALS: WildEntry[] = [
-    "alirocaillus", "mouflorage", "mobyd", "phoechaudiii", "karatame", "shadow", // créations finales (Gavillus/Goatiny/Guizer/Phoéchaud/Bidouzen/Shady)
+    "alirocaillus", "mouflorage", "mobyd", "karatame", "shadow", // créations finales (Gavillus/Goatiny/Guizer/Bidouzen/Shady) — Phoéchaudiii RETIRÉ du monde live (Sartay 26/10/2026) : la lignée Phoéchaud reste en run 2 (Grotte) et run 3 (Grotte Rocheuse)
     "tenebrir", "condombre", "leviabysse", "uzumaro",                            // némésis finales (loup / vautour / serpent des abysses / ninja)
 ].map((speciesId) => ({ speciesId, base: VERY_RARE, noEvolve: true, levelFixed: 75, captureMult: 0.45, captureTaunt: NEXUS_FINAL_TAUNT }))
 
@@ -590,8 +590,7 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "givroptere", base: VERY_RARE, rare: true }, // remplace Loutrille (Sartay) — VOL/GLACE, TRÈS RARE
             { speciesId: "piouflot", base: UNCOMMON },
             { speciesId: "auroruff", base: UNCOMMON },
-            { speciesId: "marmoterre", base: UNCOMMON },
-            { speciesId: "tetardoc", base: UNCOMMON },
+            { speciesId: "tetardoc", base: UNCOMMON }, // (marmoterre RETIRÉE du sauvage le 26/10/2026 — lignée Iorours = cadeau du Dénicheur, run 3)
             { speciesId: "sporbeo", base: RARE, player: "rare", rare: true },
         ],
     },
@@ -882,7 +881,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
         rate: 0.16, minLevel: 5,
         pool: [
             { speciesId: "tetardoc", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
-            { speciesId: "glacirex", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON }, { speciesId: "givroptere", base: VERY_RARE, rare: true }, // Loutrille → Givroptère TRÈS RARE (Sartay)
+            { speciesId: "glacirex", base: UNCOMMON }, { speciesId: "givroptere", base: VERY_RARE, rare: true }, // Loutrille → Givroptère TRÈS RARE (Sartay) ; marmoterre RETIRÉE (26/10/2026)
             { speciesId: "gouttiny", base: RARE, rare: true },
             { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
         ],

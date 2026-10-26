@@ -3771,6 +3771,7 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "bidouzen", "medisciple", "karatame",                   // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
     "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
+    "marmoterre", "iorours", "yetiroche",                   // lignée Iorours : RETIRÉE du sauvage le 26/10/2026 (Sartay) → cadeau du Dénicheur en run 3 uniquement
     "joeyrrant", "wallabisan", "kangoudead",             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
     "possyl", "possombre", "necrossum",                   // création canonisée (Zyran) — spectre-possédé NORMAL→NORMAL/SPECTRE, mur physique
     "charolyx", "bubolyx", "pestilyx",

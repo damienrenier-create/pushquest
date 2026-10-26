@@ -17,8 +17,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { isCreatorAccount } from "@/lib/gamebook/creator"
-import { getTodayExerciseTotal, getMaxSingleSet, getDayQuotaProgress } from "@/lib/gamebook/yellow/server/playerStats"
-import { physScaledTarget, pushupDefiVariant } from "@/lib/gamebook/yellow/data/labDefis"
+import { getTodayExerciseTotal, getExerciseTotalForDate, getMaxSingleSet, getDayQuotaProgress } from "@/lib/gamebook/yellow/server/playerStats"
+import { physScaledTarget, pushupDefiVariant, parisDayOf, pushupDeltaAcrossMidnight } from "@/lib/gamebook/yellow/data/labDefis"
+import { getTodayISO } from "@/lib/challenge"
 
 export const dynamic = "force-dynamic"
 
@@ -54,8 +55,11 @@ export async function POST(req: NextRequest) {
     if (kind === "pushup1h") {
         const { exercise, growth } = pushupDefiVariant(!!body.ngplus) // run 2 = SQUAT / rampe ×1,2
         const start = body.startedAt ? Date.parse(body.startedAt) : NaN
+        const today = getTodayISO(), startDay = Number.isNaN(start) ? today : parisDayOf(start)
         const total = await getTodayExerciseTotal(userId, exercise)
-        const delta = total - Math.max(0, Math.floor(body.startSnapshot ?? 0))
+        // Défi lancé AVANT minuit, vérifié APRÈS : les reps de la veille (après le snapshot) comptent aussi (26/10/2026).
+        const totalStartDay = startDay === today ? total : await getExerciseTotalForDate(userId, exercise, startDay)
+        const delta = pushupDeltaAcrossMidnight(body.startSnapshot ?? 0, startDay === today, totalStartDay, total)
         const inWindow = !Number.isNaN(start) && (nowMs - start) <= PUSHUP_WINDOW_MS
         const target = physScaledTarget(PUSHUP_TARGET, wins, growth) // durcie : run 1 ×1,1 · run 2 ×1,2
         const validated = isCreator || (delta >= target && inWindow)

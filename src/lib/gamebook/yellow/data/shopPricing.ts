@@ -30,17 +30,24 @@ export interface ShopPriceCtx {
     potionBuysToday: number     // nb d'achats de soins du joueur AUJOURD'HUI (inflation perso), reset quotidien
     jcEnergyBuysToday: number   // nb de recharges d'énergie payées en JC aujourd'hui → +10 %/achat sur TOUT le shop, reset quotidien
     active: boolean             // la bourse est-elle ACTIVE ? (débloquée au run 3). Sinon → prix de base immuables.
+    run3Balls?: boolean         // CONCOURS (run 3) : toutes les Balls à MOITIÉ PRIX (Sartay 26/10/2026) — s'applique même bourse endormie
 }
+export const RUN3_BALL_DISCOUNT = 0.5
 
 /** Prix effectif d'un objet du magasin (arrondi, plancher 1). `category` = ITEMS[id].category. */
 export function shopPrice(base: number, category: string, ctx: ShopPriceCtx): number {
-    if (!ctx.active || base <= 0) return base // bourse pas encore débloquée (avant run 3) → prix d'origine
-    let p = base * bourseMultiplier(ctx.hour) // BOURSE horaire : tous les objets
-    p *= Math.pow(1 + JC_ENERGY_INFLATION_PER_BUY, Math.max(0, ctx.jcEnergyBuysToday)) // +10 %/recharge JC : tous les objets
-    if (category === "HEAL") {                // SOINS : Sylvebarbe + inflation perso (cumulés)
-        if (ctx.sylvebarbeAwake) p *= SYLVEBARBE_POTION_MULT
-        p *= Math.pow(1 + POTION_INFLATION_PER_BUY, Math.max(0, ctx.potionBuysToday))
+    const ballOff = ctx.run3Balls === true && category === "BALL" // CONCOURS : Balls −50 %
+    if ((!ctx.active && !ballOff) || base <= 0) return base // bourse pas encore débloquée (avant run 3) → prix d'origine
+    let p = base
+    if (ctx.active) {
+        p *= bourseMultiplier(ctx.hour) // BOURSE horaire : tous les objets
+        p *= Math.pow(1 + JC_ENERGY_INFLATION_PER_BUY, Math.max(0, ctx.jcEnergyBuysToday)) // +10 %/recharge JC : tous les objets
+        if (category === "HEAL") {                // SOINS : Sylvebarbe + inflation perso (cumulés)
+            if (ctx.sylvebarbeAwake) p *= SYLVEBARBE_POTION_MULT
+            p *= Math.pow(1 + POTION_INFLATION_PER_BUY, Math.max(0, ctx.potionBuysToday))
+        }
     }
+    if (ballOff) p *= RUN3_BALL_DISCOUNT
     return Math.max(1, Math.round(p))
 }
 

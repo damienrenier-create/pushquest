@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { arenaInfo, run3ArenaInfo, type Run3ArenaInfo } from "@/lib/gamebook/yellow/data/arenaInfos"
+import { run3ExclusiveRows } from "@/lib/gamebook/yellow/data/run3Exclusives"
 import { getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { markSeen } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -69,6 +70,11 @@ export default function ArenaInfoPanel({ badge, isRun2, isRun3, onClose }: { bad
                 <div style={{ ...S.blockTitle }}>🛡️ GARDIENS : <span style={{ color: "#8a4bd0" }}>{r3.guardType}</span> {r3.guardTypes.map((t) => <Chip key={t} t={t} />)}</div>
                 <div style={{ ...S.blockTitle, color: "#1e8449", fontSize: 11 }}>⚔️ frappe-les avec</div>
                 <div style={S.chipRow}>{r3.guardRecommend.length ? r3.guardRecommend.map((t) => <Chip key={t} t={t} />) : <span style={S.muted}>Type varié — pas de faille commune.</span>}</div>
+            </div>
+            {/* INÉDITS DU CONCOURS : les lignées qui n'existent qu'en run 3 → de quoi bâtir son équipe (Sartay 26/10/2026). */}
+            <div style={S.block}>
+                <div style={S.blockTitle}>🏆 INÉDITS DU CONCOURS <span style={{ ...S.muted, fontWeight: 400 }}>(run 3 seulement — pense ton équipe autour d'eux)</span></div>
+                {run3ExclusiveRows().map((r) => <div key={r.key} style={{ fontSize: 11, color: INK, lineHeight: 1.35 }}><b>{r.names}</b> <span style={S.muted}>({r.types}) — {r.hint}</span></div>)}
             </div>
             <div style={S.block}>
                 <div style={{ ...S.blockTitle, color: "#1e8449" }}>⚔️ CONTRE LE BOSS ({r3.bossPlayer}) — types qui touchent le +</div>

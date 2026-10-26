@@ -43,9 +43,9 @@ describe("Badges run 1 — socle", () => {
         expect([TIER_POINTS.bronze, TIER_POINTS.silver, TIER_POINTS.gold, TIER_POINTS.diamond, TIER_POINTS.legend]).toEqual([5, 15, 30, 75, 150])
     })
 
-    it("Pokédex run 1 = 150 espèces (badge dex_run1) — +9 lignées de clan (dex run 1, capturables post-Sylvebarbe) ; exclut Sylvebarbe/Géckèbre (postLeague)", () => {
-        expect(RUN1_DEX_TOTAL).toBe(150)
-        expect(BADGES.find((b) => b.id === "dex_run1")!.label).toContain("150")
+    it("Pokédex run 1 = 147 espèces (badge dex_run1) — +9 lignées de clan (dex run 1, capturables post-Sylvebarbe) ; exclut Sylvebarbe/Géckèbre (postLeague) et, depuis le 26/10/2026, la lignée Iorours (Marmoterre retirée du sauvage → run 3 seulement)", () => {
+        expect(RUN1_DEX_TOTAL).toBe(147)
+        expect(BADGES.find((b) => b.id === "dex_run1")!.label).toContain("147")
     })
 
     it("save vierge : 0 point, aucun badge gagné", () => {
