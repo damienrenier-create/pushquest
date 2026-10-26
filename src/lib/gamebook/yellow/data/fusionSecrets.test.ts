@@ -14,11 +14,11 @@ import { getSpecies } from "./species"
 const entries = fusionSecretEntries()
 
 describe("catalogue", () => {
-    it("tous les secrets y sont : inédites, duos, CHAQUE paire de clan (15 panthères + 10 geckos), Mimimoy — clés uniques", () => {
+    it("tous les secrets y sont : inédites, duos, CHAQUE paire de clan (15 panthères + 10 geckos + 3 clans de Nouillon), Mimimoy — clés uniques", () => {
         const kinds = (k: string) => entries.filter((e) => e.kind === k).length
         expect(kinds("special")).toBeGreaterThanOrEqual(10)
         expect(kinds("pair")).toBeGreaterThanOrEqual(8)
-        expect(kinds("clan")).toBe(25) // 6 panthères → 15 paires, 5 geckos → 10 paires (même espèce : interdit)
+        expect(kinds("clan")).toBe(28) // 6 panthères → 15 paires, 5 geckos → 10 paires, 3 finales de Nouillon → 3 paires (26/10/2026) (même espèce : interdit)
         expect(kinds("mimimoy")).toBe(1)
         expect(new Set(entries.map((e) => e.key)).size).toBe(entries.length)
         expect(entries.length).toBe(fusionSecretCatalog().length)
@@ -94,7 +94,7 @@ describe("surfaces (garde-fous structurels)", () => {
 
 describe("clans : une carte par paire", () => {
     it("chaque paire de clan a une énigme qui nomme le clan et les deux éléments, sans espèce", () => {
-        for (const e of entries.filter((x) => x.kind === "clan")) expect(e.riddle, e.key).toMatch(/^Deux (panthères|geckos) : .+ et .+\.$/)
+        for (const e of entries.filter((x) => x.kind === "clan")) expect(e.riddle, e.key).toMatch(/^Deux (panthères|geckos|clans de Nouillon) : .+ et .+\.$/)
     })
     it("deux paires distinctes ne partagent jamais la même énigme", () => {
         const clan = entries.filter((x) => x.kind === "clan")

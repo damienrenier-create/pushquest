@@ -11,8 +11,8 @@ const clanPairs = fusionSecretCatalog().filter((d) => d.kind === "clan").map((d)
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8")
 
 describe("noms sur mesure des paires de clan (Sartay 19/10/2026)", () => {
-    it("les 25 paires ont un nom, le même dans les deux ordres, et c'est celui que donne le moteur", () => {
-        expect(clanPairs).toHaveLength(25)
+    it("les 28 paires (15 panthères + 10 geckos + 3 clans de Nouillon) ont un nom, le même dans les deux ordres, et c'est celui que donne le moteur", () => {
+        expect(clanPairs).toHaveLength(28)
         for (const [a, b] of clanPairs) {
             const n = clanPairName(a, b)
             expect(n, `${a}|${b}`).toBeTruthy()
@@ -21,9 +21,9 @@ describe("noms sur mesure des paires de clan (Sartay 19/10/2026)", () => {
             expect(computeFusion(P(b), P(a)).name).toBe(n)
         }
     })
-    it("25 noms distincts, un seul mot sans tiret, 6 à 12 lettres, jamais le nom d'une espèce", () => {
+    it("28 noms distincts, un seul mot sans tiret, 6 à 12 lettres, jamais le nom d'une espèce", () => {
         const names = clanPairs.map(([a, b]) => clanPairName(a, b)!)
-        expect(new Set(names.map((n) => n.toLowerCase())).size).toBe(25)
+        expect(new Set(names.map((n) => n.toLowerCase())).size).toBe(28)
         const species = new Set(Object.values(SPECIES).map((s) => s.name.toLowerCase()))
         for (const n of names) {
             expect(n, n).toMatch(/^[A-ZÀ-Ý][a-zà-ÿ]{5,11}$/)

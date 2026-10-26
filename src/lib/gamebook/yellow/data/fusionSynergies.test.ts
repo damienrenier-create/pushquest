@@ -70,8 +70,8 @@ describe("synergies", () => {
     it("merorem × tonytony → boosté", () => {
         expect(computeFusion(P("merorem"), P("tonytony")).stats.hp).toBe(140)
     })
-    it("NOUVELLES paires 08/09 : karatame×bouhbou, namizeus×brookhante, kilipanda×druidours → boostées (0,7/0,5)", () => {
-        for (const [a, b] of [["karatame", "bouhbou"], ["namizeus", "brookhante"], ["kilipanda", "druidours"]] as const) {
+    it("NOUVELLES paires 08/09 : karatame×bouhbou, namizeus×brookhante, iorours×druidours (ex-kilipanda, 26/10) → boostées (0,7/0,5)", () => {
+        for (const [a, b] of [["karatame", "bouhbou"], ["namizeus", "brookhante"], ["iorours", "druidours"]] as const) {
             expect(computeFusion(P(a), P(b)).stats.hp).toBe(140)   // dominant 0,7+0,7
             expect(computeFusion(P(a), P(b)).stats.spc).toBe(100)  // récessif 0,5+0,5
             expect(computeFusion(P(b), P(a)).stats.hp).toBe(140)   // ordre indifférent
@@ -80,7 +80,8 @@ describe("synergies", () => {
     it("fusionSynergy identifie les 3 nouvelles paires (fête de découverte)", () => {
         expect(fusionSynergy("karatame", "bouhbou")?.label).toBe("la synergie des arts martiaux")
         expect(fusionSynergy("namizeus", "brookhante")?.label).toBe("la synergie des âmes errantes")
-        expect(fusionSynergy("kilipanda", "druidours")?.label).toBe("la synergie des ursidés")
+        expect(fusionSynergy("iorours", "druidours")?.label).toBe("la synergie des ursidés")
+        expect(fusionSynergy("kilipanda", "druidours")).toBeNull() // retiré le 26/10/2026 (Kilipanda = clan de la Roche)
     })
     it("MIMIMOY parent → ses stats à 0.7 partout (dominant ET récessif)", () => {
         const f = computeFusion(P("mimimoy"), P("draclet"))

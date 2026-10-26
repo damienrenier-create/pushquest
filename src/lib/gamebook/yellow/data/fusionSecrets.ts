@@ -30,10 +30,11 @@ export const SECRET_KIND_LABEL: Record<FusionSecretKind, string> = {
 }
 
 /** CLANS : chaque paire a sa carte, et son énigme nomme les DEUX éléments (jamais les espèces). */
-const CLAN_NOUN: Record<string, string> = { panthere: "panthères", gecko: "geckos" }
+const CLAN_NOUN: Record<string, string> = { panthere: "panthères", gecko: "geckos", nouillon: "clans de Nouillon" }
 const CLAN_ELEMENT: Record<string, string> = {
     florapanthe: "les lianes", panthegel: "le givre", pyropanthe: "la braise", ombrapanthe: "l'ombre", aquapanthe: "le torrent", voltapanthe: "la foudre",
     gekroc: "l'étincelle", gekraise: "le magma", gekosmic: "l'esprit", geckebre: "l'obsidienne", geaucke: "le geyser",
+    pandapurna: "la panda", picassault: "l'oiseau", lievrocogne: "le lapin", // clans de Nouillon (26/10/2026)
 }
 function clanRiddle(d: FusionSecretDef): string | null {
     if (d.kind !== "clan" || !d.pair) return null
@@ -60,7 +61,7 @@ export const FUSION_SECRET_RIDDLES: Record<string, string> = {
     "pair:loupyre|tenebrir": "Deux loups, une meute.",
     "pair:bouhbou|karatame": "Deux arts martiaux.",
     "pair:brookhante|namizeus": "Deux âmes errantes.",
-    "pair:druidours|kilipanda": "Deux ours… enfin, presque.",
+    "pair:druidours|iorours": "Deux ours : l'un des bois, l'autre des glaces.",
     "pair:coccimperatrice|colosfer": "L'impératrice et le fer.",
     "mimimoy": "Le plus insignifiant de tous… mais pas en fusion.",
 }

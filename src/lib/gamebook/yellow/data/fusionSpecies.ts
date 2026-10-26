@@ -81,9 +81,14 @@ const WEIGHTS: Record<Exclude<FusionWeightMode, "all">, [number, number]> = {
 /** CLANS : fusionner DEUX membres d'un même clan = synergie boostée (0,7/0,5). `label` = annonce de découverte. */
 const PANTHERE_IDS: ReadonlySet<string> = new Set(["florapanthe", "panthegel", "pyropanthe", "ombrapanthe", "aquapanthe", "voltapanthe"]) // 6 panthères évoluées (Panthéon-base exclu)
 const GECKO_IDS: ReadonlySet<string> = new Set(["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke"]) // lignée Gékroc (couteaux-suisses)
+// CLANS DE NOUILLON (Sartay 26/10/2026 : « on crée des synergies pour les Pokémon des clans — la panda, l'oiseau et le lapin ») :
+//   les 3 FORMES FINALES des lignées de la Chapelle (comme les Panthères : formes évoluées seulement). Un joueur n'ayant qu'UN
+//   clan, fusionner deux clans = échanger avec un autre joueur.
+const NOUILLON_IDS: ReadonlySet<string> = new Set(["pandapurna", "picassault", "lievrocogne"]) // la panda (Roche), l'oiseau (Air), le lapin (Combat)
 const CLANS: readonly { key: string; label: string; ids: ReadonlySet<string> }[] = [
     { key: "panthere", label: "la synergie des Panthères", ids: PANTHERE_IDS },
     { key: "gecko", label: "la synergie des Geckos", ids: GECKO_IDS },
+    { key: "nouillon", label: "la synergie des clans de Nouillon", ids: NOUILLON_IDS },
 ]
 const MIMIMOY_ID = "mimimoy" // parent Mimimoy → TOUTES ses stats à 0,7 (révèle son potentiel aux croisements)
 /** Clé de paire indépendante de l'ordre. */
@@ -120,6 +125,10 @@ const CLAN_PAIR_NAMES: Record<string, string> = {
     [pairKey("gekosmic", "geckebre")]: "Géclipse",
     [pairKey("gekosmic", "geaucke")]: "Geaumirage",
     [pairKey("geckebre", "geaucke")]: "Geaugouffre",
+    // Clans de Nouillon (3) — noms posés le 26/10/2026, à renommer sur mesure si Sartay préfère
+    [pairKey("pandapurna", "picassault")]: "Pandassault",
+    [pairKey("pandapurna", "lievrocogne")]: "Pandacogne",
+    [pairKey("picassault", "lievrocogne")]: "Lièvrassault",
 }
 /** Nom sur mesure d'une paire de clan (ordre indifférent), ou null hors clan. */
 export function clanPairName(aId?: string, bId?: string): string | null {
@@ -135,7 +144,7 @@ const DUO_PAIR_NAMES: Record<string, string> = {
     [pairKey("mobyd", "orcaline")]: "Ivorque",
     [pairKey("tenebrir", "loupyre")]: "Ragnapyre",
     [pairKey("namizeus", "brookhante")]: "Yohorage",
-    [pairKey("kilipanda", "druidours")]: "Pandolmen",
+    [pairKey("iorours", "druidours")]: "Iordruide", // 26/10/2026 : remplace Pandolmen (Kilipanda × Druidours, retiré — Kilipanda est un Daemon du clan de la Roche)
 }
 /** Nom sur mesure d'une paire SYNERGIQUE nommée (paire de clan ou duo), ordre indifférent, ou null. */
 export function synergyPairName(aId?: string, bId?: string): string | null {
@@ -150,7 +159,7 @@ const SYNERGY_PAIRS: Record<string, string> = {
     [pairKey("tenebrir", "loupyre")]: "la synergie de la meute",
     [pairKey("karatame", "bouhbou")]: "la synergie des arts martiaux",   // 2 combattants (Combat × Combat/Spectre)
     [pairKey("namizeus", "brookhante")]: "la synergie des âmes errantes", // 2 spectres (Spectre/Élec × Spectre)
-    [pairKey("kilipanda", "druidours")]: "la synergie des ursidés",       // panda × ours-druide (les plantigrades)
+    [pairKey("iorours", "druidours")]: "la synergie des ursidés",          // ourse polaire × ours-druide (26/10/2026 ; remplace Kilipanda × Druidours)
     [pairKey("colosfer", "coccimperatrice")]: "la synergie de l'impératrice de fer", // starters du run 3 (19/10/2026) : le joueur recrée l'Impérafer officiel de KOGA, boosté — et KOGA aussi : le Conseil profite des synergies (décision Sartay 19/10).
 }
 /** `concept` = description PHYSIQUE injectée au générateur de sprite (Gemini) pour que le rendu colle au thème voulu. */
