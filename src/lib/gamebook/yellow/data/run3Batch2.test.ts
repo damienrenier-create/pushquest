@@ -7,17 +7,42 @@ import { shopPrice, RUN3_BALL_DISCOUNT } from "./shopPricing"
 import { RUN3_TIP_SHOP_LINES, run3RestartOfferLines } from "./run3Tips"
 import { getSpecies } from "./species"
 
-// Décisions Sartay du 26/10/2026 (2e lot run 3).
+// Décisions Sartay du 26/10/2026 (2e lot run 3 + Marmoterre/Phoéchaud).
 const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8")
+const bst = (id: string) => { const s = getSpecies(id)!.baseStats; return s.hp + s.atk + s.def + s.spe + s.spc }
 
-describe("Marmoterre : plus jamais sauvage — cadeau du Dénicheur en run 3 uniquement", () => {
-    it("absente des runs 1 et 2, obtenable en run 3 (échange) ; plus aucune zone sauvage ; lignée hors dex run 1", () => {
-        expect(runObtainableSpecies(1, false).has("marmoterre")).toBe(false)
+describe("Marmoterre : UNE seule apparition sauvage (Grotte Gelée run 1, ≈1 %, 12h→22h) + cadeau du Dénicheur en run 3", () => {
+    it("obtenable en run 1 (sauvage) et run 3 (échange), jamais en run 2 ; plus dans les Hautes Herbes", () => {
+        expect(runObtainableSpecies(1, false).has("marmoterre")).toBe(true)
         expect(runObtainableSpecies(2, false).has("marmoterre")).toBe(false)
         expect(runObtainableSpecies(3, false).has("marmoterre")).toBe(true)
-        for (const run of [1, 2, 3]) expect(captureGuide("marmoterre", run, true, false, true, false).where).toEqual([])
-        for (const id of ["marmoterre", "iorours", "yetiroche"]) expect(getSpecies(id)!.runThreeOnly, id).toBe(true)
-        expect(read("src/lib/gamebook/yellow/data/encounters.ts").match(/speciesId: "marmoterre"/g)).toBeNull()
+        const w1 = captureGuide("marmoterre", 1, true, false, true, false).where.map((w) => (typeof w === "string" ? w : JSON.stringify(w))).join(" | ")
+        expect(w1).toContain("Grotte Gelée"); expect(w1).toContain("≈1%"); expect(w1).not.toContain("Hautes Herbes")
+        expect(captureGuide("marmoterre", 2, true, false, true, false).where).toEqual([])
+        expect(captureGuide("marmoterre", 3, true, false, true, false).where).toEqual([])
+        const enc = read("src/lib/gamebook/yellow/data/encounters.ts")
+        expect(enc.match(/speciesId: "marmoterre"/g)?.length).toBe(1)
+        expect(enc).toContain("{ speciesId: \"marmoterre\", base: 3, hourRange: [12, 22] }")
+        for (const id of ["marmoterre", "iorours", "yetiroche"]) expect(getSpecies(id)!.runThreeOnly, id).toBeFalsy() // de retour au dex run 1
+    })
+    it("lignée Iorours : Atk et Spé relevés (252→264, 352→368, 425→447), learnset de Marmoterre comblé (Éboulis @14, Bélier @18)", () => {
+        expect(getSpecies("marmoterre")!.baseStats).toEqual({ hp: 58, atk: 58, def: 52, spe: 42, spc: 54 })
+        expect(getSpecies("iorours")!.baseStats).toEqual({ hp: 80, atk: 88, def: 70, spe: 50, spc: 80 })
+        expect(getSpecies("yetiroche")!.baseStats).toEqual({ hp: 95, atk: 112, def: 80, spe: 55, spc: 105 })
+        expect([bst("marmoterre"), bst("iorours"), bst("yetiroche")]).toEqual([264, 368, 447])
+        const ls = getSpecies("marmoterre")!.learnset.map((l) => `${l.moveId}@${l.level}`)
+        expect(ls).toContain("eboulis@14"); expect(ls).toContain("belier@18")
+    })
+})
+
+describe("Phoéchaud : plus en run 2 (ni en live) — run 3 seulement", () => {
+    it("obtenable en run 3 uniquement", () => {
+        expect(runObtainableSpecies(1, false).has("phoechaudi")).toBe(false)
+        expect(runObtainableSpecies(2, false).has("phoechaudi")).toBe(false)
+        expect(runObtainableSpecies(3, false).has("phoechaudi")).toBe(true)
+        const enc = read("src/lib/gamebook/yellow/data/encounters.ts")
+        expect(enc.match(/speciesId: "phoechaudi"/g)?.length).toBe(1) // la seule entrée : Grotte Rocheuse run 3
+        expect(enc).not.toContain("\"phoechaudiii\", \"karatame\"") // retiré des finales B2F (monde live)
     })
 })
 
@@ -25,9 +50,9 @@ describe("inédits du run 3 — panneaux et carrousel d'arène", () => {
     it("lignées calculées depuis les données ; chaque lignée a son indice « où/comment »", () => {
         const rows = run3ExclusiveRows()
         const keys = rows.map((r) => r.key)
-        for (const k of ["elefer", "cornaive", "coccipoing", "otama", "gekosmic", "magnetor", "onirail", "flamarokto", "marmoterre"]) expect(keys, k).toContain(k)
+        for (const k of ["elefer", "cornaive", "coccipoing", "otama", "gekosmic", "magnetor", "onirail", "flamarokto", "phoechaudi"]) expect(keys, k).toContain(k)
+        expect(keys).not.toContain("marmoterre") // de nouveau sauvage en run 1 → plus un inédit
         for (const r of rows) expect(RUN3_EXCLUSIVE_HINTS[r.key], `indice manquant pour ${r.key}`).toBeDefined()
-        expect(rows.find((r) => r.key === "marmoterre")!.names).toBe("Marmoterre → Iorours → Yétiroche")
         expect(rows.find((r) => r.key === "otama")!.names).toBe("Otama → Gamaruto → Uzumaro")
         const lines = run3ExclusiveSignLines()
         expect(lines[0]).toContain("INÉDITS DU CONCOURS")

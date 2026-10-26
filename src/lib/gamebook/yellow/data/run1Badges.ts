@@ -53,7 +53,7 @@ export function medalMult(m: FunMedal): number { return m ? MEDAL_MULT[m] : 1 }
  *  (DEX_ULTRA_SECRET : MégamonarX/Galijah, obtention hors-normes) en sont EXCLUS — ils restent dans le Pokédex
  *  (cartes « ??? » capturables) mais ne bloquent pas la complétion. Calculé une fois. */
 const RUN1_SPECIES: readonly string[] = visibleDexSpecies([], false, false, false).map((s) => s.id).filter((id) => !DEX_ULTRA_SECRET.has(id))
-export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 147 au 26/10/2026 (dont Osquille + Rô, pêchables ; lignée Iorours sortie : runThreeOnly). Exclut Sylvebarbe(133) &
+export const RUN1_DEX_TOTAL = RUN1_SPECIES.length // 150 (dont Osquille + Rô, pêchables ; lignée Iorours : Grotte Gelée 12h-22h depuis le 26/10/2026). Exclut Sylvebarbe(133) &
 // Géckèbre(180) désormais postLeague (endgame post-Ligue / Zone de Combat), comme leurs cousins Gavillus/Goatiny/B2F.
 const PANTHEON_EVOS = ["pyropanthe", "aquapanthe", "voltapanthe", "florapanthe", "panthegel", "ombrapanthe"]
 // Lignée Gékroc — les 5 Geckos élémentaires (miroir de GECKO_IDS dans fusionSpecies.ts). Inliné en littéral pour

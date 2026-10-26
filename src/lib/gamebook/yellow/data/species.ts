@@ -1403,8 +1403,10 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Lignée 4 : Marmotte/ourse/yéti (Roche/Glace, mur physique) ---
     marmoterre: {
         id: "marmoterre", dexNo: 89, name: "Marmoterre", types: ["ROCHE", "GLACE"],
-        baseStats: { hp: 58, atk: 52, def: 52, spe: 42, spc: 48 },
-        learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "coup_d_givre" }, { level: 8, moveId: "jet_pierres" }],
+        // 26/10/2026 (Sartay : « plus compétitif tout en restant raisonnable ») : Atk 52→58, Spé 48→54 (total 252→264) ;
+        //   learnset comblé entre le niv 8 et l'évolution (20) : Éboulis @14, Bélier @18.
+        baseStats: { hp: 58, atk: 58, def: 52, spe: 42, spc: 54 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "coup_d_givre" }, { level: 8, moveId: "jet_pierres" }, { level: 14, moveId: "eboulis" }, { level: 18, moveId: "belier" }],
         evolution: { toId: "iorours", method: { kind: "LEVEL", level: 20 } },
         catchRate: 120, baseExp: 62, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Roche/Glace — marmotte",
         description: "Marmotte des cimes gelées qui creuse la pierre.",
@@ -1412,7 +1414,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     iorours: {
         id: "iorours", dexNo: 90, name: "Iorours", types: ["ROCHE", "GLACE"],
-        baseStats: { hp: 80, atk: 80, def: 70, spe: 50, spc: 72 },
+        baseStats: { hp: 80, atk: 88, def: 70, spe: 50, spc: 80 }, // 26/10/2026 : Atk 80→88, Spé 72→80 (total 352→368)
         learnset: [{ level: 1, moveId: "coup_d_givre" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "eboulis" }, { level: 28, moveId: "belier" }],
         evolution: { toId: "yetiroche", method: { kind: "LEVEL", level: 40 } },
         catchRate: 50, baseExp: 150, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Glace — ourse polaire",
@@ -1421,7 +1423,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     yetiroche: {
         id: "yetiroche", dexNo: 91, name: "Yétiroche", types: ["ROCHE", "GLACE"],
-        baseStats: { hp: 95, atk: 100, def: 80, spe: 55, spc: 95 },
+        baseStats: { hp: 95, atk: 112, def: 80, spe: 55, spc: 105 }, // 26/10/2026 : Atk 100→112, Spé 95→105 (total 425→447, attaquant mixte ; reste lent)
         learnset: [{ level: 1, moveId: "souffle_polaire" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "coup_d_givre" }, { level: 40, moveId: "belier" }, { level: 44, moveId: "danse_lames" }, { level: 52, moveId: "carapace_diamant" }, { level: 66, moveId: "blizzard" }],
         catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Glace — yéti (attaquant MIXTE Atk+Spé)",
         description: "Yéti légendaire des sommets ; frappe aussi bien du poing que du souffle glacé.",
@@ -3771,7 +3773,6 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "bidouzen", "medisciple", "karatame",                   // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
     "obscurene", "abyssombre", "leviabysse",                // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
-    "marmoterre", "iorours", "yetiroche",                   // lignée Iorours : RETIRÉE du sauvage le 26/10/2026 (Sartay) → cadeau du Dénicheur en run 3 uniquement
     "joeyrrant", "wallabisan", "kangoudead",             // création canonisée (Jacanon) — kangourou mort-vivant TÉNÈBRES/FEU→TÉNÈBRES/GLACE, run 3
     "possyl", "possombre", "necrossum",                   // création canonisée (Zyran) — spectre-possédé NORMAL→NORMAL/SPECTRE, mur physique
     "charolyx", "bubolyx", "pestilyx",

@@ -19,7 +19,7 @@ export const RUN3_EXCLUSIVE_HINTS: Record<string, string> = {
     magnetor: "Magmator niv 50 + Noyau de Métal (boutique Jetons de Combat)",
     onirail: "à la canne à pêche, dans l'eau de Cendreville",
     flamarokto: "légendaire des Hautes Herbes de Cendreville",
-    marmoterre: "le Dénicheur de la Route Nord, contre un Ruffiant",
+    phoechaudi: "sauvage à la Grotte Rocheuse (niv 12-18, coriace)", // lignée Phoéchaud : run 3 seulement depuis le 26/10/2026
 }
 
 export interface Run3ExclusiveRow { key: string; ids: string[]; names: string; types: string; hint: string }

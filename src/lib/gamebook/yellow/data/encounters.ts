@@ -590,7 +590,10 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "givroptere", base: VERY_RARE, rare: true }, // remplace Loutrille (Sartay) — VOL/GLACE, TRÈS RARE
             { speciesId: "piouflot", base: UNCOMMON },
             { speciesId: "auroruff", base: UNCOMMON },
-            { speciesId: "tetardoc", base: UNCOMMON }, // (marmoterre RETIRÉE du sauvage le 26/10/2026 — lignée Iorours = cadeau du Dénicheur, run 3)
+            { speciesId: "tetardoc", base: UNCOMMON },
+            // MARMOTERRE (Sartay 26/10/2026) : SEULE apparition sauvage du jeu — ≈1 % des rencontres (3/257), de 12h à 22h
+            //   SEULEMENT. Ailleurs : cadeau du Dénicheur en run 3 (contre un Ruffiant). Retirée des Hautes Herbes et du run 2.
+            { speciesId: "marmoterre", base: 3, hourRange: [12, 22] },
             { speciesId: "sporbeo", base: RARE, player: "rare", rare: true },
         ],
     },
@@ -951,7 +954,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "wistree", base: UNCOMMON },
             { speciesId: "revemante", base: UNCOMMON },
             { speciesId: "shady", base: RARE },
-            { speciesId: "phoechaudi", base: RARE, rare: true },        // Feu/Spectre, pépite (évolue en Phoéchaudiii)
+            // (Phoéchaudi RETIRÉ du run 2 le 26/10/2026 — Sartay : la lignée Phoéchaud ne se croise plus qu'en run 3, Grotte Rocheuse.)
             { speciesId: "bouh", base: RARE, rare: true },
         ],
     },
