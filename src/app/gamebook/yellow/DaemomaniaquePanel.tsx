@@ -1,13 +1,16 @@
 "use client"
 
 // DAEMOMANIAQUE — guide de capture (PNJ Cendreville, dès le RUN 1). Comportement PAR RUN (anti-spoiler) :
-//  • RUN 1  : n'affiche/informe QUE les Daemons DÉJÀ VUS (+ Goshendofy) ; localisations run 1, zones endgame masquées
-//             tant que pas Champion (pas de Grotte du Nexus/plaine).
+//  • RÈGLE GÉNÉRALE (Sartay 26/10/2026) : tant que le joueur n'est pas au RUN FUSION, le guide ne montre QUE les Daemons
+//             OBTENABLES dans la run où il est (runObtainableSpecies : sauvages, pêche, cadeaux/échanges/boss de la run,
+//             évolutions) — plus de « ne se croise pas dans cette run ». La Grotte du Nexus n'existe qu'au run fusion /
+//             après le run 3 (les runs 1, 2 et 3 n'y ont pas accès).
+//  • RUN 1  : parmi eux, n'affiche/informe QUE les Daemons DÉJÀ VUS (+ Goshendofy) ; localisations run 1.
 //  • RUN FUSION (run 4) : live POST-Champion — même liste « déjà vus » mais zones endgame RÉVÉLÉES (plaine, Grotte du
 //             Nexus, rattrapage inédits run 3). Étiqueté « Run Fusion » pour le distinguer clairement du run 1.
-//  • RUN 2  : affiche TOUS les Daemons run 1+2 ; info UNIQUEMENT sur les vus (+ Ukognos) ; localisations run 2.
-//  • RUN 3  : affiche/informe TOUS les Daemons du run 3 (sans filtre « vu »).
-//  • POST-3 : demande d'abord DE QUEL RUN parler (1/2/3), puis tout révèle.
+//  • RUN 2  : affiche les Daemons obtenables au run 2 ; info UNIQUEMENT sur les vus (+ Ukognos) ; localisations run 2.
+//  • RUN 3  : affiche/informe tous les Daemons obtenables au run 3 (sans filtre « vu »).
+//  • POST-3 : demande d'abord DE QUEL RUN parler (1/2/3), puis tout révèle (obtenables de ce run, Grotte comprise).
 // Fusions/customs exclus (getSpecies null). Éco : 5 consultations gratuites/jour puis 50⚡ (consultDaemomaniaque).
 
 import { useEffect, useMemo, useState } from "react"
@@ -16,7 +19,7 @@ import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONS
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
-import { captureGuide, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
+import { captureGuide, runObtainableSpecies, type CaptureGuide } from "@/lib/gamebook/yellow/data/encounters"
 import { ECLAIREUR_PRECISION_MARKER } from "@/lib/gamebook/yellow/data/pnj7"
 import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import DaemomaniaqueCompare from "./DaemomaniaqueCompare"
@@ -55,7 +58,12 @@ export default function DaemomaniaquePanel() {
     //   queryRun = run des DONNÉES passé à captureGuide (run 4 lit les pools run 1 + champion) ; displayRun = étiquette affichée.
     const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "run4" ? 1 : mode === "post" ? (selectedRun ?? (tab === "compare" ? 3 : 1)) : 1
     const displayRun = mode === "run4" ? 4 : mode === "post" ? (selectedRun ?? queryRun) : queryRun
-    const hideEndgame = queryRun === 1 && !player.isChampion
+    // DISPONIBILITÉ PAR RUN (26/10/2026) : la Grotte du Nexus (post-Ligue) n'existe qu'au run fusion / après le run 3 ; et
+    //   le guide ne liste que les Daemons OBTENABLES dans la run consultée.
+    const endgame = mode === "run4" || mode === "post"
+    const hideEndgame = !endgame
+    const availRun = mode === "run4" ? 4 : queryRun
+    const avail = useMemo(() => runObtainableSpecies(availRun, endgame), [availRun, endgame])
     const seenSet = useMemo(() => new Set([...dex.seen, ...dex.caught]), [dex.seen, dex.caught])
     const infoAllowed = (id: string) => mode !== "run2" || seenSet.has(id) || id === "ukognos"
 
@@ -79,6 +87,7 @@ export default function DaemomaniaquePanel() {
             // POST run 3 : catalogue 100% débloqué (dexFullUnlock) — la grille montre TOUT le dex, l'info est scopée au run choisi.
             list = visibleDexSpecies(caught, true, true, true, true, seen)
         }
+        list = list.filter((sp) => sp && avail.has(sp.id)) // OBTENABLE dans cette run seulement (26/10/2026)
         const uniq = new Set<string>()
         // ANTI-SPOILER : les LÉGENDAIRES ULTRA-SECRETS (MégamonarX/Galijah, obtention hors-normes) n'apparaissent JAMAIS
         //   dans le guide de capture tant qu'ils ne sont pas CAPTURÉS (sinon on spoile leur existence + méthode).
@@ -88,7 +97,7 @@ export default function DaemomaniaquePanel() {
         if (needle) list = list.filter((sp) => sp.name.toLowerCase().includes(needle))
         if (typeFilter) list = list.filter((sp) => sp.types.includes(typeFilter as SpeciesData["types"][number]))
         return list
-    }, [open, mode, selectedRun, tab, queryRun, hideEndgame, q, typeFilter, seenSet, dex.caught, dex.seen, player.isChampion])
+    }, [open, mode, selectedRun, tab, queryRun, hideEndgame, avail, q, typeFilter, seenSet, dex.caught, dex.seen, player.isChampion])
 
     if (!open) return null
 
@@ -107,8 +116,8 @@ export default function DaemomaniaquePanel() {
     const allTypes = Object.keys(TYPE_COLOR)
     const runLabel = (r: number) => (r === 1 ? "Run 1" : r === 2 ? "Run 2" : r === 3 ? "Run 3" : "Run Fusion")
     const modeSub = mode === "post" ? (selectedRun ? `Infos ${runLabel(selectedRun)}` : "De quel run veux-tu parler ?")
-        : mode === "run1" ? "Run 1 — Daemons déjà croisés" : mode === "run2" ? "Run 2 — run 1 + 2"
-        : mode === "run4" ? "Run Fusion — ère post-Ligue (plaine, Grotte du Nexus…)" : "Run 3"
+        : mode === "run1" ? "Run 1 — Daemons déjà croisés" : mode === "run2" ? "Run 2 — Daemons de ce run"
+        : mode === "run4" ? "Run Fusion — ère post-Ligue (plaine, Grotte du Nexus…)" : "Run 3 — Daemons du concours"
 
     return (
         <div style={S.overlay} onClick={close}>

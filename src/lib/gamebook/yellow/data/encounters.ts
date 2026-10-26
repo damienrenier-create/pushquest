@@ -14,6 +14,8 @@ import { rollIvs, funRollIvs } from "./ivConfig"
 import { speciesAtLevel, levelEvosRemaining } from "./ace"
 import { getSpecies, SPECIES } from "./species"
 import { SPECIAL_OBTAIN, SPECIAL_OBTAIN_FUN_HOW } from "./captureSpecial"
+import { FISHING_COMMONS, FISHING_BY_MAP, GEAUCKE_ID } from "./fishing"
+import { FLAMAROKTO_ID, FLAMAROKTO_GUIDE_LINE, RUN3_LEGEND_HINT_DENOM_MULT } from "./run3Legend"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5, GIGA_RARE = 2
@@ -251,12 +253,15 @@ const pctOf = (base: number, sum: number): number | undefined => (sum > 0 ? (bas
 function guideMatchesRun(target: string, run: number, hideEndgame: boolean): GuideMatch[] {
     const table = guideTable(run)
     const out: GuideMatch[] = []
+    // RUN 1 avant la Ligue : les entrées `postSylvebarbe` (Ténèbres) ont un poids NUL au runtime → le guide ne doit pas
+    //   les annoncer (ex. Obscurène à la Plage) — « erreur » du Daemomaniaque relevée par Sartay le 26/10/2026.
+    const preSylvebarbe = run === 1 && hideEndgame
     for (const mapId of Object.keys(table)) {
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
         const poolSum = sumBase(z.pool)
-        for (const e of z.pool) if (entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum) })
-        if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool); for (const e of r.pool) if (entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs) }) }
+        for (const e of z.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum) })
+        if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool); for (const e of r.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs) }) }
         const tg = z.trainingGrid
         if (tg) {
             for (const [t, pool0] of Object.entries(tg.typePools)) { const pool = guideGridTypePool(pool0, run); const ps = sumBase(pool); for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t, pct: pctOf(e.base, ps) }) }
@@ -345,6 +350,12 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
             how.add("Rattrapage post-Ligue : ces inédits du run 3 rôdent en LIVE une fois Champion (RARES ; plus fréquents une fois le run 3 terminé).")
         }
     }
+    // FLAMAROKTO (légendaire du run 3, 26/10/2026) : capture GARANTIE à l'Hyper Nexus-Ball sous 60 % de PV ou sous statut
+    //   → les verrous génériques (statut requis, Ball puissante) ne décrivent plus la réalité : on les remplace.
+    if (speciesId === FLAMAROKTO_ID && where.length > 0) {
+        for (const h of [...how]) if (/Capture IMPOSSIBLE sans statut|Exige une Ball puissante|Très coriace/.test(h)) how.delete(h)
+        how.add(FLAMAROKTO_GUIDE_LINE)
+    }
     if (where.length === 0) {
         // Pas sauvage dans cette run → obtention SPÉCIALE curée (pierre/objet/échange/cadeau/boss/rôdeur).
         const special = SPECIAL_OBTAIN[speciesId]
@@ -381,12 +392,13 @@ function run1ChampionCatchup(speciesId: string): string[] {
 }
 /** Espèces spawnables dans une run (base + formes évoluées in situ). Fusions/customs exclus par l'appelant (getSpecies null). Mémoïsé. */
 const _runSpawnCache: Record<string, Set<string>> = {}
-export function runSpawnableSpecies(run: number, hideEndgame: boolean = false): Set<string> {
-    const key = `${run}:${hideEndgame ? 1 : 0}`
+export function runSpawnableSpecies(run: number, hideEndgame: boolean = false, preSylvebarbe: boolean = false): Set<string> {
+    const key = `${run}:${hideEndgame ? 1 : 0}:${preSylvebarbe ? 1 : 0}`
     if (_runSpawnCache[key]) return _runSpawnCache[key]
     const table = guideTable(run)
     const set = new Set<string>()
-    const add = (e: WildEntry) => { for (const s of entryYieldSet(e)) set.add(s) }
+    // `preSylvebarbe` (run 1 avant la Ligue) : les entrées `postSylvebarbe` ont un poids nul → pas spawnables.
+    const add = (e: WildEntry) => { if (preSylvebarbe && e.postSylvebarbe) return; for (const s of entryYieldSet(e)) set.add(s) }
     for (const mapId of Object.keys(table)) {
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
@@ -401,6 +413,37 @@ export function runSpawnableSpecies(run: number, hideEndgame: boolean = false): 
         }
     }
     _runSpawnCache[key] = set
+    return set
+}
+
+/** Espèces OBTENABLES dans une run — DAEMOMANIAQUE (Sartay 26/10/2026 : « tant que le joueur n'est pas au run fusion, ne
+ *  montrer QUE les Daemons dispo dans le run où il est »). = sauvages de la run (runSpawnableSpecies) + pêche + obtentions
+ *  spéciales annotées `runs` (captureSpecial : cadeaux, échanges, boss, pierres…) + évolutions PAR NIVEAU de tout ça (les
+ *  évolutions par objet/échange passent par captureSpecial). `run` 4 = run fusion (live Champion : pools du run 1 +
+ *  rattrapage post-Ligue) ; `endgame` = Grotte du Nexus visible — SEULEMENT au run fusion et après le run 3 : les runs
+ *  1, 2 et 3 n'y ont pas accès. Mémoïsé. */
+const _runObtainCache: Record<string, Set<string>> = {}
+export function runObtainableSpecies(run: number, endgame: boolean): Set<string> {
+    const key = `${run}:${endgame ? 1 : 0}`
+    if (_runObtainCache[key]) return _runObtainCache[key]
+    const poolRun = run === 4 ? 1 : run
+    const set = new Set<string>(runSpawnableSpecies(poolRun, !endgame, run === 1 && !endgame))
+    // PÊCHE (canne de la Fashion Victim) : commun de la run + signature de chaque plan d'eau + rares horaires + Geaucké ;
+    //   Onirail à Cendreville au run 3. Obscurène (Ténèbres, Cendreville) : pas au run 1 avant Sylvebarbe → run fusion.
+    for (const id of FISHING_COMMONS[`run${poolRun}`] ?? FISHING_COMMONS.run1) set.add(id)
+    for (const [mapId, ids] of Object.entries(FISHING_BY_MAP)) { if (mapId === "yellow_cendreville" && run === 1) continue; for (const id of ids) set.add(id) }
+    set.add("osquille"); set.add("ro"); set.add(GEAUCKE_ID)
+    if (run === 3) set.add("onirail")
+    // RATTRAPAGE post-Ligue (run fusion) : des inédits du run 3 rôdent en live une fois Champion (cf. run1ChampionCatchup).
+    if (run === 4) { for (const e of RUN3_HH_CATCHUP) set.add(e.speciesId); set.add("wistree") }
+    // Obtentions SPÉCIALES valables dans CETTE run.
+    for (const [id, s] of Object.entries(SPECIAL_OBTAIN)) if ((s.runs ?? [1, 2, 3, 4]).includes(run)) set.add(id)
+    // Évolutions par NIVEAU de tout ce qui précède.
+    for (const id of [...set]) {
+        let cur = getSpecies(id); let guard = 0
+        while (cur?.evolution && cur.evolution.method.kind === "LEVEL" && guard++ < 6) { set.add(cur.evolution.toId); cur = getSpecies(cur.evolution.toId) }
+    }
+    _runObtainCache[key] = set
     return set
 }
 
@@ -1311,7 +1354,8 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
         const leg = legId ? { ...tg.legendary, speciesId: legId } : tg.legendary
         const alreadyCaught = legId ? !!ctx.caughtSpecies?.includes(legId) : !!ctx.goshCaught
         if (!alreadyCaught) {
-            const boost = ctx.goshBoost ? 0.5 : 1
+            // Confidence du GAMIN entendue, dans sa fenêtre : ×2 (runs 1/2) ; ×5 au RUN 3 (Sartay 26/10/2026, « run 3 hardcore »).
+            const boost = ctx.goshBoost ? (ctx.run3 ? RUN3_LEGEND_HINT_DENOM_MULT : 0.5) : 1
             const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
             if (rng() < 1 / denom) return finalizeSpawn(leg, leg.levelFixed ?? 50, rng, ctx)
         }

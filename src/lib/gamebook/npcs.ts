@@ -40,6 +40,9 @@ export interface NpcDefinition {
     /** `tint` = filtre CSS de personnalisation (hue-rotate/saturate/brightness) appliqué EN PLUS de l'ombre —
      *  sert au REFLET de la Ligue de Fusion, qui porte l'avatar exact du joueur (teinte comprise). */
     gen3?: { url: string; col?: number; row?: number; tint?: string }
+    // RUN 3 (Nexus Jaune) : le PNJ est PEINT dans le fond de la carte (arènes re-thémées) → MapView ne dessine NI sprite
+    //   NI emoji par-dessus (sinon le sprite du run 1 se superposait au PNJ du run 3 ; signalement Sartay 26/10/2026).
+    hideSprite?: boolean
     // Pour les wanderers : rayon de patrouille autour de la position initiale
     wanderRadius?: number
     // Dialogues

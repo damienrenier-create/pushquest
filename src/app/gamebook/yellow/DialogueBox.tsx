@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getTrainer } from "@/lib/gamebook/yellow/data/trainers"
 import { NGPLUS_ARENA_NPCS } from "@/lib/gamebook/yellow/data/ngplusArenas"
+import { isRun3ArenaNpc, run3ArenaName } from "@/lib/gamebook/yellow/data/run3ArenaNpcs"
 import { KEY_GUARD_NPC_ID, KEY_GUARD_TRAINER_ID, KEY_GUARD_SPRITE } from "@/lib/gamebook/yellow/data/boatArena"
 import { effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 
@@ -67,13 +68,16 @@ export default function DialogueBox() {
     //   par activeNpcs). La bulle suit : nom du run 2 + portrait découpé dans la planche. Avant le 20/10/2026 elle montrait
     //   les PNJ du RUN 1 (Druide, gardes Plante…) et leur ancien nom, quel que soit l'appelant.
     const r2 = effectiveRunWorld() === "ngplus" ? NGPLUS_ARENA_NPCS[dialogue.npcId] : undefined
+    // RUN 3 : les PNJ d'arène sont ceux du thème du run 3 (peints dans le fond) → nom du run 3 pour les gardiens, nom du
+    //   champion (déjà dans le dialogue) pour les boss, et JAMAIS le portrait ni l'emoji du run 1 (signalement 26/10/2026).
+    const r3 = effectiveRunWorld() === "run3" && isRun3ArenaNpc(dialogue.npcId)
     // Planche Gen 3 servant de portrait : re-skin du run 2, ou PNJ qui n'existe QU'EN planche (le GARDIEN DES CLÉS).
-    const gen3Sheet = r2?.gen3 ?? GEN3_PORTRAITS[dialogue.npcId]
-    const portrait = gen3Sheet ? undefined : DIALOGUE_PORTRAITS[dialogue.npcId]
-    const npcName = r2?.name ?? dialogue.npcName
+    const gen3Sheet = r3 ? undefined : (r2?.gen3 ?? GEN3_PORTRAITS[dialogue.npcId])
+    const portrait = gen3Sheet || r3 ? undefined : DIALOGUE_PORTRAITS[dialogue.npcId]
+    const npcName = (r3 ? run3ArenaName(dialogue.npcId) : null) ?? r2?.name ?? dialogue.npcName
     // Garde / dresseur SANS portrait image → on affiche son emoji de sprite en filigrane
     // DERRIÈRE le texte (look "on voit qui parle"). Non-dresseurs : pas de filigrane.
-    const trainerEmoji = !portrait && !gen3Sheet ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
+    const trainerEmoji = !portrait && !gen3Sheet && !r3 ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
 
     return (
         <>

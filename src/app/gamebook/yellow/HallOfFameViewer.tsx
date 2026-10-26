@@ -29,8 +29,10 @@ const TIER_META: Record<string, { label: string; color: string }> = {
 }
 
 // Runs visibles au toggle : le spectateur ne voit QUE les runs qu'il a atteints (anti-spoiler).
-const WORLD_META: { id: "live" | "ngplus" | "run3"; label: string }[] = [
-    { id: "live", label: "RUN 1" }, { id: "ngplus", label: "RUN 2" }, { id: "run3", label: "RUN 3" },
+// « RUN 1 · APRÈS FUSION » (live_post) : re-sacres de la Ligue du run 1 par des joueurs déjà fusionnés (ou un 2e sacre) —
+//   réservé aux spectateurs au run fusion (le serveur ne le sert qu'à eux), cf. data/leagueHof.
+const WORLD_META: { id: "live" | "ngplus" | "run3" | "live_post"; label: string }[] = [
+    { id: "live", label: "RUN 1" }, { id: "ngplus", label: "RUN 2" }, { id: "run3", label: "RUN 3" }, { id: "live_post", label: "RUN 1 · APRÈS FUSION" },
 ]
 
 const STAT_ROWS: { key: keyof ChampionMon["stats"]; label: string }[] = [
@@ -49,10 +51,10 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const activeWorld = useActiveWorld()
     const player = usePlayer()
     const fusionUnlocked = player.defeatedTrainers.includes("autel_visited") // arrivé au Dôme Fusion → onglet FUSION
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "fusion" | "clans">(activeWorld === "replay" ? "live" : activeWorld)
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "live_post" | "fusion" | "clans">(activeWorld === "replay" ? "live" : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
-    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
+    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used) || (w.id === "live_post" && player.run3Used && activeWorld !== "run3"))
     // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
     const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
     const worldLabel = viewWorld === "fusion" ? "FUSION" : viewWorld === "clans" ? "CLANS" : (WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1")

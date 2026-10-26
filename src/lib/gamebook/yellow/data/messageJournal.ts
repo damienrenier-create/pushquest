@@ -24,7 +24,12 @@ export function shouldLogMessage(npcId: string, name?: string): boolean {
     if (!npcId) return false
     if (isSpaghetti(npcId, name) || isGenie(npcId, name)) return true
     if (NOISE_IDS.has(npcId)) return false
-    if (getTrainer(npcId) && !KEEP_TRAINERS.has(npcId)) return false // dresseur de combat → intro/raillerie, pas de l'info
+    const trainer = getTrainer(npcId)
+    // NARRATION sous l'id d'un dresseur (ex. « 🌀 MÉGA-FUSION » / « FUSION DES TIMELINES » portés par y_ligue_maitre en fin
+    //   de run) : le NOM affiché n'est pas celui du dresseur → c'est de l'info, pas une raillerie → consigné. Sartay 26/10/2026 :
+    //   « à la fin d'un run on reçoit plein d'infos, beaucoup les zappent → bien les enregistrer dans le calepin ».
+    if (trainer && name && name.trim() && name.trim().toUpperCase() !== trainer.name.toUpperCase()) return true
+    if (trainer && !KEEP_TRAINERS.has(npcId)) return false // dresseur de combat → intro/raillerie, pas de l'info
     return true
 }
 

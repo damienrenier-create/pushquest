@@ -26,6 +26,7 @@ import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/captureConfig"
 import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID } from "../data/items"
+import { flamaroktoGuaranteed } from "../data/run3Legend"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN, EV_STAT_CAP } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
@@ -91,6 +92,9 @@ export interface BattleState {
     /** ESCALADE : nb de lancers de Ball RATÉS sur le sauvage courant → chaque échec augmente la proba du
      *  prochain lancer (l'acharnement paie, surtout sur les cibles coriaces). Repart à 0 à chaque combat. */
     captureAttempts: number
+    /** 🧞 VŒU « captures garanties » (Kingme, 26/10/2026) : posé par le store le temps d'UN lancer de Ball → capture à coup
+     *  sûr (hors fusions, qui exigent leur Fusio-Ball). Jamais persisté au-delà du tour. */
+    genieCatchGuaranteed?: boolean
     /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois). */
     participated: string[]
     /** Par ENNEMI (uid) → uids des Daemons joueur qui l'ont AFFRONTÉ. Seuls eux gagnent
@@ -1601,8 +1605,13 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     // comme une Ball très forte (bonus 6).
     // ⚠️ UKOGNOFY n'arrive JAMAIS jusqu'ici : le verrou FUSION ci-dessous la renvoie avant (elle exige sa
     //   Fusio-Ball). Si ce verrou devait un jour bouger, il faudrait la ré-exclure explicitement.
-    const legGuaranteed = itemId === SUPER_MEGA_BALL_ID && isSuperMegaTarget(wild.speciesId) && wild.currentHp < maxHpOf(wild) * 0.5
+    // FLAMAROKTO (run 3, Sartay 26/10/2026) : l'Hyper Nexus-Ball (ou mieux) le capture À COUP SÛR sous 60 % de PV OU sous
+    //   statut — shunte aussi son verrou de Ball (Hyper +) et son verrou de statut (cf. data/run3Legend).
+    const legGuaranteed = (itemId === SUPER_MEGA_BALL_ID && isSuperMegaTarget(wild.speciesId) && wild.currentHp < maxHpOf(wild) * 0.5)
+        || flamaroktoGuaranteed(wild.speciesId, ballBonusOf(itemId), wild.currentHp / Math.max(1, maxHpOf(wild)), wild.status)
+        || state.genieCatchGuaranteed === true // 🧞 vœu « captures garanties »
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    if (state.genieCatchGuaranteed) events.push({ kind: "message", text: "🧞 Le génie guide ta Ball : cette capture est GARANTIE." })
     // RAILLERIE (créations finales niv 75 de la Grotte du Nexus) : au 1er lancer, la bête toise le dresseur. Une
     //   seule fois par combat (flag captureTauntShown). Purement flavor → n'affecte pas les chances de capture.
     if (wild.captureTaunt && !state.captureTauntShown) { events.push({ kind: "message", text: wild.captureTaunt }); state.captureTauntShown = true }
@@ -1661,7 +1670,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     // est consommé mais aucune capture. Placé AVANT tryCapture → le tirage RNG reste intact pour la suite.
     // Un STATUT majeur peut SHUNTER l'exigence de Ball (ex. Bouh : Super Ball+ OU sous statut).
     const statusBypassesBall = wild.captureStatusBypassesBall && wild.status !== "NONE"
-    if (wild.captureMinBallBonus != null && !isGuaranteedBall(itemId) && ballBonusOf(itemId) < wild.captureMinBallBonus && !statusBypassesBall) {
+    if (wild.captureMinBallBonus != null && !isGuaranteedBall(itemId) && !legGuaranteed && ballBonusOf(itemId) < wild.captureMinBallBonus && !statusBypassesBall) {
         events.push({ kind: "ball", action: "miss" })
         events.push({ kind: "message", text: `La Ball ricoche sans même s'ouvrir… ${displayName(wild)} est bien trop instable pour une Ball aussi faible !` })
         return
@@ -1675,7 +1684,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     }
     // VERROU DE PV PLEINS (Grotte du Nexus) : aucune capture tant que la cible est à PLEINS PV — il faut d'abord
     // l'affaiblir. La Master Ball shunte. Placé AVANT tryCapture (le tour est consommé, aucune capture).
-    if (wild.captureRequiresDamage && wild.currentHp >= maxHpOf(wild) && !isGuaranteedBall(itemId)) {
+    if (wild.captureRequiresDamage && wild.currentHp >= maxHpOf(wild) && !isGuaranteedBall(itemId) && !legGuaranteed) {
         events.push({ kind: "ball", action: "miss" })
         events.push({ kind: "message", text: `${displayName(wild)} est bien trop FRAIS ! Il ne se laisse pas capturer à pleins PV — affaiblis-le d'abord.` })
         return

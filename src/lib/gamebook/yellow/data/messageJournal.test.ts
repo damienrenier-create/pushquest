@@ -29,7 +29,14 @@ describe("messageJournal — filtre & source", () => {
 
     it("un vrai dresseur de combat → EXCLU (raillerie/intro de combat, pas de l'info)", () => {
         expect(getTrainer("y_trainer_leo")).toBeTruthy()        // y_trainer_leo EST un dresseur enregistré…
-        expect(shouldLogMessage("y_trainer_leo", "Léo")).toBe(false) // …donc exclu
+        expect(shouldLogMessage("y_trainer_leo", getTrainer("y_trainer_leo")!.name)).toBe(false) // …donc exclu
+    })
+
+    it("fin de run : une NARRATION portée par l'id d'un dresseur (nom différent) → consignée (26/10/2026)", () => {
+        expect(getTrainer("y_ligue_maitre")).toBeTruthy()
+        expect(shouldLogMessage("y_ligue_maitre", "🌀 MÉGA-FUSION")).toBe(true)
+        expect(shouldLogMessage("y_ligue_maitre", "FUSION DES TIMELINES")).toBe(true)
+        expect(shouldLogMessage("y_ligue_maitre", getTrainer("y_ligue_maitre")!.name)).toBe(false) // sa vraie intro de combat : bruit
     })
 
     it("le génie-embuscade est un dresseur MAIS reste consigné (source génie)", () => {

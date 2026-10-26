@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react"
 import type { ChampionMon } from "../storage/save"
+import { teamOutclasses } from "../data/playerArena"
 
 export const RUN2_GHOST_MAP_ID = "yellow_grotte_nexus" // Grotte 1F
 export const RUN2_GHOST_TRAINER_PREFIX = "run2ghost:"
@@ -35,8 +36,9 @@ export interface Run2Ghost {
 interface ChampionEntry { userId?: string; nickname: string; wonAt: string; team: ChampionMon[]; world?: string; avatar?: string | null }
 
 /** Renvoie les PNJ-joueurs run 2 à afficher sur la Grotte 1F (vide ailleurs). 1 équipe run-2 par joueur (la plus
- *  récente), soi-même exclu, jusqu'à 5 placées aux coords fixes. */
-export function useRun2Ghosts(mapId: string, myUserId: string): Run2Ghost[] {
+ *  récente), soi-même exclu, jusqu'à 5 placées aux coords fixes. `myLevel` = niveau de TON Daemon le plus haut : une
+ *  équipe qui te SURCLASSE (≥ 2 Daemons à plus de 2 niveaux au-dessus) n'est pas montrée (Sartay 26/10/2026). */
+export function useRun2Ghosts(mapId: string, myUserId: string, myLevel: number): Run2Ghost[] {
     const active = mapId === RUN2_GHOST_MAP_ID
     const [ghosts, setGhosts] = useState<Run2Ghost[]>([])
     useEffect(() => {
@@ -56,6 +58,7 @@ export function useRun2Ghosts(mapId: string, myUserId: string): Run2Ghost[] {
                     const uid = c.userId
                     if (!uid || uid === myUserId || seen.has(uid)) continue
                     if (!Array.isArray(c.team) || c.team.length === 0) continue
+                    if (teamOutclasses(c.team, myLevel)) continue // plus fort que toi → jamais affiché
                     const pos = spots[list.length]
                     if (!pos) break // déjà 5 → on s'arrête (les autres attendront une place)
                     seen.add(uid)
@@ -65,6 +68,6 @@ export function useRun2Ghosts(mapId: string, myUserId: string): Run2Ghost[] {
             })
             .catch(() => { if (!cancel) setGhosts([]) })
         return () => { cancel = true }
-    }, [active, mapId, myUserId])
+    }, [active, mapId, myUserId, myLevel])
     return active ? ghosts : []
 }

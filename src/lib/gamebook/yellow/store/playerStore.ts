@@ -1675,6 +1675,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
+        case "guaranteed_captures": setGenieCatchCharges(Math.max(0, amt)); return true                       // vœu « 5 Balls qui ne ratent jamais » (Kingme, 26/10/2026) : N prochains lancers garantis
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
         default: return false                                                                              // type non géré → non appliqué
     }
@@ -2713,8 +2714,33 @@ export function isMinitelUnlocked(): boolean { return st.defeatedTrainers.includ
 export function aceAvailableToday(): boolean {
     if (st.creditedThrough === "") return true
     if (st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) return st.aceWins < ACE_PANTHEON_WIN // boosté : jusqu'au Panthéon (7 d'affilée)
+    if (runMode() === "run3") return aceRun3WinsToday() < ACE_RUN3_DAILY_CAP // RUN 3 : 3 victoires par jour (le concours se speedrunne)
     return st.aceDefeatedDate !== st.creditedThrough // règle historique (inchangée pour tous les autres joueurs)
 }
+/** RUN 3 (Sartay 26/10/2026 : « 7 jours pour battre ACE, c'est trop long en run 3 ») : jusqu'à 3 VICTOIRES par jour,
+ *  comptées par un marqueur journalier (`ace_r3_<date>_<n>`, un seul à la fois via setDailyMarker). Rejeu run 3 inclus. */
+export const ACE_RUN3_DAILY_CAP = 3
+const ACE_RUN3_DAILY_PREFIX = "ace_r3_"
+export function aceRun3WinsToday(): number {
+    const head = `${ACE_RUN3_DAILY_PREFIX}${st.creditedThrough}_`
+    const m = st.defeatedTrainers.find((t) => t.startsWith(head))
+    return m ? (Number(m.slice(head.length)) || 0) : 0
+}
+
+// ═══════ VŒU « CAPTURES GARANTIES » (Kingme, 26/10/2026 — offert sans contrepartie, décision Sartay) ═══════
+// N prochains lancers de Ball = capture à COUP SÛR (toute Ball, tout sauvage, même à pleins PV ; les fusions gardent leur
+// Fusio-Ball). Compteur = UN marqueur `genie_catch_<n>` dans defeatedTrainers (per-monde ; reporté par restartRun3).
+export const GENIE_CATCH_PREFIX = "genie_catch_"
+export function genieCatchCharges(): number {
+    const m = st.defeatedTrainers.find((t) => t.startsWith(GENIE_CATCH_PREFIX))
+    return m ? (Number(m.slice(GENIE_CATCH_PREFIX.length)) || 0) : 0
+}
+export function setGenieCatchCharges(n: number): void {
+    const others = st.defeatedTrainers.filter((t) => !t.startsWith(GENIE_CATCH_PREFIX))
+    st = { ...st, defeatedTrainers: n > 0 ? [...others, `${GENIE_CATCH_PREFIX}${Math.floor(n)}`] : others }
+    emit()
+}
+export function consumeGenieCatchCharge(): void { const n = genieCatchCharges(); if (n > 0) setGenieCatchCharges(n - 1) }
 /**
  * Défaite d'ACE : ratchet du pic de niveau (= max(pic, ton meilleur + 2), ne régresse
  * jamais) + mémorise le niveau du contre affronté. Verrouille la journée. Renvoie le n° de victoire.
@@ -2725,6 +2751,7 @@ export function recordAceDefeat(playerBestLevel: number, playerLastTypes: PokeTy
     const counter = bestCounter(playerLastTypes)
     const box = { ...st.aceBox, [counter]: Math.max(st.aceBox[counter] ?? 0, playerLastLevel) }
     st = { ...st, acePeakLevel: peak, aceBox: box, aceWins: wins, aceDefeatedDate: st.creditedThrough }
+    if (runMode() === "run3") setDailyMarker(ACE_RUN3_DAILY_PREFIX, `${ACE_RUN3_DAILY_PREFIX}${st.creditedThrough}_${aceRun3WinsToday() + 1}`) // RUN 3 : 3 victoires/jour
     emit()
     return wins
 }

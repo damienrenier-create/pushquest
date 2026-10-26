@@ -22,7 +22,7 @@ import { chenLabRoute } from "@/lib/gamebook/yellow/data/labDialogues"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave, canAbandonNgplus } from "@/lib/gamebook/yellow/store/saveManager"
 import {
-    PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
+    PHYSICAL_DEFIS, physEnergyBase, physEnergyRewardLabel, QUOTA2X_MULT,
     ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, CT_DEFI_POWER_MULT, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
     physScaledTarget, physScaledReward, pushupDefiVariant,
 } from "@/lib/gamebook/yellow/data/labDefis"
@@ -115,11 +115,11 @@ export default function LabPanel() {
             setMsg(`✅ Quota doublé ! Tes énergies de demain seront ×${QUOTA2X_MULT}.`)
         } else if (activePhys.kind === "squat150") {
             markSquat150Done() // one-shot à vie (pas de scaling)
-            const got = grantReps(PHYSICAL_ENERGY_REWARD); logEnergyIncome("🏋️ Défi physique", got)
+            const got = grantReps(physEnergyBase(ngplus)); logEnergyIncome("🏋️ Défi physique", got) // run 2 : ×5
             setMsg(`✅ Défi réussi ! +${got} énergie.`)
         } else {
             // pushup1h : défi répétable → récompense scalée (×1,05 par réussite) puis on durcit le suivant.
-            const got = grantReps(physScaledReward(PHYSICAL_ENERGY_REWARD, wins)); logEnergyIncome("🏋️ Défi physique", got)
+            const got = grantReps(physScaledReward(physEnergyBase(ngplus), wins)); logEnergyIncome("🏋️ Défi physique", got) // run 2 : base ×5
             recordPhysWin(activePhys.kind)
             setMsg(`✅ Défi réussi ! +${got} énergie. Le prochain sera un cran plus dur. 💪`)
         }
@@ -242,7 +242,7 @@ export default function LabPanel() {
                                         const tgt = scaled ? physScaledTarget(x.target!, w, pv.growth) : 0
                                         const title = scaled ? `${tgt} ${pv.word} en 1 heure` : x.label
                                         const desc = scaled ? `Encode ${tgt} ${pv.word} dans l'heure qui suit le lancement.` : x.desc
-                                        const reward = scaled ? `+${physScaledReward(PHYSICAL_ENERGY_REWARD, w)} énergie${w > 0 ? ` · palier ${w + 1}` : ""}` : x.reward
+                                        const reward = scaled ? `+${physScaledReward(physEnergyBase(ngplus), w)} énergie${w > 0 ? ` · palier ${w + 1}` : ""}` : (x.kind === "squat150" ? physEnergyRewardLabel(ngplus) : x.reward)
                                         return (
                                             <Card key={x.kind} title={title} desc={desc} reward={reward}>
                                                 <button onClick={() => startPhys(x.kind)} disabled={busy} style={primary}>Lancer</button>

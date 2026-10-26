@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
+import { genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -695,6 +695,22 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     raiseRepsCap(RUN3_ENERGY_CAP - 1000)  // = raiseRepsCap(0) : cap reste 1000
     grantReps(RUN3_START_ENERGY, true)    // reps → 500 (force : seule source autorisée avec les recharges d'arène)
     // 4) Flush immédiat (les champs plats = run 1 inchangés → garde-fou OK).
+    await persistNow()
+    return true
+}
+
+/** NOUVEAU DÉPART du run 3 (décision Sartay du 26/10/2026, pour Kingme : 63 ⚡, aucun badge → concours perdu d'avance).
+ *  Depuis le run 3 ACTIF et SANS badge uniquement : le monde run 3 repart de zéro (nouveau starter, 500 ⚡, sac
+ *  cross-run reporté), les runs 1 et 2 gelés et le Pokédex global ne bougent pas. Un run 3 déjà entamé (badge) ne se
+ *  recommence pas : ce serait effacer un score. */
+export async function restartRun3(starter: MonInstance): Promise<boolean> {
+    if (getActiveWorld() !== "run3") return false
+    if (getPlayer().badges.length > 0) return false
+    const catchLeft = genieCatchCharges() // 🧞 captures garanties (vœu) : le compteur suit le joueur dans son nouveau départ
+    startRun3World(starter)
+    setBerrySecretKnown()
+    if (catchLeft > 0) setGenieCatchCharges(catchLeft)
+    grantReps(RUN3_START_ENERGY, true)
     await persistNow()
     return true
 }

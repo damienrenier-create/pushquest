@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge } from "./playerStore"
 import { getItem } from "../data/items"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
@@ -31,6 +31,7 @@ import { run3ArenaBossTeam } from "../data/run3Bosses"
 import { run3ArenaForBoss, RUN3_BOAT_ENERGY } from "../data/run3Arenas"
 import { bossEnemyKey, leagueEnemyKey, boatBossSlot } from "../data/run3Score"
 import { BOAT_BADGE, BOAT_BOSS_IDS, BOAT_KEY_LINES, ARENA_KEY_ITEM_ID, KEY_GUARD_TRAINER_ID, isBoatTrainer, boatArenaCleared, gymBadgeCount, boatCtForRun, boatCtLine } from "../data/boatArena"
+import { RUN3_TIP_CAPTURE_MARKER } from "../data/run3Tips"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies, registerCustomSpecies } from "../data/species"
@@ -156,6 +157,7 @@ interface BattleStoreState {
     /** Message de don de la Pierre Gékroc (mini-boss Centrale) → notification post-combat ; null sinon. */
     stoneReward: string | null
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
+    run3Tip: "capture" | null // RUN 3 : rappel des règles du concours par le Dieu Spag (1re capture sauvage), transitoire
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
     loopOffer: boolean // BOUCLE ENDGAME : capture d'Ukognofy OU sacre OR → proposer de recréer son Daemon & rejouer le run 1 (transitoire)
     fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
@@ -222,7 +224,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, fusionDefeat: null, platineSacre: false, platineDefeat: false, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, run3Tip: null, fusioBallOffer: false, loopOffer: false, fusionParentReward: null, fusionSacre: null, fusionDefeat: null, platineSacre: false, platineDefeat: false, megamonarxReveal: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -813,7 +815,11 @@ export function submitPlayerAction(action: PlayerAction) {
             paidMoveCost = cost
         }
     }
-    const next = resolveTurn(battle, action)
+    // 🧞 VŒU « CAPTURES GARANTIES » (Kingme) : tant qu'il reste des charges, un lancer de Ball est garanti (drapeau lu par le
+    //   moteur) ; une charge part à chaque CAPTURE réussie (un lancer bloqué — fusion sans Fusio-Ball — ne coûte rien).
+    const genieCatch = action.kind === "ball" && genieCatchCharges() > 0
+    const next = resolveTurn(genieCatch ? { ...battle, genieCatchGuaranteed: true } : battle, action)
+    if (genieCatch) { if (next.outcome === "caught") consumeGenieCatchCharge(); next.genieCatchGuaranteed = false }
     // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
     // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
@@ -1063,6 +1069,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   à la 1re CAPTURE, le Dieu Spag rappelle que c'est le Daemon qu'étudie CHEN (→ Magmator → Magnetor).
     //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
     let lavapetitTeaser: "seen" | "caught" | null = null
+    let run3Tip: "capture" | null = null // RUN 3 : rappel des règles à la 1re capture sauvage du concours
     let fusioBallOffer = false // posé au sacre de la Ligue de Fusion (offre d'achat Fusio-Ball par le Dieu Spaghetti)
     let fusionSacre: { tier: string; team: FusionChampionMon[] } | null = null // roster vainqueur à graver au Hall of Fame
     let megamonarxReveal = false // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vainqueur → cinématique de transcendance (client)
@@ -1071,6 +1078,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         const pl = getPlayer()
         if (b.outcome === "caught" && !pl.run3LavapetitCaught) { markRun3LavapetitCaught(); lavapetitTeaser = "caught" }
         else if (!pl.run3LavapetitSeen && !pl.run3LavapetitCaught) { markRun3LavapetitSeen(); lavapetitTeaser = "seen" }
+    }
+    // 🍝 RUN 3 — RAPPEL DES RÈGLES à la 1re CAPTURE sauvage du concours (Kingme, 26/10/2026 : il ignorait que l'arène 1 le
+    //   rechargerait à 500 ⚡ et a vidé sa réserve sur les sauvages). Marqueur per-monde (une fois) ; rejeu run 3 inclus.
+    if (effectiveRunWorld() === "run3" && b.isWild && b.outcome === "caught" && !isTrainerDefeated(RUN3_TIP_CAPTURE_MARKER)) {
+        markTrainerDefeated(RUN3_TIP_CAPTURE_MARKER)
+        run3Tip = "capture"
     }
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).
@@ -1441,6 +1454,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 // BONUS de l'arène ÉLECTRIK (arène Dragon ; 4e badge avant le bateau, 5e depuis) : +100 reps EN PLUS de la recharge, pour TOUT LE MONDE
                 //   (choix Sartay 08/09). Forcé (le run 3 bloque les gains non-forcés) ; 1×/run (le badge est one-shot).
                 if (badgeAwarded === "elec") logEnergyIncome("🏅 Badge Électrik run 3", grantReps(100, true))
+                // BONUS de l'arène FEU (arène 3) : +100 reps EN PLUS de la recharge — le BATEAU (arène 4) est loin (Grotte Gelée
+                //   + Plage + 6 combats). Décision Sartay du 26/10/2026. Forcé ; 1×/run (badge one-shot).
+                if (badgeAwarded === "feu") logEnergyIncome("🏅 Badge Feu run 3", grantReps(100, true))
             }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
@@ -1923,7 +1939,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (shinyFadeLines.length) rematchReward = rematchReward
         ? { ...rematchReward, lines: [...rematchReward.lines, ...shinyFadeLines] }
         : { npcId: DUEL_DREAM_NPC, npcName: "🧞 LE GÉNIE", lines: shinyFadeLines }
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, platineSacre, platineDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && (!isFusionTrial || isFusionLeague), sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, nemesisLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, run3Tip, fusioBallOffer, loopOffer, fusionParentReward, fusionSacre, fusionDefeat, platineSacre, platineDefeat, megamonarxReveal, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -2492,6 +2508,13 @@ export function useLavapetitTeaser(): BattleStoreState["lavapetitTeaser"] {
 }
 export function clearLavapetitTeaser() {
     setStore({ lavapetitTeaser: null })
+}
+/** RUN 3 — rappel des règles du concours à afficher post-combat ('capture'), ou null. */
+export function useRun3Tip(): BattleStoreState["run3Tip"] {
+    return useSyncExternalStore(subscribe, () => getSnapshot().run3Tip, () => getSnapshot().run3Tip)
+}
+export function clearRun3Tip() {
+    setStore({ run3Tip: null })
 }
 
 /** LIGUE DE FUSION — le Dieu Spaghetti propose-t-il l'achat d'une Fusio-Ball (post-sacre, transitoire) ? */

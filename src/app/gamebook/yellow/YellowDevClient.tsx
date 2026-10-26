@@ -74,7 +74,7 @@ import { getGauntletTeam } from "@/lib/gamebook/yellow/store/fusionGauntlet"
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useFusionDefeat, clearFusionDefeat, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getNemesisLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useRun3Tip, clearRun3Tip, useFusioBallOffer, clearFusioBallOffer, useLoopOffer, clearLoopOffer, useFusionParentReward, clearFusionParentReward, useFusionSacre, clearFusionSacre, useFusionDefeat, clearFusionDefeat, useMegamonarxReveal, clearMegamonarxReveal, usePnj6TradeOffer, clearPnj6TradeOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine, aceNoCalepinTease } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -84,7 +84,7 @@ import { ALL_BADGE_IDS } from "@/lib/gamebook/yellow/data/badges"
 import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
 import { repsUnit, repsIcon, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, restartRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
 import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBoughtCount, fusioShopMarkersFor } from "@/lib/gamebook/yellow/data/fusionLeaguePerks"
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
@@ -123,6 +123,7 @@ import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER, historyFusions, fusionPairError, NON_FUSABLE_IDS } from "@/lib/gamebook/yellow/data/fusiodex"
 import { EPILOGUE_INTRO_LINES, fusionEpilogueQuests } from "@/lib/gamebook/yellow/data/fusionEpilogue"
 import { shopPrice, BOURSE_INTRO_LINES, BOURSE_SHOP_LINES, BOURSE_INTRO_MARKER, BOURSE_SHOP_MARKER } from "@/lib/gamebook/yellow/data/shopPricing"
+import { RUN3_TIP_CAPTURE_LINES, RUN3_TIP_SHOP_LINES, RUN3_TIP_SHOP_MARKER, run3RestartOfferAllowed, run3RestartOfferLines } from "@/lib/gamebook/yellow/data/run3Tips"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { LAMP_ITEM_ID, LAMP_RUBBED_MARKER } from "@/lib/gamebook/yellow/data/genieLamp"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
@@ -404,6 +405,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
     const [run3Offer, setRun3Offer] = useState<{ score: number; bestGrade: number } | null>(null)
     const [run3StarterChoice, setRun3StarterChoice] = useState(false) // RUN 3 : choix du starter (les 3 lignées)
+    const [run3RestartOffer, setRun3RestartOffer] = useState<number | null>(null) // RUN 3 : offre de NOUVEAU DÉPART (énergie au moment de l'offre)
+    const run3RestartOfferedRef = useRef(false) // une seule offre par session
+    const run3RestartModeRef = useRef(false)    // le prochain choix de starter = nouveau départ (restartRun3), pas un lancement
     const [run3EndOffer, setRun3EndOffer] = useState<{ score: number; reason: "energy" | "master" } | null>(null) // RUN 3 : fin (0⚡ OU sacre du Maître) → méga-fusion forcée
     const run3EndTriggeredRef = useRef(false) // anti double-déclenchement de completeRun3 (async, bascule activeWorld)
     const run = useRun()
@@ -494,6 +498,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const rematchReward = useRematchReward()
     const stoneReward = useStoneReward()
     const lavapetitTeaser = useLavapetitTeaser() // RUN 3 : teaser Dieu Spag Lavapetit (post-combat)
+    const run3Tip = useRun3Tip() // RUN 3 : rappel des règles du concours (1re capture sauvage)
     const fusioBallOffer = useFusioBallOffer() // LIGUE DE FUSION : offre Fusio-Ball du Dieu Spaghetti (post-sacre)
     const loopOffer = useLoopOffer() // BOUCLE ENDGAME : offre « recrée ton Daemon & repars » (post-capture Ukognofy / sacre OR)
     const fusionParentReward = useFusionParentReward() // LIGUE DE FUSION : XP reversée aux parents (fin de combat)
@@ -509,7 +514,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const myArenaLevel = player.team.reduce((m, x) => Math.max(m, x.level), 0)
     const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel, gameMode, player.defeatedTrainers.includes(AUTEL_VISITED_MARKER))
     const [arenaFight, setArenaFight] = useState<{ opp: ArenaOpponent; mode: ArenaMode; enemy: MonInstance[] } | null>(null)
-    const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
+    const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId, myArenaLevel) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F) ; jamais plus forts que toi
     // PALIER PLATINE : charge le couloir (ACE + salles des champions + Maître en titre) à l'entrée de la salle
     //   du trône, et l'oublie en sortant. Sans lui, la salle n'a aucun adversaire à présenter.
     const platineCorridor = usePlatineCorridor(mapPlayer.mapId) // effet (charge/oublie le couloir) ET état affiché
@@ -688,6 +693,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (!shopOpen) return
         fetch("/api/gamebook/yellow/shop-time").then((r) => r.json()).then((d) => { if (typeof d?.hour === "number") setBourseHour(d.hour) }).catch(() => { /* hors-ligne : repli heure client */ })
+        // 🍝 RUN 3 — RAPPEL DES RÈGLES à la 1re entrée en boutique du concours (26/10/2026) : pas d'énergie à vendre, l'arène 1 recharge à 500.
+        if (effectiveRunWorld() === "run3" && !getPlayer().defeatedTrainers.includes(RUN3_TIP_SHOP_MARKER)) {
+            closeShop()
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [...RUN3_TIP_SHOP_LINES])
+            markTrainerDefeated(RUN3_TIP_SHOP_MARKER); persistYellowSave()
+            return
+        }
         if (getPlayer().run3Used && !getPlayer().defeatedTrainers.includes(BOURSE_SHOP_MARKER)) {
             closeShop() // le Dieu Spaghetti t'interpelle À l'entrée (sinon le dialogue passe derrière la modale) → tu rouvres après
             showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, BOURSE_SHOP_LINES)
@@ -1648,6 +1660,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore, bestGrade: run2Sc.bestGrade })
+            // 📖 CALEPIN : les infos de fin de run 2 (score, choix fusion / run 3) survivent à la fenêtre (Sartay 26/10/2026).
+            logDialogueMessage("spaghetti_fin_run", "🏁 FIN DU RUN 2", [
+                `Tu boucles ta seconde vie avec ${ngplusScore}⚡ en réserve. Ton MEILLEUR score du run 2, ${run2Sc.bestGrade}/1000, est gravé au classement du Nexus.`,
+                "Deux voies : 🍝 FUSIONNER maintenant (tes deux vies n'en font plus qu'une, tous tes anciens Daemons rejoignent ton PC) — OU 🔥 lancer le RUN 3, le concours : 500⚡ pour tout faire, ni casino ni cadeaux, score = Σ des niveaux ennemis vaincus, et la méga-fusion des 3 vies à la fin.",
+                "Tant que tu n'as pas choisi, la fenêtre revient à chaque connexion.",
+            ], getCurrentMapId() ?? undefined)
+            persistYellowSave()
         } else {
             // Ton ancien toi t'a battu : tu n'es pas Maître. Il faut REFAIRE la Ligue (rebattre les 5, puis re-affronter
             // l'ancienne équipe). Le marqueur "Maître battu" a été retiré par battleStore → le combat final n'est plus
@@ -1673,7 +1692,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (player.reps >= minMoveCost && !beatMaster) return
         if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
         run3EndTriggeredRef.current = true
-        setRun3EndOffer({ score: run3Score(player.run3Defeated ?? []), reason: beatMaster ? "master" : "energy" })
+        const endScore = run3Score(player.run3Defeated ?? [])
+        setRun3EndOffer({ score: endScore, reason: beatMaster ? "master" : "energy" })
+        // 📖 CALEPIN : l'issue du concours + ce que la méga-fusion va faire (Sartay 26/10/2026 : « beaucoup zappent ces infos »).
+        logDialogueMessage("spaghetti_fin_run", "🏁 FIN DU RUN 3", [
+            beatMaster ? `Tu as terrassé LE MAÎTRE de la Ligue : le concours s'achève dans la gloire. Score gravé : ${endScore}.` : `Ton énergie est épuisée : le concours s'achève ici. Score gravé : ${endScore}.`,
+            "🍝 MÉGA-FUSION : tes trois vies (run 1 + run 2 + run 3) n'en font plus qu'UNE. Ton équipe du concours reste active ; tous tes anciens Daemons, objets et CT te reviennent (PC d'un Centre Daemon).",
+            "Ensuite : cap au SUD de Ville Jaune (SYLVEBARBE) → la ZONE DE COMBAT, l'OR au DÔME, puis le MARCHAND ouvre la GROTTE DU NEXUS (50 Jetons de Combat) → l'ULTIME Ligue au fond de son dédale.",
+        ], getCurrentMapId() ?? undefined)
+        persistYellowSave()
     }, [activeWorld, player.reps, player.isChampion, player.run3Defeated, battle, evolutions.length, championRun, dialogue, pendingLearn, newDexEntry, run3EndOffer])
 
     // SACRE run 1 → une fois le dialogue-défi du Dieu des Nouilles refermé, on OUVRE le créateur en mode FORCÉ.
@@ -1962,6 +1989,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearLavapetitTeaser()
         }
     }, [lavapetitTeaser, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, run3EndOffer, showDialogue])
+    // 🍝 RUN 3 — RAPPEL DES RÈGLES à la 1re capture sauvage du concours (26/10/2026) : écran libre, après la fiche de capture.
+    useEffect(() => {
+        if (run3Tip && !battle && !newDexEntry && evolutions.length === 0 && !pendingLearn && !dialogue && !championRun && !run3EndOffer) {
+            showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", [...RUN3_TIP_CAPTURE_LINES])
+            clearRun3Tip()
+        }
+    }, [run3Tip, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, run3EndOffer, showDialogue])
+    // 🍝 RUN 3 — NOUVEAU DÉPART (décision Sartay 26/10/2026, Kingme) : concours perdu d'avance (aucun badge, réserve sous le
+    //   seuil) → le Dieu Spaghetti propose UNE fois par session de tout recommencer. Le choix du starter enchaîne (restartRun3).
+    useEffect(() => {
+        if (!hydrated || run3RestartOfferedRef.current || battle || dialogue || evolutions.length > 0 || run3StarterChoice || run3EndOffer) return
+        const p = getPlayer()
+        if (!run3RestartOfferAllowed(nickname, getActiveWorld(), p.badges, p.reps)) return
+        run3RestartOfferedRef.current = true
+        setRun3RestartOffer(p.reps)
+    }, [hydrated, battle, dialogue, evolutions.length, run3StarterChoice, run3EndOffer, activeWorld, nickname])
 
     // LIGUE DE FUSION — OFFRE FUSIO-BALL (Dieu Spaghetti) au sacre : modale d'achat post-combat, une fois l'écran
     // LIBRE (après l'annonce de victoire du reflet + toute cinématique) pour ne rien écraser.
@@ -2328,15 +2371,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         let starter
         try { starter = createMonInstance(starterId, 5, { owned: true }) }
         catch { setToast("Starter introuvable — run 3 impossible."); return }
-        const ok = await startRun3(starter)
-        if (!ok) { setToast("Run 3 réservé au Champion du run 2."); return }
+        // NOUVEAU DÉPART (Dieu Spaghetti, concours perdu d'avance) : on REPART le run 3 actif au lieu d'en lancer un depuis le run 2.
+        const restart = run3RestartModeRef.current
+        run3RestartModeRef.current = false
+        const ok = restart ? await restartRun3(starter) : await startRun3(starter)
+        if (!ok) { setToast(restart ? "Nouveau départ impossible : ce concours a déjà un badge." : "Run 3 réservé au Champion du run 2."); return }
         markCaught(starterId); markCaughtThisRun(starterId) // le starter run 3 entre au Pokédex (comme le run 1) — sinon sa base disparaît dès qu'il évolue
         setRun3StarterChoice(false)
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le run 3 démarre au tout début
         const nm = getSpecies(starterId)?.name ?? "Ton champion"
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
-            `*Un éclair de pâte incandescente. ${nm} s'éveille à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
+            `*Un éclair de pâte incandescente. ${nm} s'éveille à tes côtés, niveau 5 — ${restart ? "NOUVEAU DÉPART du concours, et cette fois tu connais les règles" : "pour la TROISIÈME vie"}.*`,
             getGameMode() === "fun"
                 ? "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de cadeaux, pas de récompenses d'énergie : chaque attaque puise dans ta réserve. »"
                 : "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
@@ -4251,6 +4297,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* RUN 3 — FIN DU CONCOURS (0⚡ OU sacre du Maître) : méga-fusion 3-voies FORCÉE (un seul bouton). */}
+            {run3RestartOffer !== null && (
+                <div style={menuOverlayStyle}>
+                    <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🍝 UN NOUVEAU DÉPART ?</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
+                            {run3RestartOfferLines(run3RestartOffer).map((l, i) => <div key={i} style={{ marginBottom: 6 }}>{l}</div>)}
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => { setRun3RestartOffer(null); run3RestartModeRef.current = true; setRun3StarterChoice(true) }}>🔁 Recommencer le run 3</button>
+                        <button style={{ ...menuBtnStyle, opacity: 0.8 }} onClick={() => setRun3RestartOffer(null)}>Plus tard</button>
+                    </div>
+                </div>
+            )}
             {run3EndOffer && (
                 <div style={menuOverlayStyle}>
                     <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>

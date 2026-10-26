@@ -149,7 +149,7 @@ export const BLESSING_QUEUE_MAX = 20
 // ───────── Montée en difficulté des défis physiques répétables ─────────
 /** Cible ×1,1 par réussite (le défi devient plus dur à chaque fois). */
 export const PHYS_TARGET_GROWTH = 1.1
-/** RUN 2 : rampe de difficulté ×1,2 (au lieu de ×1,1) pour le défi répétable — même récompense qu'en run 1. */
+/** RUN 2 : rampe de difficulté ×1,2 (au lieu de ×1,1) pour le défi répétable — récompense ×5 (physEnergyBase). */
 export const PHYS_TARGET_GROWTH_NGPLUS = 1.2
 /** Récompense énergie ×1,05 par réussite (augmente moins vite que la difficulté). */
 export const PHYS_REWARD_GROWTH = 1.05
@@ -159,7 +159,7 @@ export function physScaledTarget(base: number, wins: number, growth: number = PH
 }
 
 /** DÉFI RÉPÉTABLE "pushup1h" selon le monde : run 1 = POMPES / rampe ×1,1 ; run 2 = SQUATS / rampe ×1,2.
- *  Le mot d'affichage, l'exercice validé serveur et la rampe changent ; base (50) et récompense inchangées. */
+ *  Le mot d'affichage, l'exercice validé serveur et la rampe changent ; base (50) inchangée, récompense ×5 (physEnergyBase). */
 export function pushupDefiVariant(ngplus: boolean): { exercise: "PUSHUP" | "SQUAT"; word: string; growth: number } {
     return ngplus
         ? { exercise: "SQUAT", word: "squats", growth: PHYS_TARGET_GROWTH_NGPLUS }
@@ -240,6 +240,13 @@ export const PHYSICAL_DEFIS: PhysicalDefi[] = [
 
 /** Récompense énergie des défis physiques 1 & 2. */
 export const PHYSICAL_ENERGY_REWARD = 100
+/** RUN 2 : les défis physiques de Chen rapportent 5× plus (Sartay 26/10/2026 : « beaucoup plus d'énergie, 5× plus ») —
+ *  l'économie du run 2 est ×10 (10000 ⚡ de départ) et la rampe de difficulté y est plus raide (×1,2). */
+export const PHYSICAL_ENERGY_REWARD_MULT_NGPLUS = 5
+/** Base de récompense d'un défi physique selon le monde : run 1 = 100 ⚡ · run 2 = 500 ⚡ (puis ×1,05 par réussite pour le répétable). */
+export function physEnergyBase(ngplus: boolean): number { return ngplus ? PHYSICAL_ENERGY_REWARD * PHYSICAL_ENERGY_REWARD_MULT_NGPLUS : PHYSICAL_ENERGY_REWARD }
+/** Libellé de récompense d'un défi physique à énergie fixe (squat150), selon le monde. */
+export function physEnergyRewardLabel(ngplus: boolean): string { return `+${physEnergyBase(ngplus)} énergie` }
 /** Multiplicateur du défi 3 (énergies de demain ×3). */
 export const QUOTA2X_MULT = 3
 

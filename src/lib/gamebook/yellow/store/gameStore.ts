@@ -60,6 +60,7 @@ import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { trainerSpotting, TRAINER_ALERT_MS } from "../data/trainerSight"
 import { NGPLUS_ARENA_TEAMS, NGPLUS_ARENA_NPCS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { run3ArenaName, run3ArenaIntro, run3ArenaDefeat, isRun3ArenaNpc } from "../data/run3ArenaNpcs"
 import { ALL_BADGE_IDS } from "../data/badges"
 import { BOAT_BADGE, KEY_GUARD_TRAINER_ID, KEY_GUARD_NPC_ID, KEY_GUARD_NAME, KEY_GUARD_SPRITE, KEY_GUARD_MAP_ID, KEY_GUARD_POS, KEY_GUARD_STORY_LINES, KEY_GUARD_CHALLENGE_LINES, keyGuardActive, withImpliedAncre, gymBadgeCount } from "../data/boatArena"
 import { run2ArenaIntro, run2ArenaDefeat } from "../data/ngplusArenaDialogue"
@@ -128,10 +129,14 @@ export function activeNpcs() {
         sprite: { emoji: "🏄", color: "#2aa5d0" }, initialX: SURFER_POS.x, initialY: SURFER_POS.y,
         dialoguesAfter: ["Yo, dude ! 🏄"],
     }]
+    // RUN 3 — les 25 PNJ d'arène sont PEINTS dans le fond de chaque arène re-thémée : hitbox déplacée (run3X/run3Y), AUCUN
+    //   sprite/emoji dessiné par-dessus (hideSprite, lu par MapView), et NOM du run 3 pour les gardiens (cf. run3ArenaNpcs ;
+    //   les boss gardent le nom du champion, posé au dialogue). Avant le 26/10/2026 : nom + sprite du run 1 par-dessus le fond.
     if (effectiveRunWorld() === "run3") {
-        list = list.map((n) => (n.run3X != null
-            ? { ...n, initialX: n.run3X, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" } }
-            : n))
+        list = list.map((n) => {
+            if (n.run3X == null && !isRun3ArenaNpc(n.id)) return n
+            return { ...n, initialX: n.run3X ?? n.initialX, initialY: n.run3Y ?? n.initialY, sprite: { ...n.sprite, emoji: "" }, hideSprite: true, name: run3ArenaName(n.id) ?? n.name }
+        })
     }
     // RUN 2 — RE-SKIN des dresseurs d'arène (ex. arène VOL) : nouveau NOM + planche Gen 3 (rendue par MapView via
     //   npc.gen3, qui prime sur NPC_SPRITES). Positions inchangées. Hors run 2 : liste intacte.
@@ -1122,9 +1127,11 @@ function arenaIntroLines(t: { id: string; intro: string[]; introFun?: string[] }
     // MODE FUN : intro sans allusion à l'effort réel quand le dresseur en a une (cf. Trainer.introFun).
     const intro = getGameMode() === "fun" && t.introFun ? t.introFun : t.intro
     if (t.id === "y_fusion_platine") return platineOpponentIntro() ?? intro
+    if (effectiveRunWorld() === "run3") return run3ArenaIntro(t.id) ?? intro // RUN 3 : gardiens re-thémés (Glace, Combat, Spectre, Dragon, Multi)
     return (effectiveRunWorld() === "ngplus" ? run2ArenaIntro(t.id, getPlayerSave().team) : null) ?? intro
 }
 function arenaDefeatLines(t: { id: string; defeat: string[] }): string[] {
+    if (effectiveRunWorld() === "run3") return run3ArenaDefeat(t.id) ?? t.defeat
     return (effectiveRunWorld() === "ngplus" ? run2ArenaDefeat(t.id) : null) ?? t.defeat
 }
 

@@ -15,6 +15,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { leagueWorldForSacre, leagueHofVisible } from "@/lib/gamebook/yellow/data/leagueHof"
 
 export const dynamic = "force-dynamic"
 
@@ -24,6 +25,14 @@ async function requireYellow() {
     if (!userId) return { ok: false as const, status: 401 }
     if (!(await isNexusYellowEnabled(userId))) return { ok: false as const, status: 404 }
     return { ok: true as const, userId }
+}
+
+/** Le joueur a-t-il atteint le RUN FUSION (méga-fusion de fin de run 3 faite) ? Lecture directe du blob flags. */
+async function playerRun3Used(userId: string): Promise<boolean> {
+    try {
+        const row = await (prisma as any).gamebookProgress.findUnique({ where: { userId_chapterId: { userId, chapterId: YELLOW_CHAPTER_ID } }, select: { flags: true } })
+        return (row?.flags as { run3Used?: unknown } | null)?.run3Used === true
+    } catch { return false }
 }
 
 // Liste des champions (Hall of Fame partagé), du plus récent au plus ancien.
@@ -39,7 +48,9 @@ export async function GET() {
         })) as { userId: string; nickname: string; team: string; wonAt: Date; world: string | null }[]
         // Les sacres de FUSION vivent dans la même table (world "fusion:*") mais ont leur propre onglet
         //   (fusion-hall-of-fame) → on les EXCLUT ici pour ne pas polluer le HoF de la Ligue classique.
-        const filtered = rows.filter((r) => !(r.world ?? "").startsWith("fusion:")).slice(0, 150)
+        // « RUN 1 · APRÈS FUSION » (live_post, 26/10/2026) : servi SEULEMENT à un spectateur arrivé au run fusion (run3Used).
+        const viewerRun3Used = await playerRun3Used(auth.userId)
+        const filtered = rows.filter((r) => leagueHofVisible(r.world, viewerRun3Used)).slice(0, 150)
         // AVATARS COURANTS : un reflet run-2 (PNJ-joueur de la Grotte) doit afficher le SKIN ACTUEL du joueur
         //   (chosenAvatar), pas un Red générique. On joint GamebookProgress.flags par userId (best-effort).
         const uids = [...new Set(filtered.map((r) => r.userId).filter(Boolean))]
@@ -74,15 +85,17 @@ export async function POST(req: NextRequest) {
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     // L'équipe est gelée côté client (ChampionMon[]) ; on la stocke telle quelle (bornée), sans la croire pour autre chose.
     const team = Array.isArray(body.team) ? body.team.slice(0, 6) : []
-    // Run du sacre (whitelist stricte, défaut "live") → HoF Ligue séparé par run.
-    const world = body.world === "ngplus" || body.world === "run3" ? body.world : "live"
-
     try {
         const lc = (prisma as any).leagueChampion // tables gated, créées par db:push
         const eg = (prisma as any).leagueEnergyGrant
         // Pseudo du champion TRUSTÉ serveur (jamais le client).
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
+        // Run du sacre (whitelist stricte). RUN 1 : le palmarès ne garde que le PREMIER sacre d'un joueur ; un re-sacre, ou
+        //   un sacre par un joueur déjà au run fusion (run3Used), part dans « RUN 1 · APRÈS FUSION » (26/10/2026). Les
+        //   deux sont lus SERVEUR (flags + table), jamais crus du client. L'énergie offerte aux autres ne change pas.
+        const alreadyLive = ((await lc.count({ where: { userId: auth.userId, world: "live" } })) as number) > 0
+        const world = leagueWorldForSacre(body.world, await playerRun3Used(auth.userId), alreadyLive)
 
         await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team), world } })
         // Nb total de sacres de CE joueur (= nb de lignes) → le client débloque la CT Souffle Primordial à 10.

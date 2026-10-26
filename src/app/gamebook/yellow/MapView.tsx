@@ -1026,10 +1026,13 @@ function NpcSprite({
     screenPos,
     overrideSprite,
 }: {
-    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string }; gen3?: { url: string; col?: number; row?: number; tint?: string } }
+    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string }; gen3?: { url: string; col?: number; row?: number; tint?: string }; hideSprite?: boolean }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     overrideSprite?: { url: string; frames: number; h?: number }
 }) {
+    // PNJ PEINT dans le fond de la carte (arènes du run 3) : rien à dessiner par-dessus — ni planche, ni sprite du run 1,
+    //   ni emoji. Sans ça, les gardes du run 1 se superposaient aux PNJ du run 3 (signalement Sartay 26/10/2026).
+    if (npc.hideSprite && !overrideSprite) return null
     // TON DOUBLE (salle dorée run 2) : rendu SPÉCIAL = le sprite du JOUEUR (de face) nimbé d'un HALO MAUVE.
     //   (Le boss de Ligue n'est plus un reflet : c'est le Dieu Spaghetti, rendu via son sprite/emoji normal.)
     if (npc.id === "y_ligue_double") {

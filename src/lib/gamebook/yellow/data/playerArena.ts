@@ -192,10 +192,21 @@ export const ARENA_LEVEL_GAP_CAP = 15
  *  en Ville Jaune à ± 25 pour qu'un joueur de fin de partie trouve encore des adversaires. */
 export const ARENA_LEVEL_GAP_CAP_ENDGAME = 25
 
-/** Les N joueurs (hors soi, équipe non vide) dont le niveau est le PLUS PROCHE du nôtre, ET dans la borne d'écart. */
+/** REFLETS PLUS FORTS QUE TOI — JAMAIS affichés (Sartay 26/10/2026, « pour ne pas décourager ») : un joueur dont
+ *  l'équipe compte au moins REFLECT_OUTCLASS_COUNT Daemons à plus de REFLECT_OUTCLASS_MARGIN niveaux AU-DESSUS de ton
+ *  Daemon le plus haut est exclu. La règle des reflets MOINS forts (borne d'écart ±) ne change pas. */
+export const REFLECT_OUTCLASS_MARGIN = 2
+export const REFLECT_OUTCLASS_COUNT = 2
+export function teamOutclasses(team: readonly { level: number }[], myLevel: number): boolean {
+    return team.filter((m) => m.level > myLevel + REFLECT_OUTCLASS_MARGIN).length >= REFLECT_OUTCLASS_COUNT
+}
+
+/** Les N joueurs (hors soi, équipe non vide) dont le niveau est le PLUS PROCHE du nôtre, ET dans la borne d'écart,
+ *  ET qui ne nous surclassent pas (teamOutclasses). */
 export function rankClosest(players: RegistryPlayer[], myUserId: string, myLevel: number, n = ARENA_OPPONENTS, maxGap = ARENA_LEVEL_GAP_CAP): RegistryPlayer[] {
     return players
         .filter((p) => p.userId !== myUserId && p.team.length > 0)
+        .filter((p) => !teamOutclasses(p.team, myLevel)) // plus fort que toi → jamais affiché
         .map((p) => ({ p, d: Math.abs(teamMaxLevel(p.team) - myLevel) }))
         .filter((x) => x.d <= maxGap) // BORNE : exclut les reflets trop loin de notre niveau (anti-OHKO du débutant)
         .sort((a, b) => a.d - b.d || a.p.userId.localeCompare(b.p.userId)) // tie-break déterministe
