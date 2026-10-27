@@ -11,6 +11,15 @@ const isGhostOrPsy = (id: string) => {
     const t = getSpecies(id)?.types ?? []
     return t.includes("SPECTRE") || t.includes("PSY")
 }
+// Exception voulue (Sartay, 27/10/2026) : POSSYL, création de Zyran, stade 1 NORMAL d'une lignée POSSÉDÉE qui finit
+//   NORMAL/SPECTRE (Nécrossum) — « la base 1 de Nécrossum, ultra rare dans la maison spectre ». On accepte donc une
+//   lignée qui DEVIENT Spectre ; tout autre intrus reste refusé.
+const finalTypes = (id: string): string[] => {
+    let s = getSpecies(id)
+    for (let g = 0; s?.evolution && g < 6; g++) s = getSpecies(s.evolution.toId)
+    return s?.types ?? []
+}
+const fitsHauntedHouse = (id: string) => isGhostOrPsy(id) || finalTypes(id).includes("SPECTRE")
 
 describe("Maison hantée — zone de rencontres", () => {
     const r = new Rng(424242)
@@ -21,9 +30,10 @@ describe("Maison hantée — zone de rencontres", () => {
         if (mon && !seen[mon.speciesId]) seen[mon.speciesId] = mon
     }
 
-    it("zone reconnue + ne fait apparaître QUE des Spectre/Psy (évolutions incluses)", () => {
+    it("zone reconnue + ne fait apparaître QUE des Spectre/Psy (évolutions incluses ; Possyl, lignée qui devient Spectre)", () => {
         expect(hasEncounters(MAP)).toBe(true)
-        for (const id of Object.keys(seen)) expect(isGhostOrPsy(id), `${id} n'est ni Spectre ni Psy`).toBe(true)
+        for (const id of Object.keys(seen)) expect(fitsHauntedHouse(id), `${id} n'est ni Spectre ni Psy`).toBe(true)
+        expect(fitsHauntedHouse("possyl")).toBe(true); expect(isGhostOrPsy("possyl")).toBe(false)
     })
 
     it("Brook (commun) apparaît au niveau 20 ; Hibouh (15-18)", () => {

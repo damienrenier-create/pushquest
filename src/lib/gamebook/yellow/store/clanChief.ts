@@ -14,7 +14,7 @@ import { createMonInstance } from "../battle/factory"
 import {
     getPlayer, getClan, joinClan, clanDaemonLevel, clanDaemonSpeciesId, isClanCtGiven, markClanCtGiven, grantBonusEnergyUncapped,
     isClanTransGiven, markClanTransGiven, rivalClanSignatureInTeam, claimClanVisitToday,
-    grantReps, addItem, grantCt, logEnergyIncome, addCaught, markCaughtThisRun, TEAM_MAX, isTrainerDefeated, markTrainerDefeated, getActiveWorld,
+    grantReps, addItem, grantCt, logEnergyIncome, addCaught, markCaughtThisRun, TEAM_MAX, isTrainerDefeated, markTrainerDefeated, getActiveWorld, effectiveRunWorld,
 } from "./playerStore"
 import { markCaught } from "./pokedexStore"
 import { persistYellowSave } from "./saveManager"
@@ -142,7 +142,7 @@ export function clanChiefPressA(npcId: string, today: string): ClanChiefResult |
         // CADEAU D'ÉNERGIE DE CLAN (one-time/monde, JAMAIS run 3) : disciple > niv 20 → +1000⚡ au membre (hors-plafond)
         //   + 500⚡ ruisselés sur les AUTRES membres fun du MÊME clan, MÊME run (broadcast serveur : gameStore → /clan-gift).
         let clanGiftBroadcast: ClanKey | undefined
-        if (getActiveWorld() !== "run3" && lvl > CLAN_ENERGY_GIFT_LEVEL && !isTrainerDefeated(CLAN_ENERGY_GIFT_MARKER)) {
+        if (effectiveRunWorld() !== "run3" && lvl > CLAN_ENERGY_GIFT_LEVEL && !isTrainerDefeated(CLAN_ENERGY_GIFT_MARKER)) { // rejeu du run 3 : pas de promesse de 1000 ⚡ non créditée
             grantBonusEnergyUncapped(1000, `${c.emoji} ${c.name} — largesse du chef`)
             markTrainerDefeated(CLAN_ENERGY_GIFT_MARKER)
             clanGiftBroadcast = clan

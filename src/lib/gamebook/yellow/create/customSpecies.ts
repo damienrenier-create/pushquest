@@ -788,6 +788,8 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmtj184wc00276w9_ewokid: ["/yellow/sprites/dex/ewokid.png", "/yellow/sprites/dex/endorix.png", "/yellow/sprites/dex/wooky.png"],
     // Dracominus → Spectragon → Thanadrak (Rob) : shiny crafté, DRAGON/SPECTRE.
     custom_cmti9xukc002h7k2_dracominus: ["/yellow/sprites/dex/dracominus.png", "/yellow/sprites/dex/spectragon.png", "/yellow/sprites/dex/thanadrak.png"],
+    // Snatchacoolt → Stealacoolt → Robacoolt (DaKumba) : raton chapardeur ÉLEC/TÉNÈBRES (canonisé le 27/10/2026).
+    custom_cmt7m9eip0009uov_snatchacoolt: ["/yellow/sprites/dex/snatchacoolt.png", "/yellow/sprites/dex/stealacoolt.png", "/yellow/sprites/dex/robacoolt.png"],
     // ANCIENNES NÉMÉSIS GÉNÉRÉES (léguées par ACE au run 2 avant le 22/10/2026) : sprites générés le 22/10 (générateur du jeu,
     //   3 stades chaînés) — elles s'affichaient en MissingNo. Plus aucune némésis générée n'est créée depuis (lignées existantes).
     // Némésis de Chadine (Kingme, « Caros ») : PLANTE/ÉLEC, l'orque-liane électrique qui finit en mante.

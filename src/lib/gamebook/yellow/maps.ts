@@ -1209,6 +1209,10 @@ function buildGelee(): TileType[][] {
     const m = GELEE_MASK.map((row) => [...row].map((ch) => (ch === "#" ? "tree" : "grass") as TileType))
     // EAU PÊCHABLE (coords validées Sartay) : l'escalier 20/6 → 21/9.
     for (const [x, y] of [[20, 6], [20, 7], [20, 8], [19, 8], [19, 9], [20, 9], [21, 9]] as const) m[y][x] = "water"
+    // BERGE de la mare (27/10/2026) : ces 4 cases sont de la glace au bord de l'eau sur gelee.png, mais le masque les
+    //   marquait « mur » → AUCUNE case marchable ne touchait l'eau : pêche impossible ici depuis le 19/08 (Têtardoc, puis
+    //   Guizer au run 3). Elles bordent l'eau sans ouvrir d'autre passage (cf. fishingWaterReachable.test.ts).
+    for (const [x, y] of [[19, 6], [19, 7], [18, 8], [18, 9]] as const) m[y][x] = "grass"
     return m
 }
 

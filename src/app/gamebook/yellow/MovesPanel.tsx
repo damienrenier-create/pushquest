@@ -12,7 +12,7 @@ import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { CTS } from "@/lib/gamebook/yellow/data/cts"
 import { SPECIES, DEX_ULTRA_SECRET, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { knownMoveIds } from "@/lib/gamebook/yellow/data/moveDexReveal"
-import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
@@ -115,7 +115,8 @@ export default function MovesPanel({ close }: { close: () => void }) {
     const dex = usePokedex()
     const player = usePlayer()
     const aw = useActiveWorld()
-    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
+    const w = aw === "replay" ? effectiveRunWorld() : aw // REJEU : le glossaire suit le tier du run rejoué
+    const isRun2 = w === "ngplus", isRun3 = w === "run3"
 
     // Attaques CONNUES (règles a-d : espèce croisée / CT achetable / CT reçue / Daemon possédé) → seules celles-ci
     //   apparaissent au glossaire. Révélation progressive, à vie (dex.seen/caught globaux + inventaire courant).

@@ -37,7 +37,7 @@ export const CHEN_FUN_GIFT_REMINDER_LINE = "« Et pour l'énergie, rien ne chang
 export type ChenRoute = "abandon" | "magnetor" | "flute" | "fun_gift" | "lab"
 export interface ChenRouteInput {
     fun: boolean            // getGameMode() === "fun"
-    world: string           // getActiveWorld() : live | ngplus | run3 | replay
+    world: string           // effectiveRunWorld() = run JOUÉ (live | ngplus | run3), rejeu compris
     canAbandon: boolean     // canAbandonNgplus() : run 2, au plus 15 combats livrés
     isChampion: boolean
     hasFlute: boolean

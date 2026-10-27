@@ -17,7 +17,7 @@
 //     le type partagé représente déjà les DEUX parents). Mono uniquement si aucun autre type dispo.
 //   • Nom : 1re moitié du nom du 1er parent (dominant) + « - » + 2e moitié du 2e.
 
-import { SPECIES, getSpecies, CANONICAL_NEMESIS } from "./species"
+import { SPECIES, getSpecies, CANONICAL_NEMESIS, CANONIZED_CUSTOM_ALIAS } from "./species"
 import { CRAFTED_SHINY_IDS } from "./craftedShinies"
 import { getMove } from "./moves"
 import type { PokeType, StatKey } from "../battle/types"
@@ -221,11 +221,17 @@ function craftedIds(): Set<string> {
         let id: string | undefined = root
         for (let guard = 0; id && guard < 6; guard++) { out.add(id); id = getSpecies(id)?.evolution?.toId }
     }
+    // Créations canonisées SANS némésis canonique (ex. Snatchacoolt de DaKumba, 27/10/2026) : leur stade FINAL est la
+    //   valeur de CANONIZED_CUSTOM_ALIAS → on remonte toute la lignée (les némésis n'y figurent jamais).
+    for (const fin of Object.values(CANONIZED_CUSTOM_ALIAS)) {
+        let id: string | undefined = fin
+        for (let guard = 0; id && guard < 6; guard++) { out.add(id); const cur: string = id; id = Object.values(SPECIES).find((s) => s.evolution?.toId === cur)?.id }
+    }
     return (_craftedIds = out)
 }
 /** Daemon CRAFTÉ : une création de joueur (n'importe quel stade de sa lignée), jamais une némésis. Une par joueur arrivé au
  *  run 2 (19/10/2026 : 11 lignées — Gavillus de Mools/Sartay, Joeyrrant, Guizer, Shady, Possyl, Bidouzen, Phoéchaud,
- *  Dracominus, Stashex, Ewokid, Chadine). Les ids custom des créateurs comptent ; les NÉMÉSIS custom (`custom_nem…`, owner
+ *  Dracominus, Stashex, Ewokid, Chadine ; + Snatchacoolt de DaKumba, canonisé le 27/10/2026). Les ids custom des créateurs comptent ; les NÉMÉSIS custom (`custom_nem…`, owner
  *  `nem_<id>`) jamais. */
 export function isCraftedStarter(speciesId?: string): boolean {
     if (!speciesId) return false

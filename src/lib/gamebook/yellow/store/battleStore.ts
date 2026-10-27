@@ -1081,7 +1081,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let fusionSacre: { tier: string; team: FusionChampionMon[] } | null = null // roster vainqueur à graver au Hall of Fame
     let megamonarxReveal = false // 🐉🪨 MÉGAMONARX : Dracolithe niv100 vainqueur → cinématique de transcendance (client)
     let pnj6TradeOffer = false // posé à la victoire sur PNJ 6 (offre d'échange Crocavern ↔ team[0])
-    if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
+    if (effectiveRunWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) { // rejeu du run 3 compris
         const pl = getPlayer()
         if (b.outcome === "caught" && !pl.run3LavapetitCaught) { markRun3LavapetitCaught(); lavapetitTeaser = "caught" }
         else if (!pl.run3LavapetitSeen && !pl.run3LavapetitCaught) { markRun3LavapetitSeen(); lavapetitTeaser = "seen" }
@@ -1129,7 +1129,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const aceLast = aceTeam[aceTeam.length - 1]
             const aceLastTypes = aceLast ? (getSpecies(aceLast.speciesId)?.types ?? []) : []
             const winNum = recordAceDefeat(avg, aceLastTypes, aceLast?.level ?? avg)
-            const run3 = getActiveWorld() === "run3"
+            const run3 = effectiveRunWorld() === "run3" // rejeu du run 3 : même barème (ni reps ni ticket, déjà non versés sous ses règles)
             const r = aceReward(winNum, run3, getGameMode() === "fun") // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie) ; fun : « énergies »
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) logEnergyIncome("⚔️ Rival (ACE)", grantReps(r.reps))
@@ -1195,7 +1195,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             markTrainerRematched(id)
             // RUN 2 — REVANCHE d'arène (équipe run 1 +N) : re-donne la CT CLASSIQUE du run 1 (boss uniquement,
             // 2e CT de l'arène en run 2) + le ticket d'arène (30). Les gardes : juste l'honneur.
-            const revBoost = getActiveWorld() === "ngplus" ? arenaRevancheBoost(id) : null
+            const revBoost = effectiveRunWorld() === "ngplus" ? arenaRevancheBoost(id) : null // rejeu du run 2 compris
             if (revBoost != null) {
                 if (t?.badge) markTrainerDefeated("ach_arena_revanche") // HAUT FAIT (run 2) : 1re revanche d'arène (boss run-1 boosté) remportée
                 // CT « classique » de l'arène : soit un giftCt direct (Druide/Granit/Pyra/Ondine), soit — pour
@@ -1244,7 +1244,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else if (storeState.trainer.trainerId === HH_COLLECTOR_ID) {
             // COLLECTIONNEUR : réaffrontable (PAS de markTrainerDefeated). Pas de badge → tout (récompense +
             // progression) est annoncé via rematchReward, fiable post-combat.
-            if (getActiveWorld() === "run3") {
+            if (effectiveRunWorld() === "run3") { // rejeu du run 3 compris (même dialogue côté gameStore)
                 // RUN 3 (Maison COMBAT) : la CT ultime « Mitra-Poing » (ct58) si le joueur a un GAMARUTO en équipe.
                 const hasGamaruto = b.player.team.some((m) => m.speciesId === "gamaruto")
                 const mv = getMove(getCt("ct58")?.moveId ?? "")?.name ?? "Mitra-Poing"
@@ -1285,8 +1285,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // escalade le niveau (+10/victoire). 1re victoire → cadeau Orcaline ; battre le niv 95 → ball.
             const winsBefore = recordOrcalineDefeat()
             const levelBeaten = orcalineLevelForWins(winsBefore)
-            const ngplus = getActiveWorld() === "ngplus"
-            const run3 = getActiveWorld() === "run3"
+            const ngplus = effectiveRunWorld() === "ngplus" // cadeau = celui du run JOUÉ (dialogue et équipe le suivent déjà)
+            const run3 = effectiveRunWorld() === "run3"
             const dlg = orcalineTrainerDialogue(effectiveRunWorld()) // run 2 → Panthégel ; run 3 → ÉLEVEUR (rejeu → run rejoué)
             const lines: string[] = []
             if (winsBefore === 0) {
@@ -1447,7 +1447,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             recordTrainerWinNoKo(b.player.team.filter((m) => m.currentHp <= 0).length) // série « 10 victoires sans KO subi »
             resetFoeLossStreak(storeState.trainer.trainerId) // une victoire casse la série « 3 défaites d'affilée vs le même »
             const t = getTrainer(storeState.trainer.trainerId)
-            const inNgplus = getActiveWorld() === "ngplus"
+            const inNgplus = effectiveRunWorld() === "ngplus" // rejeu du run 2 : CT signature + ticket du boss, comme au vrai run 2
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
             // ⚓ ARÈNE 4 = LE BATEAU (21/10/2026) : pas UN boss mais tout l'équipage. Le badge ANCRE tombe quand les 4
             //   matelots ET les 2 boss sont battus (n'importe quel ordre) ; le dernier vaincu remet aussi la CLÉ volée
@@ -1482,11 +1482,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
             //     RUN 3 : AUCUN ticket (concours sans casino/roulette) → run 1 uniquement.
-            if (badgeAwarded && getActiveWorld() === "live") grantRouletteTicket(ARENA_TICKET_VALUE)
+            if (badgeAwarded && effectiveRunWorld() === "live") grantRouletteTicket(ARENA_TICKET_VALUE) // rejeu du run 1 : ticket de la bulle
             // CT CADEAU (trophée du boss) — RUN 1 UNIQUEMENT. En RUN 2, le boss ne redonne PAS la CT du run 1
             // (ça n'a aucun sens : elle est déjà acquise) → il n'offre QUE sa signature exclusive (ci-dessous).
             // En RUN 3 : le boss = équipe gelée d'un joueur, AUCUN cadeau (badge + palier d'énergie SEULEMENT).
-            if (t?.giftCt && getActiveWorld() === "live" && grantCt(t.giftCt)) {
+            if (t?.giftCt && effectiveRunWorld() === "live" && grantCt(t.giftCt)) { // rejeu du run 1 : CT dans la bulle
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }
@@ -1540,7 +1540,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
             //     En NG+ ET en RUN 3, les arènes re-typées / boss figés sont des combats UNIQUES → pas de phase 2
             //     (sinon VOLTA enchaînerait sur sa vraie phase-2 hors-score qui draine l'énergie du concours).
-            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch && !inNgplus && getActiveWorld() !== "run3") chainRematchId = storeState.trainer.trainerId
+            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch && !inNgplus && effectiveRunWorld() !== "run3") chainRematchId = storeState.trainer.trainerId
         }
     }
 

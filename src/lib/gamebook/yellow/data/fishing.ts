@@ -43,10 +43,23 @@ export function fishingRareOfHour(hour: number): string {
     const h = ((Math.floor(hour) % 24) + 24) % 24
     return h >= 8 && h < 20 ? "osquille" : "ro"
 }
-/** RARE pêché selon le PLAN D'EAU + le RUN : ONIRAIL (Eau/Fée) à CENDREVILLE en RUN 3 uniquement (exclusif),
+/** NIVEAU d'un RARE qui ÉVOLUE (Guizer, 27/10/2026) : on pêche l'espèce ANNONCÉE, au stade 1 → niveau plafonné juste sous
+ *  sa 1re évolution (jamais un stade 1 au-dessus de son niveau d'évolution). Les rares sans évolution (Osquille, Rô,
+ *  Onirail) gardent leur niveau tel quel. */
+export function fishingRareLevelFor(speciesId: string, level: number): number {
+    const method = getSpecies(speciesId)?.evolution?.method
+    return method && method.kind === "LEVEL" ? Math.max(2, Math.min(level, method.level - 1)) : level
+}
+/** GUIZER (Grotte Gelée, run 3) : part des prises RARES de cette eau qui sont un Guizer. Sartay 27/10/2026 : « Guizer
+ *  (le rare) 12 % descend à 3 % » → 1/4 du tier rare (12 % par lancer à effort neutre) = 3 % des lancers ; les 3/4
+ *  restants gardent le rare habituel (Osquille de jour, Rô de nuit), comme dans les autres eaux. */
+export const GUIZER_RARE_SHARE = 0.25
+/** RARE pêché selon le PLAN D'EAU + le RUN : ONIRAIL (Eau/Fée) à CENDREVILLE en RUN 3 (exclusif) ; GUIZER (Eau/Glace,
+ *  création de Task1) à la GROTTE GELÉE en RUN 3, une prise rare sur quatre (`rand` ∈ [0,1) < GUIZER_RARE_SHARE) ;
  *  sinon le rare horaire habituel (Osquille jour / Rô nuit). */
-export function fishingRareOfMap(mapId: string, run: string, hour: number): string {
+export function fishingRareOfMap(mapId: string, run: string, hour: number, rand: number): string {
     if (mapId === "yellow_cendreville" && run === "run3") return "onirail"
+    if (mapId === "yellow_grotte_gelee" && run === "run3" && rand < GUIZER_RARE_SHARE) return "guizer" // « pêché dans le run 3 uniquement, dans la grotte glacée »
     return fishingRareOfHour(hour)
 }
 

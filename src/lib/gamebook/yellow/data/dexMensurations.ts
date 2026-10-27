@@ -552,6 +552,10 @@ export const DEX_SIZE: Record<string, DexSize> = {
     dracominus: { size: [0.5, 0.8], weight: [5, 12], weightMode: "special", quip: "La taille d'un chat, le poids d'une brume : il passe la porte sans qu'on ait besoin de l'ouvrir — et ce n'est pas le plus inquiétant." },
     spectragon: { size: [1.6, 2.3], weight: [40, 85], weightMode: "special", quip: "Deux mètres d'ailes en lambeaux qui ne devraient pas porter grand-chose. Elles portent très bien. Les lois de la physique ont préféré ne pas insister." },
     thanadrak: { size: [3.4, 4.8], weight: [150, 320], weightMode: "special", quip: "Grand comme une maison hantée, léger comme sa légende : plus un spécimen est parfait, moins il pèse — comme si la mort elle-même s'allégeait en lui." },
+    // 238-240 · Snatchacoolt / Stealacoolt / Robacoolt (ELEC/TENEBRES) — création de DaKumba : raton chapardeur, mur trapu.
+    snatchacoolt: { size: [0.35, 0.55], weight: [4, 9], quip: "La taille d'un chat de gouttière, des poches qui n'existent pas mais toujours pleines : on le pèse, on récupère trois pièces et une clé." },
+    stealacoolt: { size: [0.65, 0.95], weight: [12, 24], quip: "Le poids d'un gros chien… dont un bon tiers en couronnes, sceptres et colliers qui ne lui appartiennent pas." },
+    robacoolt: { size: [1.2, 1.7], weight: [55, 110], quip: "Bas sur pattes et lourd comme un coffre-fort, ce qui tombe bien : il en a souvent un sous le bras. Sa queue, à elle seule, ferait tourner une centrale." },
 }
 
 /** Fourchette de mensurations d'une espèce, ou null si pas encore définie. */

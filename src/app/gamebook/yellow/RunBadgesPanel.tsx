@@ -5,7 +5,7 @@
 // Accessible dès le run 1 (contrairement au leaderboard, gaté post-run-1).
 
 import { useEffect, useState } from "react"
-import { getPlayer, getGameMode, getActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, getGameMode, effectiveRunWorld, getActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { BADGES, TIER_EMOJI, TIER_POINTS, TIER_EMOJI_FUN, TIER_POINTS_FUN, MEDAL_EMOJI, BADGE_REPS, evaluateBadges, badgeInputFromSave, funTierOf, type BadgeTier, type TierFun } from "@/lib/gamebook/yellow/data/run1Badges"
 import { evaluateRun2Badges, RUN2_BADGE_REPS } from "@/lib/gamebook/yellow/data/run2Badges"
@@ -25,8 +25,8 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
     const p = getPlayer()
     const dex = getPokedex()
     const fun = getGameMode() === "fun" // barème 8 paliers + médailles au lieu du barème 5-tiers
-    const isRun2 = getActiveWorld() === "ngplus" // Remix → échelle des hauts faits RUN 2
-    const isRun3 = getActiveWorld() === "run3"   // Concours → hauts faits « GUIDE » (ni énergie ni points)
+    const isRun2 = effectiveRunWorld() === "ngplus" // Remix → échelle des hauts faits RUN 2 (rejeu du run 2 : idem, affichage seul)
+    const isRun3 = effectiveRunWorld() === "run3"   // Concours → hauts faits « GUIDE » (ni énergie ni points) ; rejeu du run 3 : idem
 
     // MODE FUN — médailles de rapidité (GET best-effort) : badgeId → or/argent/bronze. RUN 1 UNIQUEMENT (le run 2 se
     //   classe à la performance /1000 + reps, pas aux médailles) → on ne fetch même pas en Remix.
@@ -104,6 +104,10 @@ export default function RunBadgesPanel({ close }: { close: () => void }) {
             ? "Chaque trophée affiche « X pts · Y⚡ » : les PTS font ton SCORE au classement (par palier) ; les ⚡ sont l'ÉNERGIE qu'il rapporte, créditée à part au compte-gouttes à la connexion (🍝 Dieu Spaghetti). 🥇🥈🥉 = médaille de rapidité (1ᵉʳ/2ᵉ/3ᵉ à décrocher le trophée) ; 🏅×N = places de médaille ENCORE LIBRES (dépêche-toi !), « 🏅 prises » = les 3 sont parties. Gris = pas encore obtenu."
             : "Les badges secrets 🔒 apparaissent en gris dès que tu croises le contenu, puis se colorent une fois obtenus."
     }
+
+    // BULLE DE REJEU : les hauts faits ne versent RIEN (le versement se fait au monde réel, cf. YellowDevClient) → le pied
+    //   de page ne promet plus d'énergie ; les ⚡ affichés restent la valeur du haut fait dans le run d'origine.
+    if (getActiveWorld() === "replay" && !isRun3) footNote = "🔁 Rejeu : ces hauts faits sont pour l'honneur. Aucune énergie n'est versée pendant un rejeu (les ⚡ affichés sont ceux du run d'origine)."
 
     return (
         <div style={S.overlay} onClick={close}>

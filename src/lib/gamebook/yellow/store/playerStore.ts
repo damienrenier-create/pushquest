@@ -32,7 +32,7 @@ import { LAMP_ITEM_ID, genieFxMarker, GENIE_PERSISTENT_EFFECT_KINDS } from "../d
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, PATE_LUXE_VOLEUR_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "../data/items"
 import { IV_MAX } from "../data/ivConfig"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
@@ -1803,7 +1803,7 @@ export function applyAcceptedGenieWishEffects(row: {
     // RUN 3 (concours, économie scellée) : SEULS les effets de GENIE_RUN3_ALLOWED_KINDS s'appliquent — un vœu qui en contient
     //   un autre reste en attente du retour dans un vrai monde. Avant le 26/10/2026 TOUT était refusé en run 3 : Kingme a
     //   accepté « 5 captures garanties » en plein concours et n'a jamais reçu ses charges.
-    const inRun3 = getActiveWorld() === "run3"
+    const inRun3 = effectiveRunWorld() === "run3" // run 3 ET rejeu du run 3 : même sceau ; le blocage des vœux NEUFS en rejeu reste plus bas (getActiveWorld)
     const wishes = [
         { acc: row.accepted1, fx: row.effect1, mark: genieFxMarker(1, row.round), cond: row.condition1 },
         { acc: row.accepted2, fx: row.effect2, mark: genieFxMarker(2, row.round), cond: row.condition2 },
@@ -2960,17 +2960,25 @@ function applyLuxeOutcome(mon: MonInstance, outcome: LuxeOutcome): MonInstance {
 /** Utilise UNE Pâte de Luxe sur `uid` (équipe OU PC). VERROUILLÉ : 1×/Daemon (reason "locked" ensuite → passer par un
  *  Tiramisu). L'issue vient de la file pré-tirée (cadeau) sinon 50/50 générique. STOCKE les IV d'ORIGINE (luxeIvsBackup)
  *  avant de re-tirer (jamais de hard-delete → restauration possible). Consomme 1 objet. Renvoie l'issue. */
-export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "introuvable" | "locked"; outcome?: LuxeOutcome } {
-    if ((st.items[PATE_LUXE_ITEM_ID] ?? 0) <= 0) return { ok: false, reason: "none" }
+export function useLuxePasta(uid: string, itemId: string = PATE_LUXE_ITEM_ID): { ok: boolean; reason?: "none" | "introuvable" | "locked"; outcome?: LuxeOutcome } {
+    // PÂTE DU VOLEUR (Sartay 27/10/2026) : TROIS issues égales, 1/3 shiny+parfait, 1/3 parfait, 1/3 rang D ; elle ne touche PAS la
+    //   file pré-tirée des cadeaux du génie (réservée aux Pâtes de Luxe classiques).
+    const thiefPasta = itemId === PATE_LUXE_VOLEUR_ITEM_ID
+    if (!thiefPasta && itemId !== PATE_LUXE_ITEM_ID) return { ok: false, reason: "none" }
+    if ((st.items[itemId] ?? 0) <= 0) return { ok: false, reason: "none" }
     let inTeam = true
     let idx = st.team.findIndex((m) => m.uid === uid)
     if (idx < 0) { idx = st.pc.findIndex((m) => m.uid === uid); inTeam = false }
     if (idx < 0) return { ok: false, reason: "introuvable" }
     const orig = (inTeam ? st.team : st.pc)[idx]
     if (orig.luxeUsed) return { ok: false, reason: "locked" } // déjà pâté → verrou définitif (rattrapage via Tiramisu)
-    const queue = st.luxeOutcomeQueue ?? []
-    const outcome: LuxeOutcome = queue.length > 0 ? (queue[0] as LuxeOutcome) : (Math.random() < 0.5 ? "perfect" : "min")
-    const nextQueue = queue.length > 0 ? queue.slice(1) : queue
+    const fullQueue = st.luxeOutcomeQueue ?? []
+    const queue = thiefPasta ? [] : fullQueue
+    const roll = Math.random()
+    const outcome: LuxeOutcome = thiefPasta
+        ? (roll < 1 / 3 ? "shiny_perfect" : roll < 2 / 3 ? "perfect" : "min")
+        : queue.length > 0 ? (queue[0] as LuxeOutcome) : (roll < 0.5 ? "perfect" : "min")
+    const nextQueue = thiefPasta ? fullQueue : queue.length > 0 ? queue.slice(1) : queue
     const arr = (inTeam ? st.team : st.pc).slice()
     const rolled = applyLuxeOutcome(orig, outcome)
     rolled.luxeUsed = true // verrou 1×/Daemon
@@ -2978,7 +2986,7 @@ export function useLuxePasta(uid: string): { ok: boolean; reason?: "none" | "int
     arr[idx] = rolled
     const items: Record<string, number> = {}
     for (const [k, v] of Object.entries(st.items)) {
-        if (k === PATE_LUXE_ITEM_ID) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
+        if (k === itemId) { if (v - 1 > 0) items[k] = v - 1 } else items[k] = v
     }
     st = inTeam ? { ...st, team: arr, items, luxeOutcomeQueue: nextQueue } : { ...st, pc: arr, items, luxeOutcomeQueue: nextQueue }
     emit()
@@ -3454,7 +3462,7 @@ export function settleBlackjack(payout: number, net: number): void {
  *  Retourne le NOM de l'attaque débloquée (pour la célébration UI) si le palier vient d'être franchi, sinon null.
  *  Idempotent : le flag blackjackCtClaimed empêche tout re-don, même si grantCt échoue (CT déjà possédée). */
 export function claimBlackjackCt(): string | null {
-    if (getActiveWorld() === "ngplus") return null // RUN 2 : l'Apothéose est remplacée par les picks de CT de boss (cf. ci-dessous)
+    if (effectiveRunWorld() === "ngplus") return null // RUN 2 (et rejeu du run 2) : l'Apothéose est remplacée par la récompense unique (cf. ci-dessous)
     if (st.labDefi.blackjackCtClaimed) return null
     if (st.labDefi.blackjackWon < BLACKJACK_CT_TARGET) return null
     st = { ...st, labDefi: { ...st.labDefi, blackjackCtClaimed: true } }
@@ -3474,8 +3482,14 @@ export function blackjackNgplusChoices(): string[] {
 }
 /** La récompense UNIQUE est-elle disponible ? (run 2, seuil de 1000 ⚡ atteint, JAMAIS encore réclamée, et il
  *  reste au moins une CT à prendre). Une seule fois pour tout le run 2. */
+/** TRANSITION (27/10/2026) : bulle de rejeu du run 2 ouverte AVANT que le casino suive le run joué, qui a déjà touché
+ *  l'Apothéose (lot du run 1) → pas de 2e lot (blackjackNgplusPickPending), et le panneau l'affiche comme obtenu. */
+export function blackjackLegacyApotheoseInReplay(): boolean {
+    return getActiveWorld() === "replay" && st.labDefi.blackjackCtClaimed
+}
 export function blackjackNgplusPickPending(): boolean {
-    if (getActiveWorld() !== "ngplus") return false
+    if (effectiveRunWorld() !== "ngplus") return false // rejeu du run 2 compris
+    if (blackjackLegacyApotheoseInReplay()) return false
     if (st.labDefi.blackjackNgplusPicks >= 1) return false // déjà réclamée une fois → plus jamais
     return st.labDefi.blackjackWon >= BLACKJACK_CT_NGPLUS_TARGET && blackjackNgplusChoices().length > 0
 }
@@ -3811,9 +3825,19 @@ export function playTicketSpin(betCase: number): CasinoTicketResult {
  *  (labDefi, PAR MONDE : remis à zéro en NG+) débloque l'un OU l'autre aux MÊMES paliers (1000 / 5000).
  *  Source unique partagée par le don, le shiny et l'UI (labo/croupier/roulette) → jamais de nom incohérent. */
 export function casinoPillar(): { species: string; name: string; emoji: string } {
-    return getActiveWorld() === "ngplus"
+    return effectiveRunWorld() === "ngplus" && !legacyTonytonyPillarInReplay() // rejeu du run 2 : Merorem, comme au vrai run 2
         ? { species: MEROREM_SPECIES, name: "Merorem", emoji: "🦠" }
         : { species: TONYTONY_SPECIES, name: "Tonytony", emoji: "🥚" }
+}
+
+/** TRANSITION (27/10/2026) : bulle de rejeu du run 2 ouverte AVANT que le casino suive le run joué, dont le pilier reçu à
+ *  1000 ⚡ est un TONYTONY (et aucun Merorem possédé) → labo, croupier, roulette et shiny à 5000 gardent « Tonytony ».
+ *  Une bulle neuve reçoit, affiche et fait briller un Merorem. */
+function legacyTonytonyPillarInReplay(): boolean {
+    // Trace DURABLE du don (pas la possession actuelle, qui change si le joueur relâche ou échange) : grantTonytony fait
+    //   markCaughtThisRun(espèce remise) ; caughtThisRun est propre à la bulle (remis à zéro au départ) et aucun échange ne
+    //   l'alimente. Un TONYTONY y figure seulement si la bulle l'a reçu en pilier avant le correctif.
+    return getActiveWorld() === "replay" && st.labDefi.tonytonyClaimed && st.caughtThisRun.includes(TONYTONY_SPECIES)
 }
 
 /**
@@ -3841,7 +3865,7 @@ export function makeTonytonyShiny(): "team" | "pc" | "new" | null {
     // Invariant : on ne peut rendre shiny QUE si le pilier de base a déjà été réclamé (1000⚡). L'UI le garantit
     // déjà, mais on le verrouille aussi ici (défense en profondeur : pas de shiny gratuit sans le don de base).
     if (d.tonytonyShiny || !d.tonytonyClaimed || d.casinoTotalWon < TONYTONY_SHINY_TARGET) return null
-    const species = casinoPillar().species // run 2 → Merorem, sinon Tonytony
+    const species = casinoPillar().species // run 2 → Merorem, sinon Tonytony (bulle du run 2 d'avant le 27/10 : Tonytony reçu)
     const ti = st.team.findIndex((m) => m.speciesId === species)
     if (ti >= 0) {
         const team = st.team.slice(); team[ti] = { ...team[ti], shiny: true }

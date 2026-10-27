@@ -18,8 +18,10 @@ describe("bonus des créateurs : deux Daemons craftés (Sartay 19/10/2026)", () 
         expect(isCraftedStarter("custom_nemcmti9xukc002h_nemesisdedracomi_s2")).toBe(false) // némésis custom de Rob
         expect(isCraftedStarter("custom_cmti9xukc002h7k2_dracominus_s3")).toBe(true) // le Dracominus custom de Rob
     })
-    it("une création par joueur arrivé au run 2 : les 11 stades finaux sont craftés, leurs némésis non", () => {
+    it("une création par joueur arrivé au run 2 : les 11 stades finaux sont craftés, leurs némésis non (+ DaKumba, 27/10/2026)", () => {
         for (const id of ["alirocaillus", "kangoudead", "mobyd", "shadow", "necrossum", "karatame", "phoechaudiii", "thanadrak", "stashex3", "wooky", "lesleo"]) expect(isCraftedStarter(id), id).toBe(true)
+        // Snatchacoolt de DaKumba, canonisé sans némésis canonique : toute sa lignée compte, comme son id custom.
+        for (const id of ["snatchacoolt", "stealacoolt", "robacoolt", "custom_cmt7m9eip0009uov_snatchacoolt_s3"]) expect(isCraftedStarter(id), id).toBe(true)
         for (const id of ["goatiny", "mouflorage", "otama", "uzumaro", "caninombre", "tenebrir", "charolyx", "sepulcru", "obscurene", "brasicow"]) expect(isCraftedStarter(id), id).toBe(false)
     })
     it("Thanadrak × Moby D : génétique boostée ; un crafté avec un Daemon normal : génétique normale", () => {

@@ -73,7 +73,7 @@ import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_PASS_MARKER_PREFIX, ACE_PASS_MAX_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
-import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
+import { CAVE_TRADER_ID, CAVE_TRADE_R3_MARKER, caveTradeConfig, caveTradeDoneForRun } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, HH_KID_DAY_LINES_RUN3, HH_KID_NOON_LINES, isHhKidNight, isHhKidDawn, isHhKidNoon } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_MAP_ID, SURFER_POS, SURFER_TEAM, SURFER_SPECIES_GATE, SURFER_CHALLENGE_LINES, SURFER_NOT_READY_LINES, SURFER_DONE_TODAY_LINES, SURFER_DONE_LINES, SURFER_NO_TEAM_LINES, SURFER_GALIJAH_HINT, ISLAND_TOO_EARLY_LINES } from "../data/surferTrainer"
@@ -82,7 +82,7 @@ import { ANANAS_NPC_ID, ANANAS_TRAINER_ID, buildAnanasTeam, ananasTargetLevel, a
 import { repsUnit, notEnoughReps } from "../data/energyWords"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_ROD_GIFT_LINES_FUN, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
-import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
+import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevelFor, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
@@ -1291,7 +1291,7 @@ function tryLaunchUkognofy(): ActiveDialogue | null {
 function doHhTrade(giveUid: string): ActiveDialogue | null {
     const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const ngplus = getActiveWorld() === "ngplus"
+    const ngplus = effectiveRunWorld() === "ngplus" // RUN JOUÉ (rejeu du run 2 → Morrow, comme l'offre de pressA)
     const receiveId = ngplus ? HH_TRADE_RECEIVE : HH_TRADE_RECEIVE_RUN1 // run 2 = Morrow ; run 1 = Rochison (trade-évo)
     const received = createMonInstance(receiveId, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve l'investissement Saiyan (Rochison trade-évo ET Morrow)
@@ -1324,15 +1324,25 @@ function doAquilordTrade(giveUid: string): ActiveDialogue | null {
 
 // DÉNICHEUR (Route Nord) : donne un COMMUN → reçoit un BÉLUNODE (base lignée Léviathonn) au MÊME niveau
 // + MÊMES points Saiyan (récompense de l'investissement). Bélunode évolue ensuite en Sonarque → Léviathonn.
+// DÉNICHEUR — l'échange est-il déjà fait DANS CE RUN ? Le drapeau caveTradeDone est per-monde. Mais en REJEU du run 3, avant le
+//   27/10/2026, le Dénicheur testait le monde RÉEL (« replay ») et proposait l'échange du RUN 1 (Limaroche→Bélunode), en posant
+//   caveTradeDone (cas DaKumba) : on re-propose alors UNE fois le bon échange (Ruffiant→Marmoterre), tracé par CAVE_TRADE_R3_MARKER.
+//   Un vrai monde run 3 n'a jamais eu ce bug → son drapeau suffit.
+function caveTradeAlreadyDone(r3: boolean): boolean {
+    return caveTradeDoneForRun(!!getPlayerSave().caveTradeDone, r3, getActiveWorld() === "run3", isTrainerDefeated(CAVE_TRADE_R3_MARKER))
+}
+
 function doCaveTrade(giveUid: string): ActiveDialogue | null {
     const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const cfg = caveTradeConfig(getActiveWorld() === "run3") // run 3 = ruffiant→marmoterre ; sinon limaroche→belunode
+    const r3 = effectiveRunWorld() === "run3" // RUN JOUÉ (un rejeu du run 3 = le marché du run 3)
+    const cfg = caveTradeConfig(r3) // run 3 = ruffiant→marmoterre ; sinon limaroche→belunode
     const received = createMonInstance(cfg.receive, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
     if (owner.shiny) { received.shiny = true; markTrainerDefeated("ach_trade_shiny") } // NE JAMAIS détruire un shiny à l'échange + HAUT FAIT run 2
     executeTrade(giveUid, received)             // retire le donné, ajoute le reçu
     markCaveTradeDone()                          // échange unique (per-monde) → ne se reproposera plus
+    if (r3) markTrainerDefeated(CAVE_TRADE_R3_MARKER) // le BON échange du run 3 est fait (répare les rejeux touchés par l'ancien bug)
     persistYellowSave()
     return { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: cfg.done }
 }
@@ -1365,9 +1375,9 @@ function tryLaunchAce(): ActiveDialogue | null {
     // CLIQUET : le niveau d'ACE est FIGÉ entre deux défaites (aceBattleLevel). Il ne monte
     // qu'APRÈS sa défaite (recordAceDefeat) — fini la recalibration à chaque rencontre.
     // NG+ (2e run) : ACE sort la contre-lignée NÉMÉSIS + trio thématisé (tonytony/enclumind/tortoracle) au lieu du Panthéon.
-    const ngplus = getActiveWorld() === "ngplus"
+    const ngplus = effectiveRunWorld() === "ngplus" // RUN JOUÉ : un rejeu du run 2 affronte l'ACE du run 2
     // RUN 3 : ACE sort le STARTER qui CONTRE le tien (triangle) comme némésis, rétro-évolué à son niveau.
-    const run3 = getActiveWorld() === "run3"
+    const run3 = effectiveRunWorld() === "run3"
     const nemesisSpeciesId = ngplus ? (getNgplusNemesisSpeciesId() ?? undefined) : run3 ? (getRun3AceNemesis() ?? undefined) : undefined
     // ⚓ Panthères d'ACE : paliers calibrés sur 5 arènes (3 → 1 évoluée, 4 → 2, 5 → 3) → le badge du bateau n'en compte pas.
     const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: gymBadgeCount(getPlayerSave().badges), ngplus, run3, nemesisSpeciesId })
@@ -1709,7 +1719,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const shiny = Math.random() < fishingShinyChance(biteAt)
         let speciesId: string, level: number, hard: boolean
         if (tier === "geaucke") { speciesId = GEAUCKE_ID; level = GEAUCKE_LEVEL; hard = true }
-        else if (tier === "rare") { speciesId = fishingRareOfMap(get().map.id, run, new Date().getHours()); level = fishingRareLevel(badges, avg, Math.random(), Math.random()); hard = true } // Onirail à Cendreville run 3, sinon Osquille/Rô horaire
+        else if (tier === "rare") { speciesId = fishingRareOfMap(get().map.id, run, new Date().getHours(), Math.random()); level = fishingRareLevelFor(speciesId, fishingRareLevel(badges, avg, Math.random(), Math.random())); hard = true } // Onirail à Cendreville run 3, sinon Osquille/Rô horaire
         else { const postSylve = run !== "run1" || getPlayerSave().sylvebarbeAwake; speciesId = fishingCommon(get().map.id, run, Math.random(), postSylve); level = fishingLevel(avg, Math.random()); speciesId = speciesAtLevel(speciesId, level); hard = false } // stade NATUREL du niveau ; TÉNÈBRES (Obscurène/Cendreville) hors run 1 pré-Sylvebarbe
         // IV « PRÉVUS » (priorité au TEMPS D'ATTENTE, cf. fishingBaseIvs) ; le FERRAGE au mashing les remonte. Shiny → parfait (factory).
         set({ fishing: { dir: player.direction, biteAt, catch: { speciesId, level, shiny, hard, baseIvs: fishingBaseIvs(biteAt, Math.random) } } })
@@ -2240,7 +2250,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
                 // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
                 // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.
-                if (getActiveWorld() === "run3" && targetMapId === "yellow_centrale") run3CentralePity = { count: 0, hSeen: false, kSeen: false }
+                if (effectiveRunWorld() === "run3" && targetMapId === "yellow_centrale") run3CentralePity = { count: 0, hSeen: false, kSeen: false } // même test que le comptage
                 // (Le RÉ-ARM du gardien de la Grotte du Nexus se fait dans setMap — l'entrée de la grotte passe par le
                 //   passeur → setMap(PNJ5_MAP_ID), jamais par ce bloc move()/newMap. Cf. setMap.)
                 // Mémorise l'origine en ENTRANT dans un intérieur partagé (→ retour dynamique +
@@ -2906,7 +2916,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Cailloutchi, Séisme — pertinente tant que l'arène est 100% Élec). En RUN 2/3 l'arène est RE-TYPÉE
         // (Insecte/Spectre en run 2, Dragon en run 3) → cette antisèche serait PÉRIMÉE : on ouvre à la place
         // le carrousel stratégique AUTO-CALCULÉ (arenaInfo/run3ArenaInfo, run-aware) comme les autres panneaux.
-        if (npc.id === "y_elecarena_sign" && (getActiveWorld() === "ngplus" || getActiveWorld() === "run3")) {
+        if (npc.id === "y_elecarena_sign" && (effectiveRunWorld() === "ngplus" || effectiveRunWorld() === "run3")) {
             set({ arenaInfoOpen: "elec" })
             return
         }
@@ -2976,7 +2986,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const fun = getGameMode() === "fun"
             const save = getPlayerSave()
             const route = chenLabRoute({
-                fun, world: getActiveWorld(), canAbandon: canAbandonNgplus(), isChampion: save.isChampion,
+                fun, world: effectiveRunWorld(), canAbandon: canAbandonNgplus(), isChampion: save.isChampion, // RUN JOUÉ ; l'abandon reste sur le monde réel
                 hasFlute: (save.items["daemonflute"] ?? 0) > 0, sylvebarbeAwake: save.sylvebarbeAwake,
             })
             // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
@@ -3044,8 +3054,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             // CENDREVILLE → MAÎTRE DES CAPACITÉS (réapprentissage payant). VILLE JAUNE → l'assistant (aiguillage récompenses).
             if (npc.id === "y_move_tutor") { set({ moveReminderOpen: true }); return }
-            const assistantLines = getActiveWorld() === "run3" ? LAB_ASSISTANT_LINES_RUN3
-                : getActiveWorld() === "ngplus" ? LAB_ASSISTANT_LINES_NGPLUS : LAB_ASSISTANT_LINES
+            const assistantLines = effectiveRunWorld() === "run3" ? LAB_ASSISTANT_LINES_RUN3
+                : effectiveRunWorld() === "ngplus" ? LAB_ASSISTANT_LINES_NGPLUS : LAB_ASSISTANT_LINES
             set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: assistantLines } })
             return
         }
@@ -3359,7 +3369,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // BROCANTEUR (maison hantée) — WORLD-AWARE. RUN 1 → Roctaur→ROCHISON (trade-évo) ; RUN 2 → Roctaur→MORROW ;
         // RUN 3 → PLUS de Roctaur : uniquement le service AQUILOTHAN→AQUILORD. (Post-game live : Aquilord ET Roctaur.)
         if (npc.id === HH_TRADER_ID) {
-            const world = getActiveWorld()
+            const world = effectiveRunWorld() // RUN JOUÉ (même choix que doHhTrade)
             // SERVICE PREMIUM (post-game : live OU run 3) : un AQUILOTHAN en équipe → trade-évo en AQUILORD (interlude
             //   Mimimoy → amorce son roaming). Prioritaire sur le service Roctaur (le joueur l'apporte exprès).
             if (world === "live" || world === "run3") {
@@ -3389,8 +3399,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         // DÉNICHEUR (Route Nord) : run 1/2 = LIMAROCHE→Bélunode ; run 3 = RUFFIANT→Marmoterre. UNE SEULE FOIS (per-monde).
         if (npc.id === CAVE_TRADER_ID) {
-            const cfg = caveTradeConfig(getActiveWorld() === "run3")
-            if (getPlayerSave().caveTradeDone) {
+            const r3 = effectiveRunWorld() === "run3" // RUN JOUÉ : en rejeu du run 3, le marché du run 3 (bug corrigé le 27/10/2026)
+            const cfg = caveTradeConfig(r3)
+            if (caveTradeAlreadyDone(r3)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: cfg.already } })
                 return
             }
@@ -3473,7 +3484,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
         if (npc.id === HH_COLLECTOR_ID) {
             // RUN 3 (Maison COMBAT) : le Collectionneur enseigne MITRA-POING (ct58) à qui lui montre un GAMARUTO.
-            if (getActiveWorld() === "run3") {
+            if (effectiveRunWorld() === "run3") { // rejeu du run 3 compris (même test que la victoire, battleStore)
                 if (getPlayerSave().ownedCts.includes("ct58")) {
                     set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ["Tu maîtrises déjà Mitra-Poing, disciple du crapaud. 🐸"] } })
                     return
@@ -3539,7 +3550,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // RUN 2 & RUN 3 : verrou DÉSACTIVÉ (=== "live" seulement) — le run 2 boucle l'arène re-typée sans
             //   revanche ; le run 3 reframe le boss en champion figé (pas de revanche = « combat unique »). Sinon
             //   VOLTA (élec) forcerait 4 revanches + une phase-2 hors-score qui draineraient l'énergie du concours.
-            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id) && getActiveWorld() === "live") {
+            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id) && effectiveRunWorld() === "live") { // rejeu du run 1 : verrou aussi
                 const restants = trainer.requiresRematch.filter((id) => !isTrainerRematched(id)).length
                 if (restants > 0) {
                     set({
@@ -3569,7 +3580,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 return
             }
             if (isTrainerDefeated(trainer.id)) {
-                const inNgplus = getActiveWorld() === "ngplus"
+                const inNgplus = effectiveRunWorld() === "ngplus" // rejeu du run 2 : revanches du run 2 (paiement aligné, battleStore)
                 // RUN 2 — REVANCHE (combat séparé) : re-parler à un dresseur d'arène déjà battu (re-typé) propose
                 // sa revanche = son équipe RUN 1 d'origine +N. Une seule fois (rematchedTrainers, per-monde).
                 if (inNgplus && arenaRevancheBoost(trainer.id) != null && !isTrainerRematched(trainer.id)) {
@@ -3665,7 +3676,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_AQUILORD_CANCEL_LINES }, pendingAquilordTrade: null })
         } else if (get().pendingCaveTrade) {
             // Ⓑ = RENONCER à l'échange : on ne troque RIEN, le Daemon donné reste dans l'équipe.
-            set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: caveTradeConfig(getActiveWorld() === "run3").cancel }, pendingCaveTrade: null })
+            set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: caveTradeConfig(effectiveRunWorld() === "run3").cancel }, pendingCaveTrade: null })
         } else if (get().pendingHhCollector) {
             set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
         } else if (get().pendingCombatShop) {

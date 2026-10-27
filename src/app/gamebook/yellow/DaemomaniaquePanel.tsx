@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { usePlayer, useActiveWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, effectiveRunWorld, consultDaemomaniaque, freeConsultsLeft, CONSULT_COST, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getSpecies, visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
@@ -53,7 +53,10 @@ export default function DaemomaniaquePanel() {
 
     // RUN FUSION (run 4) = live POST-Champion (avant run 3). Distinct du run 1 (pré-Champion) : mêmes cartes live mais
     //   la plaine + la Grotte du Nexus + le rattrapage inédits run 3 s'ouvrent → « pas tout à fait les mêmes Daemons ».
-    const mode: Mode = aw === "ngplus" ? "run2" : aw === "run3" ? "run3" : player.run3Used ? "post" : player.isChampion ? "run4" : "run1"
+    // REJEU : le guide suit le RUN REJOUÉ (Sartay 27/10/2026) — une bulle du run 2 lit le run 2, une bulle du run 3 le run 3
+    //   (et non le sélecteur « post », que le drapeau run3Used de la bulle déclencherait à tort).
+    const w = aw === "replay" ? effectiveRunWorld() : aw
+    const mode: Mode = w === "ngplus" ? "run2" : w === "run3" ? "run3" : (aw !== "replay" && player.run3Used) ? "post" : player.isChampion ? "run4" : "run1"
     // POST : la comparaison veut un catalogue même sans run choisi → on prend le run 3 (dex complet) par défaut pour l'onglet Comparer.
     //   queryRun = run des DONNÉES passé à captureGuide (run 4 lit les pools run 1 + champion) ; displayRun = étiquette affichée.
     const queryRun = mode === "run2" ? 2 : mode === "run3" ? 3 : mode === "run4" ? 1 : mode === "post" ? (selectedRun ?? (tab === "compare" ? 3 : 1)) : 1

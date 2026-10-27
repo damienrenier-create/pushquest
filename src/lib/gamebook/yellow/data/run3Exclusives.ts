@@ -20,6 +20,11 @@ export const RUN3_EXCLUSIVE_HINTS: Record<string, string> = {
     onirail: "à la canne à pêche, dans l'eau de Cendreville",
     flamarokto: "légendaire des Hautes Herbes de Cendreville",
     phoechaudi: "sauvage à la Grotte Rocheuse (niv 12-18, coriace)", // lignée Phoéchaud : run 3 seulement depuis le 26/10/2026
+    // Lot du 27/10/2026 (Sartay) — créations de joueurs rendues sauvages au run 3 :
+    wallabisan: "rare à la Grotte Gelée, jamais sous le niv 22 (lignée de Joeyrrant, création de Jacanon)",
+    guizer: "très rare à la canne à pêche, dans l'eau de la Grotte Gelée (création de Task1)",
+    stashex: "rare, à la place d'un Nouillon : Centrale, Route Nord et carré PSY des Hautes Herbes (création de Tom)",
+    spectragon: "ultra-rare dans la Grotte Rocheuse (création de Rob)",
 }
 
 export interface Run3ExclusiveRow { key: string; ids: string[]; names: string; types: string; hint: string }
@@ -46,7 +51,7 @@ export function run3ExclusiveRows(): Run3ExclusiveRow[] {
 /** Bulles ajoutées à CHAQUE panneau lu pendant le run 3 (une lignée par bulle). */
 export function run3ExclusiveSignLines(): string[] {
     return [
-        "🏆 INÉDITS DU CONCOURS — ces Daemons n'existent QU'EN RUN 3. Pense ton équipe autour d'eux !",
+        "🏆 INÉDITS DU CONCOURS — ces Daemons sont absents des runs 1 et 2 : à capturer pendant le run 3. Pense ton équipe autour d'eux !",
         ...run3ExclusiveRows().map((r) => `• ${r.names} (${r.types}) — ${r.hint}.`),
     ]
 }

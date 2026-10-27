@@ -292,7 +292,9 @@ describe("Voleur — dialogues et câblage", () => {
         expect((eng.match(/applyEntryStab\(state, /g) ?? []).length).toBe(2) // createBattle seulement
         expect(eng).toContain("if (!opts.pvp) {")
         const ydc = read("src/app/gamebook/yellow/YellowDevClient.tsx")
-        expect(ydc).toContain("setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: \"luxe\" })")
+        expect(ydc).toContain("setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: \"luxe\", item: luxeItem })")
+        expect(ydc).toContain("const r = useLuxePasta(uid, item ?? PATE_LUXE_ITEM_ID)")
+        expect(ydc).toContain("Cette Pâte de Luxe DU VOLEUR RE-TIRE tout le génome") // mise en garde avec les vraies chances
         expect(ydc).toContain("setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: \"reroll\" })")
         expect(ydc).toContain("JE CROQUE, J'ASSUME"); expect(ydc).toContain("JE RELANCE, J'ASSUME")
         expect(ydc.indexOf("{!battle && luxeConfirm && (")).toBeGreaterThan(ydc.indexOf("{!battle && tiramisuPick && ("))

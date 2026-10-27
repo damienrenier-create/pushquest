@@ -14,7 +14,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, logEnergyIncome, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
-    physWinCount, recordPhysWin, casinoPillar, useActiveWorld, markTrainerDefeated,
+    physWinCount, recordPhysWin, casinoPillar, useActiveWorld, markTrainerDefeated, effectiveRunWorld,
     getGameMode, startFunDefi, abandonFunDefi, ensureFunDailyTarget,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { funSprintReward, funArenaRewardScaled, funLevelMultiplier, funArenaOpen, FUN_ARENA_COUNT } from "@/lib/gamebook/yellow/data/funDefis"
@@ -52,10 +52,11 @@ export default function LabPanel() {
     const open = useGameStore((s) => s.labOpen)
     const close = useGameStore((s) => s.closeLab)
     const player = usePlayer()
-    const world = useActiveWorld()
+    useActiveWorld() // abonnement : re-rendu quand on entre dans une bulle de rejeu ou qu'on en sort
+    const runWorld = effectiveRunWorld() // RUN JOUÉ (rejeu compris) : les règles du labo suivent le run rejoué
     const funAvgLvl = player.team.length ? player.team.reduce((s, m) => s + m.level, 0) / player.team.length : 1 // bonus de niveau du Blitz d'arène
-    const ngplus = world === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
-    const run3 = world === "run3"     // run 3 (concours) : casino/roulette FERMÉS
+    const ngplus = runWorld === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
+    const run3 = runWorld === "run3"     // run 3 (concours) : casino/roulette FERMÉS
     const pv = pushupDefiVariant(ngplus)         // { exercise, word: "pompes"|"squats", growth }
     const isFun = getGameMode() === "fun"
     const [tabState, setTab] = useState<"phys" | "ct" | "surprise" | "fun">(isFun ? "fun" : "phys")
@@ -87,7 +88,9 @@ export default function LabPanel() {
     // VERROU = « Chen te doit la Daemonflûte » : le MÊME aiguillage que le PNJ (chenLabRoute). Un labo verrouillé se débloque
     //   donc TOUJOURS en parlant à Chen, dans tous les modes (avant le 20/10/2026, un Champion fun restait verrouillé à vie :
     //   Chen lui offrait son cadeau d'énergie au lieu de la flûte).
-    const paused = chenLabRoute({ fun: isFun, world, canAbandon: canAbandonNgplus(), isChampion: player.isChampion, hasFlute: (player.items[FLUTE_ITEM] ?? 0) > 0, sylvebarbeAwake: player.sylvebarbeAwake }) === "flute"
+    // world = RUN JOUÉ (rejeu compris), comme le PNJ CHEN (gameStore) : en rejeu du run 3, CHEN suit la route Magnetor et ne
+    //   remet jamais la flûte → le labo ne doit pas se verrouiller « flûte » dans la bulle.
+    const paused = chenLabRoute({ fun: isFun, world: runWorld, canAbandon: canAbandonNgplus(), isChampion: player.isChampion, hasFlute: (player.items[FLUTE_ITEM] ?? 0) > 0, sylvebarbeAwake: player.sylvebarbeAwake }) === "flute"
     const today = player.creditedThrough || new Date().toISOString().slice(0, 10)
 
     // ── Actions ──

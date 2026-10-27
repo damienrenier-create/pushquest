@@ -13,7 +13,7 @@ import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes
 import { rollIvs, funRollIvs } from "./ivConfig"
 import { speciesAtLevel, levelEvosRemaining } from "./ace"
 import { getSpecies, SPECIES } from "./species"
-import { SPECIAL_OBTAIN, SPECIAL_OBTAIN_FUN_HOW } from "./captureSpecial"
+import { SPECIAL_OBTAIN, SPECIAL_OBTAIN_FUN_HOW, SPECIAL_OBTAIN_RUN_EXTRA } from "./captureSpecial"
 import { FISHING_COMMONS, FISHING_BY_MAP, GEAUCKE_ID } from "./fishing"
 import { FLAMAROKTO_ID, FLAMAROKTO_GUIDE_LINE, RUN3_LEGEND_HINT_DENOM_MULT } from "./run3Legend"
 
@@ -35,6 +35,8 @@ interface WildEntry {
     levelMode?: "weakestTeam" | "strongestTeam" // niveau = Daemon le + faible (Namicha) / le + fort (Vipember) de l'équipe
     levelBonus?: number           // décalage appliqué au levelMode (ex. Vipember = strongestTeam +5)
     levelMax?: number             // plafond spécifique à l'espèce (ex. Jerbiwat 20)
+    levelMin?: number             // PLANCHER spécifique à l'espèce, appliqué APRÈS les caps (badges/zone/espèce) : ex. Wallabisan ≥ 22
+                                  //   (Grotte Gelée run 3). Ignoré si levelFixed/levelRange (ils imposent déjà leur niveau).
     noEvolve?: boolean            // garde l'espèce telle quelle (pas de speciesAtLevel → ex. Namicha jamais Namizeus)
     quotaRateMult?: number        // ×poids d'apparition si quota du jour atteint (ex. Bélunode ×3)
     // --- Règles de COMBAT/CAPTURE par espèce (attachées au sauvage spawné, lues par le moteur) ---
@@ -223,14 +225,26 @@ const guideGridLegendary = (tg: TrainingGrid, run: number): WildEntry | undefine
         : tg.legendary                                              // run 1 : Goshendofy (Dragon)
 const guideGridTypePool = (pool: WildEntry[], run: number): WildEntry[] =>
     // RUN 2 : mottoche RETIRÉE (exclusive à la Grotte) ; Varovental n'apparaît QU'EN run 2 → retirée hors run 2.
-    run === 2 ? pool.filter((e) => e.speciesId !== "mottoche") : pool.filter((e) => e.speciesId !== "varovental")
+    // RUN 3 : Stashex prend sa part des Nouillon (run3NouillonSwap) — miroir EXACT de rollTrainingGrid.
+    run === 2 ? pool.filter((e) => e.speciesId !== "mottoche")
+        : run === 3 ? run3NouillonSwap(pool.filter((e) => e.speciesId !== "varovental"))
+        : pool.filter((e) => e.speciesId !== "varovental")
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
+/** Sondes de niveau d'une entrée SCALANTE : GUIDE_EVO_PROBES, relevées au plancher d'espèce (levelMin) s'il existe. */
+const guideProbes = (e: WildEntry): number[] => e.levelMin != null ? GUIDE_EVO_PROBES.map((L) => Math.max(L, e.levelMin as number)) : GUIDE_EVO_PROBES
+/** Plus petit niveau où une entrée à plancher (levelMin) fait pop `target` (ex. Kangoudead : 40 via l'entrée Wallabisan ≥ 22). */
+function guideMinLevelFor(e: WildEntry, target: string): number {
+    const from = e.levelMin ?? 1
+    if (e.speciesId === target || e.noEvolve) return from
+    for (let L = from; L <= 100; L++) { try { if (speciesAtLevel(e.speciesId, L) === target) return L } catch { break } }
+    return from
+}
 function entryYields(e: WildEntry, target: string): boolean {
     if (e.speciesId === target) return true
     if (e.noEvolve) return false
     const levels = e.levelFixed != null ? [e.levelFixed]
         : e.levelRange ? [e.levelRange[0], Math.round((e.levelRange[0] + e.levelRange[1]) / 2), e.levelRange[1]]
-        : GUIDE_EVO_PROBES
+        : guideProbes(e)
     return levels.some((L) => { try { return speciesAtLevel(e.speciesId, L) === target } catch { return false } })
 }
 /** Toutes les espèces qu'une entrée peut faire pop (base + formes évoluées in situ). */
@@ -238,12 +252,15 @@ function entryYieldSet(e: WildEntry): string[] {
     if (e.noEvolve) return [e.speciesId]
     const levels = e.levelFixed != null ? [e.levelFixed]
         : e.levelRange ? [e.levelRange[0], Math.round((e.levelRange[0] + e.levelRange[1]) / 2), e.levelRange[1]]
-        : GUIDE_EVO_PROBES
+        : guideProbes(e)
     const set = new Set<string>([e.speciesId])
     for (const L of levels) { try { set.add(speciesAtLevel(e.speciesId, L)) } catch { /* ignore */ } }
     return [...set]
 }
-interface GuideMatch { mapId: string; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean; pct?: number }
+interface GuideMatch { mapId: string; e: WildEntry; gridType?: string; legend?: boolean; dragon?: boolean; pct?: number; biome?: boolean }
+/** Le pool module-t-il les poids par BIOME (affinity/repulsion) ? Alors le % affiché n'est qu'indicatif (Route Nord et Grotte du
+ *  run 1 ; les pools des runs 2 et 3 n'en ont pas → taux fixe, pas d'avertissement). */
+const poolHasBiome = (pool: readonly WildEntry[]): boolean => pool.some((e) => (e.affinity?.length ?? 0) > 0 || (e.repulsion?.length ?? 0) > 0)
 // Taux de pop NEUTRE d'une entrée = base / Σbase du pool où elle vit (formule vérifiée : rollWildEncounter tire
 // weight_i/Σweight, et weight = base sans biome/effort). Exact pour Centrale/Cendreville/Maison Hantée/Nexus/pools
 // Hautes Herbes ; APPROCHÉ à la Route Nord & Grotte (biomes) et sur les entrées taguées `player` (effort) → un
@@ -260,8 +277,9 @@ function guideMatchesRun(target: string, run: number, hideEndgame: boolean): Gui
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
         const poolSum = sumBase(z.pool)
-        for (const e of z.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum) })
-        if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool); for (const e of r.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs) }) }
+        const zBiome = poolHasBiome(z.pool)
+        for (const e of z.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum), biome: zBiome })
+        if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool), rb = poolHasBiome(r.pool); for (const e of r.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs), biome: rb }) }
         const tg = z.trainingGrid
         if (tg) {
             for (const [t, pool0] of Object.entries(tg.typePools)) { const pool = guideGridTypePool(pool0, run); const ps = sumBase(pool); for (const e of pool) if (entryYields(e, target)) out.push({ mapId, e, gridType: t, pct: pctOf(e.base, ps) }) }
@@ -320,13 +338,14 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (m.dragon) parts.push("dragon rare (plus rare en altitude)")
         if (m.e.levelFixed != null) parts.push(`niv ${m.e.levelFixed}`)
         else if (m.e.levelRange) parts.push(`niv ${m.e.levelRange[0]}-${m.e.levelRange[1]}`)
+        else if (m.e.levelMin != null) parts.push(`niv ${guideMinLevelFor(m.e, speciesId)}+`)
         if (m.e.hourRange) parts.push(hourText(m.e.hourRange))
         if (m.e.rare) parts.push("pop un peu au-dessus de ton niveau")
         if (m.e.minLeadLevel) parts.push(`lead niv ${m.e.minLeadLevel}+`)
         if (m.e.requiresFusionLeague) parts.push("après la Ligue de Fusion")
         if (m.e.catchOnce) parts.push("1 seule capture possible")
         where.push(parts.join(" · "))
-        if (m.mapId === "yellow_route_nord" || m.mapId === "yellow_grotte") { modulated = true; biomeModulated = true }
+        if (m.biome) { modulated = true; biomeModulated = true } // pool à biomes (avant 27/10/2026 : déduit du nom de carte, faux aux runs 2 et 3)
         else if ((m.e as { player?: unknown }).player) modulated = true
         if (m.e.captureRequiresStatus) how.add("Capture IMPOSSIBLE sans statut majeur : endors-le ou gèle-le d'abord.")
         if (m.e.captureRequiresDamage) how.add("Capture IMPOSSIBLE à pleins PV : inflige-lui au moins un coup avant de lancer une Ball.")
@@ -359,7 +378,7 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
     if (where.length === 0) {
         // Pas sauvage dans cette run → obtention SPÉCIALE curée (pierre/objet/échange/cadeau/boss/rôdeur).
         const special = SPECIAL_OBTAIN[speciesId]
-        if (special) return { where: special.where ?? [], how: (fun ? SPECIAL_OBTAIN_FUN_HOW[speciesId] : undefined) ?? special.how ?? [], note: special.note ?? null }
+        if (special) return { where: special.where ?? [], how: [...((fun ? SPECIAL_OBTAIN_FUN_HOW[speciesId] : undefined) ?? special.how ?? []), ...(SPECIAL_OBTAIN_RUN_EXTRA[speciesId]?.[run] ?? [])], note: special.note ?? null }
         // Sinon : repli sur le pré-évolué (récursif — trouve la base sauvage OU sa propre obtention spéciale).
         const preEvo = Object.values(SPECIES).find((s) => (s as { evolution?: { toId?: string } }).evolution?.toId === speciesId)
         if (preEvo) {
@@ -376,6 +395,13 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         const slots = [...funSlots].sort((a, b) => a - b).map(funSlotLabel)
         if (slots.length) how.add(`🕐 Mode fun : il sort plus souvent ${slots.join(" et ")} (pop ×${String(TIME_TYPE_MULT).replace(".", ",")}). Le % affiché est hors bonus.`)
     } else if (modulated) how.add("Taux indicatif : il grimpe près du biotope de l'espèce et selon tes exercices (pompes/squats).")
+    // PÊCHE en plus du sauvage (ex. Guizer au run 3 quand la Grotte du Nexus est visible) : une obtention à la canne annotée
+    //   pour CETTE run est toujours mentionnée — sinon le guide n'enverrait qu'au sauvage.
+    //   Run fusion : le panneau consulte les pools du run 1 (run = 1, Champion, Grotte du Nexus visible) mais `runs` le code 4.
+    const fishingSpecial = SPECIAL_OBTAIN[speciesId]
+    const availRun = run === 1 && champion && !hideEndgame ? 4 : run
+    if (fishingSpecial?.runs?.includes(availRun) && /^PÊCHABLE/.test(fishingSpecial.note ?? ""))
+        for (const h of (fun ? SPECIAL_OBTAIN_FUN_HOW[speciesId] : undefined) ?? fishingSpecial.how ?? []) how.add(h)
     how.add("Affaiblis-le (idéalement 1 PV) puis lance une Ball ; un statut SOMMEIL/GEL multiplie les chances par ~2,5.")
     return { where, how: [...how], note: null }
 }
@@ -429,11 +455,12 @@ export function runObtainableSpecies(run: number, endgame: boolean): Set<string>
     const poolRun = run === 4 ? 1 : run
     const set = new Set<string>(runSpawnableSpecies(poolRun, !endgame, run === 1 && !endgame))
     // PÊCHE (canne de la Fashion Victim) : commun de la run + signature de chaque plan d'eau + rares horaires + Geaucké ;
-    //   Onirail à Cendreville au run 3. Obscurène (Ténèbres, Cendreville) : pas au run 1 avant Sylvebarbe → run fusion.
+    //   Onirail à Cendreville et Guizer à la Grotte Gelée au run 3. Obscurène (Ténèbres, Cendreville) : pas au run 1 avant
+    //   Sylvebarbe → run fusion.
     for (const id of FISHING_COMMONS[`run${poolRun}`] ?? FISHING_COMMONS.run1) set.add(id)
     for (const [mapId, ids] of Object.entries(FISHING_BY_MAP)) { if (mapId === "yellow_cendreville" && run === 1) continue; for (const id of ids) set.add(id) }
     set.add("osquille"); set.add("ro"); set.add(GEAUCKE_ID)
-    if (run === 3) set.add("onirail")
+    if (run === 3) { set.add("onirail"); set.add("guizer") } // rares de pêche du concours (cf. fishingRareOfMap)
     // RATTRAPAGE post-Ligue (run fusion) : des inédits du run 3 rôdent en live une fois Champion (cf. run1ChampionCatchup).
     if (run === 4) { for (const e of RUN3_HH_CATCHUP) set.add(e.speciesId); set.add("wistree") }
     // Obtentions SPÉCIALES valables dans CETTE run.
@@ -797,6 +824,9 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "regnantaur", base: 3, levelFixed: 45, noEvolve: true, captureMult: 0.3 },   // très rare, niv 45, très dur à capturer
             { speciesId: "enclumind", base: 3, levelFixed: 45, noEvolve: true, captureMult: 0.3 },    // très rare, niv 45, très dur à capturer
             { speciesId: "vipember", base: 2, levelMode: "strongestTeam", levelBonus: 5, noEvolve: true, captureMult: 0.25 }, // LE + rare, +5 du meilleur de l'équipe, très dur
+            // POSSYL (création canonisée de Zyran, stade 1 de Nécrossum) — ULTRA-RARE au manoir spectral (27/10/2026, Sartay) :
+            //   ~0,5 % (2/399), toujours au stade 1 (noEvolve, niv 15-21 < évo 22). Reste aussi l'exclusif du dernier couloir B1F.
+            { speciesId: "possyl", base: GIGA_RARE, noEvolve: true, levelRange: [15, 21] },
         ],
     },
     // HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) : GRILLE 3×3 = 9 carrés. Le NIVEAU monte
@@ -962,7 +992,9 @@ const NGPLUS_ZONES: Record<string, Zone> = {
     //   ce sont les ÉQUIPES des dresseurs qui passent au thème EAU (cf. SIGHT_RUN_TEAMS dans sightRunTeams.ts) ; le pont
     //   ne déclenche donc rien (le hook isWildTile a été retiré côté gameStore).
     // MAISON HANTÉE run 2 — LE MANOIR DES TÉNÈBRES (refonte Sartay 22/08). Manoir plus CALME (5 %/pas) et simplifié :
-    //   Sépulcru omniprésent, Caninombre fréquent mais RÉTIF à la capture (÷5), Joeyrrant en visiteur rare.
+    //   Sépulcru omniprésent, Caninombre fréquent mais RÉTIF à la capture (÷5). JOEYRRANT RETIRÉ (27/10/2026, Sartay) :
+    //   sa lignée vit désormais dans la Grotte Gelée du run 3, au stade Wallabisan minimum. À sa place, SNATCHACOOLT
+    //   (création canonisée de DaKumba, ÉLEC/TÉNÈBRES) à ~1 % (1,21 / 121,21).
     //   Obscurène a quitté le manoir → désormais PÊCHABLE dans l'eau de Cendreville. Géckèbre + mi-évos/finales retirés.
     yellow_maison_hantee: {
         rate: 0.05, minLevel: 14, maxLevel: 50,
@@ -970,9 +1002,22 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "sepulcru", base: 60, noEvolve: true, levelRange: [16, 24] },
             { speciesId: "caninombre", base: 35, noEvolve: true, levelRange: [16, 24], captureMult: 0.2 }, // fréquent MAIS capture TRÈS difficile
             { speciesId: "charolyx", base: 25, noEvolve: true, levelRange: [16, 24] }, // lynx charognard TÉNÈBRES/POISON (némésis de Possyl) ; NE pop PAS pour l'owner de Possyl (Zyran) — cf. blockedSpecies
-            { speciesId: "joeyrrant", base: 10 },
+            { speciesId: "snatchacoolt", base: 1.21, noEvolve: true, levelRange: [16, 21] }, // ~1 % — raton chapardeur de DaKumba, stade 1 (évo 22)
         ],
     },
+}
+
+// RUN 3 — STASHEX (création de Tom, PSY) apparaît À LA PLACE DE NOUILLON (Sartay, 27/10/2026). Une part
+//   RUN3_STASHEX_SHARE du poids de CHAQUE entrée Nouillon du run 3 passe à Stashex, mêmes niveaux et mêmes règles
+//   (le stade suit le niveau : StasHex dès 16, StasHEX dès 34). 0,1 = un Nouillon sur dix devient un Stashex → RARE.
+//   1 = remplacement TOTAL (Nouillon disparaît du run 3). Appliqué aux pools RUN3_ZONES (Centrale, Route Nord) et au
+//   carré PSY des Hautes Herbes (rollTrainingGrid + guideGridTypePool) → le jeu et le Daemomaniaque restent alignés.
+export const RUN3_STASHEX_SHARE = 0.1
+function run3NouillonSwap(pool: WildEntry[]): WildEntry[] {
+    if (RUN3_STASHEX_SHARE <= 0) return pool
+    return pool.flatMap((e): WildEntry[] => e.speciesId !== "nouillon" ? [e]
+        : RUN3_STASHEX_SHARE >= 1 ? [{ ...e, speciesId: "stashex" }]
+        : [{ ...e, base: e.base * (1 - RUN3_STASHEX_SHARE) }, { ...e, speciesId: "stashex", base: e.base * RUN3_STASHEX_SHARE }])
 }
 
 // ═══════════════ RENCONTRES DU RUN 3 (concours) ═══════════════
@@ -1014,6 +1059,9 @@ const RUN3_ZONES: Record<string, Zone> = {
             // PHOÉCHAUD (création Guillaume, phénix maudit FEU/SPECTRE) — capturable au STADE 1 puis évolution (22→40).
             // Ajouté ici (choix Sartay 03/08) pour rendre la lignée complétable au dex. levelRange bas = garantit la base.
             { speciesId: "phoechaudi", base: 3, levelRange: [12, 18], captureMult: 0.5 },
+            // SPECTRAGON (stade 2 de Dracominus, création de Rob) — ULTRA-RARE (27/10/2026, Sartay) : ~0,5 % (0,34/67,34).
+            //   Toujours Spectragon (noEvolve), jamais sous son niveau d'évolution (22, levelMin au-dessus des caps).
+            { speciesId: "spectragon", base: 0.34, noEvolve: true, rare: true, levelMin: 22 },
             // CRÉATIONS (Guizer & Shady) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
         ],
     },
@@ -1026,6 +1074,10 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "gouttiny", base: 2, rare: true },
             { speciesId: "belunode", base: 1 }, { speciesId: "glacirex", base: 1, rare: true },
             { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
+            // JOEYRRANT (création de Jacanon), déplacé du manoir du run 2 (27/10/2026, Sartay : « toujours minimum au niveau
+            //   Wallabisan, en mode rare ») : la lignée entre au stade WALLABISAN (Ténèbres/Glace), jamais sous le niv 22
+            //   (levelMin, au-dessus des caps) ; Kangoudead dès 40. ~6,5 % (2/31) ; `rare` = un cran au-dessus du lead.
+            { speciesId: "wallabisan", base: 2, rare: true, levelMin: 22 },
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→
@@ -1080,6 +1132,8 @@ const RUN3_ZONES: Record<string, Zone> = {
         ],
     },
 }
+// STASHEX à la place de NOUILLON (cf. RUN3_STASHEX_SHARE) : appliqué UNE fois, ici, à tous les pools du run 3.
+for (const z of Object.values(RUN3_ZONES)) z.pool = run3NouillonSwap(z.pool)
 
 export function hasEncounters(mapId: string): boolean {
     return mapId in ZONES
@@ -1248,6 +1302,7 @@ function rollWildEncounterCore(ctx: EncounterCtx, rng: () => number): MonInstanc
     if (zone.maxLevel != null) level = Math.min(level, zone.maxLevel)  // cap de ZONE (ex. Centrale 25)
     if (entry.levelMax != null) level = Math.min(level, entry.levelMax)// cap d'ESPÈCE (ex. Jerbiwat 20)
     level = Math.max(zone.minLevel ?? 2, Math.min(100, level))        // plancher (zone) → plafond 100
+    if (entry.levelMin != null) level = Math.max(level, Math.min(100, entry.levelMin)) // plancher d'ESPÈCE (ex. Wallabisan ≥ 22) : passe AU-DESSUS des caps
     // OVERRIDES de niveau par espèce (bypassent scaling + caps ci-dessus) :
     if (entry.levelFixed != null) level = entry.levelFixed                                   // ex. Thundah 50, Zappeuréal 40
     else if (entry.levelRange) level = intIn(rng, entry.levelRange[0], entry.levelRange[1])  // ex. Bélunode 5-15
@@ -1377,9 +1432,10 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const type = dailyTypes(ctx.dayKey ?? "", tg.types, tg.highOnlyTypes ?? [])[sqIdx] ?? tg.types[0]
     // Mottoche : champ d'entraînement UNIQUEMENT en run 1 (exclusive à la Grotte en run 2). Varovental : EXCLUSIF run 2
     //   → retiré hors run 2 (ctx.ngplus faux = run 1 ou run 3). Filtres en miroir.
-    const pool = (ctx.ngplus
+    const pool0 = (ctx.ngplus
         ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche")
         : (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "varovental"))
+    const pool = ctx.run3 ? run3NouillonSwap(pool0) : pool0 // RUN 3 : Stashex prend sa part des Nouillon (miroir de guideGridTypePool)
     if (pool.length === 0) return null
     // ⚠️ Même filtre `blockedSpecies` que le roll de zone : sinon les lignées « meme » de clan (couperin/COMBAT,
     //   plumiot/VOL, mottoche & sa lignée/ROCHE) leakent dans la grille d'entraînement pour un joueur du mauvais clan

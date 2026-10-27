@@ -27,10 +27,17 @@ const LINES: Record<PateLuxeOutcome, readonly ((n: string) => string)[]> = {
     ],
 }
 
+/** PÂTE DU VOLEUR (un tiers SHINY+PARFAIT, annoncé avant la bouchée) : le shiny n'y est pas un miracle → répliques qui
+ *  ne parlent pas de rareté (« une bouchée sur mille » contredirait la mise en garde). */
+const THIEF_SHINY_LINES: readonly ((n: string) => string)[] = [
+    (n) => `Le butin du Voleur a du goût ! ${n} ressort SHINY et parfait, IV au sommet. Le pari a payé : régale-toi.`,
+    (n) => `Une pâte volée, mais quelle cuisson ! ${n} scintille ET touche la perfection. La marmite t'a souri, cette fois.`,
+]
+
 /** Réplique du Dieu Spaghetti sur le résultat. `rand`∈[0,1) → variante (déterministe/testable). Renvoie un tableau
- *  de lignes (prêt pour showDialogue). Issue inconnue → repli sur les répliques « parfait ». */
-export function pateDeLuxeGodLines(outcome: PateLuxeOutcome, monName: string, rand: number): string[] {
-    const arr = LINES[outcome] ?? LINES.perfect
+ *  de lignes (prêt pour showDialogue). Issue inconnue → repli sur les répliques « parfait ». `thief` = Pâte du Voleur. */
+export function pateDeLuxeGodLines(outcome: PateLuxeOutcome, monName: string, rand: number, opts?: { thief?: boolean }): string[] {
+    const arr = outcome === "shiny_perfect" && opts?.thief ? THIEF_SHINY_LINES : (LINES[outcome] ?? LINES.perfect)
     const i = Math.min(arr.length - 1, Math.max(0, Math.floor(Math.max(0, Math.min(0.999999, rand)) * arr.length)))
     return [arr[i](monName)]
 }

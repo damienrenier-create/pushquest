@@ -234,6 +234,12 @@ export const ITEMS: Record<string, ItemData> = {
         id: "pate_de_luxe", name: "Pâte de Luxe", category: "MISC",
         description: "Un plat gastronomique au génome instable. Donné à un Daemon, il RE-TIRE tout son potentiel génétique : PARFAIT… ou catastrophique (rang D). Un seul essai par Daemon — à tes risques !", price: 0, luxePasta: true,
     },
+    // PÂTE DE LUXE DU VOLEUR (cadeau du 2e vol, décision Sartay du 27/10/2026) : loterie à TROIS issues égales — 1/3 SHINY et
+    //   PARFAIT, 1/3 PARFAIT, 1/3 RANG D. Même verrou que la Pâte de Luxe (1 seule Pâte par Daemon, toutes sortes confondues).
+    pate_luxe_voleur: {
+        id: "pate_luxe_voleur", name: "Pâte de Luxe du Voleur", category: "MISC",
+        description: "La Pâte de Luxe « améliorée » par le Voleur de Cendreville. Le Daemon qui la goûte tire au sort : un tiers SHINY et PARFAIT, un tiers PARFAIT, un tiers RANG D (IV au plancher). Une seule Pâte de Luxe par Daemon, et c'est irréversible !", price: 0, luxePasta: true,
+    },
     tiramisu: {
         id: "tiramisu", name: "Tiramisu", category: "MISC",
         description: "Dessert du remords. Sur un Daemon qui a déjà goûté une Pâte de Luxe : au choix, RESTAURER ses IV d'origine… ou RE-TENTER la loterie (PARFAIT/rang D). La seconde chance des cuisiniers repentis.", price: 0, tiramisu: true,
@@ -253,6 +259,8 @@ export const SUPER_PASTA_ITEM_ID = "super_pasta"
 
 /** Id de l'objet Pâte de Luxe (loterie génétique : IV re-tirés → PARFAIT ou rang D). */
 export const PATE_LUXE_ITEM_ID = "pate_de_luxe"
+/** Pâte de Luxe du VOLEUR (3 issues égales : shiny+parfait / parfait / rang D) — cf. useLuxePasta. */
+export const PATE_LUXE_VOLEUR_ITEM_ID = "pate_luxe_voleur"
 
 /** Id du Bon Bonbon EV (voeu de Zyran) : max d'EV dans la stat-signature du prochain vaincu. */
 export const BONBON_EV_ITEM_ID = "bon_bonbon_ev"

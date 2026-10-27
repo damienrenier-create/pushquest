@@ -59,7 +59,21 @@ export const CAVE_TRADE_ALREADY_LINES_RUN3 = [
     "Je n'avais qu'un seul MARMOTERRE à offrir, et il roule déjà avec toi. Élève-le bien — c'est tout ce que j'avais !",
 ]
 
-/** Config du DÉNICHEUR selon le monde : run 3 = ruffiant→marmoterre, sinon (run 1/2) = limaroche→belunode. */
+/** Marqueur (defeatedTrainers, per-monde) : l'échange du RUN 3 (Ruffiant→Marmoterre) a été fait. Sert à réparer les REJEUX du run 3
+ *  où, avant le 27/10/2026, le Dénicheur proposait par erreur l'échange du run 1 et posait caveTradeDone (cas DaKumba). */
+export const CAVE_TRADE_R3_MARKER = "cave_trade_r3"
+
+/** Le Dénicheur a-t-il DÉJÀ servi le joueur dans le run JOUÉ ? `caveTradeDone` est per-monde. En run 3 joué : un vrai monde run 3
+ *  n'a jamais eu le bug (son drapeau suffit) ; dans un REJEU du run 3, le drapeau ne compte que si le BON échange a été fait
+ *  (marqueur CAVE_TRADE_R3_MARKER) → l'ancien échange erroné (Limaroche→Bélunode) n'empêche pas l'échange du run 3. */
+export function caveTradeDoneForRun(caveTradeDone: boolean, r3: boolean, actualWorldIsRun3: boolean, hasR3Marker: boolean): boolean {
+    if (!caveTradeDone) return false
+    if (!r3) return true
+    return actualWorldIsRun3 || hasR3Marker
+}
+
+/** Config du DÉNICHEUR selon le RUN JOUÉ (effectiveRunWorld : un rejeu suit le run rejoué) : run 3 = ruffiant→marmoterre,
+ *  sinon (run 1/2) = limaroche→belunode. */
 export function caveTradeConfig(run3: boolean) {
     return run3
         ? { give: CAVE_TRADE_GIVE_RUN3, receive: CAVE_TRADE_RECEIVE_RUN3, offer: CAVE_TRADER_OFFER_LINES_RUN3, need: CAVE_TRADER_NEED_LINES_RUN3, done: CAVE_TRADE_DONE_LINES_RUN3, cancel: CAVE_TRADE_CANCEL_LINES_RUN3, already: CAVE_TRADE_ALREADY_LINES_RUN3 }

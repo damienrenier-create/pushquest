@@ -27,6 +27,7 @@ import { getSpecies } from "./species"
 import { dexLore } from "./dexLore"
 import { THIEF_ITEM_ID, getHeldItem, isHeldItem } from "./heldItems"
 import { bestCounter, baseSpeciesOf, speciesAtLevel } from "./ace"
+import { PATE_LUXE_VOLEUR_ITEM_ID } from "./items"
 import { distributeEvs } from "./evConfig"
 
 export { THIEF_ITEM_ID }
@@ -48,7 +49,8 @@ export const THIEF_MAX_THEFTS = 3
 /** Nb de Pâtes de Luxe offertes au 2e vol. */
 export const THIEF_LUXE_GIFT = 3
 export const THIEF_BALL_GIFT_ID = "hyper_ball_plus"
-export const THIEF_LUXE_ITEM_ID = "pate_de_luxe"
+/** Les Pâtes offertes au 2e vol sont des Pâtes de Luxe DU VOLEUR : 1/3 shiny+parfait, 1/3 parfait, 1/3 rang D (Sartay 27/10/2026). */
+export const THIEF_LUXE_ITEM_ID = PATE_LUXE_VOLEUR_ITEM_ID
 
 /** État GLOBAL au profil (save haut niveau). `stolen` = le Daemon volé tel qu'au moment du vol (Surin compris au 1er vol) ;
  *  `snapshot` = l'équipe ENTIÈRE à cet instant (volé compris, à sa place) → base des némésis du combat. */
@@ -236,8 +238,8 @@ export function thiefStoleLines(victimName: string, gift: ThiefGift): string[] {
         if (gift.returnedItem) lines.push(`*L'objet qu'il tenait, ${getHeldItem(gift.returnedItem)?.name ?? gift.returnedItem}, est retombé dans ton sac.*`)
     } else if (gift.theftNo === 2) {
         lines.push(
-            "« Pardon, pardon… je n'ai pas pu m'en empêcher. Pour me faire pardonner : TROIS PÂTES DE LUXE, dans ton sac. »",
-            "« Écoute bien : une Pâte de Luxe RE-TIRE tout le génome d'un Daemon, à pile ou face : PARFAIT (IV au maximum)… ou RANG D (IV au plancher). Une seule par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Le Dieu Spaghetti te préviendra avant chaque bouchée. »",
+            "« Pardon, pardon… je n'ai pas pu m'en empêcher. Pour me faire pardonner : TROIS PÂTES DE LUXE DU VOLEUR, dans ton sac. »",
+            "« Écoute bien, c'est ma recette : la Pâte RE-TIRE tout le génome d'un Daemon. Un tiers des fois, il en ressort SHINY et PARFAIT ; un tiers, PARFAIT (IV au maximum) ; un tiers, RANG D (IV au plancher). Une seule Pâte par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Le Dieu Spaghetti te préviendra avant chaque bouchée. »",
         )
     } else {
         lines.push("« Trois fois… c'est la dernière, promis. Une HYPER NEXUS-BALL +, dans ton sac, pour la route. »")

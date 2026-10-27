@@ -5,7 +5,7 @@
 // (→ future CT signature). Moteur pur dans casino/blackjack.ts.
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendCasinoBet, settleBlackjack, claimBlackjackCt, getActiveWorld, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendCasinoBet, settleBlackjack, claimBlackjackCt, effectiveRunWorld, blackjackLegacyApotheoseInReplay, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { BLACKJACK_CT_TARGET, BLACKJACK_CT_NGPLUS_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
@@ -49,8 +49,9 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
 
     const won = player.labDefi.blackjackWon
     const ctClaimed = player.labDefi.blackjackCtClaimed
-    const ngplus = getActiveWorld() === "ngplus" // RUN 2 : récompense UNIQUE = 1 CT du magasin au choix
+    const ngplus = effectiveRunWorld() === "ngplus" // RUN 2 (et rejeu du run 2) : récompense UNIQUE = 1 CT du magasin au choix
     const ngplusRewardTaken = player.labDefi.blackjackNgplusPicks >= 1 // récompense unique déjà réclamée ?
+    const legacyApotheose = ngplus && blackjackLegacyApotheoseInReplay() // bulle du run 2 d'avant le 27/10 : Apothéose déjà touchée
     // Liste de choix (dérivée en direct de l'état) : affichée dès que la récompense unique est disponible.
     const ngplusPickList = ngplus && blackjackNgplusPickPending() ? blackjackNgplusChoices() : null
     const inHand = !!game && game.phase === "player" && !dealing // on ne peut agir qu'une fois les cartes posées
@@ -74,7 +75,7 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         settleBlackjack(s.payout, s.net)
         // RUN 1 : palier 1000 ⚡ → CT « Apothéose » (one-shot). RUN 2 : la récompense unique (1 CT du magasin)
         // est dérivée en direct dans le rendu (ngplusPickList) dès que le seuil de 500 ⚡ est franchi.
-        if (getActiveWorld() !== "ngplus") {
+        if (effectiveRunWorld() !== "ngplus") {
             const ctName = claimBlackjackCt()
             if (ctName) setCtWon(ctName)
         }
@@ -242,6 +243,8 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
                     {ngplus
                         ? (ngplusRewardTaken
                             ? <span style={{ color: "#9ff0b8" }}> · récompense unique (1 CT au choix) obtenue ✓</span>
+                            : legacyApotheose
+                            ? <span style={{ color: "#9ff0b8" }}> · lot de cette partie déjà obtenu (CT « Apothéose ») ✓</span>
                             : won >= BLACKJACK_CT_NGPLUS_TARGET
                                 ? <span style={{ color: "#ffd54a" }}> · 🎁 récompense unique DISPO : choisis 1 CT ci-dessus</span>
                                 : <span> · <b>{Math.min(won, BLACKJACK_CT_NGPLUS_TARGET)}/{BLACKJACK_CT_NGPLUS_TARGET} ⚡</b> → 1 CT au choix (unique) 🔒</span>)

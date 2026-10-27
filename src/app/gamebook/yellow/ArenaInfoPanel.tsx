@@ -73,7 +73,7 @@ export default function ArenaInfoPanel({ badge, isRun2, isRun3, onClose }: { bad
             </div>
             {/* INÉDITS DU CONCOURS : les lignées qui n'existent qu'en run 3 → de quoi bâtir son équipe (Sartay 26/10/2026). */}
             <div style={S.block}>
-                <div style={S.blockTitle}>🏆 INÉDITS DU CONCOURS <span style={{ ...S.muted, fontWeight: 400 }}>(run 3 seulement — pense ton équipe autour d'eux)</span></div>
+                <div style={S.blockTitle}>🏆 INÉDITS DU CONCOURS <span style={{ ...S.muted, fontWeight: 400 }}>(absents des runs 1 et 2 — pense ton équipe autour d'eux)</span></div>
                 {run3ExclusiveRows().map((r) => <div key={r.key} style={{ fontSize: 11, color: INK, lineHeight: 1.35 }}><b>{r.names}</b> <span style={S.muted}>({r.types}) — {r.hint}</span></div>)}
             </div>
             <div style={S.block}>

@@ -15,7 +15,9 @@ describe("espèces obtenables par run (guide de capture)", () => {
     })
     it("chaque run a ses propres obtentions", () => {
         for (const id of ["gouttiny", "feuillichot", "braisille", "pantheon", "gekroc", "tonytony", "goshendofy", "pivinci", "lapifrappe", "fujipanda", "loutrille"]) expect(r1.has(id), id).toBe(true)
-        for (const id of ["merorem", "morrow", "gekraise", "ukognos", "obscurene", "joeyrrant"]) expect(r2.has(id), id).toBe(true) // Joeyrrant : sauvage au Manoir du run 2
+        for (const id of ["merorem", "morrow", "gekraise", "ukognos", "obscurene", "snatchacoolt"]) expect(r2.has(id), id).toBe(true) // Snatchacoolt (DaKumba) : Manoir du run 2
+        expect(r2.has("joeyrrant")).toBe(false) // 27/10/2026 : Joeyrrant a quitté le Manoir → sa lignée vit dans la Grotte Gelée du run 3
+        for (const id of ["wallabisan", "kangoudead", "guizer"]) expect(r3.has(id), id).toBe(true)
         for (const id of ["onirail", "elefer", "cornaive", "coccipoing", "gekosmic", "marmoterre", "flamarokto", "magnetor"]) expect(r3.has(id), id).toBe(true)
         expect(r1.has("onirail")).toBe(false); expect(r2.has("gekosmic")).toBe(false); expect(r3.has("merorem")).toBe(false)
         expect(r1.has("joeyrrant")).toBe(false); expect(r1.has("obscurene")).toBe(false) // Ténèbres : pas avant Sylvebarbe

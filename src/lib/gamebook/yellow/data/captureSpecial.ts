@@ -165,10 +165,11 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     cornaive: { runs: [3], note: "Starter du run 3 (jamais sauvage).", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE.", "⚠️ Seulement 2 des 3 lignées-starter par run 3 : pour la lignée qu'a choisie ACE, il faut RECOMMENCER un run 3 en la prenant comme starter."] },
     coccipoing: { runs: [3], note: "Starter du run 3 (jamais sauvage).", how: ["Starter choisi au début du run 3, ou confié par l'Éleveur (plaine) s'il n'est ni le tien ni celui d'ACE.", "⚠️ Seulement 2 des 3 lignées-starter par run 3 : pour la lignée qu'a choisie ACE, il faut RECOMMENCER un run 3 en la prenant comme starter."] },
 
-    // ── Création canonisée de Jacanon (dex de référence — NON obtenable par le joueur) ──
-    joeyrrant: { runs: [], note: "Non obtenable.", how: ["Création canonisée de Jacanon : n'existe que dans l'équipe du PNJ Jacanon (run 3) et comme parent de fusions ennemies. Impossible à capturer, recevoir ou faire évoluer soi-même."] },
-    wallabisan: { runs: [], note: "Non obtenable.", how: ["Stade 2 de la création de Jacanon (évolution de Joeyrrant). Dex de référence / équipe du PNJ uniquement — ni capturable, ni recevable, ni évoluable par toi."] },
-    kangoudead: { runs: [], note: "Non obtenable.", how: ["Stade final de la création de Jacanon. Dex de référence, équipe du PNJ Jacanon et parent de fusions ennemies. Impossible à obtenir."] },
+    // ── Création canonisée de Jacanon : depuis le 27/10/2026, la lignée ne se croise plus qu'au run 3, dans la Grotte Gelée,
+    //    au stade Wallabisan minimum (niv 22+). Ces textes ne servent que hors de cette zone (repli du guide). ──
+    joeyrrant: { runs: [], note: "Non obtenable.", how: ["Création canonisée de Jacanon. Sa lignée ne se croise plus qu'au stade Wallabisan (Grotte Gelée, run 3, niv 22+) : le petit Joeyrrant, lui, ne se capture plus."] },
+    wallabisan: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Rare dans la Grotte Gelée pendant le concours (run 3), jamais sous le niv 22. Absent des autres runs."] },
+    kangoudead: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Rare dans la Grotte Gelée pendant le concours (run 3), dès le niv 40 (sinon : fais évoluer un Wallabisan). Absent des autres runs."] },
 
     // ── PÊCHE (canne offerte par la Fashion Victim, Grotte 1F — face à un plan d'eau) ──
     // ── Starters du run 1 (offerts par le Prof. Chen ; sauvages seulement au run 3, dans la Grotte) ──
@@ -197,6 +198,11 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
         note: "PÊCHABLE à Cendreville — run 3 uniquement (rare).",
         how: ["Canne à pêche face à l'eau de Cendreville pendant le concours : il remplace le rare horaire (Osquille/Rô). RARE ; affaiblis-le d'abord."],
     },
+    guizer: {
+        runs: [3],
+        note: "PÊCHABLE à la Grotte Gelée — run 3 uniquement (très rare).",
+        how: ["Canne à pêche face à l'eau de la Grotte Gelée pendant le concours : environ 3 % des lancers (une prise rare sur quatre ; les autres restent Osquille ou Rô). TRÈS RARE ; affaiblis-le d'abord. Il mord toujours au stade Guizer (niv 21 max) : à toi de le faire évoluer. Création canonisée de Task1."],
+    },
 
     osquille: {
         runs: [1, 2, 3, 4],
@@ -218,6 +224,12 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
         note: "Évolution d'un Braisécaille pêché.",
         how: ["Pêche un Braisécaille (canne, plan d'eau), puis fais-le évoluer (niv 32)."],
     },
+}
+
+/** Précisions PROPRES À UNE RUN, ajoutées au « comment » de l'obtention spéciale quand le guide consulte cette run. */
+export const SPECIAL_OBTAIN_RUN_EXTRA: Record<string, Partial<Record<number, string[]>>> = {
+    osquille: { 3: ["Au run 3 : jamais à Cendreville (Onirail y mord à la place) ; à la Grotte Gelée, une prise rare sur quatre est un Guizer."] },
+    ro: { 3: ["Au run 3 : jamais à Cendreville (Onirail y mord à la place) ; à la Grotte Gelée, une prise rare sur quatre est un Guizer."] },
 }
 
 /** MODE FUN — « comment » de remplacement là où le texte classique parle des reps du jour (le joueur fun n'en encode

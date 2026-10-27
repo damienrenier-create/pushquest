@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { visibleDexSpecies, DEX_ULTRA_SECRET } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer, useActiveWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld, effectiveRunWorld, galijahCountdown } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal, maskedBst, galijahCounterStyle } from "./dexShared"
@@ -36,7 +36,8 @@ export default function DexClient() {
     const dex = usePokedex()
     const player = usePlayer()
     const aw = useActiveWorld()
-    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
+    const w = aw === "replay" ? effectiveRunWorld() : aw // REJEU : le dex suit le tier du run rejoué
+    const isRun2 = w === "ngplus", isRun3 = w === "run3"
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
     // Hydrate la save (idempotent) : sinon les sets en mémoire sont vides → dex apparaît vide au refresh direct.

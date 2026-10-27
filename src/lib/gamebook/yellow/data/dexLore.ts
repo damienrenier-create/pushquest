@@ -1658,6 +1658,24 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "La mort n'est pas sa fin : c'est son territoire.",
         note: "Il m'a laissé partir. Je n'ai jamais su si c'était par mépris, par curiosité, ou parce qu'il s'était déjà servi de ce qu'il voulait. Je n'ai pas relu cette page depuis.",
     },
+    // 238 · Snatchacoolt (ELEC/TENEBRES) — création de DaKumba
+    snatchacoolt: {
+        ecology: "Petit raton noir-bleu aux yeux jaune électrique, hérissé d'antennes qui crépitent dès qu'un objet brille à proximité. Il adore chaparder pièces, boutons et bijoux, mais ses petites pattes maladroites et son électricité incontrôlable le font trébucher au pire moment : une gerbe d'étincelles, une pluie de pièces, et tout le quartier sait qui a fait le coup.",
+        dicton: "Qui vole en crépitant ne vole jamais longtemps.",
+        note: "Il m'a subtilisé une pièce avec une adresse remarquable. Puis il a éternué une étincelle, tout est tombé par terre, et il m'a regardé comme si le voleur, c'était moi.",
+    },
+    // 239 · Stealacoolt (ELEC/TENEBRES)
+    stealacoolt: {
+        ecology: "Plus grand et plus sûr de lui, il porte désormais ses larcins sur le dos : couronne de travers, sceptre sous le bras, pattes bandées pour amortir les chutes. Il se croit le cerveau d'un coup parfait et prépare ses vols des jours à l'avance… avant de tout gâcher d'une maladresse. Son électricité s'est faite plus dense : un seul faux pas suffit à illuminer toute la pièce.",
+        dicton: "Une couronne volée tient toujours un peu de travers.",
+        note: "Je l'ai surpris en plein cambriolage, la couronne d'un autre sur la tête. Il a pris la pose, très digne. Puis il a marché sur sa propre queue et a tout lâché.",
+    },
+    // 240 · Robacoolt (ELEC/TENEBRES)
+    robacoolt: {
+        ecology: "Raton laveur trapu et très touffu, corps bas et puissant sur de petites pattes, dont l'énorme queue annelée emmagasine l'énergie comme une batterie vivante. Au repos, on le croirait pataud ; quand il attaque, la queue se déroule en spirale d'éclairs et il devient franchement impressionnant. Il se croit toujours extrêmement malin — et sur ce point au moins, rien ne le fera changer d'avis.",
+        dicton: "La queue qui accumule finit toujours par tout rendre, d'un seul coup.",
+        note: "Il gardait un tas de cristaux comme un dragon garde son or. Je n'en ai pris qu'un pour l'examiner : ma lampe a grillé, mes cheveux se sont dressés, et il m'a fait un clin d'œil.",
+    },
 }
 
 /** FICHES des espèces CUSTOM qui doivent quand même en avoir une (hors couverture des espèces officielles) : les

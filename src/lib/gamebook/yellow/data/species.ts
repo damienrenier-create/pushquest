@@ -3676,6 +3676,61 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Un dragon spectral massif aux écailles noires fissurées laissant filtrer une lueur violette, enveloppé de brumes fantomatiques, aux ailes déchiquetées et au regard incandescent, dans une posture prédatrice terrifiante — Malicieux, fier et terriblement intelligent — 🖋️ Création de Rob",
         sprite: "/yellow/sprites/dex/thanadrak.png", hiddenUntilCaught: true,
     },
+
+    // CANON d'une CRÉATION de joueur (DaKumba) — raton chapardeur ÉLEC/TÉNÈBRES. Porté FIDÈLEMENT depuis
+    //   buildCustomSpecies (spec réelle de sa save, 27/10/2026) : stats (BST 200/301/444), learnset PARTAGÉ (ultime
+    //   Choc Mental niv 60), éclosion tardive (courbe slow, évo 22/40), talent « resistant ». Mur spécial (Déf/Spé/PV).
+    //   Pop sauvage : Manoir des Ténèbres (Maison Hantée du run 2), ~1 % (décision Sartay du 27/10/2026).
+    snatchacoolt: {
+        id: "snatchacoolt", dexNo: 238, name: "Snatchacoolt", types: ["ELEC", "TENEBRES"],
+        baseStats: { hp: 59, atk: 7, def: 68, spe: 7, spc: 59 }, // BST 200
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "surtension" }, { level: 18, moveId: "osmose" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "vampigraine" },
+            { level: 36, moveId: "mirage" }, { level: 42, moveId: "devoreur_ombres" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "voile_effroi" },
+            { level: 60, moveId: "choc_mental" },
+        ],
+        evolution: { toId: "stealacoolt", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 90, rarity: "RARE", growthRate: "slow", secretTalent: "resistant",
+        role: "ELEC/TENEBRES — défensif spécial (création)",
+        description: "Il adore chaparder les objets brillants. Mais ses petites pattes maladroites et son électricité incontrôlable le font régulièrement trébucher, révélant ainsi tous ses petits larcins. — Il se croit extrêmement malin, mais il est pataud — 🖋️ Création de DaKumba",
+        sprite: "/yellow/sprites/dex/snatchacoolt.png",
+    },
+    stealacoolt: {
+        id: "stealacoolt", dexNo: 239, name: "Stealacoolt", types: ["ELEC", "TENEBRES"],
+        baseStats: { hp: 90, atk: 10, def: 103, spe: 10, spc: 88 }, // BST 301
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "surtension" }, { level: 18, moveId: "osmose" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "vampigraine" },
+            { level: 36, moveId: "mirage" }, { level: 42, moveId: "devoreur_ombres" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "voile_effroi" },
+            { level: 60, moveId: "choc_mental" },
+        ],
+        evolution: { toId: "robacoolt", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 135, rarity: "RARE", growthRate: "slow", secretTalent: "resistant",
+        role: "ELEC/TENEBRES — défensif spécial (création)",
+        description: "Il adore chaparder les objets brillants. Mais ses petites pattes maladroites et son électricité incontrôlable le font régulièrement trébucher, révélant ainsi tous ses petits larcins. — Il se croit extrêmement malin, mais il est pataud — 🖋️ Création de DaKumba",
+        sprite: "/yellow/sprites/dex/stealacoolt.png",
+    },
+    robacoolt: {
+        id: "robacoolt", dexNo: 240, name: "Robacoolt", types: ["ELEC", "TENEBRES"],
+        baseStats: { hp: 132, atk: 15, def: 152, spe: 15, spc: 130 }, // BST 444 — mur spécial (Déf 152, Spé 130, PV 132)
+        learnset: [
+            { level: 5, moveId: "morsure_sombre" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "surtension" }, { level: 18, moveId: "osmose" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "vampigraine" },
+            { level: 36, moveId: "mirage" }, { level: 42, moveId: "devoreur_ombres" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "voile_effroi" },
+            { level: 60, moveId: "choc_mental" },
+        ],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "slow", secretTalent: "resistant",
+        role: "ELEC/TENEBRES — défensif spécial (création)",
+        description: "Un raton laveur trapu et très touffu, aux yeux jaune électrique, avec une énorme queue annelée qui accumule l'énergie. Il devient impressionnant quand il attaque. Silhouette : corps bas et puissant, petites pattes — Il se croit extrêmement malin, mais il est pataud — 🖋️ Création de DaKumba",
+        sprite: "/yellow/sprites/dex/robacoolt.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -3706,6 +3761,7 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
     custom_cmtifg0cn0001146_stashex_s3: "stashex3", // Tom
     custom_cmtj184wc00276w9_ewokid_s3: "wooky", // TomGotrails
     custom_cmti9xukc002h7k2_dracominus_s3: "thanadrak", // Rob
+    custom_cmt7m9eip0009uov_snatchacoolt_s3: "robacoolt", // DaKumba
 }
 
 // ESPÈCES RÉSOLVABLES CÔTÉ SERVEUR mais HORS DEX : les fusions de base « stabilisées » (Mottelave, Basaltor,
@@ -3777,7 +3833,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "possyl", "possombre", "necrossum",                   // création canonisée (Zyran) — spectre-possédé NORMAL→NORMAL/SPECTRE, mur physique
     "charolyx", "bubolyx", "pestilyx",
     "chadine", "arlpol", "lesleo", "stashex", "stashex2", "stashex3",            // ✨ SHINY CRAFTÉS canonisés (Kingme, Tom) : pop partout post-Dôme Fusion, cachés du dex tant que non capturés
-    "ewokid", "endorix", "wooky", "dracominus", "spectragon", "thanadrak"]) {   // ✨ SHINY CRAFTÉS canonisés (TomGotrails, Rob) — cf. data/craftedShinies                 // némésis (lynx charognard) TÉNÈBRES/POISON de Possyl (Zyran), forgé par ACE
+    "ewokid", "endorix", "wooky", "dracominus", "spectragon", "thanadrak",   // ✨ SHINY CRAFTÉS canonisés (TomGotrails, Rob) — cf. data/craftedShinies (charolyx… plus haut : némésis de Possyl, forgé par ACE)
+    "snatchacoolt", "stealacoolt", "robacoolt"]) {                           // création canonisée (DaKumba) — raton chapardeur ÉLEC/TÉNÈBRES, Manoir des Ténèbres du run 2 (~1 %)
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 

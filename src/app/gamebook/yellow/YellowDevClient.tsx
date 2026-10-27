@@ -161,7 +161,7 @@ function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number;
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies, isCustomSpeciesId } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem, SUPER_PASTA_ITEM_ID, PATE_LUXE_ITEM_ID, PATE_LUXE_VOLEUR_ITEM_ID, TIRAMISU_ITEM_ID, BERTIE_ITEM_ID, BONBON_EV_ITEM_ID } from "@/lib/gamebook/yellow/data/items"
 import { pateDeLuxeGodLines, pateDeLuxeRestoreLines, PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME } from "@/lib/gamebook/yellow/data/pateDeLuxeGod"
 import { bertieCrochueLines, BERTIE_NPC, BERTIE_NAME } from "@/lib/gamebook/yellow/data/bertieCrochue"
 import { clanOfSpecies, funMemeClanOf, CLANS } from "@/lib/gamebook/yellow/data/clans"
@@ -633,7 +633,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pastaPick, setPastaPick] = useState(false)
     const [pastaFree, setPastaFree] = useState(false) // sélecteur Super Pasta ouvert en mode GRATUIT (objet du sac, ferveur de clan)
     const [luxePick, setLuxePick] = useState(false) // sélecteur Pâte de Luxe (loterie IV) ouvert
-    const [luxeConfirm, setLuxeConfirm] = useState<{ uid: string; name: string; mode: "luxe" | "reroll" } | null>(null) // 🍝 mise en garde du Dieu Spaghetti AVANT de croquer (Pâte de Luxe ou Tiramisu « re-tenter ») — Sartay 27/10/2026
+    const [luxeItem, setLuxeItem] = useState<string>(PATE_LUXE_ITEM_ID) // quelle Pâte : classique (pile ou face) ou du Voleur (3 issues)
+    const [luxeConfirm, setLuxeConfirm] = useState<{ uid: string; name: string; mode: "luxe" | "reroll"; item?: string } | null>(null) // 🍝 mise en garde du Dieu Spaghetti AVANT de croquer (Pâte de Luxe ou Tiramisu « re-tenter ») — Sartay 27/10/2026
     const [candyPick, setCandyPick] = useState(false) // 🍬 sélecteur Bon Bonbon EV (vœu Zyran) ouvert
     const [tiramisuPick, setTiramisuPick] = useState(false) // sélecteur Tiramisu (restaurer / re-tenter) ouvert
     const [bertiePick, setBertiePick] = useState(false) // sélecteur Pâtes de Bertie Crochue (pari d'évolution) ouvert
@@ -709,7 +710,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     }, [shopOpen, showDialogue])
     // BOURSE — dialogue ① one-shot : le Dieu Spaghetti explique l'économie vivante après la 1re arène du run 3.
     useEffect(() => {
-        if (getActiveWorld() === "run3" && player.run3Defeated.length >= 1 && !player.defeatedTrainers.includes(BOURSE_INTRO_MARKER)
+        if (effectiveRunWorld() === "run3" && player.run3Defeated.length >= 1 && !player.defeatedTrainers.includes(BOURSE_INTRO_MARKER)
             && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun && !shopOpen) {
             showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, BOURSE_INTRO_LINES)
             markTrainerDefeated(BOURSE_INTRO_MARKER); persistYellowSave()
@@ -998,7 +999,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // RUN 3 (concours) : les TABLES du casino (mise = énergie) sont FERMÉES — pas de mise, pas de gain. Le
         //   kart (course arcade, sans mise) reste ouvert. Le verrou énergie couvre déjà les gains ; ceci évite
         //   juste d'ouvrir une table inutile.
-        if (activeWorld === "run3") {
+        if (effectiveRunWorld() === "run3") { // rejeu du run 3 compris : la bulle suit les règles d'énergie du concours
             const onTable =
                 (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) || // roulette (multi)
                 (fx === 4 && fy === 3) ||                      // croupier
@@ -1863,7 +1864,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Badge d'arène gagné : notification claire (sinon le joueur a l'impression de rien recevoir).
     useEffect(() => {
         if (badgeAwarded && !battle && evolutions.length === 0) {
-            const run3 = activeWorld === "run3"
+            const run3 = effectiveRunWorld() === "run3" // rejeu du run 3 compris (arènes re-typées dans la bulle aussi)
             // RUN 3 : les arènes sont re-typées aux GARDIENS (aperçu de la Ligue) → on annonce l'arène par ce type,
             //   pas par son type du run 1. Et on ne promet NI CT NI ticket (le concours n'a ni boutique ni casino).
             const labels: Record<string, string> = run3
@@ -2257,7 +2258,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // libre, on ouvre la cinématique du Dieu Spaghetti (1×/session ; consommé à la fermeture).
     useEffect(() => {
         if (ticketChecked.current || !hydrated || ticketOpen) return
-        if (getActiveWorld() === "run3") return // RUN 3 : casino/tickets FERMÉS → aucune cinématique ni don de ticket
+        if (effectiveRunWorld() === "run3") return // RUN 3 (et son rejeu) : casino/tickets FERMÉS → aucune cinématique ni don de ticket
         if (!getPlayer().introSeen) return
         if (battle || dialogue || evolutions.length > 0 || pendingLearn || newDexEntry || championRun || whiteout) return
         const today = getPlayer().creditedThrough
@@ -2949,7 +2950,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 )
                             })()}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "2px 0 6px" }}>
-                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{activeWorld === "run3" ? " — RUN 3 (guide)" : activeWorld === "ngplus" ? " — RUN 2" : run1Done ? " — RUN 1" : ""}</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES & HAUTS FAITS{effectiveRunWorld() === "run3" ? " — RUN 3 (guide)" : effectiveRunWorld() === "ngplus" ? " — RUN 2" : run1Done ? " — RUN 1" : ""}</button>
                                 {hasArenaHof && <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>🏟️ HALL OF FAME (ARÈNES)</button>}
                                 {hasLeagueHof && <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>}
                                 {/* Classement visible DÈS le run 1 (onglet RUN 1 + Duels) ; les onglets run 2/3 sont masqués côté panneau tant qu'ils ne sont pas atteints. */}
@@ -3257,16 +3258,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         </div>
                                     )}
                                     {/* 🍝✨ Poche Pâte de Luxe (loterie génétique) : un clic ouvre le sélecteur → re-tire les IV (PARFAIT ou rang D). */}
-                                    {(player.items[PATE_LUXE_ITEM_ID] ?? 0) > 0 && (
+                                    {((player.items[PATE_LUXE_ITEM_ID] ?? 0) > 0 || (player.items[PATE_LUXE_VOLEUR_ITEM_ID] ?? 0) > 0) && (
                                         <div>
                                             <div style={pocketHdrStyle}>🍝✨ Pâtes de Luxe</div>
-                                            <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#e0c060", color: "#ffe9a8" }}
-                                                onClick={() => { setMenu("none"); setBagItem(null); setLuxePick(true) }}>
-                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                    <span>Pâte de Luxe 🎲</span><span>×{player.items[PATE_LUXE_ITEM_ID]}</span>
-                                                </span>
-                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Re-tire les IV d'un Daemon : PARFAIT… ou rang D. Un pari irréversible !</span>
-                                            </button>
+                                            {(player.items[PATE_LUXE_ITEM_ID] ?? 0) > 0 && (
+                                                <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#e0c060", color: "#ffe9a8" }}
+                                                    onClick={() => { setMenu("none"); setBagItem(null); setLuxeItem(PATE_LUXE_ITEM_ID); setLuxePick(true) }}>
+                                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>Pâte de Luxe 🎲</span><span>×{player.items[PATE_LUXE_ITEM_ID]}</span>
+                                                    </span>
+                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Re-tire les IV d'un Daemon : PARFAIT… ou rang D. Un pari irréversible !</span>
+                                                </button>
+                                            )}
+                                            {/* 🥷 PÂTE DU VOLEUR (2e vol) : 3 issues égales, annoncées ici, dans le mot du Voleur et dans la mise en garde. */}
+                                            {(player.items[PATE_LUXE_VOLEUR_ITEM_ID] ?? 0) > 0 && (
+                                                <button style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto", borderColor: "#c08ae0", color: "#ecd4ff" }}
+                                                    onClick={() => { setMenu("none"); setBagItem(null); setLuxeItem(PATE_LUXE_VOLEUR_ITEM_ID); setLuxePick(true) }}>
+                                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>Pâte de Luxe du Voleur 🎲</span><span>×{player.items[PATE_LUXE_VOLEUR_ITEM_ID]}</span>
+                                                    </span>
+                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Un tiers SHINY et PARFAIT, un tiers PARFAIT, un tiers RANG D. Un pari irréversible !</span>
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                     {/* 🍮 Poche Tiramisu (seconde chance) : un clic ouvre le sélecteur → restaurer OU re-tenter. */}
@@ -3418,7 +3431,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "stats" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "run3" ? "concours (run 3)" : activeWorld === "ngplus" ? "run 2" : "run principal"}</div>
+                        <div style={menuTitleStyle}>📊 STATS — {effectiveRunWorld() === "run3" ? "concours (run 3)" : effectiveRunWorld() === "ngplus" ? "run 2" : "run principal"}{activeWorld === "replay" ? " (rejeu)" : ""}</div>
                         {(() => {
                             const s = getPlayer().stats
                             const winrate = s.battles > 0 ? Math.round((s.wins / s.battles) * 100) : 0
@@ -4266,7 +4279,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 )
             })()}
             <GuidePanel />
-            {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={activeWorld === "ngplus"} isRun3={activeWorld === "run3"} onClose={closeArenaInfo} />}
+            {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={effectiveRunWorld() === "ngplus"} isRun3={effectiveRunWorld() === "run3"} onClose={closeArenaInfo} />}
 
             {/* RUN 3 — CHOIX à la fin du run 2 : fusionner maintenant (finir) OU lancer le concours (méga-fusion plus tard). */}
             {run3Offer && (
@@ -4461,7 +4474,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </button>
             )}
             {/* Roulette EUROPÉENNE (bêta) — entrée provisoire dans le casino (la table-sur-map via sprite 16×16 viendra ensuite) */}
-            {inCasino && activeWorld !== "run3" && !battle && !showIntro && !chatOpen && !rouletteOpen && (
+            {inCasino && effectiveRunWorld() !== "run3" && !battle && !showIntro && !chatOpen && !rouletteOpen && (
                 <button onClick={() => setRouletteOpen(true)} style={{ ...chatFabStyle, bottom: 84, fontSize: 22 }} title="Roulette européenne">🎡</button>
             )}
             {rouletteOpen && <RouletteCasinoModal onClose={() => setRouletteOpen(false)} />}
@@ -4984,7 +4997,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <span>REVENDRE</span><span>{repsIcon(funWords)} {player.reps}/{player.repsCap}</span>
                         </div>
                         {(() => {
-                            if (activeWorld === "run3") return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Pas de revente pendant le CONCOURS — aucune énergie ne rentre en run 3.</div>
+                            if (effectiveRunWorld() === "run3") return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Pas de revente pendant le CONCOURS — aucune énergie ne rentre en run 3.</div>
                             const owned = Object.values(ITEMS).filter((it) => it.price > 0 && (player.items[it.id] ?? 0) > 0)
                             if (!owned.length) return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Aucun objet à revendre.</div>
                             return owned.map((it) => {
@@ -5126,10 +5139,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => setLuxePick(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>🍝✨ QUEL DAEMON ?</span><span>🎲 ×{player.items[PATE_LUXE_ITEM_ID] ?? 0}</span>
+                            <span>🍝✨ QUEL DAEMON ?</span><span>🎲 ×{player.items[luxeItem] ?? 0}</span>
                         </div>
                         <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
-                            Re-tire tout le potentiel génétique : PARFAIT… ou rang D. Un seul essai par Daemon, et c'est irréversible : c'est un pari !
+                            {luxeItem === PATE_LUXE_VOLEUR_ITEM_ID
+                                ? "Pâte du Voleur : un tiers SHINY et PARFAIT, un tiers PARFAIT, un tiers RANG D. Un seul essai par Daemon, et c'est irréversible : c'est un pari !"
+                                : "Re-tire tout le potentiel génétique : PARFAIT… ou rang D. Un seul essai par Daemon, et c'est irréversible : c'est un pari !"}
                         </div>
                         {[...player.team, ...player.pc].map((m) => (
                             <button
@@ -5137,7 +5152,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 style={m.luxeUsed ? menuBtnDimStyle : menuBtnStyle}
                                 disabled={!!m.luxeUsed}
                                 title={m.luxeUsed ? "Ce Daemon a déjà mangé une Pâte de Luxe : c'est définitif." : undefined}
-                                onClick={() => setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: "luxe" })}
+                                onClick={() => setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: "luxe", item: luxeItem })}
                             >
                                 <span style={{ display: "flex", justifyContent: "space-between" }}>
                                     <span>{displayName(m)}{m.shiny ? " ✨" : ""}{m.luxeUsed ? " 🔒" : ""}</span><span>N.{m.level}</span>
@@ -5274,10 +5289,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ fontSize: 11, padding: "0 4px 10px", whiteSpace: "normal", lineHeight: 1.4 }}>
                             {luxeConfirm.mode === "reroll"
                                 ? <>« STOP, mortel ! Ce Tiramisu RELANCE la loterie génétique de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face — même s'il est déjà parfait, il peut tout perdre. Tu confirmes ? »</>
-                                : <>« STOP, mortel ! Cette Pâte de Luxe RE-TIRE tout le génome de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face. UNE SEULE pâte par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Tu confirmes ? »</>}
+                                : luxeConfirm.item === PATE_LUXE_VOLEUR_ITEM_ID
+                                    ? <>« STOP, mortel ! Cette Pâte de Luxe DU VOLEUR RE-TIRE tout le génome de <b>{luxeConfirm.name}</b> : un tiers de chances SHINY et PARFAIT, un tiers PARFAIT (IV au maximum), un tiers RANG D (IV au plancher). UNE SEULE pâte par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Tu confirmes ? »</>
+                                    : <>« STOP, mortel ! Cette Pâte de Luxe RE-TIRE tout le génome de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face. UNE SEULE pâte par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Tu confirmes ? »</>}
                         </div>
                         <button style={menuBtnStyle} onClick={() => {
-                            const { uid, name: nm, mode } = luxeConfirm
+                            const { uid, name: nm, mode, item } = luxeConfirm
                             setLuxeConfirm(null)
                             if (mode === "reroll") {
                                 const r = useTiramisu(uid, "reroll")
@@ -5285,11 +5302,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 else if (r.reason === "none") { setToast("Tu n'as plus de Tiramisu."); setTiramisuPick(false) }
                                 return
                             }
-                            const r = useLuxePasta(uid)
+                            const r = useLuxePasta(uid, item ?? PATE_LUXE_ITEM_ID)
                             if (r.ok && r.outcome) {
                                 // Le DIEU SPAGHETTI commente le résultat de la bouchée (parfait / rang D / shiny+parfait).
                                 setLuxePick(false)
-                                showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random()))
+                                showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random(), { thief: item === PATE_LUXE_VOLEUR_ITEM_ID }))
                             } else if (r.reason === "locked") {
                                 setToast(`${nm} a déjà mangé une Pâte de Luxe : c'est définitif.`)
                             } else if (r.reason === "none") {
