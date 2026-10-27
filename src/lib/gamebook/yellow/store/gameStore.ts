@@ -91,6 +91,7 @@ import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } fro
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { ORFEVRE_NPC_ID, ORFEVRE_TRAINER_ID, ORFEVRE_NAME, ORFEVRE_SPRITE, ORFEVRE_INTRO_LINES, ORFEVRE_NO_TEAM_LINES, ORFEVRE_ALREADY_TODAY_LINES, ORFEVRE_DONE_LINES, ORFEVRE_ARRIVAL_LINES, ORFEVRE_DAY_PREFIX, orfevreDayMarker, orfevreDone, buildOrfevreTeam } from "../data/orfevre"
 import { RUN3_VETERAN_NPC_ID, RUN3_VETERAN_NAME, RUN3_VETERAN_MAP_ID, RUN3_VETERAN_POS, RUN3_VETERAN_SPRITE, RUN3_VETERAN_LINES } from "../data/run3Veteran"
+import { CONTEUR_NPC_ID, CONTEUR_NAME, CONTEUR_MAP_ID, CONTEUR_POS, CONTEUR_SPRITES, CONTEUR_LEGEND, conteurRun, conteurLines } from "../data/legendTeller"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, UKOGNOFY_NPC_POS, UKOGNOFY_CAUGHT_MARKER, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_ABANDON_OFFER_LINES_FUN, CHEN_FUN_GIFT_REMINDER_LINE, chenLabRoute, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
@@ -313,6 +314,24 @@ export function activeNpcs() {
             initialX: RUN3_VETERAN_POS.x,
             initialY: RUN3_VETERAN_POS.y,
             dialoguesAfter: [...RUN3_VETERAN_LINES],
+        }]
+    }
+    // 📜 CONTEUR DE LÉGENDE (27/10/2026) — Cendreville (11,23), UN VISAGE PAR RUN : il raconte le légendaire de la run (Goshendofy /
+    //   Ukognos / Flamarokto / Galijah au run fusion), vante ses stats (lues dans species.ts) et explique comment l'attraper.
+    //   Toujours présent ; sprite et lignes recalculés à chaque liste (run courante + Pokédex). Cf. data/legendTeller.
+    {
+        const cRun = conteurRun(effectiveRunWorld(), getPlayerSave().sylvebarbeAwake)
+        list = [...list, {
+            id: CONTEUR_NPC_ID,
+            name: CONTEUR_NAME,
+            mapId: CONTEUR_MAP_ID,
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "📜", color: "#8c6840" }, // repli si la planche Gen 3 manque
+            gen3: { url: CONTEUR_SPRITES[cRun] },
+            initialX: CONTEUR_POS.x,
+            initialY: CONTEUR_POS.y,
+            dialoguesAfter: conteurLines(cRun, getPokedex().caught.includes(CONTEUR_LEGEND[cRun])),
         }]
     }
     // FASHION VICTIM — à VILLE JAUNE, visible SEULEMENT à partir du 1er badge d'arène (elle n'existe pas avant : un tout
