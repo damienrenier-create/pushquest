@@ -25,7 +25,7 @@ import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/captureConfig"
 import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID } from "../data/items"
+import { ballBonusOf, getItem, isGuaranteedBall, isSuperMegaTarget, SUPER_MEGA_BALL_ID, SHINY_BALL_ID } from "../data/items"
 import { flamaroktoGuaranteed } from "../data/run3Legend"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN, EV_STAT_CAP } from "../data/evConfig"
@@ -95,6 +95,9 @@ export interface BattleState {
     /** 🧞 VŒU « captures garanties » (Kingme, 26/10/2026) : posé par le store le temps d'UN lancer de Ball → capture à coup
      *  sûr (hors fusions, qui exigent leur Fusio-Ball). Jamais persisté au-delà du tour. */
     genieCatchGuaranteed?: boolean
+    /** ✨ SHINY BALL (L'Orfèvre, 26/10/2026) : la capture de CE combat a FORGÉ un chromatique (le captif n'était pas shiny
+     *  de naissance) → le store n'en fait ni fête shiny ni prime de parrainage. Posé par performCapture. */
+    shinyBallCapture?: boolean
     /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois). */
     participated: string[]
     /** Par ENNEMI (uid) → uids des Daemons joueur qui l'ont AFFRONTÉ. Seuls eux gagnent
@@ -1621,7 +1624,18 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     //   OU une fusion ÉPHÉMÈRE (id `fusion_<uid>_<uid>`). Aucun autre Daemon n'est concerné.
     const isFusion = FUSION_BASE_IDS.includes(wild.speciesId) || wild.speciesId === "ukognofy" || wild.speciesId.startsWith("fusion_")
     const isFusioBall = itemId === "fusio_ball"
-    if (isFusion && !isFusioBall) {
+    // ✨ SHINY BALL (L'Orfèvre, 26/10/2026) : fait OFFICE de Fusio-Ball sur un fusionné (même seuil garanti), Ball très forte
+    //   (bonus 6, pas infaillible) sur tout le reste ; dans les deux cas le captif devient CHROMATIQUE (IV parfaits + flag).
+    const isShinyBall = itemId === SHINY_BALL_ID
+    const ballName = getItem(itemId)?.name ?? "Ball"
+    const shinyForge = () => {
+        if (!isShinyBall || wild.shiny) return // déjà chromatique de naissance → rien à forger (et la fête shiny reste due)
+        wild.shiny = true
+        for (const k of Object.keys(wild.ivs) as (keyof typeof wild.ivs)[]) wild.ivs[k] = 15
+        state.shinyBallCapture = true
+        events.push({ kind: "message", text: `✨ La Shiny Ball fait scintiller ${displayName(wild)} : il est devenu CHROMATIQUE !` })
+    }
+    if (isFusion && !isFusioBall && !isShinyBall) {
         events.push({ kind: "ball", action: "miss" })
         events.push({ kind: "message", text: `La Ball GLISSE sur ${displayName(wild)} sans l'accrocher ! Seule une FUSIO-BALL peut capturer une créature fusionnée…` })
         return
@@ -1643,7 +1657,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     //   bien plus bas. CAS SPÉCIAL UKOGNOFY (choix Sartay) : seuil FIXE à 50% (au lieu du ~10% dérivé de son BST 1710)
     //   → dur mais accessible dès la moitié de ses PV. Un STATUT majeur RELÈVE le seuil (capture plus facile) :
     //   sommeil/gel ×1,6 ; brûlure/poison/toxik/paralysie ×1,3. Au-dessus du seuil → la Ball ne prend pas.
-    if (isFusioBall) {
+    if (isFusioBall || (isShinyBall && isFusion)) {
         const fs = wild.frozenStats
         const bst = fs ? fs.hp + fs.atk + fs.def + fs.spe + fs.spc + (wild.frozenSpd ?? fs.spc)
             : Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
@@ -1653,7 +1667,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         if (wild.currentHp > maxHpOf(wild) * threshold) {
             events.push({ kind: "ball", action: "miss" })
             const statusHint = wild.status === "NONE" ? " Un STATUT (sommeil/gel surtout) faciliterait la prise." : ""
-            events.push({ kind: "message", text: `${displayName(wild)} est ENCORE trop vigoureux ! Affaiblis-le sous ${Math.round(threshold * 100)}% de ses PV — alors la Fusio-Ball le capturera À COUP SÛR.${statusHint}` })
+            events.push({ kind: "message", text: `${displayName(wild)} est ENCORE trop vigoureux ! Affaiblis-le sous ${Math.round(threshold * 100)}% de ses PV — alors la ${ballName} le capturera À COUP SÛR.${statusHint}` })
             return
         }
         events.push({ kind: "ball", action: "throw" })
@@ -1661,7 +1675,8 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         events.push({ kind: "ball", action: "result", caught: true })
         state.phase = "ended"
         state.outcome = "caught"
-        events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé par la Fusio-Ball !` })
+        events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé par la ${ballName} !` })
+        shinyForge()
         events.push({ kind: "end", outcome: "caught" })
         return
     }
@@ -1710,6 +1725,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         state.phase = "ended"
         state.outcome = "caught"
         events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé !` })
+        shinyForge()
         events.push({ kind: "end", outcome: "caught" })
     } else if (rng.next() < CAPTURE_WOBBLE_CHANCE) {
         // ÉCHEC « PRESQUE ! » (30%) : la ball accroche, FILE, TREMBLE (≥1 secousse pour le suspense)… puis

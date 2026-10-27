@@ -99,6 +99,13 @@ export const ITEMS: Record<string, ItemData> = {
         //   facile une fois affaiblie, une fusion très puissante (BST énorme) reste ardue. Sans effet sur les autres.
         description: "La SEULE Ball qui capture un Daemon FUSIONNÉ. Redoutablement efficace — mais les fusions les plus puissantes résistent. Sans effet sur les autres Daemons.", price: 0, ballBonus: 8,
     },
+    // SHINY BALL — forgée par L'ORFÈVRE (Sanctuaire d'Ukognofy, une fois le légendaire capturé ; 1 par victoire, 6 max — cf.
+    //   data/orfevre). Capture un cran au-dessus de l'Hyper Nexus-Ball + (bonus 6, PAS `guaranteed`), le Daemon capturé devient
+    //   CHROMATIQUE (IV parfaits + flag shiny) et elle fait office de FUSIO-BALL (cf. engine.performCapture). price 0 = hors shop.
+    shiny_ball: {
+        id: "shiny_ball", name: "Shiny Ball", category: "BALL",
+        description: "Forgée par l'Orfèvre. Le Daemon qu'elle capture devient CHROMATIQUE à jamais. Prise redoutable — un cran au-dessus de l'Hyper Nexus-Ball + — mais pas infaillible. Accroche aussi les Daemons FUSIONNÉS, comme une Fusio-Ball.", price: 0, ballBonus: 6,
+    },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
         description: "Restaure 20 PV à un Daemon.", price: 10, healHp: 20,
@@ -285,6 +292,8 @@ export function isGuaranteedBall(itemId: string): boolean {
  *  La Ball reste NON `guaranteed` au sens strict (elle ne capture pas n'importe quoi) : c'est le moteur qui
  *  croise « cette Ball » × « cette cible » × « < 50 % PV ». */
 export const SUPER_MEGA_BALL_ID = "super_mega_nexus_ball"
+/** SHINY BALL de l'Orfèvre : le captif devient chromatique ; fait office de Fusio-Ball (cf. engine.performCapture + data/orfevre). */
+export const SHINY_BALL_ID = "shiny_ball"
 export const SUPER_MEGA_TARGET_IDS: readonly string[] = ["goshendofy", "ukognos", "flamarokto", "galijah"]
 /** Cette espèce est-elle une cible « capture garantie » de la Super Méga Nexus-Ball ? */
 export function isSuperMegaTarget(speciesId: string): boolean {

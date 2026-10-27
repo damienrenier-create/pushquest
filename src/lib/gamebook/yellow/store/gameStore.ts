@@ -89,8 +89,9 @@ import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, in
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { AUTEL_VISITED_MARKER, GROTTE_ENTERED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
+import { ORFEVRE_NPC_ID, ORFEVRE_TRAINER_ID, ORFEVRE_NAME, ORFEVRE_SPRITE, ORFEVRE_INTRO_LINES, ORFEVRE_NO_TEAM_LINES, ORFEVRE_ALREADY_TODAY_LINES, ORFEVRE_DONE_LINES, ORFEVRE_ARRIVAL_LINES, ORFEVRE_DAY_PREFIX, orfevreDayMarker, orfevreDone, buildOrfevreTeam } from "../data/orfevre"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
-import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
+import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, UKOGNOFY_NPC_POS, UKOGNOFY_CAUGHT_MARKER, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_ABANDON_OFFER_LINES_FUN, CHEN_FUN_GIFT_REMINDER_LINE, chenLabRoute, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { fullStats } from "../battle/stats"
@@ -279,6 +280,22 @@ export function activeNpcs() {
             initialX: KEY_GUARD_POS.x,
             initialY: KEY_GUARD_POS.y,
             dialoguesAfter: [...KEY_GUARD_STORY_LINES],
+        }]
+    }
+    // ✨ L'ORFÈVRE (26/10/2026) : une fois UKOGNOFY CAPTURÉ, il prend sa place au centre du Sanctuaire (7,7) — le PNJ
+    //   Ukognofy quitte la liste. 6 Shiny Balls (1 par victoire), 1 combat/jour. Planche Gen 3 via npc.gen3. Cf. data/orfevre.
+    if (isTrainerDefeated(UKOGNOFY_CAUGHT_MARKER)) {
+        list = [...list.filter((n) => n.id !== UKOGNOFY_NPC_ID), {
+            id: ORFEVRE_NPC_ID,
+            name: ORFEVRE_NAME,
+            mapId: UKOGNOFY_CHAMBER_MAP,
+            kind: "static",
+            interaction: "interactive",
+            sprite: { emoji: "✨", color: "#d4a017" }, // repli si la planche Gen 3 manque
+            gen3: { url: ORFEVRE_SPRITE },
+            initialX: UKOGNOFY_NPC_POS.x,
+            initialY: UKOGNOFY_NPC_POS.y,
+            dialoguesAfter: [...ORFEVRE_INTRO_LINES],
         }]
     }
     // FASHION VICTIM — à VILLE JAUNE, visible SEULEMENT à partir du 1er badge d'arène (elle n'existe pas avant : un tout
@@ -627,6 +644,7 @@ interface GameStore {
     pendingPnj7: boolean // intro de PNJ 7 (Éclaireur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingNemesis: boolean // intro du défi némésis (vœu de Jacanon) en cours → combat à la fermeture
     pendingPnj6: boolean // intro de PNJ 6 (Échangeur de la Grotte du Nexus) en cours → combat à la fermeture
+    pendingOrfevre: boolean // intro de L'ORFÈVRE (dresseur de shiny du Sanctuaire d'Ukognofy) en cours → combat à la fermeture
     pendingPnj10: boolean // intro de PNJ 10 (Sentinelle de la Grotte du Nexus) en cours → combat à la fermeture
     pendingCombatShop: boolean // intro ONE-TIME du MARCHAND en cours → ouvre la boutique JC à la fermeture du dialogue
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
@@ -1423,6 +1441,19 @@ function tryLaunchPnj6(): ActiveDialogue | null {
     return null
 }
 
+// ✨ L'ORFÈVRE (Sanctuaire d'Ukognofy, 26/10/2026). Cap 1×/jour posé AU LANCEMENT (gagné ou perdu, comme l'Échangeur) ;
+//   la récompense (marqueur orfevre_win_N + Shiny Ball) est posée dans battleStore.finishBattle.
+function tryLaunchOrfevre(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: ORFEVRE_TRAINER_ID, npcName: ORFEVRE_NAME, lineIndex: 0, lines: [...ORFEVRE_NO_TEAM_LINES] }
+    }
+    setDailyMarker(ORFEVRE_DAY_PREFIX, orfevreDayMarker()) // prefix "orfevre_day_" ≠ "orfevre_win_"
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, buildOrfevreTeam(), seed, { trainerId: ORFEVRE_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // LA SENTINELLE DE LA GROTTE (PNJ 10). Bloqueur de couloir : re-battu à chaque visite (flag transitoire).
 function tryLaunchPnj10(): ActiveDialogue | null {
     const team = getPlayerSave().team
@@ -1524,6 +1555,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingPnj7: false,
     pendingNemesis: false,
     pendingPnj6: false,
+    pendingOrfevre: false,
     pendingPnj10: false,
     pendingCombatShop: false,
     pendingHhTrade: null,
@@ -2086,7 +2118,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (targetMapId.startsWith("yellow_grotte_nexus") && ukognofyChainArmed && isUkognofyNight()
                 && getPlayerSave().team.some((m) => m.level >= 100)
                 && getPlayerSave().team.some((m) => m.currentHp > 0)
-                && !isUkognofyGone(isTrainerDefeated)) {
+                // ✨ CAPTURÉ → la chambre RESTE ouverte (même rituel) : L'ORFÈVRE y a pris la place du légendaire (26/10/2026).
+                && (!isUkognofyGone(isTrainerDefeated) || isTrainerDefeated(UKOGNOFY_CAUGHT_MARKER))) {
                 targetMapId = UKOGNOFY_CHAMBER_MAP; spawnX = 7; spawnY = 12; ukognofyChainArmed = false
             }
             // La chaîne se réinitialise dès qu'on QUITTE la Grotte (destination hors Grotte et hors chambre).
@@ -2137,6 +2170,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const ukognofyAutoAmbush = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated)
                     && ukognofyFails === 0 && getPlayerSave().team.some((m) => m.currentHp > 0)
                 const ukognofyWarn = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated) && ukognofyFails >= 1
+                const orfevreArrival = enteringUkognofyChamber && isTrainerDefeated(UKOGNOFY_CAUGHT_MARKER) // ✨ L'Orfèvre a pris la place
                 // OUVERTURE DU TRÔNE — une seule fois, en arrivant à l'Autel. Le sacre OR l'annonce déjà à chaud,
                 //   mais les champions OR d'AVANT la feature ont reçu le palier par migration au chargement : sans
                 //   ça, la porte changerait de destination dans leur dos, sans un mot. Volontairement placé APRÈS
@@ -2163,6 +2197,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     } : ukognofyWarn ? {
                         // 2ᵉ visite+ : avertissement d'enjeu + rappel du choix APPROCHER / RESSORTIR (pas de combat auto).
                         npcId: UKOGNOFY_NPC_ID, npcName: "UKOGNOFY", lineIndex: 0, lines: ukognofyWarnLines(ukognofyRemainingTries(isTrainerDefeated)),
+                    } : orfevreArrival ? {
+                        npcId: ORFEVRE_NPC_ID, npcName: ORFEVRE_NAME, lineIndex: 0, lines: [...ORFEVRE_ARRIVAL_LINES],
                     } : islandTooEarly ? {
                         npcId: "y_ile_presage", npcName: "🌊 ÎLE ÉMERAUDE", lineIndex: 0, lines: ISLAND_TOO_EARLY_LINES,
                     } : null,
@@ -2599,6 +2635,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchNemesisChallenge(), pendingNemesis: false })
                 } else if (get().pendingPnj6) {
                     set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
+                } else if (get().pendingOrfevre) {
+                    set({ dialogue: tryLaunchOrfevre(), pendingOrfevre: false })
                 } else if (get().pendingPnj10) {
                     set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
                 } else if (get().pendingHhTrade) {
@@ -3078,6 +3116,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // UKOGNOFY — PNJ de la chambre (2ᵉ visite+, « bump-to-fight »). APPROCHER + A = ENGAGER le combat (l'approche
         //   vaut engagement, comme un défi de dresseur). Le demi-tour = NE PAS approcher, ressortir par l'échelle.
         //   Gardes : disparu à jamais / déjà affronté cette visite / équipe K.O. (aucune tentative brûlée dans ces cas).
+        // ✨ L'ORFÈVRE (Sanctuaire, une fois Ukognofy capturé) : 6 Shiny Balls max (1 par victoire), 1 combat par jour (gagné
+        //   ou perdu), équipe K.O. = pas de combat. L'approche + A = engagement (comme Ukognofy).
+        if (npc.id === ORFEVRE_NPC_ID) {
+            if (orfevreDone(isTrainerDefeated)) {
+                set({ dialogue: { npcId: npc.id, npcName: ORFEVRE_NAME, lineIndex: 0, lines: [...ORFEVRE_DONE_LINES] } })
+                return
+            }
+            if (isTrainerDefeated(orfevreDayMarker())) {
+                set({ dialogue: { npcId: npc.id, npcName: ORFEVRE_NAME, lineIndex: 0, lines: [...ORFEVRE_ALREADY_TODAY_LINES] } })
+                return
+            }
+            if (!getPlayerSave().team.some((m) => m.currentHp > 0)) {
+                set({ dialogue: { npcId: npc.id, npcName: ORFEVRE_NAME, lineIndex: 0, lines: [...ORFEVRE_NO_TEAM_LINES] } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: ORFEVRE_NAME, lines: [...ORFEVRE_INTRO_LINES], lineIndex: 0 }, pendingOrfevre: true })
+            return
+        }
         if (npc.id === UKOGNOFY_NPC_ID) {
             if (isUkognofyGone(isTrainerDefeated)) {
                 set({ dialogue: { npcId: npc.id, npcName: "UKOGNOFY", lineIndex: 0, lines: UKOGNOFY_GONE_LINES } })
@@ -3458,6 +3514,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchNemesisChallenge(), pendingNemesis: false })
         } else if (get().pendingPnj6) {
             set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
+        } else if (get().pendingOrfevre) {
+            set({ dialogue: tryLaunchOrfevre(), pendingOrfevre: false })
         } else if (get().pendingPnj10) {
             set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
         } else if (get().pendingHhTrade) {

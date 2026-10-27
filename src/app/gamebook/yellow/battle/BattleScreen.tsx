@@ -1043,6 +1043,7 @@ function PartyScreen({ team, options, cursor, onPick }: {
 // "miss" = lancer COMPLÈTEMENT raté : la ball part de travers, frôle la cible et sort de l'écran.
 /** Couleur (dégradé du haut) de la Ball lancée, par PALIER — comme les vraies Poké/Super/Hyper Balls. */
 function ballGradient(id: string): string {
+    if (id === "shiny_ball") return "linear-gradient(#fff4c2,#e2b31c)"            // Shiny Ball : nacrée (L'Orfèvre)
     if (id === "fusio_ball") return "linear-gradient(#f5d24a,#d4a017)"            // Fusio-Ball : doré
     if (id === "master_ball") return "linear-gradient(#d24ab0,#a01a80)"          // Master-Éclair : magenta
     if (id === "super_mega_nexus_ball") return "linear-gradient(#9a5ae0,#6a2ac0)" // Super Méga : violet

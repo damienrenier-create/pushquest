@@ -52,6 +52,7 @@ import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } f
 import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
+import { ORFEVRE_TRAINER_ID, ORFEVRE_NAME, nextOrfevreWinMarker, orfevreWinCount, orfevreVictoryLines, SHINY_BALL_ID } from "../data/orfevre"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
@@ -1022,7 +1023,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // DÉFIS FUN : avance le SPRINT (N espèces) / valide la CIBLE DU JOUR. No-op hors mode fun (aucun défi actif).
             if (getActiveWorld() !== "replay") funOnCapture(wild.speciesId)
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
-            if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
+            //   ✨ Un shiny FORGÉ par la Shiny Ball (L'Orfèvre) n'en est pas une : ni fête, ni prime de parrainage.
+            if (wild.shiny && !b.shinyBallCapture) reportShiny("captured", wild.uid, wild.speciesId)
             // 🐈‍⬛ GALIJAH : à 150 ESPÈCES → arme sa chasse (décompte UI). Il se CAPTURE sur l'ÎLE ÉMERAUDE (rencontre
             //   25 %/combat, cf. gameStore) — plus de CADEAU au 200ᵉ dex (grantGalijahIfDexMilestone RETIRÉ) : à 200 il
             //   RÉAPPARAÎT sur l'île s'il avait été manqué. (Le dex global compte même les espèces vues en rejeu.)
@@ -1339,6 +1341,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             primeGrotteDemo()
             markTrainerDefeated(ECLAIREUR_PRECISION_MARKER) // PERSISTANT : débloque les coords d'échelle précises du Daemomaniaque
             rematchReward = { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lines: [...PNJ7_VICTORY_LINES, ...PNJ7_CAROUSEL_LINES] }
+        } else if (storeState.trainer.trainerId === ORFEVRE_TRAINER_ID) {
+            // ✨ L'ORFÈVRE (Sanctuaire d'Ukognofy, 26/10/2026) : le cap 1×/jour est posé AU LANCEMENT (gameStore.tryLaunchOrfevre).
+            //   Chaque VICTOIRE pose le prochain marqueur orfevre_win_N (per-monde) et remet une SHINY BALL — 6 au maximum.
+            const mk = nextOrfevreWinMarker(isTrainerDefeated)
+            if (mk) { markTrainerDefeated(mk); addItem(SHINY_BALL_ID, 1) }
+            rematchReward = { npcId: ORFEVRE_TRAINER_ID, npcName: ORFEVRE_NAME, lines: orfevreVictoryLines(orfevreWinCount(isTrainerDefeated)) }
         } else if (storeState.trainer.trainerId === PNJ6_TRAINER_ID) {
             // L'ÉCHANGEUR (PNJ 6) : victoire → offre d'échange Crocavern ↔ team[0] (modale côté client). RÉPÉTABLE
             //   tant que l'échange n'est pas conclu — aucun marqueur ici (pnj6_trade_done est posé À L'ÉCHANGE).
