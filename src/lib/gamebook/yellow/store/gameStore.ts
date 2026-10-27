@@ -44,7 +44,7 @@ import { PLATINE_INTRO_MARKER, PLATINE_SPAGHETTI_LINES, PLATINE_SPAGHETTI_SHORT,
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, galijahStrengthTier, getGalijahDaily, setGalijahDaily, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree, getShinyFrenzy } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, galijahStrengthTier, getGalijahDaily, setGalijahDaily, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree, getShinyFrenzy, getThief, commitTheft, thiefVictimsNow } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getFusionChampionAvatar } from "./playerStore"
 import { avatarFilter } from "../data/avatars"
@@ -54,7 +54,7 @@ import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
 import { distributeEvs, EV_TOTAL_CAP } from "../data/evConfig"
-import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
+import { persistYellowSave, persistYellowSaveNow, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt, buildForcedSpawn } from "../data/encounters"
 import { getOnlineCount } from "../multiplayer/onlinePresence"
 import { reportShiny } from "../shinyGift"
@@ -92,6 +92,7 @@ import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM
 import { ORFEVRE_NPC_ID, ORFEVRE_TRAINER_ID, ORFEVRE_NAME, ORFEVRE_SPRITE, ORFEVRE_INTRO_LINES, ORFEVRE_NO_TEAM_LINES, ORFEVRE_ALREADY_TODAY_LINES, ORFEVRE_DONE_LINES, ORFEVRE_ARRIVAL_LINES, ORFEVRE_DAY_PREFIX, orfevreDayMarker, orfevreDone, buildOrfevreTeam } from "../data/orfevre"
 import { RUN3_VETERAN_NPC_ID, RUN3_VETERAN_NAME, RUN3_VETERAN_MAP_ID, RUN3_VETERAN_POS, RUN3_VETERAN_SPRITE, RUN3_VETERAN_LINES } from "../data/run3Veteran"
 import { CONTEUR_NPC_ID, CONTEUR_NAME, CONTEUR_MAP_ID, CONTEUR_POS, CONTEUR_SPRITES, CONTEUR_LEGEND, conteurRun, conteurLines } from "../data/legendTeller"
+import { THIEF_NPC_ID, THIEF_TRAINER_ID, THIEF_NAME, THIEF_STRANGER_NAME, THIEF_MAP_ID, THIEF_HOME, THIEF_HIDEOUTS, THIEF_SPRITE, THIEF_ALREADY_TODAY_LINES, THIEF_LONELY_LINES, THIEF_NOTHING_TEMPTING_LINES, thiefDayKey, thiefGone, nextThiefSpotIdx, pickThiefVictim, thiefMonName, thiefAnecdote, thiefHomeLines, thiefStoleLines, thiefFoundLines, thiefNoTeamLines, buildThiefTeam } from "../data/thief"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, UKOGNOFY_NPC_POS, UKOGNOFY_CAUGHT_MARKER, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_ABANDON_OFFER_LINES_FUN, CHEN_FUN_GIFT_REMINDER_LINE, chenLabRoute, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES, CHEN_FUN_GIFT_REPS, CHEN_FUN_GIFT_LINES, CHEN_FUN_GIFT_DONE_LINES, CHEN_FUN_GIFT_OFFER_LINES, CHEN_FUN_GIFT_ENOUGH_LINES } from "../data/labDialogues"
@@ -333,6 +334,31 @@ export function activeNpcs() {
             initialY: CONTEUR_POS.y,
             dialoguesAfter: conteurLines(cRun, getPokedex().caught.includes(CONTEUR_LEGEND[cRun])),
         }]
+    }
+    // 🥷 LE VOLEUR (27/10/2026) — Cendreville, toutes les runs (jamais en rejeu : la bulle est jetable). État GLOBAL au profil :
+    //   un vol non résolu le fait réapparaître — avec le larcin — dans la run suivante. Vol en cours → il se CACHE (3 cases,
+    //   re-tirées à chaque chargement de carte) ; sinon CHEZ LUI en (37,18) tant qu'il n'a pas disparu (3 vols résolus).
+    if (getActiveWorld() !== "replay") {
+        const th = getThief()
+        if (th.stolen) {
+            // La cachette n'est tirée QUE quand Cendreville est la carte affichée : un tirage fait pendant le rendu d'un intérieur
+            //   (Centre, boutique…) deviendrait la « précédente » sans avoir jamais été vue (revue du 27/10/2026).
+            if (thiefSpotIdx < 0 && useGameStore.getState().map?.id === THIEF_MAP_ID) { thiefSpotIdx = nextThiefSpotIdx(thiefLastSpotIdx, Math.random()); thiefLastSpotIdx = thiefSpotIdx }
+            if (thiefSpotIdx >= 0) {
+                const [hx, hy] = THIEF_HIDEOUTS[thiefSpotIdx]
+                list = [...list, {
+                    id: THIEF_NPC_ID, name: THIEF_NAME, mapId: THIEF_MAP_ID, kind: "static", interaction: "interactive",
+                    sprite: { emoji: "🥷", color: "#3a2a5a" }, gen3: { url: THIEF_SPRITE }, initialX: hx, initialY: hy,
+                    dialoguesAfter: thiefFoundLines(thiefMonName(th.stolen)),
+                }]
+            }
+        } else if (!thiefGone(th)) {
+            list = [...list, {
+                id: THIEF_NPC_ID, name: th.thefts > 0 ? THIEF_NAME : THIEF_STRANGER_NAME, mapId: THIEF_MAP_ID, kind: "static", interaction: "interactive",
+                sprite: { emoji: "🥷", color: "#3a2a5a" }, gen3: { url: THIEF_SPRITE }, initialX: THIEF_HOME.x, initialY: THIEF_HOME.y,
+                dialoguesAfter: ["« Hé, dresseur ! Approche, j'adore les belles rencontres. »"],
+            }]
+        }
     }
     // FASHION VICTIM — à VILLE JAUNE, visible SEULEMENT à partir du 1er badge d'arène (elle n'existe pas avant : un tout
     //   nouveau compte ne doit pas la croiser). Spot tiré au hasard parmi TOUTES les cases WALKABLE de la ville
@@ -586,6 +612,12 @@ let galijahStepsLeft = -1
 //   page n'est pas rechargée → le PNJ reste atteignable), re-tiré au prochain chargement → « pop à différents endroits ».
 const DAEMO_SPOTS: ReadonlyArray<readonly [number, number]> = [[26, 15], [8, 17], [17, 29], [36, 4], [22, 2], [7, 8], [30, 29]]
 let daemoSpotIdx = -1
+// 🥷 LE VOLEUR : index de sa CACHETTE (THIEF_HIDEOUTS), re-tiré à CHAQUE chargement de carte (setMap / warp / téléport) → il
+//   change de place tant qu'on ne l'a pas retrouvé. -1 = à tirer. `thiefVictimUid` = la cible choisie à l'ouverture de son
+//   dialogue chez lui (le vol est COMMIS à la fermeture, cf. finishTheft).
+let thiefSpotIdx = -1
+let thiefLastSpotIdx = -1 // dernière cachette montrée → la suivante est toujours DIFFÉRENTE (nextThiefSpotIdx)
+let thiefVictimUid = ""
 // VIEUX SAGE SAIYAN : spot tiré au hasard parmi TOUTES les cases marchables ATTEIGNABLES de Ville Jaune (BFS depuis un
 //   spot central connu → jamais dans une poche isolée ; hautes herbes exclues pour ne pas déclencher de rencontre à ses
 //   pieds). Re-tiré à CHAQUE entrée à Ville Jaune (cf. setMap) → il change de place d'une visite à l'autre.
@@ -681,6 +713,8 @@ interface GameStore {
     pendingNemesis: boolean // intro du défi némésis (vœu de Jacanon) en cours → combat à la fermeture
     pendingPnj6: boolean // intro de PNJ 6 (Échangeur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingOrfevre: boolean // intro de L'ORFÈVRE (dresseur de shiny du Sanctuaire d'Ukognofy) en cours → combat à la fermeture
+    pendingThiefSteal: boolean // 🥷 anecdote du VOLEUR en cours → le VOL est commis à la fermeture (finishTheft)
+    pendingThiefFight: boolean // 🥷 « tu m'as trouvé » en cours → combat contre les némésis à la fermeture (tryLaunchThief)
     pendingPnj10: boolean // intro de PNJ 10 (Sentinelle de la Grotte du Nexus) en cours → combat à la fermeture
     pendingCombatShop: boolean // intro ONE-TIME du MARCHAND en cours → ouvre la boutique JC à la fermeture du dialogue
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
@@ -1490,6 +1524,33 @@ function tryLaunchOrfevre(): ActiveDialogue | null {
     return null
 }
 
+// 🥷 LE VOLEUR — fermeture de son anecdote : le VOL est commis (le Daemon ciblé quitte l'équipe, l'instantané est figé dans
+//   l'état global), la save part tout de suite, et il file se cacher (nouvelle cachette tirée). Renvoie le dialogue de la
+//   découverte du larcin (ou null si le vol n'a pas pu avoir lieu : cible partie, équipe trop petite…).
+function finishTheft(): ActiveDialogue | null {
+    const uid = thiefVictimUid
+    thiefVictimUid = ""
+    const theft = uid ? commitTheft(uid) : null
+    if (!theft) return null
+    thiefSpotIdx = -1
+    void persistYellowSaveNow() // save IMMÉDIATE : un rechargement de page ne doit pas pouvoir annuler le vol
+    return { npcId: THIEF_NPC_ID, npcName: THIEF_NAME, lineIndex: 0, lines: thiefStoleLines(thiefMonName(theft.stolen), theft.gift) }
+}
+// 🥷 LE VOLEUR — combat de récupération : son équipe = les CLONES de l'équipe du joueur au moment du vol (+ le volé), IA « hof »
+//   (la plus maligne). Pas de cap : retentable à chaque fois qu'on le retrouve. La récupération est posée dans
+//   battleStore.finishBattle (victoire) ; une défaite ne change rien (il garde le Daemon).
+function tryLaunchThief(): ActiveDialogue | null {
+    const th = getThief()
+    if (!th.stolen) return null
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: THIEF_TRAINER_ID, npcName: THIEF_NAME, lineIndex: 0, lines: thiefNoTeamLines(thiefMonName(th.stolen)) }
+    }
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, buildThiefTeam(th), seed, { trainerId: THIEF_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // LA SENTINELLE DE LA GROTTE (PNJ 10). Bloqueur de couloir : re-battu à chaque visite (flag transitoire).
 function tryLaunchPnj10(): ActiveDialogue | null {
     const team = getPlayerSave().team
@@ -1592,6 +1653,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingNemesis: false,
     pendingPnj6: false,
     pendingOrfevre: false,
+    pendingThiefSteal: false,
+    pendingThiefFight: false,
     pendingPnj10: false,
     pendingCombatShop: false,
     pendingHhTrade: null,
@@ -2197,6 +2260,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 //   le joueur APPROCHE le PNJ pour combattre (pressA) ou RESSORT par l'échelle sans risquer de tentative.
                 const enteringUkognofyChamber = targetMapId === UKOGNOFY_CHAMBER_MAP
                 if (enteringUkognofyChamber) ukognofyChamberFought = false // reset par visite
+                thiefSpotIdx = -1 // 🥷 le Voleur change de cachette à chaque chargement de carte
                 // ÎLE ÉMERAUDE — présage « quelque chose de puissant… mais pas maintenant » quand Galijah ne peut PAS
                 //   apparaître (Pokédex < 150, OU déjà apparu et < 200). Pas capturé (sinon plus de présage). On entre
                 //   quand même (fillers + baie palmier accessibles).
@@ -2673,6 +2737,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
                 } else if (get().pendingOrfevre) {
                     set({ dialogue: tryLaunchOrfevre(), pendingOrfevre: false })
+                } else if (get().pendingThiefSteal) {
+                    set({ dialogue: finishTheft(), pendingThiefSteal: false })
+                } else if (get().pendingThiefFight) {
+                    set({ dialogue: tryLaunchThief(), pendingThiefFight: false })
                 } else if (get().pendingPnj10) {
                     set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
                 } else if (get().pendingHhTrade) {
@@ -3152,6 +3220,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // UKOGNOFY — PNJ de la chambre (2ᵉ visite+, « bump-to-fight »). APPROCHER + A = ENGAGER le combat (l'approche
         //   vaut engagement, comme un défi de dresseur). Le demi-tour = NE PAS approcher, ressortir par l'échelle.
         //   Gardes : disparu à jamais / déjà affronté cette visite / équipe K.O. (aucune tentative brûlée dans ces cas).
+        // 🥷 LE VOLEUR (Cendreville) : chez lui → anecdote sur un Daemon AU HASARD de l'équipe puis VOL à la fermeture (1/jour,
+        //   jamais le dernier Daemon ni un Daemon posé sur l'étal) ; caché → « tu m'as trouvé » puis combat à la fermeture.
+        if (npc.id === THIEF_NPC_ID) {
+            const th = getThief()
+            if (th.stolen) {
+                if (!getPlayerSave().team.some((m) => m.currentHp > 0)) {
+                    set({ dialogue: { npcId: npc.id, npcName: THIEF_NAME, lineIndex: 0, lines: thiefNoTeamLines(thiefMonName(th.stolen)) } })
+                    return
+                }
+                set({ dialogue: { npcId: npc.id, npcName: THIEF_NAME, lines: thiefFoundLines(thiefMonName(th.stolen)), lineIndex: 0 }, pendingThiefFight: true })
+                return
+            }
+            if (th.lastTheftDay === thiefDayKey()) {
+                set({ dialogue: { npcId: npc.id, npcName: THIEF_NAME, lineIndex: 0, lines: [...THIEF_ALREADY_TODAY_LINES] } })
+                return
+            }
+            const homeName = th.thefts > 0 ? THIEF_NAME : THIEF_STRANGER_NAME // INCONNU au 1er vol : la révélation vient après
+            if (getPlayerSave().team.length < 2) {
+                set({ dialogue: { npcId: npc.id, npcName: homeName, lineIndex: 0, lines: [...THIEF_LONELY_LINES] } })
+                return
+            }
+            const victims = thiefVictimsNow() // hors étal, hors disciple de clan, hors Daemons liés à une pièce de l'Artisane
+            if (victims.length === 0) {
+                set({ dialogue: { npcId: npc.id, npcName: homeName, lineIndex: 0, lines: [...THIEF_NOTHING_TEMPTING_LINES] } })
+                return
+            }
+            const victim = pickThiefVictim(victims, thiefDayKey(), th.thefts) // tirage stable dans la journée : un F5 ne change pas la cible
+            thiefVictimUid = victim.uid
+            set({ dialogue: { npcId: npc.id, npcName: homeName, lines: thiefHomeLines(thiefMonName(victim), thiefAnecdote(victim.speciesId)), lineIndex: 0 }, pendingThiefSteal: true })
+            return
+        }
         // ✨ L'ORFÈVRE (Sanctuaire, une fois Ukognofy capturé) : 6 Shiny Balls max (1 par victoire), 1 combat par jour (gagné
         //   ou perdu), équipe K.O. = pas de combat. L'approche + A = engagement (comme Ukognofy).
         if (npc.id === ORFEVRE_NPC_ID) {
@@ -3552,6 +3651,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
         } else if (get().pendingOrfevre) {
             set({ dialogue: tryLaunchOrfevre(), pendingOrfevre: false })
+        } else if (get().pendingThiefSteal) {
+            set({ dialogue: finishTheft(), pendingThiefSteal: false })
+        } else if (get().pendingThiefFight) {
+            set({ dialogue: tryLaunchThief(), pendingThiefFight: false })
         } else if (get().pendingPnj10) {
             set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
         } else if (get().pendingHhTrade) {
@@ -3588,6 +3691,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
         // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
         if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
+        thiefSpotIdx = -1 // 🥷 nouvelle cachette à chaque chargement de carte
         if (mapId === "yellow_entrance") { sageSpotIdx = -1; fashionSpot = null; fashionSpriteIdx = -1 } // SAGE + FASHION VICTIM : re-tirent leur spot (+ look) à CHAQUE entrée à Ville Jaune → ils bougent d'une visite à l'autre
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null, fishing: null }) // fishing null : garde-fou anti-session-bloquée à la transition de carte
@@ -3603,6 +3707,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             ? { mapId: "yellow_cendreville", x: 19, y: 25 }
             : { mapId: YELLOW_ENTRANCE_MAP_ID, x: 26, y: 27 }
         ukognofyChainArmed = false
+        thiefSpotIdx = -1 // 🥷 téléportation = chargement de carte → nouvelle cachette
         set({ map, player, dialogue: null, interiorReturn, fishing: null }) // fishing null : garde-fou anti-session-bloquée au téléport
         saveNow(player) // transition de map → persistance immédiate (cohérent avec setMap)
     },

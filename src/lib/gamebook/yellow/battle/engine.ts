@@ -253,7 +253,7 @@ export function createBattle(
     const playerStartIdx = playerStart >= 0 ? playerStart : 0
     const leadUid = playerTeam[playerStartIdx]?.uid
     const enemyLeadUid = enemyTeam[enemyStart >= 0 ? enemyStart : 0]?.uid
-    return {
+    const state: BattleState = {
         player: { team: playerTeam.map(toBattleMon), activeIndex: playerStartIdx },
         enemy: { team: enemyTeam.map(toBattleMon), activeIndex: enemyStart >= 0 ? enemyStart : 0 },
         isWild: opts.isWild,
@@ -279,6 +279,15 @@ export function createBattle(
         obedienceRun3: opts.obedienceRun3 || undefined,
         evResetLeft: Math.max(0, Math.floor(opts.evResetCharges ?? 0)) || undefined,
     }
+    // 🗡️ SURIN DU VOLEUR (Sartay : « avant de commencer le combat ») : les deux Daemons envoyés D'ENTRÉE entaillent leur
+    //   vis-à-vis (le joueur d'abord), UNE fois, ICI seulement — jamais au changement (sinon des allers-retours amèneraient
+    //   n'importe quel légendaire à 1 PV sans risque). Jamais en PvP : les objets tenus y sont retirés (startPvpBattle),
+    //   mais APRÈS createBattle. Les événements initiaux sont rejoués par l'écran de combat au montage (events[0]).
+    if (!opts.pvp) {
+        applyEntryStab(state, "player", state.events)
+        applyEntryStab(state, "enemy", state.events)
+    }
+    return state
 }
 
 // ============================================================
@@ -1333,6 +1342,22 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     events.push({ kind: "message", text: side === "player" ? `En avant, ${displayName(incoming)} !` : `L'adversaire envoie ${displayName(incoming)} !` })
     events.push({ kind: "hp", side, hp: incoming.currentHp, max: maxHpOf(incoming) })
     recordMatchup(state)
+}
+
+/** 🗡️ SURIN DU VOLEUR (objet tenu `entryStab`, cf. data/thief) : appelé UNIQUEMENT par createBattle (hors PvP) — le Daemon
+ *  envoyé EN PREMIER du côté `side` entaille son vis-à-vis : autant de PV perdus que le niveau du porteur, plancher 1 PV
+ *  (jamais de K.O. avant le premier coup : capture et XP restent possibles). Symétrique (le voleur porteur entaille aussi). */
+function applyEntryStab(state: BattleState, side: SideId, events: BattleEvent[]) {
+    const me = active(state[side])
+    const foeSide: SideId = side === "player" ? "enemy" : "player"
+    const foe = active(state[foeSide])
+    if (!me || !foe || me.currentHp <= 0 || foe.currentHp <= 0) return
+    if (!heldEffect(me)?.entryStab) return
+    const dmg = Math.min(Math.max(1, Math.floor(me.level)), Math.max(0, foe.currentHp - 1))
+    if (dmg <= 0) return
+    foe.currentHp -= dmg
+    events.push({ kind: "message", text: `🗡️ Le Surin du Voleur de ${displayName(me)} entaille ${displayName(foe)} : −${dmg} PV !` })
+    events.push({ kind: "hp", side: foeSide, hp: foe.currentHp, max: maxHpOf(foe) })
 }
 
 /** Mémorise que le Daemon joueur actif a AFFRONTÉ l'ennemi actif (partage d'XP par ennemi). */

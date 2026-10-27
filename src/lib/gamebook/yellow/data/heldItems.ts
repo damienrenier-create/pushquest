@@ -60,7 +60,17 @@ export interface HeldItemData {
     berryCureStatus?: boolean
     /** Baie phénix : survit à 1 PV au lieu de tomber K.O. (une seule fois). */
     berryRevive?: boolean
+    // ── SURIN DU VOLEUR (27/10/2026) ──
+    /** AU DÉBUT du combat, si le porteur est envoyé EN PREMIER, l'adversaire d'en face perd autant de PV que le NIVEAU du
+     *  porteur — sans jamais tomber K.O. (plancher 1 PV). Une fois par combat, jamais au changement, jamais en PvP.
+     *  Branché dans engine.createBattle (applyEntryStab). */
+    entryStab?: boolean
+    /** Objet JAMAIS vendu (cadeau) : exclu de HELD_ITEM_LIST (étal du Marchand). */
+    unbuyable?: boolean
 }
+
+/** SURIN DU VOLEUR — objet tenu glissé sur le Daemon volé au 1er vol (cf. data/thief). */
+export const THIEF_ITEM_ID = "surin_voleur"
 
 // Objet de TYPE : +10 % aux dégâts d'un type. Famille des 15 types existants.
 function typeItem(id: string, name: string, emoji: string, type: PokeType, price = 90): HeldItemData {
@@ -123,13 +133,16 @@ export const HELD_ITEMS: Record<string, HeldItemData> = {
     baie_vive: { id: "baie_vive", name: "Baie Vive", emoji: "🟢", description: "Sous ¼ de PV, augmente la Vitesse d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "spe" },
     baie_roc: { id: "baie_roc", name: "Baie Roc", emoji: "🟡", description: "Sous ¼ de PV, augmente la Défense d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "def" },
     baie_phenix: { id: "baie_phenix", name: "Baie Phénix", emoji: "🔥", description: "Une fois : survit à 1 PV au lieu de tomber K.O. Consommée.", jcPrice: 0, category: "baie", berryRevive: true },
+
+    // ───────── SURIN DU VOLEUR (cadeau du Voleur de Cendreville, jamais vendu) ─────────
+    surin_voleur: { id: THIEF_ITEM_ID, name: "Surin du Voleur", emoji: "🗡️", description: "Souvenir du Voleur de Cendreville. Au début d'un combat, si le porteur est envoyé en premier, il entaille l'adversaire : autant de PV perdus que son niveau (sans jamais le mettre K.O.). Sans effet en duel entre joueurs, comme tous les objets tenus.", jcPrice: 0, category: "combat", entryStab: true, unbuyable: true },
 }
 
 /** IDs des 7 baies (récompenses d'arbres). */
 export const BERRY_IDS = ["baie_soin", "baie_pure", "baie_fougue", "baie_eclat", "baie_vive", "baie_roc", "baie_phenix"] as const
 
 /** Liste ordonnée (boutique en JC). Les BAIES en sont exclues (récoltées sur les arbres, pas vendues). */
-export const HELD_ITEM_LIST: HeldItemData[] = Object.values(HELD_ITEMS).filter((i) => i.category !== "baie")
+export const HELD_ITEM_LIST: HeldItemData[] = Object.values(HELD_ITEMS).filter((i) => i.category !== "baie" && !i.unbuyable)
 
 export function getHeldItem(id?: string): HeldItemData | undefined {
     return id ? HELD_ITEMS[id] : undefined
@@ -223,6 +236,7 @@ function mergeHeldEffects(a: HeldItemData, b: HeldItemData): HeldItemData {
         berryCureStatus: a.berryCureStatus ?? b.berryCureStatus,
         berryRevive: a.berryRevive ?? b.berryRevive,
         negateStatDrop: a.negateStatDrop ?? b.negateStatDrop,
+        entryStab: a.entryStab || b.entryStab || undefined, // 🗡️ Surin du Voleur hérité par l'un OU l'autre parent (effet d'entrée, non consommé)
     }
 }
 

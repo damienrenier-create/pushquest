@@ -9,6 +9,7 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
+import { emptyThiefState, stateAfterTheft, thiefEligibleVictims, THIEF_ITEM_ID, THIEF_LUXE_GIFT, THIEF_LUXE_ITEM_ID, THIEF_BALL_GIFT_ID, THIEF_MAX_THEFTS, type ThiefState, type ThiefGift } from "../data/thief"
 import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
 import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
 import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
@@ -230,6 +231,9 @@ interface PlayerState {
     genieArcSeen?: boolean
     /** MODE GENÈSE — profil « 6 craftés / zéro capture jusqu'à la Ligue de Fusion ». GLOBAL au profil. */
     genesisMode?: boolean
+    /** 🥷 LE VOLEUR (Cendreville) — vols commis, jour du dernier vol, Daemon VOLÉ + instantané de l'équipe. GLOBAL au profil
+     *  (un vol non résolu suit le joueur d'une run à l'autre). null/absent = aucun vol en cours. Cf. data/thief. */
+    thief?: ThiefState | null
     /** RUN 3 — ennemis vaincus (boss + Ligue) pour le SCORE. Per-monde. Défaut []. */
     run3Defeated: { key: string; level: number }[]
     /** RUN 3 — score « Survivant » : énergie restante relevée à la fin de chaque arène/Ligue (clé → snapshot). Per-monde. */
@@ -717,6 +721,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         ngplusStarterBase: "ngplusStarterBase" in p ? p.ngplusStarterBase : st.ngplusStarterBase,
         genieArcSeen: "genieArcSeen" in p ? p.genieArcSeen : st.genieArcSeen,
         genesisMode: "genesisMode" in p ? p.genesisMode : st.genesisMode,
+        thief: "thief" in p ? (p.thief ?? null) : (st.thief ?? null), // 🥷 global au profil (clé fournie = source de vérité)
         run3Defeated: p.run3Defeated ?? st.run3Defeated ?? [],
         run3EnergyByArena: p.run3EnergyByArena ?? st.run3EnergyByArena ?? {},
         caughtThisRun: p.caughtThisRun ?? st.caughtThisRun ?? [],
@@ -1127,7 +1132,7 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
-    st = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1187,7 +1192,7 @@ export function fixNgplusFusioBalls(items: Record<string, number>): Record<strin
  *  Les OBJETS CROSS-RUN (lampe/canne) sont reportés depuis le run précédent (carryCrossRunItems). */
 export function startNgPlusWorld(starter: MonInstance) {
     const carriedItems = carryCrossRunItems(st.items) // AVANT réassignation de st (= sac du run live)
-    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1200,7 +1205,7 @@ export const RUN3_START_BALLS = 2
 export function startRun3World(starter: MonInstance) {
     const carried = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
     const carriedItems = { ...carried, poke_ball: (carried.poke_ball ?? 0) + RUN3_START_BALLS } // + 2 Nexus-Balls de départ
-    st = { team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1686,6 +1691,7 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
         case "guaranteed_captures": setGenieCatchCharges(Math.max(0, amt)); return true                       // vœu « 5 Balls qui ne ratent jamais » (Kingme, 26/10/2026) : N prochains lancers garantis
+        case "wild_heal": if (!st.defeatedTrainers.includes(WILD_HEAL_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, WILD_HEAL_MARKER] }; return true // vœu de Gass (27/10/2026) : soin après chaque combat SAUVAGE gagné
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
         default: return false                                                                              // type non géré → non appliqué
     }
@@ -2723,6 +2729,10 @@ export const ACE_DAILY_CAP_MARKER = "ace_daily_cap_boost"
  *  l'appel ; à la chute de son DERNIER Daemon, un 7e surgit (tiré au hasard du PC ; en Ligue de Fusion, une fusion
  *  créée non engagée). Le hasard est la seule contrepartie. PvE uniquement (armMinitel refuse le PvP → pas de désync). */
 export const MINITEL_UNLOCK_MARKER = "minitel_unlocked"
+/** 🧞 VŒU DE GASS (27/10/2026) — « mes Daemons se soignent à la fin de chaque combat », accordé CONTRE LES SAUVAGES seulement :
+ *  marqueur permanent (rejoué dans les autres mondes, cf. GENIE_PERSISTENT_EFFECT_KINDS) lu par battleStore.finishBattle. */
+export const WILD_HEAL_MARKER = "genie_wild_heal"
+export function hasWildHealPerk(): boolean { return st.defeatedTrainers.includes(WILD_HEAL_MARKER) }
 /** Le joueur a-t-il débloqué l'appel MINITEL (vœu accepté) ? */
 export function isMinitelUnlocked(): boolean { return st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER) }
 
@@ -3873,6 +3883,23 @@ export function healAllTeam() {
     emit()
 }
 
+/** 🧞 VŒU DE GASS — soin des Daemons ENCORE DEBOUT (PV max, statut levé, PP pleins) ; les K.O. le restent (choix de Sartay :
+ *  le Centre garde son utilité). Ne compte pas comme un soin d'équipe (stat « heals » intacte). */
+export function healStandingTeam(): void {
+    let changed = false
+    const team = st.team.map((m): MonInstance => {
+        if (m.currentHp <= 0) return m
+        const sp = getSpecies(m.speciesId)
+        const max = sp ? fullStats(m, sp).hp : m.currentHp
+        if (m.currentHp === max && m.status === "NONE" && m.moves.every((mv) => mv.pp === mv.ppMax)) return m
+        changed = true
+        return { ...m, currentHp: max, status: "NONE", statusCounter: 0, moves: m.moves.map((mv) => ({ ...mv, pp: mv.ppMax })) }
+    })
+    if (!changed) return
+    st = { ...st, team }
+    emit()
+}
+
 /**
  * Réordonne les attaques d'un Daemon (équipe OU PC) : déplace le slot `from` vers `to`.
  * L'ordre des slots = l'ordre affiché en combat (le curseur démarre en haut). Persistance par l'appelant.
@@ -4208,6 +4235,64 @@ export function equipHeldItem(uid: string, itemId: string): boolean {
     st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items, defeatedTrainers: mk }
     emit()
     return true
+}
+
+// ═══════════ 🥷 LE VOLEUR (Cendreville, 27/10/2026) — état GLOBAL au profil (cf. data/thief) ═══════════
+export function getThief(): ThiefState { return st.thief ?? emptyThiefState() }
+
+/** Reset VOLONTAIRE du chapitre (saveManager.resetYellowChapter) : tout repart de zéro, le Voleur aussi. ⚠️ JAMAIS ailleurs :
+ *  resetForIntro (rejeu du run 1, boucle endgame) CONSERVE l'état — sinon le Daemon volé disparaîtrait de la save. */
+export function clearThiefForReset(): void {
+    if (!st.thief) return
+    st = { ...st, thief: null }
+    emit()
+}
+
+/** uids que le Voleur ne prend JAMAIS : le DISCIPLE de clan (le chef croirait qu'il n'a jamais été reçu et en offrirait un
+ *  autre) et tout Daemon lié à une pièce de l'ARTISANE (liaison par uid, PER-MONDE : emporté ailleurs, il la perdrait). */
+export function thiefProtectedUids(): Set<string> {
+    const out = new Set<string>()
+    if (st.clanDaemonUid) out.add(st.clanDaemonUid)
+    for (const c of st.craftedItems ?? []) if (c.boundUid) out.add(c.boundUid)
+    return out
+}
+/** Daemons que le Voleur peut prendre MAINTENANT (équipe ≥ 2, hors étal, hors uids protégés). */
+export function thiefVictimsNow(): MonInstance[] { return thiefEligibleVictims(st.team, thiefProtectedUids()) }
+
+/** VOL : retire `victimUid` de l'équipe (jamais le dernier Daemon, ni un Daemon posé sur l'étal, ni un uid protégé), fige
+ *  l'INSTANTANÉ de l'équipe entière (base des némésis du combat) et remet le CADEAU DU VOL (Sartay : « lors du Nème vol ») :
+ *  1 → Surin glissé au Daemon volé (son ancien objet tenu retombe au sac ; objet inconnu → le Surin va au sac) ;
+ *  2 → 3 Pâtes de Luxe ; 3 → 1 Hyper Nexus-Ball +. Renvoie le Daemon volé + le cadeau, ou null si rien n'a été volé.
+ *  ⚠️ Le Daemon n'est PAS détruit : il vit dans `thief.stolen` (sérialisé, parsé serveur) jusqu'à sa récupération. */
+export function commitTheft(victimUid: string): { stolen: MonInstance; gift: ThiefGift } | null {
+    const r = stateAfterTheft(st.thief, st.team, victimUid, activeWorld, { protectedUids: thiefProtectedUids() })
+    if (!r) return null
+    st = { ...st, team: r.remaining, thief: r.state }
+    if (r.gift.returnedItem) addItem(r.gift.returnedItem, 1)
+    if (r.gift.surin === "bag") addItem(THIEF_ITEM_ID, 1)
+    if (r.gift.theftNo === 2) addItem(THIEF_LUXE_ITEM_ID, THIEF_LUXE_GIFT)
+    if (r.gift.theftNo === 3) addItem(THIEF_BALL_GIFT_ID, 1)
+    emit()
+    return { stolen: r.stolen, gift: r.gift }
+}
+
+/** RÉCUPÉRATION (victoire sur le Voleur) : le Daemon revient TEL QUEL (Surin compris s'il l'a reçu au 1er vol) — pas via
+ *  addCaught, qui ré-estampillerait les métadonnées de capture et les règles d'EV (evCurveV2/evCapBoost, « non
+ *  rétroactifs ») —, en équipe s'il y a de la place, sinon dans la boîte PC (soigné, comme tout Daemon qui y entre) ; uid
+ *  re-tagué si (rarissime) il est déjà pris. Le vol en cours est effacé, les compteurs restent. */
+export function recoverStolen(): { mon: MonInstance; placed: "team" | "pc"; theftNo: number } | null {
+    const th = st.thief
+    if (!th?.stolen) return null
+    const theftNo = Math.max(1, Math.min(THIEF_MAX_THEFTS, th.thefts))
+    let mon: MonInstance = { ...th.stolen, owned: true }
+    const taken = new Set([...st.team, ...st.pc].map((m) => m.uid))
+    if (taken.has(mon.uid)) { let u = `ret-${mon.uid}`; while (taken.has(u)) u = `ret-${u}`; mon = { ...mon, uid: u } }
+    st = { ...st, thief: { ...th, stolen: null, snapshot: [], stolenAt: "", stolenWorld: "" } }
+    let placed: "team" | "pc"
+    if (st.team.length < TEAM_MAX) { st = { ...st, team: [...st.team, mon] }; placed = "team" }
+    else { st = { ...st, pc: [...st.pc, healedForPc(mon)] }; placed = "pc" }
+    emit()
+    return { mon, placed, theftNo }
 }
 
 /** Retire l'objet tenu d'un Daemon → il retourne au sac. Renvoie false si aucun objet tenu. */

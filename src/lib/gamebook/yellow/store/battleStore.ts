@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam } from "./playerStore"
 import { getItem } from "../data/items"
 import { getTodayISO } from "@/lib/challenge"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
@@ -53,6 +53,7 @@ import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { ORFEVRE_TRAINER_ID, ORFEVRE_NAME, nextOrfevreWinMarker, orfevreWinCount, orfevreVictoryLines, SHINY_BALL_ID } from "../data/orfevre"
+import { THIEF_TRAINER_ID, THIEF_NAME, thiefWinLines, thiefMonName } from "../data/thief"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
@@ -959,6 +960,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // PNJ-JOUEUR RUN 2 : on n'écrit l'équipe (donc l'XP ×2 des KO) dans la save QUE si VICTOIRE. Une DÉFAITE ne garde
     //   RIEN → tue le farm du ×2 XP par défaite volontaire (le combat reste retentable, mais un échec ne rapporte aucune XP).
     const isRun2GhostLoss = storeState.trainer?.trainerId?.startsWith("run2ghost:") === true && b.outcome !== "win"
+    // 🥷 VOLEUR : combat retentable à volonté tant que le vol court → une DÉFAITE ne garde rien (ni XP ni EV), comme le PNJ-joueur
+    //   du run 2 : sinon on farmerait l'XP de ses némésis en perdant exprès (revue du 27/10/2026).
+    const isThiefLoss = storeState.trainer?.trainerId === THIEF_TRAINER_ID && b.outcome !== "win"
     // 📟 stripMinitelReserve : le 7e RENFORT MINITEL (éphémère, uid préfixé) est RETIRÉ avant l'écriture → il ne
     //   rejoint jamais l'équipe réelle (sinon setTeam grave une 7e slot permanente). No-op sans renfort.
     // VŒU DE TASK1 — SHINY ÉPHÉMÈRES : un shiny en sursis qui est TOMBÉ pendant ce combat use une charge, et
@@ -966,7 +970,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   Sartay) — et la Zone de Combat / Ligue de Fusion sont déjà hors de ce chemin (isFactory).
     //   On ne compte que les K.O. de CE combat : un Daemon déjà à terre à l'ouverture n'a rien encaissé.
     const shinyFadeLines: string[] = []
-    const koCountsForShiny = !isFactory && !isRun2GhostLoss && !b.pvp && !storeState.trainer?.trainerId?.startsWith("duel:")
+    const koCountsForShiny = !isFactory && !isRun2GhostLoss && !isThiefLoss && !b.pvp && !storeState.trainer?.trainerId?.startsWith("duel:")
     const teamOut = koCountsForShiny
         ? b.player.team.map((m) => {
             if (!isEphemeralShiny(m) || m.currentHp > 0 || shinyKoAtStart.has(m.uid)) return m
@@ -975,12 +979,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             return { ...m, ...r.mon }
         })
         : b.player.team
-    if (!isFactory && !isRun2GhostLoss) setTeam(stripMinitelReserve(teamOut).map(toMonInstance))
+    if (!isFactory && !isRun2GhostLoss && !isThiefLoss) setTeam(stripMinitelReserve(teamOut).map(toMonInstance))
 
     // …et on débite les charges du vœu de Zyran DANS LE MÊME SOUFFLE : les EV remis à zéro viennent d'être
     //   gravés, donc les charges doivent l'être aussi. Si l'équipe n'est pas réécrite (Zone de Combat, PNJ
     //   run 2), rien n'est consommé — cohérent, puisque le reset n'a pas été gravé non plus.
-    if (!isFactory && !isRun2GhostLoss) consumeEvResetCharges(b.evResetUsed ?? 0)
+    if (!isFactory && !isRun2GhostLoss && !isThiefLoss) consumeEvResetCharges(b.evResetUsed ?? 0)
 
     // HAUT FAIT « KO du starter » (run 1) : grave le NIVEAU du starter à sa 1ʳᵉ chute (plus il tombe tard/haut, plus le
     //   badge vaut de points). UID mémorisé à l'intro (marqueur starter_uid:), 1 seule fois (marqueur starter_ko:). Combats
@@ -1341,6 +1345,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             primeGrotteDemo()
             markTrainerDefeated(ECLAIREUR_PRECISION_MARKER) // PERSISTANT : débloque les coords d'échelle précises du Daemomaniaque
             rematchReward = { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lines: [...PNJ7_VICTORY_LINES, ...PNJ7_CAROUSEL_LINES] }
+        } else if (storeState.trainer.trainerId === THIEF_TRAINER_ID) {
+            // 🥷 LE VOLEUR (Cendreville, 27/10/2026) : VICTOIRE → le Daemon volé revient TEL QUEL (équipe, sinon PC) ; les cadeaux
+            //   ont été remis AU VOL (playerStore.commitTheft). Après le 3e vol résolu, il disparaît. Aucun marqueur : tout vit dans
+            //   l'état global `thief`. Défaite = il garde le Daemon (retentable). BULLE DE REJEU : jamais de récupération (le Daemon
+            //   atterrirait dans un monde jetable — cas d'un combat repris après une bascule de monde faite ailleurs).
+            const r = getActiveWorld() === "replay" ? null : recoverStolen()
+            if (r) rematchReward = { npcId: THIEF_TRAINER_ID, npcName: THIEF_NAME, lines: thiefWinLines(r.theftNo, thiefMonName(r.mon), r.placed) }
         } else if (storeState.trainer.trainerId === ORFEVRE_TRAINER_ID) {
             // ✨ L'ORFÈVRE (Sanctuaire d'Ukognofy, 26/10/2026) : le cap 1×/jour est posé AU LANCEMENT (gameStore.tryLaunchOrfevre).
             //   Chaque VICTOIRE pose le prochain marqueur orfevre_win_N (per-monde) et remet une SHINY BALL — 6 au maximum.
@@ -1898,6 +1909,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         for (const [type, amount] of Object.entries(b.dmgByType)) addCtDamage(type as PokeType, amount ?? 0)
     }
 
+    // 🧞 VŒU DE GASS (27/10/2026) — « mes Daemons se soignent à la fin de chaque combat », accordé par Sartay CONTRE LES SAUVAGES :
+    //   après un combat SAUVAGE GAGNÉ (K.O. ou capture), les Daemons ENCORE DEBOUT retrouvent PV/PP et perdent leurs statuts ;
+    //   les K.O. le restent ; rien après une fuite ; jamais au run 3 (concours) ni dans son rejeu. Toujours APRÈS l'écriture de
+    //   l'équipe de combat (sinon setTeam écraserait le soin). Soin AVANT les évolutions (l'instantané d'annulation garde des PP
+    //   pleins) ET APRÈS (PV pleins au nouveau maximum) ; cancelEvolution re-plafonne les PV (revue du 27/10).
+    const wildHeal = b.isWild && (b.outcome === "win" || b.outcome === "caught") && hasWildHealPerk() && effectiveRunWorld() !== "run3"
+    if (wildHeal) healStandingTeam()
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     //    EXCEPTION USINE : on n'a pas touché l'équipe réelle (rentals) → pas d'évolution parasite.
     const team = getPlayer().team
@@ -1907,6 +1925,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         for (const e of evos) recordEvo3IfFinal(e.toId) // HAUT FAIT « 6 Daemons au stade final »
         setTeam([...team])
     }
+    if (wildHeal) healStandingTeam() // …et APRÈS les évolutions : PV pleins au nouveau maximum d'un Daemon qui vient d'évoluer
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // KO en LIGUE DE FUSION (y_fusion_*) : on FORCE un whiteout → la carte renvoie au DÔME DE FUSION (Autel). L'épreuve
@@ -1979,6 +1998,9 @@ export function cancelEvolution(uid: string) {
     mon.speciesId = evo.beforeSpeciesId
     mon.moves = evo.beforeMoves.map((m) => ({ ...m }))
     mon.pendingMoves = [...evo.beforePendingMoves]
+    // PV re-plafonnés au maximum de la forme d'ORIGINE : un soin fait après l'évolution (vœu de Gass) ne doit pas laisser de PV en trop.
+    const sp0 = getSpecies(mon.speciesId)
+    if (sp0) mon.currentHp = Math.min(mon.currentHp, fullStats(mon, sp0).hp)
     setTeam([...team])
     persistYellowSave()
 }

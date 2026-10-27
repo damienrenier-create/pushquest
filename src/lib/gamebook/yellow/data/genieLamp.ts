@@ -83,7 +83,7 @@ export function genieFxMarker(n: number, round?: number | null): string {
 //   casino_cap n'en fait PAS partie : son seul cas réel (Jacanon) a été LEVÉ par le canal pendingEffects (casino_uncap,
 //   15/10/2026), qui ne se rejoue jamais → le rejouer dans un monde neuf le re-bannirait à tort.
 export const GENIE_PERSISTENT_EFFECT_KINDS: ReadonlySet<string> = new Set([
-    "league_level_boost", "casino_uncap", "ace_daily_cap", "attack_cost_extended", "minitel_unlock",
+    "league_level_boost", "casino_uncap", "ace_daily_cap", "attack_cost_extended", "minitel_unlock", "wild_heal",
 ])
 /** Les DONS UNIQUES connus (énergie, objets, défi némésis, pâtes, rencontres, charges, surtaxe, malédiction datée…) :
  *  jamais reversés dans un 2e monde. Un effet inconnu des deux listes est traité comme un don unique (prudence). */

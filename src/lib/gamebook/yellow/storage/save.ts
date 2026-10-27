@@ -228,6 +228,10 @@ export interface YellowSave {
      *  VERROUILLÉE jusqu'à la victoire à la Ligue de Fusion (marqueur fusleague_or). GLOBAL au profil. La fusion
      *  reste autorisée. Absent/false = mode normal. */
     genesisMode?: boolean
+    /** 🥷 LE VOLEUR (Cendreville, 27/10/2026) — état GLOBAL au profil : vols commis, jour du dernier vol, Daemon VOLÉ et
+     *  instantané de l'équipe au moment du vol. Écrit au HAUT NIVEAU (source de vérité) et recopié dans chaque monde ; un
+     *  vol non résolu SUIT le joueur d'une run à l'autre. Absent/null = aucun vol en cours. ADDITIF (anciennes saves). */
+    thief?: import("../data/thief").ThiefState | null
     /** RUN 3 — ennemis VAINCUS (boss d'arène + Ligue), dédupliqués par clé (cf. bossEnemyKey/leagueEnemyKey),
      *  pour le SCORE du concours = Σ de leurs niveaux (run3Score). Per-monde (vit dans le monde run 3). Défaut [].
      *  Type structurel (= Run3DefeatedEnemy) inliné pour éviter tout cycle d'import storage↔data. */
@@ -475,6 +479,26 @@ function parseMon(raw: unknown): MonInstance | null {
         capturedMapId: typeof o.capturedMapId === "string" ? o.capturedMapId : undefined,
         capturedQuotaReached: o.capturedQuotaReached === true ? true : undefined,
         disobedient: o.disobedient === true ? true : undefined, // VŒU MAUDIT (Jacanon) : ce Daemon refuse d'obéir jusqu'à la grâce du créateur
+    }
+}
+
+/** 🥷 VOLEUR — parse défensif de l'état global (cf. data/thief.ThiefState). Daemon volé et instantané passent par parseMon
+ *  (mêmes garanties que l'équipe) ; un volé absent/corrompu → aucun vol en cours (jamais de Daemon fantôme). */
+function parseThief(raw: unknown): import("../data/thief").ThiefState | null {
+    if (!raw || typeof raw !== "object") return null
+    const o = raw as Record<string, unknown>
+    const thefts = typeof o.thefts === "number" && isFinite(o.thefts) ? Math.max(0, Math.min(3, Math.floor(o.thefts))) : 0
+    const stolen = parseMon(o.stolen)
+    const snapshot = Array.isArray(o.snapshot) ? (o.snapshot as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null).slice(0, 6) : []
+    const lastTheftDay = typeof o.lastTheftDay === "string" ? o.lastTheftDay.slice(0, 10) : ""
+    if (thefts === 0 && !stolen && !lastTheftDay) return null
+    return {
+        thefts,
+        lastTheftDay,
+        stolen,
+        snapshot: stolen ? snapshot : [],
+        stolenAt: stolen && typeof o.stolenAt === "string" ? o.stolenAt.slice(0, 40) : "",
+        stolenWorld: stolen && typeof o.stolenWorld === "string" ? o.stolenWorld.slice(0, 16) : "",
     }
 }
 
@@ -852,6 +876,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         ngplusStarterBase: typeof o.ngplusStarterBase === "string" ? o.ngplusStarterBase : undefined,
         genieArcSeen: o.genieArcSeen === true ? true : undefined,
         genesisMode: o.genesisMode === true ? true : undefined,
+        thief: parseThief(o.thief), // 🥷 Voleur : global au profil (haut niveau = source de vérité, recopié dans les mondes)
         // RUN 3 — ennemis vaincus (score). Parse défensif (façon chips) : ne garde que les entrées {key,level}
         // plausibles, dédup non nécessaire ici (addRun3Defeated dédup à l'écriture), borné à 64.
         run3Defeated: Array.isArray(o.run3Defeated)
