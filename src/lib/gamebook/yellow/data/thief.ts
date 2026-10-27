@@ -237,7 +237,7 @@ export function thiefStoleLines(victimName: string, gift: ThiefGift): string[] {
     } else if (gift.theftNo === 2) {
         lines.push(
             "« Pardon, pardon… je n'ai pas pu m'en empêcher. Pour me faire pardonner : TROIS PÂTES DE LUXE, dans ton sac. »",
-            "« Écoute bien : une Pâte de Luxe RE-TIRE tout le génome d'un Daemon, à pile ou face : PARFAIT (IV au maximum)… ou RANG D (IV au plancher). Une seule par Daemon, et c'est verrouillé ensuite : seul un TIRAMISU peut lui rendre ses gènes d'origine. Le Dieu Spaghetti te préviendra avant chaque bouchée. »",
+            "« Écoute bien : une Pâte de Luxe RE-TIRE tout le génome d'un Daemon, à pile ou face : PARFAIT (IV au maximum)… ou RANG D (IV au plancher). Une seule par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Le Dieu Spaghetti te préviendra avant chaque bouchée. »",
         )
     } else {
         lines.push("« Trois fois… c'est la dernière, promis. Une HYPER NEXUS-BALL +, dans ton sac, pour la route. »")

@@ -3265,7 +3265,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                     <span>Pâte de Luxe 🎲</span><span>×{player.items[PATE_LUXE_ITEM_ID]}</span>
                                                 </span>
-                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Re-tire les IV d'un Daemon : PARFAIT… ou rang D. Un pari risqué, que seul un Tiramisu rattrape !</span>
+                                                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>Re-tire les IV d'un Daemon : PARFAIT… ou rang D. Un pari irréversible !</span>
                                             </button>
                                         </div>
                                     )}
@@ -5129,14 +5129,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <span>🍝✨ QUEL DAEMON ?</span><span>🎲 ×{player.items[PATE_LUXE_ITEM_ID] ?? 0}</span>
                         </div>
                         <div style={{ fontSize: 10, opacity: 0.7, padding: "0 4px 8px", whiteSpace: "normal", lineHeight: 1.3 }}>
-                            Re-tire tout le potentiel génétique : PARFAIT… ou rang D. Un seul essai par Daemon : seul un Tiramisu peut revenir en arrière.
+                            Re-tire tout le potentiel génétique : PARFAIT… ou rang D. Un seul essai par Daemon, et c'est irréversible : c'est un pari !
                         </div>
                         {[...player.team, ...player.pc].map((m) => (
                             <button
                                 key={m.uid}
                                 style={m.luxeUsed ? menuBtnDimStyle : menuBtnStyle}
                                 disabled={!!m.luxeUsed}
-                                title={m.luxeUsed ? "Ce Daemon a déjà mangé une Pâte de Luxe (verrouillé). Utilise un Tiramisu." : undefined}
+                                title={m.luxeUsed ? "Ce Daemon a déjà mangé une Pâte de Luxe : c'est définitif." : undefined}
                                 onClick={() => setLuxeConfirm({ uid: m.uid, name: displayName(m), mode: "luxe" })}
                             >
                                 <span style={{ display: "flex", justifyContent: "space-between" }}>
@@ -5274,7 +5274,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ fontSize: 11, padding: "0 4px 10px", whiteSpace: "normal", lineHeight: 1.4 }}>
                             {luxeConfirm.mode === "reroll"
                                 ? <>« STOP, mortel ! Ce Tiramisu RELANCE la loterie génétique de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face — même s'il est déjà parfait, il peut tout perdre. Tu confirmes ? »</>
-                                : <>« STOP, mortel ! Cette Pâte de Luxe RE-TIRE tout le génome de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face. UNE SEULE pâte par Daemon, et c'est VERROUILLÉ ensuite — seul un TIRAMISU pourra lui rendre ses gènes d'origine. Tu confirmes ? »</>}
+                                : <>« STOP, mortel ! Cette Pâte de Luxe RE-TIRE tout le génome de <b>{luxeConfirm.name}</b> : PARFAIT (IV au maximum)… ou RANG D (IV au plancher), à pile ou face. UNE SEULE pâte par Daemon, et c'est DÉFINITIF : aucun retour en arrière possible. Tu confirmes ? »</>}
                         </div>
                         <button style={menuBtnStyle} onClick={() => {
                             const { uid, name: nm, mode } = luxeConfirm
@@ -5291,7 +5291,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 setLuxePick(false)
                                 showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random()))
                             } else if (r.reason === "locked") {
-                                setToast(`${nm} a déjà mangé une Pâte de Luxe — passe par un Tiramisu.`)
+                                setToast(`${nm} a déjà mangé une Pâte de Luxe : c'est définitif.`)
                             } else if (r.reason === "none") {
                                 setToast("Tu n'as plus de Pâte de Luxe.")
                                 setLuxePick(false)

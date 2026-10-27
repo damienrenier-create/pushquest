@@ -257,7 +257,8 @@ describe("Voleur — dialogues et câblage", () => {
         expect(s1).toContain("L'objet qu'il tenait, Baie de Soin, est retombé dans ton sac.")
         expect(thiefStoleLines("X", { theftNo: 1, surin: "bag" }).join(" ")).toContain("glissé mon SURIN dans ton sac")
         const s2 = thiefStoleLines("X", { theftNo: 2 }).join(" ")
-        expect(s2).toContain("encore frappé"); expect(s2).not.toContain("Ce type était"); expect(s2).toContain("TROIS PÂTES DE LUXE"); expect(s2).toContain("TIRAMISU")
+        expect(s2).toContain("encore frappé"); expect(s2).not.toContain("Ce type était"); expect(s2).toContain("TROIS PÂTES DE LUXE"); expect(s2).toContain("DÉFINITIF")
+        expect(s2).not.toMatch(/tiramisu/i) // le Tiramisu ne s'obtient pas en jeu (Sartay, 27/10/2026) : jamais promis comme rattrapage
         expect(thiefStoleLines("X", { theftNo: 3 }).join(" ")).toContain("HYPER NEXUS-BALL +")
         expect(thiefWinLines(2, "X", "pc").join(" ")).toContain("boîte PC")
         expect(thiefWinLines(3, "X", "team").join(" ")).toContain("tu ne me reverras plus")
@@ -296,6 +297,8 @@ describe("Voleur — dialogues et câblage", () => {
         expect(ydc).toContain("JE CROQUE, J'ASSUME"); expect(ydc).toContain("JE RELANCE, J'ASSUME")
         expect(ydc.indexOf("{!battle && luxeConfirm && (")).toBeGreaterThan(ydc.indexOf("{!battle && tiramisuPick && ("))
         expect(ydc).not.toContain("Irréversible, c'est un pari !\n                        </div>\n                        {[...player.team, ...player.pc].map((m) => (") // texte Pâte de Luxe corrigé
-        expect(ydc).toContain("Un seul essai par Daemon : seul un Tiramisu peut revenir en arrière.")
+        expect(ydc).toContain("Un seul essai par Daemon, et c'est irréversible : c'est un pari !")
+        // Le Tiramisu n'est disponible nulle part en jeu (Sartay, 27/10/2026) : aucun texte ne doit le promettre comme rattrapage.
+        for (const s of ["passe par un Tiramisu", "Utilise un Tiramisu", "seul un Tiramisu", "seul un TIRAMISU", "que seul un Tiramisu"]) expect(ydc, s).not.toContain(s)
     })
 })
