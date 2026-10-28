@@ -1758,6 +1758,13 @@ function runGenieEffect(e: GenieEffect): boolean {
             st = { ...st, team: st.team.map(fix), pc: st.pc.map(fix) }
             return true
         }
+        case "saiyan_points": { // RESTITUTION des POINTS SAIYAN d'un Daemon précis (29/10/2026 : le Magnetor rendu à DaKumba était neuf,
+            //   sans les points de ses 55 niveaux) : `uid` (+ `id` = espèce attendue), `amount` points À RÉPARTIR ajoutés. Rien d'autre ne change.
+            if (!e.uid || amt <= 0 || !movesTargetPresent(e)) return false
+            const fix = (m: MonInstance): MonInstance => (m.uid === e.uid && (!e.id || m.speciesId === e.id) ? { ...m, statPoints: (m.statPoints ?? 0) + amt } : m)
+            st = { ...st, team: st.team.map(fix), pc: st.pc.map(fix) }
+            return true
+        }
         case "give_mon": { // DON / RESTITUTION d'un Daemon (28/10/2026 : Daemons perdus à la sortie d'un rejeu) : un Daemon NEUF
             //   à ton nom (`id` = espèce, `level`, `shiny` → IV parfaits), en équipe s'il reste de la place, sinon au PC.
             if (!e.id || !getSpecies(e.id)) return false
@@ -1871,7 +1878,7 @@ export function applyExternalEffects(raw: string): boolean {
     //   introuvable, ne le bloque plus en boucle).
     if (!effects.every((e) => !!e && typeof e.kind === "string" && isKnownGenieEffectKind(e.kind))) return false
     if (missingDrainTarget(effects)) return false // contrepartie sans sa cible dans ce monde : le lot attend (avant : acquitté, perdue)
-    if (missingMovesTarget(effects)) return false // attaques à rendre à un Daemon absent de ce monde : le lot attend
+    if (missingMovesTarget(effects)) return false // attaques ou points Saiyan à rendre à un Daemon absent de ce monde : le lot attend
     for (const e of effects) runGenieEffect(e)
     st = { ...st, geniePaid: withGeniePaid(mark) }
     emit()
@@ -1898,10 +1905,10 @@ export function reapplyGenieWishes(): boolean { return lastGenieRow ? applyAccep
  *  versé sans elle, sa contrepartie serait perdue (même recherche qu'applyLevelDrain). */
 function levelDrainTargetPresent(id: string | undefined): boolean { return !!id && (st.team.some((m) => m.speciesId === id) || st.pc.some((m) => m.speciesId === id)) }
 const missingDrainTarget = (effects: GenieEffect[]): boolean => effects.some((e) => e.kind === "level_drain" && !levelDrainTargetPresent(e.id))
-/** La cible d'un set_moves (uid, et espèce si donnée) est-elle dans l'équipe ou le PC du monde actif ? Sinon le lot ATTEND :
- *  un Daemon resté dans un autre monde (ou une bulle de rejeu ouverte) ne doit pas perdre sa restitution. */
+/** La cible d'un set_moves ou d'un saiyan_points (uid, et espèce si donnée) est-elle dans l'équipe ou le PC du monde actif ? Sinon
+ *  le lot ATTEND : un Daemon resté dans un autre monde (ou une bulle de rejeu ouverte) ne doit pas perdre sa restitution. */
 function movesTargetPresent(e: GenieEffect): boolean { return !!e.uid && [...st.team, ...st.pc].some((m) => m.uid === e.uid && (!e.id || m.speciesId === e.id)) }
-const missingMovesTarget = (effects: GenieEffect[]): boolean => effects.some((e) => e.kind === "set_moves" && !movesTargetPresent(e))
+const missingMovesTarget = (effects: GenieEffect[]): boolean => effects.some((e) => (e.kind === "set_moves" || e.kind === "saiyan_points") && !movesTargetPresent(e))
 export function applyAcceptedGenieWishEffects(row: GenieWishRow | null | undefined, opts?: { perksOnly?: boolean }): boolean {
     if (!row) return false
     lastGenieRow = row

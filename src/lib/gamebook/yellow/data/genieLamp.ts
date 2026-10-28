@@ -127,7 +127,7 @@ export const GENIE_PERSISTENT_EFFECT_KINDS: ReadonlySet<string> = new Set([
 export const GENIE_ONCE_EFFECT_KINDS: ReadonlySet<string> = new Set([
     "energy", "ball_lock", "item", "cap", "casino_cap", "energy_drain", "level_drain", "luxe_pasta_batch", "bertie_crochue_batch",
     "force_encounter", "nemesis_challenge", "abundance_curse", "dex_wish_days", "shop_surtax", "shiny_frenzy",
-    "ephemeral_shiny_days", "ev_reset_charges", "guaranteed_captures", "give_mon", "set_moves",
+    "ephemeral_shiny_days", "ev_reset_charges", "guaranteed_captures", "give_mon", "set_moves", "saiyan_points",
 ])
 /** Ce type d'effet est-il connu de CE build (classé ONCE ou PERSISTENT, donc géré par runGenieEffect) ? Un lot ou un vœu
  *  qui en contient un INCONNU attend le déploiement EN ENTIER : jamais à moitié payé, puis repayé (28/10/2026). */
