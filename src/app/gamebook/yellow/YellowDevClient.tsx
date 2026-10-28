@@ -90,7 +90,7 @@ import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBough
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -132,6 +132,7 @@ import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossF
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun, postReplaySpend, postSpend, fetchFrontierProfile, type FrontierProfile } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
+import { replayKeepPlan, retagKept } from "@/lib/gamebook/yellow/data/replayKeep"
 import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, frontierEnergyRefund, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
@@ -532,7 +533,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [illegalMeme, setIllegalMeme] = useState<{ uid: string; name: string; clan: "air" | "combat" | "roche" } | null>(null) // fun : possède un meme de clan sans le clan → rejoindre/relâcher
     const [memeCheck, setMemeCheck] = useState(0) // re-déclenche la détection du meme illégal après une action
     const [highfiveMsg, setHighfiveMsg] = useState("")
-    const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[] } | null>(null) // rejeu : modale « ramener X Daemons »
+    const [replayKeep, setReplayKeep] = useState<{ max: number; mons: MonInstance[]; auto: MonInstance[] } | null>(null) // rejeu : modale « ramener des Daemons » (choix + shinys d'office)
     const [confirmExitReplay, setConfirmExitReplay] = useState(false) // rejeu : confirmation AVANT de sortir (anti-clic accidentel)
     const [confirmStartReplay, setConfirmStartReplay] = useState<"run2" | "run3" | null>(null) // « rejouer un run » : confirmation avant de lancer
     const [genieOffer, setGenieOffer] = useState<{ sourceNickname: string; amount: number; pushupPerRefusal: number } | null>(null) // VŒU GÉNIE « offre partagée » : prompt reçu d'un autre joueur
@@ -1923,7 +1924,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!hydrated || battle || evolutions.length > 0 || rematchReward || dialogue || deferredBadgeLines) return
         const ctId = boatCtForRun(effectiveRunWorld())
         const p = getPlayer()
-        if (!ctId || p.ownedCts.includes(ctId) || p.boughtCts.includes(ctId) || !boatArenaCleared((id) => p.defeatedTrainers.includes(id))) return
+        // déjà reçue (au sac, achetée ou DÉJÀ APPRISE) → rien : sans ça, la CT apprise revenait aussitôt (Arc Plasma, 28/10/2026)
+        if (!ctId || ctAlreadyReceived(ctId) || !boatArenaCleared((id) => p.defeatedTrainers.includes(id))) return
         if (!grantCt(ctId)) return
         persistYellowSave()
         showDialogue(BOAT_BOSS_IDS[0], "CAPITAINE VAGUE", boatCtBackfillLines(getMove(getCt(ctId)?.moveId ?? "")?.name ?? ctId))
@@ -2477,7 +2479,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "*Le Dieu Spaghetti claque des doigts. Une bulle dorée t'enveloppe, hors du temps…*",
             `« REJEU du ${label} ! Une seconde chance : bats ton score et complète ton Pokédex (les ESPÈCES vues ici restent cochées à jamais). »`,
             "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² », à côté de l'ancien. »",
-            "« Et surtout : à la SORTIE, tu pourras RAMENER dans ton vrai monde autant de DAEMONS que de BADGES gagnés ici (+1 si tu bats la Ligue) — à choisir parmi ton équipe et ton PC. Le reste sera perdu. »",
+            "« Et surtout : à la SORTIE, tu pourras RAMENER dans ton vrai monde 1 DAEMON de ton choix par BADGE gagné ici, plus TOUS tes SHINYS — et si tu bats la Ligue, tu les ramènes TOUS. Le reste sera perdu. »",
             "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé et tu choisiras tes Daemons à garder. Bonne chance, champion ! 🍝 »",
         ])
     }
@@ -2536,7 +2538,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "*Le Dieu Spaghetti sourit. Une bulle dorée t'enveloppe, ta nouvelle création à tes côtés…*",
             `« Repars au tout début du Nexus avec ${stored.spec.name} ! Une traversée fraîche, rien que vous deux. »`,
             "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² ». »",
-            "« À la SORTIE (Menu → 🚪), tu ramèneras autant de Daemons que de BADGES gagnés ici (+1 si tu bats la Ligue) — dont ta création, si tu la gardes. Bonne route, champion ! 🍝 »",
+            "« À la SORTIE (Menu → 🚪), tu ramèneras 1 Daemon de ton choix par BADGE gagné ici (ta création, si tu la gardes), plus TOUS tes SHINYS — et tout le monde si tu bats la Ligue. Bonne route, champion ! 🍝 »",
         ])
     }
 
@@ -2576,13 +2578,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     }
 
     // REJEU — SORTIE confirmée : lance la sortie (run 2 = additif → tout ramené, pas de modale de garde ; run 1/3 =
-    //   modale « ramener X Daemons » selon les badges gagnés).
+    //   1 Daemon au choix par badge + les shinys d'office, et TOUT si la Ligue est battue — Sartay, 28/10/2026).
     const beginExitReplay = () => {
         setConfirmExitReplay(false)
         if (getReplayRun() === "run2") { void doExitReplay(); return } // run 2 additif : exitReplay ramène déjà tous les Daemons
-        const max = getPlayer().badges.length + (getPlayer().isChampion ? 1 : 0)
-        if (max <= 0) { void doExitReplay(); return }
-        setKeepSel(new Set()); setReplayKeep({ max, mons: [...getPlayer().team, ...getPlayer().pc] }); setMenu("none")
+        const p = getPlayer()
+        const plan = replayKeepPlan([...p.team, ...p.pc], p.badges.length, p.isChampion)
+        if (plan.max <= 0) { void doExitReplay(retagKept(plan.auto, Date.now())); return } // rien à choisir : shinys (ou tout, Ligue battue)
+        setKeepSel(new Set()); setReplayKeep({ max: plan.max, mons: plan.choosable, auto: plan.auto }); setMenu("none")
     }
     // VŒU GÉNIE « offre partagée » — réponse au prompt. ACCEPTER → +énergie créditée localement (grantReps + persist,
     //   modèle d'énergie du jeu). REFUSER → +pompes à la dette de la SOURCE (côté serveur). Le serveur reste
@@ -5955,7 +5958,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>⚠️ Quitter le rejeu ?</div>
                         <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
-                            Tu vas SORTIR de ton {getReplayRun() === "run2" ? "RUN 2²" : getReplayRun() === "run3" ? "RUN 3²" : "RUN 1²"} et revenir à ton monde principal. <b>Cette partie bis sera figée — tu ne pourras plus la reprendre.</b>{getReplayRun() === "run2" ? " (Tes Daemons rejoignent ta collection.)" : ""}
+                            Tu vas SORTIR de ton {getReplayRun() === "run2" ? "RUN 2²" : getReplayRun() === "run3" ? "RUN 3²" : "RUN 1²"} et revenir à ton monde principal. <b>Cette partie bis sera figée — tu ne pourras plus la reprendre.</b>{getReplayRun() === "run2" ? " (Tes Daemons rejoignent ta collection.)" : getPlayer().isChampion ? " (Ligue battue : tous tes Daemons reviennent avec toi.)" : " (Tu choisiras 1 Daemon par badge ; tes shinys reviennent d'office.)"}
                         </div>
                         <button style={menuBtnStyle} onClick={() => setConfirmExitReplay(false)}>← Non, RESTER dans le rejeu</button>
                         <button style={{ ...menuBtnDimStyle, borderColor: "#c83030", color: "#c83030", marginTop: 6 }} onClick={beginExitReplay}>🚪 Oui, quitter (définitif)</button>
@@ -5994,8 +5997,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ ...menuBoxStyle, maxHeight: "88%", overflowY: "auto" }}>
                         <div style={menuTitleStyle}>🎁 RAMENER DES DAEMONS</div>
                         <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", lineHeight: 1.4, marginBottom: 8 }}>
-                            Tu peux ramener jusqu&apos;à <b>{replayKeep.max}</b> Daemon{replayKeep.max > 1 ? "s" : ""} (1 par badge gagné + 1 si Ligue battue) dans ton vrai monde. Choisis parmi ton équipe et ton PC — <b>le reste sera perdu</b>.
+                            Choisis jusqu&apos;à <b>{replayKeep.max}</b> Daemon{replayKeep.max > 1 ? "s" : ""} (1 par badge gagné) à ramener dans ton vrai monde, parmi ton équipe et ton PC. Tes <b>shinys</b> reviennent d&apos;office. <b>Le reste sera perdu</b> (une Ligue battue les aurait tous ramenés).
                         </div>
+                        {replayKeep.auto.length > 0 && <div style={{ fontSize: 11, textAlign: "center", marginBottom: 6, color: "#c9a227" }}>✨ Reviennent d&apos;office : {replayKeep.auto.map((m) => displayName(m)).join(", ")}</div>}
                         <div style={{ fontSize: 12, fontWeight: 800, textAlign: "center", marginBottom: 6, color: keepSel.size >= replayKeep.max ? "#c9a227" : "#e8e8ee" }}>Sélectionnés : {keepSel.size} / {replayKeep.max}</div>
                         {replayKeep.mons.length === 0 && <div style={{ fontSize: 11, opacity: 0.6, textAlign: "center", padding: 8 }}>(Aucun Daemon dans ce rejeu.)</div>}
                         {replayKeep.mons.map((m) => {
@@ -6022,11 +6026,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             const chosen = [...keepSel]
                                 .map((uid) => replayKeep.mons.find((m) => m.uid === uid))
                                 .filter((m): m is MonInstance => !!m)
-                                .map((m, i) => ({ ...m, uid: `bis-${Date.now()}-${i}-${m.uid}` })) // uid RÉELLEMENT unique (Date.now par sortie + index) → aucune collision entre 2 rejeux (revue : bis<i>- se répétait au reload → doublons → perte via échange)
                             setReplayKeep(null)
-                            doExitReplay(chosen)
-                        }}>✅ Garder {keepSel.size} Daemon{keepSel.size > 1 ? "s" : ""} et sortir</button>
-                        <button style={menuBtnDimStyle} onClick={() => { setReplayKeep(null); doExitReplay([]) }}>Ne rien garder et sortir</button>
+                            // uid RÉELLEMENT unique (horodatage de la sortie + index, cf. retagKept) → aucune collision entre 2 rejeux
+                            doExitReplay(retagKept([...replayKeep.auto, ...chosen], Date.now()))
+                        }}>✅ Garder {keepSel.size} Daemon{keepSel.size > 1 ? "s" : ""}{replayKeep.auto.length > 0 ? ` + ${replayKeep.auto.length} shiny${replayKeep.auto.length > 1 ? "s" : ""}` : ""} et sortir</button>
+                        <button style={menuBtnDimStyle} onClick={() => { setReplayKeep(null); doExitReplay(retagKept(replayKeep.auto, Date.now())) }}>{replayKeep.auto.length > 0 ? "Sortir avec seulement mes shinys" : "Ne rien garder et sortir"}</button>
                     </div>
                 </div>
             )}

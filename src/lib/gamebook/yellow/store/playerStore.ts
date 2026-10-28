@@ -853,7 +853,7 @@ export function recordHhCollectorWin(teamSpectreSpecies: string[]): { wins: numb
     st = { ...st, hhSpectresShown: shown, hhCollectorWins: wins }
     emit()
     let rewarded = false
-    if (wins >= 3 && shown.length >= 3 && !st.ownedCts.includes("ct26")) rewarded = grantCt("ct26")
+    if (wins >= 3 && shown.length >= 3 && !ctAlreadyReceived("ct26")) rewarded = grantCt("ct26")
     return { wins, shown: shown.length, rewarded }
 }
 
@@ -1331,9 +1331,17 @@ export function grantCt(ctId: string): boolean {
     return true
 }
 
-/** CT SURF (ct66) déjà en poche OU déjà apprise ? (teachCt déplace ownedCts→boughtCts → on teste les deux.) */
+/** Marqueur PERMANENT (par monde) d'une CT CADEAU déjà apprise : teachCt la retire de ownedCts sans l'inscrire dans
+ *  boughtCts (réservé aux achats, cf. haut fait ctBought) → sans ce marqueur, un don « une seule fois » ne savait plus
+ *  qu'elle avait été reçue et la redonnait (CT du bateau signalée par Sartay le 28/10/2026 : Arc Plasma de DaKumba). */
+export function ctTaughtMarker(ctId: string): string { return `ct_appris_${ctId}` }
+/** CT déjà REÇUE dans ce monde : au sac, achetée, ou cadeau déjà appris. Garde des dons « une seule fois ». */
+export function ctAlreadyReceived(ctId: string): boolean {
+    return st.ownedCts.includes(ctId) || st.boughtCts.includes(ctId) || st.defeatedTrainers.includes(ctTaughtMarker(ctId))
+}
+/** CT SURF (ct66) déjà en poche, achetée OU déjà apprise ? */
 export function hasSurfCt(): boolean {
-    return st.ownedCts.includes("ct66") || st.boughtCts.includes("ct66")
+    return ctAlreadyReceived("ct66")
 }
 /** Octroie la CT SURF (cadeau du surfeur, à la 1re victoire). true si nouvellement remise (jamais un 2e don). */
 export function grantSurfCt(): boolean {
@@ -4604,11 +4612,14 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
             : { ...m, pendingMoves: [...(m.pendingMoves ?? []), ct.moveId] }
         const next = arr.slice()
         next[idx] = updated
-        // CT cadeau : consommée à l'apprentissage (une seule fois, puis c'est fini).
+        // CT cadeau : consommée à l'apprentissage (une seule fois, puis c'est fini) — et MARQUÉE apprise, sinon un don
+        //   « une seule fois » (bateau, Surf, Collectionneur, sbire, Mitra-Poing) la redonnait (cf. ctAlreadyReceived).
         const ownedAfter = owned ? st.ownedCts.filter((id) => id !== ctId) : st.ownedCts
+        const taught = ctTaughtMarker(ctId)
+        const markers = owned && !st.defeatedTrainers.includes(taught) ? [...st.defeatedTrainers, taught] : st.defeatedTrainers
         // ACHAT UNIQUE (toute CT) : on enregistre l'achat → retirée du shop pour de bon.
         const boughtAfter = owned ? st.boughtCts : [...st.boughtCts, ctId]
-        st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter, boughtCts: boughtAfter }
+        st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter, boughtCts: boughtAfter, defeatedTrainers: markers }
         trackBallLockSpend(cost) // VŒU DU GÉNIE : achat de CT = dépense (hors spendReps)
         emit()
         return { ok: true, queued: !free }

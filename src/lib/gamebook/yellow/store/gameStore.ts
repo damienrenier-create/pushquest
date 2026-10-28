@@ -83,7 +83,7 @@ import { repsUnit, notEnoughReps } from "../data/energyWords"
 import { FASHION_VICTIM_NPC_ID, FASHION_VICTIM_MAP, FASHION_SPOTS, FASHION_VICTIM_SPRITES, FASHION_VICTIM_LINES, FASHION_ROD_GIFT_LINES, FASHION_ROD_GIFT_LINES_FUN, FASHION_POST_GAG_SPRITE, FASHION_PRICES, FASHION_REVERT_MARKER, FV_RESET_NICKS, FV_RESET_MARKER, isValidAvatar, avatarSheet, encodeAvatar, personalFashionOffer, randomFashionSeed, fashionRevertCost, isSurfOutfit, SURF_OUTFIT_DEX_HINT } from "../data/avatars"
 import { ARTISANE_NPC_ID, ARTISANE_MAP, ARTISANE_SPOTS, ARTISANE_LINES } from "../data/artisane"
 import { fishingLevel, fishingShinyChance, rollBiteTime, fishingTier, fishingRareOfHour, fishingRareOfMap, fishingRareLevelFor, fishingRareLevel, fishingCommon, fishingReelBonus, fishingBaseIvs, FISHING_TUTORIAL, FISHING_TUTORIAL_MARKER, FISHING_MAX_WAIT_SEC, FISHING_ROD_ITEM_ID, GEAUCKE_ID, GEAUCKE_LEVEL } from "../data/fishing"
-import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
+import { GEKROC_NPC_ID, GEKROC_NO_TEAM_LINES, buildGekroc, gekrocName, gekrocIntroLines, gekrocDoneLines } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
@@ -1251,7 +1251,7 @@ function tryLaunchSbire(): ActiveDialogue | null {
 function tryLaunchGekroc(): ActiveDialogue | null {
     const team = getPlayerSave().team
     if (!team.some((m) => m.currentHp > 0)) {
-        return { npcId: GEKROC_NPC_ID, npcName: "GÉKROC", lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
+        return { npcId: GEKROC_NPC_ID, npcName: gekrocName(effectiveRunWorld()).toUpperCase(), lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
     }
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startWildBattle(team, [buildGekroc(effectiveRunWorld())], seed) // gardien selon le monde : Gékroc / Gékraise / Gékosmic (rejeu → run rejoué)
@@ -3206,11 +3206,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // GÉKROC (mini-boss STATIQUE de la Centrale) : combat UNIQUE. Une fois vaincu/capturé
         // (gekrocResolved), il ne réapparaît plus → réplique "déjà descellé".
         if (npc.id === GEKROC_NPC_ID) {
+            // Nom et répliques du gardien du RUN JOUÉ : Gékroc (run 1), Gékraise (run 2), Gékosmic (run 3) — rejeu compris.
+            const gWorld = effectiveRunWorld()
             if (getPlayerSave().gekrocResolved) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: GEKROC_DONE_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: gekrocName(gWorld).toUpperCase(), lineIndex: 0, lines: gekrocDoneLines(gWorld) } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: GEKROC_INTRO_LINES, lineIndex: 0 }, pendingGekroc: true })
+            set({ dialogue: { npcId: npc.id, npcName: gekrocName(gWorld).toUpperCase(), lines: gekrocIntroLines(gWorld), lineIndex: 0 }, pendingGekroc: true })
             return
         }
 

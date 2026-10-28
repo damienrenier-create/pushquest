@@ -14,14 +14,22 @@ export const GEKROC_POS = { x: 4, y: 9 }
 export const GEKROC_LEVEL = 35
 export const GEKROC_STONE_ITEM = "pierre_gekroc"
 
-export const GEKROC_INTRO_LINES = [
-    "*Une masse fossile incrustée d'une pierre crépitante s'arrache du sol dans un grondement…*",
-    "GÉKROC, le gardien souterrain, surgit — sa Pierre d'Évolution étincelle de mille éclairs !",
-    "Il se dresse en travers de ton chemin. Le combat est inévitable.",
-]
-export const GEKROC_DONE_LINES = [
-    "*Il ne reste qu'un cratère fumant là où Gékroc gardait sa Pierre. Tu l'as déjà descellée.*",
-]
+/** NOM du gardien selon le monde — les textes ne disent plus « Gékroc » au run 2 (Gékraise) ni au run 3 (Gékosmic)
+ *  (Sartay, 28/10/2026 : « dans la Centrale ce n'est pas Gékroc mais Gékosmic ! »). */
+const GUARDIAN_NAME: Record<"live" | "ngplus" | "run3", string> = { live: "Gékroc", ngplus: "Gékraise", run3: "Gékosmic" }
+export function gekrocName(world: "live" | "ngplus" | "run3"): string { return GUARDIAN_NAME[world] }
+export function gekrocIntroLines(world: "live" | "ngplus" | "run3"): string[] {
+    return [
+        "*Une masse fossile incrustée d'une pierre crépitante s'arrache du sol dans un grondement…*",
+        `${gekrocName(world).toUpperCase()}, le gardien souterrain, surgit — sa Pierre d'Évolution étincelle de mille éclairs !`,
+        "Il se dresse en travers de ton chemin. Le combat est inévitable.",
+    ]
+}
+export function gekrocDoneLines(world: "live" | "ngplus" | "run3"): string[] {
+    return [`*Il ne reste qu'un cratère fumant là où ${gekrocName(world)} gardait sa Pierre. Tu l'as déjà descellée.*`]
+}
+export const GEKROC_INTRO_LINES = gekrocIntroLines("live")
+export const GEKROC_DONE_LINES = gekrocDoneLines("live")
 export const GEKROC_NO_TEAM_LINES = [
     "Tes Daemons sont tous K.O. !",
     "Soigne-les au Centre avant d'affronter le gardien.",

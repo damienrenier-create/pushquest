@@ -1060,7 +1060,8 @@ const RUN3_ZONES: Record<string, Zone> = {
         rate: 0.14,
         pool: [
             { speciesId: "plumiot", base: 20 },
-            { speciesId: "tamanpousse", base: 18 }, { speciesId: "limaroche", base: 18 },
+            // LIMAROCHE : 18 → 2,65 (Sartay, 28/10/2026 : « il est hyper fréquent dans la Centrale… descends-le à 3 % ») ≈ 17 % → 3 %.
+            { speciesId: "tamanpousse", base: 18 }, { speciesId: "limaroche", base: 2.65 },
             { speciesId: "colibraise", base: 18 },
             { speciesId: "hibouh", base: 8 }, { speciesId: "pyrozly", base: 7 },
             { speciesId: "jerbiwat", base: 0.65, rare: true }, { speciesId: "lavapetit", base: 5 }, // Jerbiwat = PÉPITE ciblée à 0,5 % (0,65/128,65 ; trop utilisé — choix Sartay 24/07). Poids fractionnaire volontaire.

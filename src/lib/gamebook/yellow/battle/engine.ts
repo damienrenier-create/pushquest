@@ -9,6 +9,7 @@ import type { StatKey, BattleMon, MonInstance, MajorStatus, MoveData, StageKey, 
 import { neutralStages } from "./types"
 import { Rng } from "./rng"
 import { getSpecies } from "../data/species"
+import { geckoSurvivePct } from "../data/geckoTrait"
 import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
@@ -967,11 +968,15 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     }
     const defHeld = heldEffect(defender)
     // Bandeau (objet) OU talent Instinct de survie : % de survivre à 1 PV depuis PV pleins.
-    const survivePct = (defHeld?.survive1hpPct ?? 0) + (talentEffect(defender)?.survive1hpPct ?? 0)
+    // 🦎 + CARAPACE FOSSILE des géckos (cf. data/geckoTrait) : toujours à l'état sauvage, 1 fois sur 10 sinon.
+    const geckoPct = geckoSurvivePct(defender.speciesId, state.isWild && other(side) === "enemy")
+    const survivePct = (defHeld?.survive1hpPct ?? 0) + (talentEffect(defender)?.survive1hpPct ?? 0) + geckoPct
     if (survivePct > 0 && dealt >= defender.currentHp && defender.currentHp === maxHpOf(defender)
         && rng.next() < survivePct / 100) {
         dealt = Math.max(1, defender.currentHp - 1)
-        events.push({ kind: "message", text: defHeld?.survive1hpPct ? `${displayName(defender)} se raccroche à 1 PV grâce à son ${defHeld.name} !` : `${displayName(defender)} s'accroche à 1 PV !` })
+        events.push({ kind: "message", text: defHeld?.survive1hpPct ? `${displayName(defender)} se raccroche à 1 PV grâce à son ${defHeld.name} !`
+            : geckoPct > 0 ? `${displayName(defender)} s'arc-boute sur sa carapace fossile et tient à 1 PV !`
+            : `${displayName(defender)} s'accroche à 1 PV !` })
     }
     applyDamage(state, other(side), dealt, events)
     // GÉNÉRIQUE DE DÉFAITE (Ligue de Fusion) : mémorise sur le défenseur le DERNIER coup encaissé (attaque + auteur).

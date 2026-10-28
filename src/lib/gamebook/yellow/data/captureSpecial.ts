@@ -21,7 +21,7 @@ export interface SpecialObtain {
 // Les 6 panthères = évolution d'un Panthéon avec la Pierre Gékroc (choix du type). Texte commun généré ci-dessous.
 const PANTHER_HOW = [
     "Panthéon = cadeau d'ACE à ta 7e victoire (1 combat/jour).",
-    "Pierre Gékroc = bats ou capture Gékroc (mini-boss statique de la Centrale).",
+    "Pierre Gékroc = bats ou capture le gardien de la Centrale (Gékroc au run 1, Gékraise au run 2, Gékosmic au run 3).",
 ]
 const panther = (typeLabel: string): SpecialObtain => ({
     runs: [1, 2, 3, 4], // Panthéon (ACE) + Pierre (Gékroc / Gékraise / Gékosmic à la Centrale) dans chaque run

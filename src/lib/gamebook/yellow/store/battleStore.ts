@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam } from "./playerStore"
 import { getItem } from "../data/items"
 import { getTodayISO } from "@/lib/challenge"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
@@ -1043,13 +1043,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // LE TRÔNE : signaux de fin de couloir, lus par l'UI pour déclencher le générique (sacre ou défaite).
     let platineSacre = false
     let platineDefeat = false // BOUCLE ENDGAME : passe à true à la capture d'Ukognofy ou au sacre OR (hors bulle de rejeu) → exposé au client
-    if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc" || e.speciesId === "gekraise" || e.speciesId === "gekosmic")) {
+    const guardian = b.isWild && (b.outcome === "win" || b.outcome === "caught") ? b.enemy.team.find((e) => e.speciesId === "gekroc" || e.speciesId === "gekraise" || e.speciesId === "gekosmic") : undefined
+    if (guardian) {
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
             addItem(GEKROC_STONE_ITEM, 1)
             // NOTIF : sans ça le don était totalement silencieux (objet MISC, pas affiché par défaut)
-            // → le joueur avait l'impression de ne rien recevoir.
-            stoneReward = "🪨 En s'effondrant, Gékroc libère une PIERRE D'ÉVOLUTION ! Tu obtiens la Pierre Gékroc — utilise-la depuis la fiche d'un Panthéon pour le faire évoluer (choix du type)."
+            // → le joueur avait l'impression de ne rien recevoir. Nom du gardien VAINCU (Gékroc / Gékraise / Gékosmic).
+            const gName = getSpecies(guardian.speciesId)?.name ?? "Le gardien"
+            stoneReward = `🪨 En s'effondrant, ${gName} libère une PIERRE D'ÉVOLUTION ! Tu obtiens la Pierre Gékroc — utilise-la depuis la fiche d'un Panthéon pour le faire évoluer (choix du type).`
         }
     }
 
@@ -1175,8 +1177,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const added = grantReps(SBIRE_REWARD_REPS_5); logEnergyIncome("⚔️ Sbire", added)
                 sbireRewardMsg = `⚡ ${added} d'énergie ! Tu tiens la distance.`
             } else if (todayWins >= 6) {
-                // Cadeau ULTIME one-time : CT Fouet de Nouilles. Déjà reçue → repli en reps.
-                if (grantCt(SBIRE_REWARD_CT_ID)) {
+                // Cadeau ULTIME one-time : CT Fouet de Nouilles. Déjà reçue (même déjà apprise) → repli en reps.
+                if (!ctAlreadyReceived(SBIRE_REWARD_CT_ID) && grantCt(SBIRE_REWARD_CT_ID)) {
                     sbireRewardMsg = `🍝 Relique du dieu Spaghetti : la CT Fouet de Nouilles est à toi !`
                 } else {
                     const added = grantReps(SBIRE_REWARD_CT_FALLBACK_REPS); logEnergyIncome("⚔️ Sbire", added)
@@ -1248,7 +1250,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 // RUN 3 (Maison COMBAT) : la CT ultime « Mitra-Poing » (ct58) si le joueur a un GAMARUTO en équipe.
                 const hasGamaruto = b.player.team.some((m) => m.speciesId === "gamaruto")
                 const mv = getMove(getCt("ct58")?.moveId ?? "")?.name ?? "Mitra-Poing"
-                if (hasGamaruto && grantCt("ct58")) {
+                if (hasGamaruto && !ctAlreadyReceived("ct58") && grantCt("ct58")) { // une seule fois, même déjà apprise
                     rematchReward = { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lines: ["Ce GAMARUTO à tes côtés… tu suis la voie du crapaud-ninja !", `🎁 Reçois la CT « ${mv} » — la technique COMBAT ultime. Enseigne-la à un Daemon Combat !`] }
                 } else if (hasGamaruto) {
                     rematchReward = { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lines: [`Tu possèdes déjà « ${mv} » — la voie du crapaud n'a plus de secret pour toi. 🐸`] }

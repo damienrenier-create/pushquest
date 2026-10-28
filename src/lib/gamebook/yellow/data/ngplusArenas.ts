@@ -169,11 +169,15 @@ export const RUN3_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     y_feuarena_g2: [{ speciesId: "chouhante", level: 22 }, { speciesId: "corvenin", level: 24 }, { speciesId: "necarabee", level: 26 }, { speciesId: "lampignon", level: 27 }, { speciesId: "namicha", level: 27 }],
     y_feuarena_g3: [{ speciesId: "corvenin", level: 28 }, { speciesId: "necarabee", level: 28 }, { speciesId: "chouhante", level: 28 }],
     y_feuarena_g4: [{ speciesId: "chouhante", level: 29 }],
-    // ── ARÈNE 4 → DRAGON (Draclet/Wyverion, Carlinou/Carlembre/Dracarlin, Glacirex/Cryotyran) ──
-    y_elecarena_g1: [{ speciesId: "wyverion", level: 20 }, { speciesId: "carlembre", level: 20 }, { speciesId: "wyverion", level: 34 }, { speciesId: "carlembre", level: 34 }],
-    y_elecarena_g2: [{ speciesId: "draclet", level: 19 }, { speciesId: "carlembre", level: 19 }, { speciesId: "wyverion", level: 29 }, { speciesId: "dracarlin", level: 40 }],
-    y_elecarena_g3: [{ speciesId: "cryotyran", level: 39 }, { speciesId: "wyverion", level: 24 }, { speciesId: "carlembre", level: 32 }, { speciesId: "glacirex", level: 34 }],
-    y_elecarena_g4: [{ speciesId: "wyverion", level: 34 }, { speciesId: "dracarlin", level: 36 }, { speciesId: "cryotyran", level: 38 }],
+    // ── ARÈNE DRAGON (5e arène depuis le bateau) — composition de Sartay du 28/10/2026 : moins redondante (Wyverion ×5 et
+    //   Carlembre ×4 avant) et sans les Daemons trop faibles (niveaux du run 2, quand c'était la 4e arène). Lignées
+    //   Draclet/Wyverion, Carlinou/Carlembre/Dracarlin, Glacirex/Cryotyran, Rosdrakis/Dracosidhe et les 2 dragons CRAFTÉS
+    //   (Ewokid/Endorix/Wooky de TomGotrails, Dracominus/Spectragon/Thanadrak de Rob : cachés du dex tant que non capturés,
+    //   même combattus). Chaque Daemon est au stade naturel de son niveau. ──
+    y_elecarena_g1: [{ speciesId: "wyverion", level: 25 }, { speciesId: "carlembre", level: 34 }, { speciesId: "endorix", level: 33 }, { speciesId: "spectragon", level: 34 }],
+    y_elecarena_g2: [{ speciesId: "glacirex", level: 28 }, { speciesId: "wooky", level: 36 }, { speciesId: "spectragon", level: 37 }, { speciesId: "dracarlin", level: 43 }],
+    y_elecarena_g3: [{ speciesId: "dracosidhe", level: 34 }, { speciesId: "cryotyran", level: 36 }, { speciesId: "wooky", level: 39 }, { speciesId: "dracarlin", level: 39 }],
+    y_elecarena_g4: [{ speciesId: "cryotyran", level: 40 }, { speciesId: "thanadrak", level: 41 }, { speciesId: "wyverion", level: 34 }],
     // ── ARÈNE 5 → MULTI (mélange de FINALS variés, façon gauntlet) ──
     y_eauarena_g1: [{ speciesId: "maitrezenc", level: 43 }, { speciesId: "mycedruide", level: 43 }, { speciesId: "dracarlin", level: 43 }, { speciesId: "gekosmic", level: 43 }], // run 3 : Nécrocorbe → GÉKOSMIC (Centrale Psy)
     y_eauarena_g2: [{ speciesId: "hebulmin", level: 44 }, { speciesId: "omnhippo", level: 46 }, { speciesId: "regnantaur", level: 47 }],                                          // run 3 : Cryotyran → OMNHIPPO (Centrale Psy)
