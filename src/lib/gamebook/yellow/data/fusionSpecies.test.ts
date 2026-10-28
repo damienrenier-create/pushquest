@@ -119,12 +119,12 @@ describe("fusion — types & divers", () => {
     it("table FIGÉE (28/10/2026) : couvre tous les types, et une espèce ajoutée au dex ne retype plus aucune fusion", () => {
         const rep = typeRepStat()
         for (const s of Object.values(SPECIES)) for (const t of s.types) expect(rep[t], `${s.id} : ${t}`).toBeTruthy()
-        // valeurs EN PROD le 28/10/2026 (Normal et Élec avaient basculé le 27/10 avec Snatchacoolt)
-        expect(rep.NORMAL).toBe("spe"); expect(rep.ELEC).toBe("spc"); expect(rep.FEE).toBe("spe")
-        // l'ajout de Coucouminou (28/10) aurait refait basculer Normal : le calcul d'origine le montre, la table figée non
-        expect(computeTypeRepStat().NORMAL).toBe("hp")
+        // valeurs d'AVANT le 27/10 (Snatchacoolt avait fait basculer Normal et Élec ; remises le 28/10 à la demande de Sartay)
+        expect(rep.NORMAL).toBe("hp"); expect(rep.ELEC).toBe("spe"); expect(rep.FEE).toBe("spe")
+        // le calcul d'origine sur le dex actuel donnerait Élec « spc » : la table figée, elle, ne bouge pas
+        expect(computeTypeRepStat().ELEC).toBe("spc")
         const before = { ...rep }
-        const fake = { id: "zz_fake", types: ["NORMAL", "ELEC"], baseStats: { hp: 400, atk: 1, def: 400, spe: 1, spc: 1 } } as unknown as (typeof SPECIES)[string]
+        const fake = { id: "zz_fake", types: ["NORMAL", "ELEC"], baseStats: { hp: 1, atk: 1, def: 1, spe: 400, spc: 400 } } as unknown as (typeof SPECIES)[string]
         ;(SPECIES as Record<string, unknown>).zz_fake = fake
         try {
             expect(computeTypeRepStat().NORMAL).not.toBe(before.NORMAL) // le calcul d'origine, lui, aurait basculé

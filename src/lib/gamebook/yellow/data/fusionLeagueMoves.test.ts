@@ -9,18 +9,18 @@ import { moveCategory } from "../battle/typeChart"
 // sur la stat dominante (physique ATK vs spécial SpA), max 2 attaques de statut.
 
 describe("Ligue de Fusion — types figés", () => {
-    it("table figée : les types en prod au 28/10 ne bougent plus quand une espèce entre au dex (Coucouminou)", () => {
+    it("table figée : les fusions retypées le 27/10 par l'ajout de Snatchacoolt retrouvent leurs types d'avant", () => {
         const types: Record<string, string> = {}
         for (const tr of FUSION_LEAGUE) {
             const team = buildFusionLeagueTeam(tr.key, "or")
             const pairs = tierPairs(tr.key, "or", tr.pairs)
             team.forEach((f, i) => { types[pairs[i].name] = [...getSpecies(f.speciesId)!.types].sort().join("/") })
         }
-        // types en prod depuis le 27/10 (avant : Ténèbres/Eau, Spectre/Feu, Vol/Fée, Eau/Normal — retour à trancher par Sartay)
-        expect(types["Abyssathonn"]).toBe("ELEC/TENEBRES")
-        expect(types["Thundèbre"]).toBe("ELEC/SPECTRE")
-        expect(types["Lunagron"]).toBe("ELEC/FEE")
-        expect(types["Aquilathonn"]).toBe("ELEC/VOL")
+        // Sartay, 28/10/2026 : « on remet évidemment les fusions de la ligue comme elles l'étaient avant »
+        expect(types["Abyssathonn"]).toBe("EAU/TENEBRES")
+        expect(types["Thundèbre"]).toBe("FEU/SPECTRE")
+        expect(types["Lunagron"]).toBe("FEE/VOL")
+        expect(types["Aquilathonn"]).toBe("EAU/NORMAL")
     })
 })
 

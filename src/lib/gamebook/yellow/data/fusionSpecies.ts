@@ -362,13 +362,13 @@ export function fuseHeldItems(a: FusionParent, b: FusionParent): string[] {
 }
 
 /** Table stat-représentative par type = la stat où le type dépasse LE PLUS la moyenne globale du roster (le
- *  « caractère » du type). FIGÉE le 28/10/2026 telle qu'elle était EN PROD ce jour-là (aucun changement pour les joueurs) :
- *  recalculée depuis SPECIES, elle basculait dès qu'une espèce entrait au dex ou changeait de stats (Plante, Normal, Fée et
- *  Dragon le 15/10, Fée le 26/10, Normal et Élec le 27/10 avec Snatchacoolt) et retypait en silence les fusions de tout le
- *  monde, Ligue de Fusion comprise. Revenir à la version d'avant le 27/10 (NORMAL "hp", ELEC "spe") reste à trancher par
- *  Sartay. Ne plus la recalculer : computeTypeRepStat garde le calcul d'origine pour le diagnostic. */
+ *  « caractère » du type). FIGÉE le 28/10/2026 : recalculée depuis SPECIES, elle basculait dès qu'une espèce entrait au dex
+ *  ou changeait de stats (Plante, Normal, Fée et Dragon le 15/10, Fée le 26/10, Normal et Élec le 27/10 avec Snatchacoolt)
+ *  et retypait en silence les fusions de tout le monde, Ligue de Fusion comprise. Valeurs d'AVANT le 27/10 (Sartay : « on
+ *  remet évidemment les fusions de la ligue comme elles l'étaient avant ») : Abyssathonn, Thundèbre, Lunagron et Aquilathonn
+ *  retrouvent leurs types. Ne plus la recalculer : computeTypeRepStat garde le calcul d'origine pour le diagnostic. */
 const TYPE_REP_STAT: Record<string, StatKey> = {
-    PLANTE: "spc", EAU: "def", FEU: "spe", NORMAL: "spe", VOL: "spe", ROCHE: "def", SOL: "def", COMBAT: "atk", ELEC: "spc",
+    PLANTE: "spc", EAU: "def", FEU: "spe", NORMAL: "hp", VOL: "spe", ROCHE: "def", SOL: "def", COMBAT: "atk", ELEC: "spe",
     GLACE: "spc", INSECTE: "atk", PSY: "spc", METAL: "def", FEE: "spe", DRAGON: "spc", POISON: "spc", SPECTRE: "spe", TENEBRES: "hp",
 }
 export function typeRepStat(): Record<string, StatKey> {
