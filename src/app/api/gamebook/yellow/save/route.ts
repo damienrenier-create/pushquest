@@ -10,6 +10,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID, YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { parseSave, emptySave } from "@/lib/gamebook/yellow/storage/save"
+import { keepPcBoxesFromStored } from "@/lib/gamebook/yellow/data/pcBoxes"
 import { classifyOverwrite, appendBackup, energyGuard } from "@/lib/gamebook/yellow/storage/saveGuard"
 
 export const dynamic = "force-dynamic"
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
 
-    let body: { save?: unknown; intentionalReset?: boolean }
+    let body: { save?: unknown; intentionalReset?: boolean; caps?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const save = parseSave(body.save) // sanitize systématique côté serveur
 
@@ -70,6 +71,10 @@ export async function POST(req: NextRequest) {
         where: { userId_chapterId: { userId: auth.userId, chapterId: YELLOW_CHAPTER_ID } },
         select: { flags: true, history: true },
     })
+
+    // 📦 BOÎTES DU PC (28/10/2026) : un onglet resté sur une version d'AVANT les boîtes n'envoie ni `pcBoxes` ni `caps` → on
+    //   garde les boîtes déjà stockées au lieu de les effacer. Jamais lors d'une remise à zéro volontaire.
+    if (existing?.flags && !body.intentionalReset && !(Array.isArray(body.caps) && body.caps.includes("pcBoxes"))) keepPcBoxesFromStored(existing.flags, save)
 
     // GARDE ANTI-TRICHE ÉNERGIE : reps ne peut légitimement dépasser 2× le cap → on PLAFONNE (jamais de refus 409,
     //   sinon perte de session) + on TRACE. Appliqué AVANT toutes les branches d'écriture et INDÉPENDAMMENT de

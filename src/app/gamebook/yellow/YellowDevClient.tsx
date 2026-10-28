@@ -90,7 +90,7 @@ import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBough
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, getReplayReturn, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, getReplayReturn, getPcBoxes, pcBoxCreate, pcBoxRename, pcBoxDelete, pcBoxAssign, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -172,6 +172,10 @@ import { attackCost, effectiveQuota, playerAttackQuota } from "@/lib/gamebook/ye
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { evTotal, topEvStats, evTotalCap, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
+import { computePcView, pcScope, pcFacets, pcBoxCounts, normalizeSel, type PcBoxSel, type PcFilter, type PcSortKey } from "@/lib/gamebook/yellow/data/pcView"
+import { boxOf } from "@/lib/gamebook/yellow/data/pcBoxes"
+import { PcViewBar, PcBulkBar, pcViewTitle, pcBoxLabel, type PcGroup, type PcBoxEdit } from "./PcViewBar"
+import { STAT_LABEL } from "./dex/dexShared"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
@@ -655,8 +659,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [renameText, setRenameText] = useState("")
     const [bagItem, setBagItem] = useState<string | null>(null)
     const [pcBox, setPcBox] = useState(0)
-    const [pcSort, setPcSort] = useState<"recent" | "lvl" | "hp" | "spc" | "atk" | "def" | "spe" | "alpha">("recent")
+    const [pcSort, setPcSort] = useState<PcSortKey>("recent")
     const [pcSortDir, setPcSortDir] = useState(-1) // -1 = décroissant · 1 = croissant
+    // PC — VUES et BOÎTES (projet de Zyran, 28/10/2026) : boîte choisie, filtre, recherche, puces ouvertes, saisie d'un nom de boîte.
+    const [pcSel, setPcSel] = useState<PcBoxSel>("all")
+    const [pcFilter, setPcFilter] = useState<PcFilter>({ kind: "all" })
+    const [pcQuery, setPcQuery] = useState("")
+    const [pcSearchOpen, setPcSearchOpen] = useState(false)
+    const [pcGroup, setPcGroup] = useState<PcGroup>(null)
+    const [pcBoxEdit, setPcBoxEdit] = useState<PcBoxEdit>(null)
+    const [pcBoxName, setPcBoxName] = useState("")
+    // Vue du PC FIGÉE à l'ouverture d'une fiche depuis la réserve : ranger le Daemon ailleurs depuis sa fiche ne fait pas sauter
+    //   la liste de glissement ◀ ▶ (uids, relus contre le PC à chaque rendu).
+    const [ficheViewUids, setFicheViewUids] = useState<string[] | null>(null)
     const [ctShop, setCtShop] = useState(false)
     const [lampOpen, setLampOpen] = useState(false)
     // 🔢 VŒU DE GUILLAUME : l'appel du matin (1 annonce/jour tant qu'il reste des journées). Cf. data/dexWish.
@@ -2668,7 +2683,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
         if (selectedFusionUid) { setSelectedFusionUid(null); return true } // fermer la fiche fusion
-        if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
+        if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); setFicheViewUids(null); return true } // fermer la fiche reset renommage + objet tenu
         if (fusioBallModal) { setFusioBallModal(false); return true } // offre Fusio-Ball post-sacre (décliner)
         if (loopModal) { setLoopModal(false); return true } // BOUCLE ENDGAME : décliner l'offre (re-proposée au prochain sacre OR / capture)
         if (pnj6Modal) { setPnj6Modal(false); return true } // offre d'échange PNJ 6 (décliner)
@@ -2702,7 +2717,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (artisaneOpen) { closeArtisane(); return true }
         if (labOpen) { closeLab(); return true }
         if (moveReminderOpen) { closeMoveReminder(); return true }
-        if (pcOpen) { closePc(); return true }
+        if (pcBoxEdit) { setPcBoxEdit(null); return true } // saisie d'un nom de boîte du PC (annuler)
+        if (pcOpen) { setPcSearchOpen(false); setPcQuery(""); setFicheViewUids(null); closePc(); return true } // la recherche ne survit pas à la fermeture
         if (menu === "team" || menu === "bag" || menu === "moves" || menu === "palmares" || menu === "genie") { setMenu("pause"); return true }
         if (menu === "reput" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("palmares"); return true }
         if (menu === "pause") { setMenu("none"); return true }
@@ -2715,6 +2731,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     //   (règle Sartay 20/10/2026). Même monnaie, même valeur : seul le mot change.
     const funWords = getGameMode() === "fun"
     const RU = repsUnit(funWords)
+    // PC — VUE COURANTE (projet de Zyran, 28/10/2026) : boîte ∧ recherche ∧ filtre, triée. Calculée ici (et pas dans le bloc du
+    //   PC) pour que la fiche d'un Daemon glisse dans la MÊME liste. Aucune boîte dans une bulle de rejeu.
+    const pcBoxesHere = activeWorld === "replay" ? undefined : player.pcBoxes
+    const pcSelN = normalizeSel(pcSel, pcBoxesHere)
+    const pcList = pcOpen ? computePcView(player.pc, { sel: pcSelN, filter: pcFilter, query: pcQuery, sort: pcSort, dir: pcSortDir, boxes: pcBoxesHere }) : null
 
     return (
         <div style={pageStyle}>
@@ -3071,46 +3092,117 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 Accessible UNIQUEMENT via l'ordinateur du Centre Daemon (pcOpen), plus depuis le menu START. */}
             {!battle && pcOpen && (() => {
                 const BOX_SIZE = 20
-                // Tri de la réserve — sur une COPIE (on ne réordonne jamais player.pc lui-même,
-                // pour garder l'ordre de dépôt réel pour l'option "récemment déposé").
-                const sortedPc = [...player.pc]
-                if (pcSort === "recent") { if (pcSortDir < 0) sortedPc.reverse() } // récent = dernier déposé en tête
-                else if (pcSort === "alpha") sortedPc.sort((a, b) => displayName(a).localeCompare(displayName(b)) * pcSortDir)
-                else if (pcSort === "lvl") sortedPc.sort((a, b) => (a.level - b.level) * pcSortDir)
-                else {
-                    const k = pcSort // "hp"|"spc"|"atk"|"def"|"spe" → stat calculée au niveau du Daemon
-                    sortedPc.sort((a, b) => {
-                        const sa = getSpecies(a.speciesId), sb = getSpecies(b.speciesId)
-                        return ((sa ? fullStats(a, sa)[k] : 0) - (sb ? fullStats(b, sb)[k] : 0)) * pcSortDir
-                    })
-                }
+                // VUE du PC (projet de Zyran, 28/10/2026) : boîte ∧ recherche ∧ filtre, triée — calculée plus haut (pcList) pour que
+                //   la fiche glisse dans la MÊME liste. C'est une copie filtrée : player.pc n'est jamais réordonné ni modifié (l'ordre
+                //   de dépôt réel sert au tri « Déposé récemment »).
+                const sortedPc = pcList ?? []
                 const boxes = Math.max(1, Math.ceil(sortedPc.length / BOX_SIZE))
                 const box = Math.min(pcBox, boxes - 1)
                 const slice = sortedPc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
-                const closePcUi = () => { closePc() }
+                const canBox = activeWorld !== "replay"
+                const scope = pcScope(player.pc, pcSelN, pcQuery, pcBoxesHere)
+                const facets = pcFacets(scope, pcFilter.kind === "type" ? pcFilter.type : undefined)
+                const boxCounts = pcBoxCounts(player.pc, pcBoxesHere)
+                const viewActive = pcSelN !== "all" || pcFilter.kind !== "all" || pcQuery.trim() !== ""
+                const evStat = pcFilter.kind === "ev" ? pcFilter.stat : null
+                const evTotals = pcFilter.kind === "evNone" || pcFilter.kind === "evFull" || pcFilter.kind === "evCandy"
+                const plural = (n: number) => (n > 1 ? "s" : "")
+                const closePcUi = () => { setPcBoxEdit(null); setPcSearchOpen(false); setPcQuery(""); setFicheViewUids(null); closePc() }
+                const startBoxName = (edit: PcBoxEdit, name = "") => { setPcBoxEdit(edit); setPcBoxName(name) }
+                const finishBoxName = () => {
+                    if (!pcBoxEdit) return
+                    if (pcBoxEdit.mode === "rename") {
+                        const r = pcBoxRename(pcBoxEdit.id, pcBoxName)
+                        if (!r.ok) { setToast(r.reason === "taken" ? "Une boîte porte déjà ce nom." : r.reason === "vide" ? "Donne un nom à la boîte." : "Boîte introuvable."); return }
+                        persistYellowSave(); setPcBoxEdit(null); setToast(`📦 Boîte renommée « ${r.name} ».`)
+                        return
+                    }
+                    const uids = pcBoxEdit.uids
+                    const r = pcBoxCreate(pcBoxName)
+                    if (!r.ok) { setToast(r.reason === "max" ? "12 boîtes au maximum." : r.reason === "taken" ? "Une boîte porte déjà ce nom." : "Impossible de créer une boîte ici."); return }
+                    const n = uids.length ? pcBoxAssign(uids, r.id) : 0
+                    persistYellowSave()
+                    setPcBoxEdit(null); setPcSel(r.id); setPcFilter({ kind: "all" }); setPcQuery(""); setPcSearchOpen(false); setPcGroup(null); setPcBox(0)
+                    setToast(uids.length ? `📦 ${n} Daemon${plural(n)} rangé${plural(n)} dans « ${r.name} ».` : `📦 Boîte « ${r.name} » créée.`)
+                }
+                const deleteBoxAsk = (id: string) => {
+                    const name = pcBoxLabel(id, pcBoxesHere), n = boxCounts.byBox[id] ?? 0
+                    const what = n > 1 ? `Ses ${n} Daemons retournent dans « Non rangés ».` : n === 1 ? "Son Daemon retourne dans « Non rangés »." : "Elle est vide."
+                    if (!window.confirm(`Supprimer la boîte « ${name} » ? ${what} Aucun Daemon n'est relâché.`)) return
+                    pcBoxDelete(id); persistYellowSave()
+                    setPcSel(getPcBoxes() ? "none" : "all"); setPcBoxEdit(null); setPcBox(0)
+                    setToast(`Boîte supprimée : ${n} Daemon${plural(n)} dans « Non rangés ».`)
+                }
+                const bulkAssign = (target: string | null) => {
+                    const uids = sortedPc.map((m) => m.uid), n = uids.length
+                    const name = target ? pcBoxLabel(target, pcBoxesHere) : "Non rangés"
+                    const ask = n === 1
+                        ? (target ? `Ranger ce Daemon dans « ${name} » ?` : "Sortir ce Daemon de sa boîte ? Il retourne dans « Non rangés ».")
+                        : (target ? `Ranger ces ${n} Daemons dans « ${name} » ?` : `Sortir ces ${n} Daemons de leur boîte ? Ils retournent dans « Non rangés ».`)
+                    if (!window.confirm(ask)) return
+                    pcBoxAssign(uids, target); persistYellowSave(); setPcBox(0)
+                    setToast(`📦 ${n} Daemon${plural(n)} ${target ? `rangé${plural(n)} ` : ""}dans « ${name} ».`)
+                }
+                // Ligne d'un Daemon (équipe ou réserve) : badge de potentiel ★/S/A/B/C/D avant le niveau ; en vue EV, la colonne du
+                //   milieu montre l'entraînement (stat de la vue, ou total/plafond) au lieu des types.
+                const monRow = (m: MonInstance, showEv: boolean) => {
+                    const tier = m.ivs ? ivTier(m.ivs) : null // un Daemon reçu sans IV (livraison abîmée) ne doit pas faire tomber l'écran
+                    return (
+                        <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%", opacity: m.tradeState === "listed" ? 0.45 : 1 }} onClick={() => { setSelected(m); setFicheViewUids(showEv ? sortedPc.map((x) => x.uid) : null) }} title={m.tradeState === "listed" ? "Sur l'étal du Grand Marchand" : undefined}>
+                            <span style={{ fontWeight: 700, flex: 1, textAlign: "left", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.tradeState === "listed" && <span title="Sur l'étal du Marchand">🛒 </span>}{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
+                            {showEv && evStat ? (
+                                <span style={{ fontSize: 10, fontWeight: 700, color: (m.ev?.[evStat] ?? 0) >= EV_STAT_CAP ? "#9a7400" : undefined }}>{STAT_LABEL[evStat]} {m.ev?.[evStat] ?? 0}</span>
+                            ) : showEv && evTotals ? (
+                                <span style={{ fontSize: 10, opacity: 0.75 }}>{evTotal(m.ev)}/{evTotalCap(m)}</span>
+                            ) : (
+                                <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
+                            )}
+                            {tier && <span title={tier === "PARFAIT" ? "Potentiel ★ PARFAIT" : `Potentiel ${tier}`} style={{ width: 18, flexShrink: 0, textAlign: "center", borderRadius: 4, fontSize: 10, fontWeight: 900, lineHeight: "15px", background: ivTierColor(tier), color: tier === "PARFAIT" ? "#1c1408" : "#fff" }}>{tier === "PARFAIT" ? "★" : tier}</span>}
+                            <span style={{ width: 38, textAlign: "right", flexShrink: 0 }}>N.{m.level}</span>
+                        </button>
+                    )
+                }
                 return (
                     <div style={menuOverlayStyle} onClick={closePcUi}>
                         <div style={{ ...menuBoxStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>PC — RANGEMENT</div>
                             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "2px 0" }}>ÉQUIPE ({player.team.length}/6)</div>
-                            {player.team.map((m) => (
-                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%", opacity: m.tradeState === "listed" ? 0.45 : 1 }} onClick={() => setSelected(m)} title={m.tradeState === "listed" ? "Sur l'étal du Grand Marchand" : undefined}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{m.tradeState === "listed" && <span title="Sur l'étal du Marchand">🛒 </span>}{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
-                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
-                                    <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
-                                </button>
-                            ))}
-                            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "8px 0 2px", display: "flex", justifyContent: "space-between" }}>
-                                <span>BOÎTE {box + 1}/{boxes}</span>
-                                <span>
+                            {player.team.map((m) => monRow(m, false))}
+                            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "8px 0 2px" }}>RÉSERVE ({player.pc.length})</div>
+                            {player.pc.length > 0 && (
+                                <PcViewBar
+                                    boxes={pcBoxesHere} counts={boxCounts} facets={facets} sel={pcSelN} filter={pcFilter} query={pcQuery}
+                                    searchOpen={pcSearchOpen} group={pcGroup} canBox={canBox} edit={pcBoxEdit} editName={pcBoxName}
+                                    onSel={(s) => { setPcSel(s); setPcBox(0); setPcBoxEdit(null) }}
+                                    onFilter={(f) => { setPcFilter(f); setPcBox(0); setPcBoxEdit(null) }}
+                                    onEvStat={(k) => { setPcFilter({ kind: "ev", stat: k }); setPcSort("ev"); setPcSortDir(-1); setPcBox(0); setPcBoxEdit(null) }}
+                                    onGroup={setPcGroup}
+                                    onQuery={(q) => { setPcQuery(q); setPcBox(0); setPcBoxEdit(null) }}
+                                    onSearchOpen={(o) => { setPcSearchOpen(o); if (!o) setPcQuery(""); setPcBox(0); setPcBoxEdit(null) }}
+                                    onClear={() => { setPcFilter({ kind: "all" }); setPcQuery(""); setPcSearchOpen(false); setPcGroup(null); setPcBox(0); setPcBoxEdit(null) }}
+                                    onNewBox={() => startBoxName({ mode: "new", uids: [] })}
+                                    onRename={(id) => startBoxName({ mode: "rename", id }, pcBoxLabel(id, pcBoxesHere))}
+                                    onDelete={deleteBoxAsk}
+                                    onEditName={setPcBoxName}
+                                    onEditOk={finishBoxName}
+                                    onEditCancel={() => setPcBoxEdit(null)}
+                                />
+                            )}
+                            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "4px 0 2px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                                <span style={{ display: "flex", gap: 4, minWidth: 0 }}>
+                                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pcViewTitle(pcSelN, pcFilter, pcQuery, pcBoxesHere)}</span>
+                                    <span style={{ flexShrink: 0 }}>· {sortedPc.length}</span>
+                                </span>
+                                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                                    PAGE {box + 1}/{boxes}
                                     <button style={miniBtn} disabled={box <= 0} onClick={() => setPcBox(box - 1)}>◀</button>
                                     <button style={miniBtn} disabled={box >= boxes - 1} onClick={() => setPcBox(box + 1)}>▶</button>
                                 </span>
                             </div>
                             <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, margin: "0 0 6px" }}>
                                 <span style={{ opacity: 0.6 }}>Tri</span>
-                                <select value={pcSort} onChange={(e) => { setPcSort(e.target.value as typeof pcSort); setPcBox(0) }}
-                                    style={{ flex: 1, fontSize: 11, padding: "3px 4px", borderRadius: 4, border: "1px solid #cdbb86", background: "#fffef8", color: "#1c1408", fontFamily: "inherit" }}>
+                                <select value={pcSort} onChange={(e) => { setPcSort(e.target.value as PcSortKey); setPcBox(0) }} aria-label="Trier la réserve"
+                                    style={{ flex: 1, minWidth: 0, fontSize: 16, padding: "2px 4px", borderRadius: 4, border: "1px solid #cdbb86", background: "#fffef8", color: "#1c1408", fontFamily: "inherit" }}>
                                     <option value="recent">Déposé récemment</option>
                                     <option value="lvl">Niveau</option>
                                     <option value="hp">PV max</option>
@@ -3119,17 +3211,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     <option value="def">Déf max</option>
                                     <option value="spe">Vit max</option>
                                     <option value="alpha">Alphabet</option>
+                                    <option value="iv">Potentiel (IV)</option>
+                                    <option value="ev">{evStat ? `EV ${STAT_LABEL[evStat]}` : "Entraînement (EV)"}</option>
                                 </select>
                                 <button style={miniBtn} onClick={() => { setPcSortDir((d) => -d); setPcBox(0) }} title={pcSortDir < 0 ? "Décroissant" : "Croissant"}>{pcSortDir < 0 ? "▼" : "▲"}</button>
                             </div>
                             {player.pc.length === 0 && <div style={{ fontSize: 11, opacity: 0.6 }}>Aucun Daemon en réserve.</div>}
-                            {slice.map((m) => (
-                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%", opacity: m.tradeState === "listed" ? 0.45 : 1 }} onClick={() => setSelected(m)} title={m.tradeState === "listed" ? "Sur l'étal du Grand Marchand" : undefined}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{m.tradeState === "listed" && <span title="Sur l'étal du Marchand">🛒 </span>}{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
-                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
-                                    <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
-                                </button>
-                            ))}
+                            {player.pc.length > 0 && sortedPc.length === 0 && (
+                                <div style={{ fontSize: 11, opacity: 0.6 }}>
+                                    {pcSelN !== "all" && pcSelN !== "none" && pcFilter.kind === "all" && !pcQuery.trim()
+                                        ? "Boîte vide. Filtre tes Daemons puis « 📦 Ranger ces N dans… », ou choisis la boîte dans la fiche."
+                                        : "Aucun Daemon ne correspond."}
+                                </div>
+                            )}
+                            {slice.map((m) => monRow(m, true))}
+                            {canBox && viewActive && sortedPc.length > 0 && (
+                                <PcBulkBar count={sortedPc.length} boxes={pcBoxesHere} sel={pcSelN} onAssign={bulkAssign}
+                                    onNew={() => startBoxName({ mode: "new", uids: sortedPc.map((m) => m.uid) })} />
+                            )}
                             <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={closePcUi}>← RETOUR</button>
                         </div>
                     </div>
@@ -5532,9 +5631,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const sp = getSpecies(live.speciesId)
                 const stats = sp ? fullStats(live, sp) : null
                 const toNext = expForLevel(live.level + 1, live.speciesId) - Math.max(live.exp, expForLevel(live.level, live.speciesId))
-                const closeFiche = () => { setSelected(null); setRenaming(false); setPcSwapMon(null) }
-                // Slide ◀ ▶ / swipe entre les Daemons de la MÊME liste (équipe ou PC).
-                const ficheList = inTeam ? player.team : player.pc
+                const closeFiche = () => { setSelected(null); setRenaming(false); setPcSwapMon(null); setFicheViewUids(null) }
+                // Slide ◀ ▶ / swipe entre les Daemons de la MÊME liste : l'équipe ; sinon la VUE du PC figée à l'ouverture de la fiche
+                //   (ranger le Daemon dans une autre boîte depuis sa fiche ne fait pas sauter la liste) ; sinon la vue courante ; sinon
+                //   tout le PC (fiche ouverte hors de la vue, ou depuis le menu ÉQUIPE).
+                const pcByUid = !inTeam && pcOpen && ficheViewUids ? new Map(player.pc.map((m) => [m.uid, m])) : null
+                const viewList = pcByUid && ficheViewUids
+                    ? ficheViewUids.map((u) => pcByUid.get(u)).filter((m): m is MonInstance => !!m)
+                    : pcList
+                const inView = !inTeam && !!viewList?.some((m) => m.uid === live.uid)
+                const ficheList = inTeam ? player.team : (inView && viewList ? viewList : player.pc)
                 const ficheIdx = ficheList.findIndex((m) => m.uid === live.uid)
                 const slide = (d: number) => {
                     if (ficheList.length < 2) return
@@ -5564,7 +5670,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </div>
                             {sp?.sprite && <img key={live.uid + ":" + live.speciesId} src={sp.sprite} alt={sp.name} style={live.shiny ? { ...ficheSpriteStyle, filter: SHINY_FILTER } : ficheSpriteStyle} />}
                             <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
-                                N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `PC ${ficheIdx + 1}/${ficheList.length}`}
+                                N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `${inView ? pcViewTitle(pcSelN, pcFilter, pcQuery, pcBoxesHere, true) : "PC"} ${ficheIdx + 1}/${ficheList.length}`}
                             </div>
                             {stats && (
                                 <div style={{ fontSize: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", margin: "8px 0" }}>
@@ -5774,6 +5880,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             }}>🕊️ Relâcher</button>
                                         </>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* PC — BOÎTE du Daemon (projet de Zyran) : seulement au PC, pour un Daemon de la réserve, hors bulle de rejeu. */}
+                            {pcOpen && !inTeam && pcBoxesHere && pcBoxesHere.boxes.length > 0 && (
+                                <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, marginTop: 8 }}>
+                                    <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>📦 Boîte :</span>
+                                    <select value={boxOf(pcBoxesHere, live.uid) ?? ""} onChange={(e) => { pcBoxAssign([live.uid], e.target.value || null); persistYellowSave() }} aria-label="Boîte du Daemon"
+                                        style={{ flex: 1, minWidth: 0, fontSize: 16, padding: "2px 4px", borderRadius: 4, border: "1px solid #cdbb86", background: "#fffef8", color: "#1c1408", fontFamily: "inherit" }}>
+                                        <option value="">Non rangé</option>
+                                        {pcBoxesHere.boxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    </select>
                                 </div>
                             )}
 

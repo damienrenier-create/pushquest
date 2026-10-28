@@ -29,6 +29,7 @@ import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
 import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isGenieInFlightMarker, isNemesisSealMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
+import { pcLiveUids, prunePcBoxes, createBox, renameBox, deleteBox, assignBox, newPcBoxId, type PcBoxes } from "../data/pcBoxes"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -64,6 +65,8 @@ export const SUPER_PASTA_GROWTH = 1.5
 interface PlayerState {
     team: MonInstance[]
     pc: MonInstance[]
+    /** PC — boîtes du joueur, PAR MONDE (cf. data/pcBoxes). Absent = aucune boîte. */
+    pcBoxes?: PcBoxes
     items: Record<string, number>
     /** Portefeuille : reps stockés (dépensés en boutique ET pour attaquer). Persisté. */
     reps: number
@@ -767,6 +770,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         fusionLeagueDefeats: "fusionLeagueDefeats" in p ? p.fusionLeagueDefeats : st.fusionLeagueDefeats,
         grotteShopBuys: "grotteShopBuys" in p ? p.grotteShopBuys : st.grotteShopBuys,
         chosenAvatar: "chosenAvatar" in p ? p.chosenAvatar : st.chosenAvatar,
+        pcBoxes: "pcBoxes" in p ? p.pcBoxes : st.pcBoxes, // hydrateFromWorld passe TOUJOURS la clé : un monde sans boîtes les efface
         clan: "clan" in p ? p.clan : st.clan,
         clanDaemonUid: "clanDaemonUid" in p ? p.clanDaemonUid : st.clanDaemonUid,
         clanCtGiven: "clanCtGiven" in p ? p.clanCtGiven : st.clanCtGiven,
@@ -4353,6 +4357,46 @@ export function renameDaemon(uid: string, nickname: string) {
     const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, nickname: nn.length ? nn : undefined } : m)
     st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply) }
     emit()
+}
+
+// === PC — BOÎTES DU JOUEUR (projet de Zyran, 28/10/2026) ===
+// Rangement PAR MONDE (champ de save `pcBoxes`), jamais sur le Daemon : ces fonctions n'écrivent QUE `pcBoxes`, ni `team` ni
+// `pc` → ranger ne peut ni perdre ni dupliquer un Daemon. Refusées dans une bulle de rejeu (monde jetable). Les rangements
+// des Daemons partis (relâchés, échangés) sont oubliés au passage. Persistées par l'appelant (persistYellowSave).
+export function getPcBoxes(): PcBoxes | undefined { return st.pcBoxes }
+const pcBoxLiveUids = () => pcLiveUids(st.team, st.pc, st.thief?.stolen?.uid)
+function setPcBoxes(pb: PcBoxes | undefined) { if (pb === st.pcBoxes) return; st = { ...st, pcBoxes: pb }; emit() }
+export function pcBoxCreate(name: string): { ok: true; id: string; name: string } | { ok: false; reason: "max" | "taken" | "id" | "replay" } {
+    if (activeWorld === "replay") return { ok: false, reason: "replay" }
+    const base = prunePcBoxes(st.pcBoxes, pcBoxLiveUids())
+    for (let i = 0; i < 5; i++) { // id déjà pris (deux créations dans la même milliseconde) → on retente avec un autre
+        const r = createBox(base, newPcBoxId(Date.now() + i, Math.random), name)
+        if (r.ok) { setPcBoxes(r.pb); return { ok: true, id: r.id, name: r.name } }
+        if (r.reason !== "id") return { ok: false, reason: r.reason }
+    }
+    return { ok: false, reason: "id" }
+}
+export function pcBoxRename(id: string, name: string): { ok: true; name: string } | { ok: false; reason: "introuvable" | "vide" | "taken" | "replay" } {
+    if (activeWorld === "replay") return { ok: false, reason: "replay" }
+    const r = renameBox(st.pcBoxes, id, name)
+    if (!r.ok) return r
+    setPcBoxes(r.pb)
+    return { ok: true, name: r.name }
+}
+/** Supprime une boîte ; ses Daemons retournent dans « Non rangés » (aucun n'est relâché). Renvoie le nombre de Daemons sortis. */
+export function pcBoxDelete(id: string): number {
+    if (activeWorld === "replay") return 0
+    const r = deleteBox(prunePcBoxes(st.pcBoxes, pcBoxLiveUids()), id)
+    setPcBoxes(r.pb)
+    return r.removed
+}
+/** Range des Daemons de CE monde dans une boîte (`null` = « Non rangés »). Renvoie le nombre de rangements modifiés. */
+export function pcBoxAssign(uids: readonly string[], boxId: string | null): number {
+    if (activeWorld === "replay") return 0
+    const live = pcBoxLiveUids()
+    const r = assignBox(prunePcBoxes(st.pcBoxes, live), uids.filter((u) => live.has(u)), boxId)
+    setPcBoxes(r.pb)
+    return r.changed
 }
 
 /** Utilise un objet de soin sur un Daemon de l'équipe (hors combat). Renvoie false si inutile.

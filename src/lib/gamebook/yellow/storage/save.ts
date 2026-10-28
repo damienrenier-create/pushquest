@@ -13,6 +13,7 @@ import { emptyFunDefis, parseFunDefis, type FunDefisState } from "../data/funDef
 import { isHeldItem } from "../data/heldItems"
 import { CRAFT_STATS, type CraftStat, type CraftedItem } from "../data/artisane"
 import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
+import { parsePcBoxes, pcLiveUids, type PcBoxes } from "../data/pcBoxes"
 
 /** Compteurs de séries pour les hauts faits « consolation » (poisse). */
 export interface AchTrack {
@@ -35,6 +36,9 @@ export interface YellowSave {
     team: MonInstance[]
     /** Réserve (PC) au-delà des 6 de l'équipe. */
     pc: MonInstance[]
+    /** PC — BOÎTES du joueur (projet de Zyran, 28/10/2026), PAR MONDE : uid du Daemon → boîte. Jamais sur le Daemon (rien ne
+     *  voyage avec un échange). Absent = aucune boîte. Cf. data/pcBoxes. */
+    pcBoxes?: PcBoxes
     items: Record<string, number>
     /** Portefeuille reps (pool stocké, plafonné). */
     reps: number
@@ -776,6 +780,8 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         version: SAVE_VERSION,
         team,
         pc,
+        // Boîtes : lecture défensive, rangements gardés seulement pour un Daemon de ce monde (équipe, PC, ou détenu par le Voleur).
+        pcBoxes: parsePcBoxes(o.pcBoxes, pcLiveUids(team, pc, (o.thief as { stolen?: { uid?: unknown } | null } | null | undefined)?.stolen?.uid)),
         items,
         reps: typeof o.reps === "number" ? Math.max(0, Math.floor(o.reps)) : 0,
         repsCap: typeof o.repsCap === "number" ? Math.max(1, Math.floor(o.repsCap)) : 1000,
