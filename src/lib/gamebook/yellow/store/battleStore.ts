@@ -90,7 +90,7 @@ import { previousFusionTier } from "../data/fusionLeague"
 import { FUSION_PLATINE_OPEN_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS, funCaptureFactor } from "../data/captureConfig"
-import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { attackCost, effectiveQuota, playerAttackQuota, QUOTA_STD, STRUGGLE_INDEX, run3LastAttackPay } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
 import { BATTLE_LS_KEY, BATTLE_SESSION_KEY } from "../storage/sessionKeys"
@@ -805,7 +805,9 @@ export function submitPlayerAction(action: PlayerAction) {
     // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
     let paidMoveCost = 0
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
-        const cost = moveCostRepsForAction(battle, action.moveIndex)
+        // RUN 3 — DERNIÈRE ATTAQUE : si l'énergie restante ne couvre plus le prix, l'attaque coûte tout ce qui reste (cf.
+        //   run3LastAttackPay ; l'écran de combat affiche le même montant).
+        const cost = run3LastAttackPay(moveCostRepsForAction(battle, action.moveIndex), getPlayer().reps, effectiveRunWorld() === "run3")
         if (cost > 0) {
             // Cap d'énergie PAR COMBAT (relevé par les badges d'arène).
             const cap = battleEnergyCap(getPlayer().badges.length)
@@ -2257,7 +2259,8 @@ function submitPvpAction(action: PlayerAction) {
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX && effectiveRunWorld() === "run3" && !ctx.ephemeralTeam) {
         const meT = battle[mySide(ctx)]
         const meMon = meT.team[meT.activeIndex]
-        const cost = meMon ? moveCostRepsForAction(battle, action.moveIndex, meMon) : 0
+        // RUN 3 — DERNIÈRE ATTAQUE (même règle qu'en solo) : à court, l'attaque coûte tout ce qui reste.
+        const cost = meMon ? run3LastAttackPay(moveCostRepsForAction(battle, action.moveIndex, meMon), getPlayer().reps, true) : 0
         if (cost > 0) {
             const cap = battleEnergyCap(getPlayer().badges.length)
             if (storeState.energySpent + cost > cap) return // plafond du combat atteint (l'UI grise déjà)

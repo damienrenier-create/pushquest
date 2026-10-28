@@ -254,7 +254,7 @@ interface PlayerState {
     fusionRoster: { a: string; b: string }[]
     fusionNames?: Record<string, string> // NOMS PERSO des fusions (clé "aId>bId") → affichés à l'atelier + en Ligue de Fusion
     fusionMoveOrders?: Record<string, string[]> // ORDRE PERSO des attaques d'une fusion (clé "aId>bId") → slots 1..4 en Ligue/atelier
-    fusionTypeChoices?: Record<string, { a?: string; b?: string }> // CHOIX DE TYPE (égalités) d'une fusion (clé "aId>bId") : type imposé au parent A/B en cas d'égalité
+    fusionTypeChoices?: Record<string, { a?: string; b?: string; natural?: boolean }> // CHOIX DE TYPE (égalités) d'une fusion (clé "aId>bId") : type imposé au parent A/B en cas d'égalité
     fusionHistory: { a: string; b: string }[] // JOURNAL permanent des fusions créées (speciesId des 2 parents, a=tête). Fusiodex.
     /** JOURNAL D'ÉNERGIE — dernières ENTRÉES {ts, source, amount} (diagnostic calepin). Per-monde, borné, optionnel (défaut absent). */
     energyLog?: { ts: number; source: string; amount: number }[]
@@ -1020,7 +1020,7 @@ export function setFusionMoves(aId: string, bId: string, moves: string[]) {
 }
 
 /** CHOIX DE TYPE (égalités) d'une fusion (par espèces parentes), ou undefined si aucun choix imposé. */
-export function getFusionTypeChoice(aId: string, bId: string): { a?: string; b?: string } | undefined {
+export function getFusionTypeChoice(aId: string, bId: string): { a?: string; b?: string; natural?: boolean } | undefined {
     return st.fusionTypeChoices?.[fusionNameKey(aId, bId)]
 }
 /** Impose le type apporté par un parent (A=tête, B=second) d'une fusion en cas d'ÉGALITÉ. `type` vide/undefined =
@@ -1030,15 +1030,27 @@ export function setFusionTypeChoice(aId: string, bId: string, which: "a" | "b", 
     const key = fusionNameKey(aId, bId)
     const cur = { ...(st.fusionTypeChoices?.[key] ?? {}) }
     if (type) cur[which] = type; else delete cur[which]
-    const next: Record<string, { a?: string; b?: string }> = {}
+    const next: Record<string, { a?: string; b?: string; natural?: boolean }> = {}
     for (const [k, v] of Object.entries(st.fusionTypeChoices ?? {})) if (k !== key) next[k] = v
-    if (cur.a || cur.b) next[key] = cur // n'enregistre que s'il reste au moins un choix
+    if (cur.a || cur.b || cur.natural) next[key] = cur // n'enregistre que s'il reste au moins un choix
+    st = { ...st, fusionTypeChoices: Object.keys(next).length ? next : undefined }
+    emit()
+}
+/** Fusion INÉDITE à type forcé OPTIONNEL (Lunasfer) : `natural` = garder les types des parents au lieu du type forcé.
+ *  Mémorisé par recette avec les choix d'égalité ; persisté par l'appelant. */
+export function setFusionNaturalTypes(aId: string, bId: string, natural: boolean) {
+    const key = fusionNameKey(aId, bId)
+    const cur = { ...(st.fusionTypeChoices?.[key] ?? {}) }
+    if (natural) cur.natural = true; else delete cur.natural
+    const next: Record<string, { a?: string; b?: string; natural?: boolean }> = {}
+    for (const [k, v] of Object.entries(st.fusionTypeChoices ?? {})) if (k !== key) next[k] = v
+    if (cur.a || cur.b || cur.natural) next[key] = cur
     st = { ...st, fusionTypeChoices: Object.keys(next).length ? next : undefined }
     emit()
 }
 // Branche le résolveur de choix de type sur le module PUR fusionSpecies : dès ce module chargé (boot de l'app),
 // tout computeFusion (atelier, Ligue, Fusiodex, fiche, sprite, PvP) reflète les choix mémorisés du joueur.
-setFusionTypeChoiceResolver((aId, bId) => st.fusionTypeChoices?.[fusionNameKey(aId, bId)] as { a?: PokeType; b?: PokeType } | undefined)
+setFusionTypeChoiceResolver((aId, bId) => st.fusionTypeChoices?.[fusionNameKey(aId, bId)] as { a?: PokeType; b?: PokeType; natural?: boolean } | undefined)
 
 /** FUSIODEX — journalise une fusion CRÉÉE (speciesId des 2 parents, a=tête/dominant → l'ORDRE compte pour le nom).
  *  Dédup : une même paire (a,b) n'est loggée qu'UNE fois. (a,b) ≠ (b,a) (fusions distinctes). Cap 200. Persisté. */

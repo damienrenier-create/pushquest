@@ -39,5 +39,8 @@ describe("sortie d'un rejeu (run 1 ou 3) : ce que le joueur ramène", () => {
         expect(ydc).not.toContain("(+1 si tu bats la Ligue)")
         expect(ydc).not.toContain("1 par badge gagné + 1 si Ligue battue")
         expect(ydc).toContain("plus TOUS tes SHINYS")
+        // REJEU DU RUN 3 : à 0⚡, la sortie s'ouvre d'elle-même (Sartay, 28/10/2026), une fois l'écran libre
+        expect(ydc).toContain("if (activeWorld !== \"replay\" || getReplayRun() !== \"run3\") { replayEnergyEndRef.current = false; return }")
+        expect(ydc).toContain("if (replayEnergyEndRef.current || player.reps > 0) return")
     })
 })

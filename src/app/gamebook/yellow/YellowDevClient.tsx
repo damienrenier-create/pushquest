@@ -90,7 +90,7 @@ import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBough
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -113,7 +113,7 @@ import { evolveMagmatorWithChen, evolveWithItem, applyAcceptedGenieWishEffects, 
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes, fusionSecretRevealKey } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { computeFusion, reorderToStored, fusionSynergy, tiedFusionTypes, fusionSecretRevealKey, optionalForcedType } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { shouldLogMessage } from "@/lib/gamebook/yellow/data/messageJournal"
 import { reportSynergyDiscovery, reportSecretReveal, reportForgedFusionSecrets } from "@/lib/gamebook/yellow/synergyGift"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
@@ -1690,13 +1690,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (activeWorld !== "run3") { run3EndTriggeredRef.current = false; return }
         if (run3EndTriggeredRef.current) return
         const beatMaster = player.isChampion // en run 3, devenir Champion = avoir battu LE MAÎTRE
-        // FIN « énergie » : le concours s'achève dès que le joueur ne peut plus s'offrir LA MOINDRE attaque de son
-        //   équipe (le struggle gratuit reste, mais il ne permet plus de progresser). Évite que reps se fige sur un
-        //   petit positif (< coût min) → le run ne se terminerait jamais avec un simple test reps===0.
-        const quota = effectiveQuota(player.wildCtx?.quota)
-        const moveCosts = player.team.flatMap((m) => { const hf = m.currentHp / Math.max(1, maxHpOf(m)); return m.moves.map((mv) => attackCost(getMove(mv.moveId), m.level, quota, hf)) })
-        const minMoveCost = moveCosts.length ? Math.min(...moveCosts) : 1
-        if (player.reps >= minMoveCost && !beatMaster) return
+        // FIN « énergie » : le concours s'achève à 0⚡. Depuis la DERNIÈRE ATTAQUE (Sartay, 28/10/2026 : une attaque trop
+        //   chère coûte tout ce qui reste, cf. run3LastAttackPay), toute énergie positive se dépense encore → plus de reliquat
+        //   figé sous le coût minimum ; avant, la fin tombait dès que l'énergie ne payait plus aucune attaque ENTIÈRE.
+        if (player.reps > 0 && !beatMaster) return
         if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
         run3EndTriggeredRef.current = true
         const endScore = run3Score(player.run3Defeated ?? [])
@@ -2587,6 +2584,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (plan.max <= 0) { void doExitReplay(retagKept(plan.auto, Date.now())); return } // rien à choisir : shinys (ou tout, Ligue battue)
         setKeepSel(new Set()); setReplayKeep({ max: plan.max, mons: plan.choosable, auto: plan.auto }); setMenu("none")
     }
+    // REJEU DU RUN 3 — FIN « énergie » (Sartay, 28/10/2026 : « go la sortie qui s'ouvre d'elle-même ») : comme le vrai
+    //   concours, le rejeu s'achève à 0⚡. On attend l'écran LIBRE puis on ouvre la SORTIE (score² figé, choix des Daemons
+    //   à ramener). Une seule fois par bulle (ref) ; les rejeux du run 1 et du run 2 ne sont pas concernés.
+    const replayEnergyEndRef = useRef(false)
+    useEffect(() => {
+        if (activeWorld !== "replay" || getReplayRun() !== "run3") { replayEnergyEndRef.current = false; return }
+        if (replayEnergyEndRef.current || player.reps > 0) return
+        if (!hydrated || battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || replayKeep || confirmExitReplay) return // save chargée d'abord
+        replayEnergyEndRef.current = true
+        setToast("⚡ Énergie épuisée : ton rejeu du run 3 s'achève. Choisis les Daemons que tu ramènes dans ton vrai monde.")
+        beginExitReplay()
+    }, [hydrated, activeWorld, player.reps, battle, evolutions.length, championRun, dialogue, pendingLearn, newDexEntry, replayKeep, confirmExitReplay]) // eslint-disable-line react-hooks/exhaustive-deps
     // VŒU GÉNIE « offre partagée » — réponse au prompt. ACCEPTER → +énergie créditée localement (grantReps + persist,
     //   modèle d'énergie du jeu). REFUSER → +pompes à la dette de la SOURCE (côté serveur). Le serveur reste
     //   authoritative sur l'éligibilité + la dette ; le client ne crédite QUE sur un accept validé.
@@ -4088,6 +4097,27 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 {/* CHOIX DE TYPE (égalités) : quand la meilleure stat d'un parent correspond à SES DEUX types (égalité),
                                                     le joueur décide lequel ce parent apporte à la fusion. Sauvegardé par recette (aId>bId) → reflété
                                                     partout (fiche, Ligue, Fusiodex, sprite) via le résolveur. Masqué s'il n'y a aucune égalité. */}
+                                                {/* TYPE FORCÉ OPTIONNEL (Lunasfer, Sartay 28/10/2026) : le joueur choisit entre le type de la fusion inédite
+                                                    (toutes ses attaques offensives converties) et les types de ses parents (attaques d'origine). */}
+                                                {a && b && (() => {
+                                                    const forced = optionalForcedType(a.speciesId, b.speciesId)
+                                                    if (!forced) return null
+                                                    const natural = !!getFusionTypeChoice(a.speciesId, b.speciesId)?.natural
+                                                    const parentsTypes = [...new Set([...(getSpecies(a.speciesId)?.types ?? []), ...(getSpecies(b.speciesId)?.types ?? [])])].join("/")
+                                                    const pick = (on: boolean, label: string, value: boolean) => (
+                                                        <button onClick={() => { setFusionNaturalTypes(a.speciesId, b.speciesId, value); persistYellowSave() }}
+                                                            style={{ background: on ? "#7c4fc0" : "transparent", border: "1px solid #7c4fc0", color: on ? "#fff" : "#c79cff", borderRadius: 5, cursor: "pointer", fontSize: 9.5, fontWeight: on ? 700 : 400, padding: "1px 8px" }}>{label}</button>
+                                                    )
+                                                    return (
+                                                        <div style={{ marginTop: 3, padding: "4px 6px", background: "rgba(124,79,192,0.10)", borderRadius: 6 }}>
+                                                            <div style={{ fontSize: 9, opacity: 0.65, marginBottom: 2 }}>🎨 Type de la fusion :</div>
+                                                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                                                {pick(!natural, `${forced} (fusion inédite)`, false)}
+                                                                {pick(natural, `${parentsTypes} (types des parents)`, true)}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })()}
                                                 {a && b && (() => {
                                                     const tiedA = tiedFusionTypes(fusionParentFromInstance(a)), tiedB = tiedFusionTypes(fusionParentFromInstance(b))
                                                     if (!tiedA.length && !tiedB.length) return null

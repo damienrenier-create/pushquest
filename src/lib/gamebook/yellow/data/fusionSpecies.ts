@@ -51,7 +51,11 @@ export interface FusionResult {
 
 /** CHOIX DE TYPE (égalités) : quand un parent a 2 types À ÉGALITÉ (même stat dominante représentative), le joueur peut
  *  décider lequel il apporte à la fusion. `a` = type imposé pour le parent TÊTE, `b` = pour le second. Optionnels. */
-export interface FusionTypeChoice { a?: PokeType; b?: PokeType }
+export interface FusionTypeChoice {
+    a?: PokeType; b?: PokeType
+    /** Fusion INÉDITE à type forcé OPTIONNEL (cf. SpecialFusion.forcedTypeOptional) : le joueur garde les types de ses parents. */
+    natural?: boolean
+}
 /** Résolveur INJECTÉ (le store le branche au boot via setFusionTypeChoiceResolver) : (aId,bId) → choix de type mémorisé,
  *  ou undefined. Reste null par défaut (modules PURS/tests → aucun choix, comportement d'origine). Grâce à cette
  *  injection, TOUT appel à computeFusion (atelier, Ligue, Fusiodex, fiche, sprite, PvP) reflète le choix, sans toucher
@@ -182,6 +186,10 @@ interface SpecialFusion {
     /** TRANSMUTATION TOTALE : TOUTES les attaques OFFENSIVES de la fusion prennent son type (STAB partout), et pas seulement
      *  la 1re de chaque parent. Les statuts ne bougent pas. Demande Sartay 19/10 pour Lunasfer (DRAGON) et Coccilune (GLACE). */
     transmuteAll?: boolean
+    /** Type forcé OPTIONNEL : le JOUEUR peut garder les types de ses parents (choix `natural` mémorisé par recette, comme les
+     *  égalités de type). La fusion garde son nom et son sprite, mais perd le type forcé, la transmutation et l'attaque STAB
+     *  imposée. Lunasfer (Sartay, 28/10/2026 : « que le joueur puisse avoir le choix et que Lunasfer reste Fée/Métal »). */
+    forcedTypeOptional?: boolean
 }
 /** Fusions INÉDITES nommées (nom curé + éventuel type MONO forcé + concept sprite). Toutes boostées (0,7/0,5). */
 const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
@@ -198,7 +206,7 @@ const SPECIAL_FUSION_PAIRS: Record<string, SpecialFusion> = {
     //    offensives transmutées dans ce type : `transmuteAll`).
     //    La 3e paire (Colosfer × Coccimpératrice) est DÉJÀ une fusion officielle — l'Impérafer de KOGA : elle reçoit une
     //    SYNERGIE (cf. SYNERGY_PAIRS) qui garde son identité, au lieu d'une inédite qui l'aurait re-typée.
-    [pairKey("colosfer", "lunarque")]: { name: "Lunasfer", forcedType: "DRAGON", stabMove: "draco_charge", transmuteAll: true, concept: "un dragon colossal d'ACIER bleu nuit poli comme un miroir sous la lune, tête d'éléphant-dragon aux défenses d'ivoire métallique, corne de licorne en croissant de lune, écailles de fer gravées de croissants argentés, grandes ailes membraneuses nacrées, aura draconique violette" },
+    [pairKey("colosfer", "lunarque")]: { name: "Lunasfer", forcedType: "DRAGON", stabMove: "draco_charge", transmuteAll: true, forcedTypeOptional: true, concept: "un dragon colossal d'ACIER bleu nuit poli comme un miroir sous la lune, tête d'éléphant-dragon aux défenses d'ivoire métallique, corne de licorne en croissant de lune, écailles de fer gravées de croissants argentés, grandes ailes membraneuses nacrées, aura draconique violette" },
     [pairKey("lunarque", "coccimperatrice")]: { name: "Coccilune", forcedType: "GLACE", stabMove: "souffle_polaire", transmuteAll: true, concept: "une coccinelle-licorne chevalière aux élytres bleu nuit constellés, corne de GLACE en croissant de lune, gantelets de givre, traîne de flocons scintillants" },
 }
 /** Fusion INÉDITE pour cette paire d'IDS de parents (ordre indifférent), ou null. */
@@ -209,6 +217,11 @@ export function specialFusionForIds(aId?: string, bId?: string): SpecialFusion |
 /** Fusion INÉDITE nommée pour cette paire de parents (ordre indifférent), ou null. */
 export function specialFusionFor(a: FusionParent, b: FusionParent): SpecialFusion | null {
     return specialFusionForIds(a.speciesId, b.speciesId)
+}
+/** Type forcé d'une fusion inédite dont le joueur peut se PASSER (forcedTypeOptional), ou null — pour l'atelier. */
+export function optionalForcedType(aId?: string, bId?: string): PokeType | null {
+    const s = specialFusionForIds(aId, bId)
+    return s?.forcedTypeOptional && s.forcedType ? s.forcedType : null
 }
 /** CRÉATIONS DE JOUEUR (« starteurs perso », décision Sartay 19/10/2026) : les lignées canonisées du Créateur de Daemon —
  *  les CLÉS de CANONICAL_NEMESIS (ses VALEURS sont les NÉMÉSIS, les antagonistes : jamais comptées) — plus les 4 shiny
@@ -497,7 +510,10 @@ export function recoloredMoveTypes(moves: readonly string[], special?: { forcedT
 
 export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
     const stats = fuseStats(a, b)
-    const special = specialFusionFor(a, b)
+    const special0 = specialFusionFor(a, b)
+    // Type forcé OPTIONNEL (Lunasfer) et choix « types des parents » du joueur : même fusion, même nom, sans type imposé.
+    const keepNatural = !!special0?.forcedTypeOptional && !!a.speciesId && !!b.speciesId && !!_typeChoiceResolver?.(a.speciesId, b.speciesId)?.natural
+    const special = keepNatural && special0 ? { ...special0, forcedType: undefined, stabMove: undefined, transmuteAll: false, recoloredMoves: undefined } : special0
     const types = special?.forcedType ? [special.forcedType] : fuseTypes(a, b)
     const natural = fuseMoves(a, b)
     // La transmutation suffit à donner un STAB : on ne plaque `stabMove` QUE si elle n'a rien pu convertir

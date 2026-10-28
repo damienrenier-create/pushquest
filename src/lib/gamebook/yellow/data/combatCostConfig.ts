@@ -87,6 +87,16 @@ export function attackCost(move: MoveData | null, level: number, quota: number, 
     return Math.max(1, Math.min(cap, Math.round(MAX_COST * f)))
 }
 
+/** RUN 3 — DERNIÈRE ATTAQUE (Sartay, 28/10/2026) : quand l'énergie restante ne couvre plus le prix d'une attaque, elle
+ *  coûte TOUT ce qui reste (le joueur finit à 0) au lieu d'être grisée — sinon il restait bloqué à quelques points
+ *  d'énergie, réduit à la Charge Désespérée. Run 3 (et son rejeu) seulement ; ailleurs, prix plein (l'énergie vient
+ *  des vraies reps et se recharge). Le plafond d'énergie PAR COMBAT reste appliqué au montant payé. */
+export function run3LastAttackPay(cost: number, reps: number, run3: boolean): number {
+    if (!run3 || cost <= 0) return cost
+    const left = Math.max(0, Math.floor(reps))
+    return left > 0 && left < cost ? left : cost
+}
+
 /** Id de l'attaque de secours gratuite (anti soft-lock : faible + dégâts à soi). */
 export const STRUGGLE_MOVE_ID = "charge_desesperee"
 

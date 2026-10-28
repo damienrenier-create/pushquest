@@ -30,7 +30,7 @@ import { useFusionSprite } from "../useFusionSprite"
 import { usePlayer, getGameMode, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
-import { attackCost, effectiveQuota, playerAttackQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { attackCost, effectiveQuota, playerAttackQuota, STRUGGLE_INDEX, run3LastAttackPay } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun" | "reviveTarget" | "itemTarget"
 
@@ -385,14 +385,19 @@ export default function BattleScreen() {
             //   En run 3 PvP on grise donc les attaques inabordables ET on propose la Lutte (sinon soft-lock à court de reps).
             const isRun3Pvp = battle.pvp && effectiveRunWorld() === "run3"
             const freePvp = battle.pvp && !isRun3Pvp
+            // RUN 3 — DERNIÈRE ATTAQUE : quand l'énergie restante ne couvre plus le prix, l'attaque coûte tout ce qui reste
+            //   (même montant que la déduction du store, cf. run3LastAttackPay).
+            const pays = costs.map((c) => run3LastAttackPay(c, reps, effectiveRunWorld() === "run3"))
             const canUse = (c: number) => freePvp || (c <= reps && c <= remainingEnergy)
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
-            if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
+            if (!pays.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
+                const lastAttack = !freePvp && pays[i] < costs[i]
                 options.push({
-                    label: `${mv?.name ?? slot.moveId}${freePvp ? "" : `  ⚡${costs[i]}`}`,
-                    onSelect: () => doMove(i), disabled: !canUse(costs[i]), moveSlot: i,
+                    label: `${mv?.name ?? slot.moveId}${freePvp ? "" : `  ⚡${pays[i]}`}`,
+                    onSelect: () => doMove(i), disabled: !canUse(pays[i]), moveSlot: i,
+                    ...(lastAttack ? { detail: `Dernière attaque : elle prend toute ton énergie restante (⚡${pays[i]} au lieu de ⚡${costs[i]}).` } : {}),
                 })
             })
             options.push({ label: "RETOUR", onSelect: () => setMenu("root"), detail: "Revenir au menu de combat sans attaquer." })
@@ -551,7 +556,8 @@ export default function BattleScreen() {
                             <>
                                 <div style={S.listBox}>{options.map((o, i) => renderRow(o, i))}</div>
                                 <div style={S.detailBox}>
-                                    {selMv ? <MoveDetails mv={selMv} mon={player} /> : <div style={S.detailHint}>{sel?.detail ?? ""}</div>}
+                                    {/* RUN 3 — « Dernière attaque » : la mention s'affiche AU-DESSUS de la fiche de l'attaque (sinon jamais vue). */}
+                                    {selMv ? <>{sel?.moveSlot != null && sel?.detail ? <div style={S.detailHint}>{sel.detail}</div> : null}<MoveDetails mv={selMv} mon={player} /></> : <div style={S.detailHint}>{sel?.detail ?? ""}</div>}
                                 </div>
                             </>
                         )

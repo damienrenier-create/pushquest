@@ -266,7 +266,7 @@ export interface YellowSave {
     /** FUSION — ORDRE PERSO des attaques d'une fusion (slots 1..4), clé « aId>bId ». Optionnel/additif. */
     fusionMoveOrders?: Record<string, string[]>
     /** FUSION — CHOIX DE TYPE (égalités), clé « aId>bId » → type imposé au parent A/B. Optionnel/additif. */
-    fusionTypeChoices?: Record<string, { a?: string; b?: string }>
+    fusionTypeChoices?: Record<string, { a?: string; b?: string; natural?: boolean }>
     /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
      *  (contrairement au roster) ; union monotone à la fusion des mondes. Défaut []. */
     fusionHistory: { a: string; b: string }[]
@@ -920,13 +920,14 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
             ? Object.fromEntries(Object.entries(o.fusionTypeChoices as Record<string, unknown>)
                 .filter(([, v]) => !!v && typeof v === "object" && !Array.isArray(v))
                 .map(([k, v]) => {
-                    const o2 = v as { a?: unknown; b?: unknown }
-                    const c: { a?: string; b?: string } = {}
+                    const o2 = v as { a?: unknown; b?: unknown; natural?: unknown }
+                    const c: { a?: string; b?: string; natural?: boolean } = {}
                     if (typeof o2.a === "string") c.a = o2.a
                     if (typeof o2.b === "string") c.b = o2.b
+                    if (o2.natural === true) c.natural = true // Lunasfer : types des parents plutôt que le type forcé
                     return [k, c] as const
                 })
-                .filter(([, c]) => c.a || c.b))
+                .filter(([, c]) => c.a || c.b || c.natural))
             : undefined,
         fusionHistory: Array.isArray(o.fusionHistory)
             ? (o.fusionHistory as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(-200) // garde les 200 PLUS RÉCENTES (cohérent avec recordFusionCreated/mergeWorlds)
