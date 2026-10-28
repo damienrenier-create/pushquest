@@ -84,13 +84,13 @@ import { ALL_BADGE_IDS } from "@/lib/gamebook/yellow/data/badges"
 import { MIRROR_GIFT_ENERGY } from "@/lib/gamebook/yellow/data/ambientNews"
 import { repsUnit, repsIcon, notEnoughReps } from "@/lib/gamebook/yellow/data/energyWords"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, restartRun3, completeRun3, startReplay, exitReplay, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, restartRun3, completeRun3, startReplay, exitReplay, replayReturnsToRunFusion, startNewProfileFromRun1, switchProfile, getAltProfileSummaries, profileCount, MAX_ALT_PROFILES, startGenesisProfile, peekEnergyGiftNote, clearEnergyGiftNote, consumeEnergyGiftNoteOnServer } from "@/lib/gamebook/yellow/store/saveManager"
 import { giftNotePlacement, GIFT_NOTE_NPC, GIFT_NOTE_NAME } from "@/lib/gamebook/yellow/data/energyGiftNote"
 import { fusioBallInShop, fusioBallShopPrice, fusioBallShopTotal, fusioShopBoughtCount, fusioShopMarkersFor } from "@/lib/gamebook/yellow/data/fusionLeaguePerks"
 import { canAnnounceToday } from "@/lib/gamebook/yellow/data/dexWish"
 import { FRONTIER_LS_KEY, RUN2_SCORES_LS_KEY } from "@/lib/gamebook/yellow/storage/sessionKeys"
 import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, getReplayReturn, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
@@ -298,6 +298,12 @@ function randomizeLead(team: MonInstance[]): MonInstance[] {
     const a = team.slice()
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] }
     return a
+}
+
+/** REJEU — monde où reviennent les Daemons à la sortie : le RUN FUSION (monde live post-Sylvebarbe, cf. isRunFusion), sinon
+ *  le run d'où le rejeu a été lancé. Pour les textes « tes shinys sont renvoyés d'office… » (Sartay, 28/10/2026). */
+function replayHomeLabel(world: string | null | undefined, fusion: boolean): string {
+    return world === "ngplus" ? "ton run 2" : world === "run3" ? "ton run 3" : fusion ? "ton run fusion" : "ton vrai monde"
 }
 
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "", gameMode = "normal" }: { userId?: string; isCreator?: boolean; nickname?: string; gameMode?: string }) {
@@ -2467,6 +2473,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const rc = await postReplaySpend()
             if (!rc.ok && rc.reason === "insufficient") { setToast(`Rejeu : ${rc.cost} JC requis (tu as ${rc.jc}). Farme la Zone de Combat !`); return }
         }
+        const home = replayHomeLabel(getActiveWorld(), isRunFusion()) // lu AVANT la bascule dans la bulle (vrai monde)
         const ok = await startReplay(run, starter)
         if (!ok) { setToast(run === "run1" ? "Rejeu impossible pour l'instant." : "Il te faut un Daemon de départ."); return }
         setReplayMenu(false); setReplayPickRun(null); setMenu("none")
@@ -2476,8 +2483,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "*Le Dieu Spaghetti claque des doigts. Une bulle dorée t'enveloppe, hors du temps…*",
             `« REJEU du ${label} ! Une seconde chance : bats ton score et complète ton Pokédex (les ESPÈCES vues ici restent cochées à jamais). »`,
             "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² », à côté de l'ancien. »",
-            "« Et surtout : à la SORTIE, tu pourras RAMENER dans ton vrai monde 1 DAEMON de ton choix par BADGE gagné ici, plus TOUS tes SHINYS — et si tu bats la Ligue, tu les ramènes TOUS. Le reste sera perdu. »",
-            "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé et tu choisiras tes Daemons à garder. Bonne chance, champion ! 🍝 »",
+            run === "run2"
+                ? `« Et surtout : ce rejeu est ADDITIF — à la SORTIE, TOUS tes Daemons, shinys compris, rejoignent ${home}. »`
+                : `« Et surtout : tes SHINYS sont renvoyés D'OFFICE dans ${home} à la SORTIE, sans compter dans ton choix. En plus, tu ramèneras 1 DAEMON de ton choix par BADGE gagné ici — et TOUS si tu bats la Ligue. Le reste sera perdu. »`,
+            run === "run2" // rejeu du run 2 = additif : aucun choix à la sortie (cf. beginExitReplay)
+                ? "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé. Bonne chance, champion ! 🍝 »"
+                : "« Sors quand tu veux (Menu → 🚪) : ton score² sera figé et tu choisiras tes Daemons à garder. Bonne chance, champion ! 🍝 »",
         ])
     }
 
@@ -2527,6 +2538,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const startLoopReplay = async (stored: StoredCustomDaemon) => {
         let starter: ReturnType<typeof createMonInstance>
         try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) } catch { setToast("Daemon custom corrompu."); return }
+        const home = replayHomeLabel(getActiveWorld(), isRunFusion()) // lu AVANT la bascule dans la bulle (vrai monde)
         const ok = await startReplay("run1", starter)
         if (!ok) { setToast("Rejeu impossible pour l'instant."); return }
         void generateCustomSpritesInBackground(stored) // NON bloquant : génère le vrai sprite de la création (comme le NG+) → tient la promesse de l'écran de succès (MISSINGNO en attendant)
@@ -2535,7 +2547,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             "*Le Dieu Spaghetti sourit. Une bulle dorée t'enveloppe, ta nouvelle création à tes côtés…*",
             `« Repars au tout début du Nexus avec ${stored.spec.name} ! Une traversée fraîche, rien que vous deux. »`,
             "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² ». »",
-            "« À la SORTIE (Menu → 🚪), tu ramèneras 1 Daemon de ton choix par BADGE gagné ici (ta création, si tu la gardes), plus TOUS tes SHINYS — et tout le monde si tu bats la Ligue. Bonne route, champion ! 🍝 »",
+            `« À la SORTIE (Menu → 🚪), tes SHINYS sont renvoyés D'OFFICE dans ${home}, sans compter dans ton choix. En plus, tu ramèneras 1 Daemon de ton choix par BADGE gagné ici (ta création, si tu la gardes) — et tout le monde si tu bats la Ligue. Bonne route, champion ! 🍝 »`,
         ])
     }
 
@@ -4423,6 +4435,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 6, lineHeight: 1.35 }}>
                             RUN 1 & 3 : bulle ISOLÉE (améliore ton score + complète ton Pokédex, ton monde reste intact, classement « {nickname || "Toi"}² »). RUN 2 : ADDITIF — repars avec ton starter perso (niv 5, {funWords ? "1 000⚡ + 10 Nexus-Balls" : "10 000⚡"}) et les Daemons capturés REJOIGNENT ta collection.
                         </div>
+                        <div style={{ fontSize: 10.5, fontWeight: 800, textAlign: "center", marginBottom: 6, color: "#ffd76a", lineHeight: 1.35 }}>
+                            ✨ Tes SHINYS sont renvoyés D&apos;OFFICE dans {replayHomeLabel(activeWorld, isRunFusion())} à la sortie, sans compter dans ton choix. RUN 1 & 3 : en plus, 1 Daemon au choix par badge gagné (TOUS si tu bats la Ligue) · RUN 2 : tout revient.
+                        </div>
                         <div style={{ fontSize: 11, fontWeight: 800, textAlign: "center", marginBottom: 8, color: replayNextCost ? "#c9a227" : "#3ad06a" }}>
                             💠 Prochain rejeu : {replayNextCost === null ? "…" : replayNextCost === 0 ? "GRATUIT" : `${replayNextCost} JC`}
                         </div>
@@ -4476,7 +4491,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* REJEU — bannière permanente (rappel : tu es dans une bulle jetable). */}
             {activeWorld === "replay" && !battle && (
                 <div style={{ position: "absolute", top: 2, left: "50%", transform: "translateX(-50%)", zIndex: 40, background: "#c9a227", color: "#3a2a00", fontSize: 8, fontWeight: 700, padding: "1px 7px", borderRadius: 8, pointerEvents: "none", whiteSpace: "nowrap", opacity: 0.9 }}>
-                    🔁 REJEU · {getReplayRun() === "run3" ? "RUN 3" : getReplayRun() === "run2" ? "RUN 2" : "RUN 1"} bis
+                    🔁 REJEU · {getReplayRun() === "run3" ? "RUN 3" : getReplayRun() === "run2" ? "RUN 2" : "RUN 1"} bis · ✨ shinys renvoyés d&apos;office
                 </div>
             )}
             <LibraryPanel />
@@ -6001,7 +6016,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>Lancer le rejeu du {confirmStartReplay === "run2" ? "RUN 2" : "RUN 3"} ?</div>
                         <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>
-                            Tu vas entrer dans une partie bis. Ton vrai monde est mis de côté (INTACT) et restauré à la sortie.{confirmStartReplay === "run2" ? " Rejeu RUN 2 = ADDITIF (tes captures rejoignent ta collection)." : ""}
+                            Tu vas entrer dans une partie bis. Ton vrai monde est mis de côté (INTACT) et restauré à la sortie.{confirmStartReplay === "run2" ? " Rejeu RUN 2 = ADDITIF (tes captures rejoignent ta collection)." : ""} <b>✨ Tes shinys seront renvoyés d&apos;office dans {replayHomeLabel(activeWorld, isRunFusion())}.</b>
                         </div>
                         <button style={menuBtnDimStyle} onClick={() => setConfirmStartReplay(null)}>← Annuler</button>
                         <button style={{ ...menuBtnStyle, marginTop: 6 }} onClick={() => { if (confirmStartReplay === "run2") doStartReplayRun2(); else { setConfirmStartReplay(null); setReplayMenu(false); setReplayPickRun("run3") } }}>Oui, lancer</button>
@@ -6027,7 +6042,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ ...menuBoxStyle, maxHeight: "88%", overflowY: "auto" }}>
                         <div style={menuTitleStyle}>🎁 RAMENER DES DAEMONS</div>
                         <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", lineHeight: 1.4, marginBottom: 8 }}>
-                            Choisis jusqu&apos;à <b>{replayKeep.max}</b> Daemon{replayKeep.max > 1 ? "s" : ""} (1 par badge gagné) à ramener dans ton vrai monde, parmi ton équipe et ton PC. Tes <b>shinys</b> reviennent d&apos;office. <b>Le reste sera perdu</b> (une Ligue battue les aurait tous ramenés).
+                            Choisis jusqu&apos;à <b>{replayKeep.max}</b> Daemon{replayKeep.max > 1 ? "s" : ""} (1 par badge gagné) à ramener dans {replayHomeLabel(getReplayReturn(), replayReturnsToRunFusion())}, parmi ton équipe et ton PC. Tes <b>shinys</b> sont renvoyés d&apos;office dans {replayHomeLabel(getReplayReturn(), replayReturnsToRunFusion())}, sans compter dans ce choix. <b>Le reste sera perdu</b> (une Ligue battue les aurait tous ramenés).
                         </div>
                         {replayKeep.auto.length > 0 && <div style={{ fontSize: 11, textAlign: "center", marginBottom: 6, color: "#c9a227" }}>✨ Reviennent d&apos;office : {replayKeep.auto.map((m) => displayName(m)).join(", ")}</div>}
                         <div style={{ fontSize: 12, fontWeight: 800, textAlign: "center", marginBottom: 6, color: keepSel.size >= replayKeep.max ? "#c9a227" : "#e8e8ee" }}>Sélectionnés : {keepSel.size} / {replayKeep.max}</div>

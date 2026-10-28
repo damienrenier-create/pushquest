@@ -936,6 +936,12 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     return true
 }
 
+/** REJEU — le monde de RETOUR est-il le RUN FUSION (live post-Sylvebarbe, cf. isRunFusion) ? Lu DANS la bulle (le vrai monde
+ *  y est stashé) pour la fenêtre de sortie : « tes shinys sont renvoyés d'office dans ton run fusion ». */
+export function replayReturnsToRunFusion(): boolean {
+    return getActiveWorld() === "replay" && (getReplayReturn() ?? "live") === "live" && !!liveStash?.sylvebarbeAwake
+}
+
 /** REJEU — SORT de la bulle : on la JETTE et on restaure le monde réel (`replayReturn`) INTACT depuis son stash.
  *  Les captures faites pendant le rejeu RESTENT (Pokédex global). No-op hors rejeu. */
 export async function exitReplay(): Promise<void> {
