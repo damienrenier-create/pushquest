@@ -28,7 +28,7 @@ import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
-import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
+import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isGenieInFlightMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -1924,10 +1924,24 @@ export function setGeniePaid(markers: readonly string[]): void {
  *  rejeu) : une revanche ne pourrait plus les lever, et le concours changerait de règles (décision laissée à Sartay). */
 export function isNemesisSeal(m: string): boolean { return m.endsWith("_blocked") }
 export function getGeniePaid(): string[] { return [...(st.geniePaid ?? [])] }
-/** Retire une empreinte du registre (lot d'effets externes ACQUITTÉ : un futur lot au texte identique sera versé). */
+/** Retire une empreinte du registre (cadeau ACQUITTÉ : un futur cadeau identique sera versé). */
 export function removeGeniePaid(marker: string): void {
     if (!(st.geniePaid ?? []).includes(marker)) return
     st = { ...st, geniePaid: (st.geniePaid ?? []).filter((m) => m !== marker) }
+    emit()
+}
+/** Pose une empreinte au registre (cadeau d'énergie crédité, persistée AVEC le crédit). */
+export function addGeniePaid(marker: string): void {
+    if (!isGeniePaidMarker(marker) || (st.geniePaid ?? []).includes(marker)) return
+    st = { ...st, geniePaid: withGeniePaid(marker) }
+    emit()
+}
+/** Ne garde, parmi les empreintes « en vol », que celles des cadeaux ENCORE proposés par le serveur (`keep`). */
+export function pruneGenieInFlight(keep: readonly string[]): void {
+    const cur = st.geniePaid ?? []
+    const next = cur.filter((m) => !isGenieInFlightMarker(m) || keep.includes(m))
+    if (next.length === cur.length) return
+    st = { ...st, geniePaid: next }
     emit()
 }
 function withGeniePaid(marker: string): string[] {

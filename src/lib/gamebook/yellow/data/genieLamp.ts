@@ -86,9 +86,19 @@ export function genieExtMarker(raw: string): string {
     for (let i = 0; i < raw.length; i++) { h ^= raw.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
     return `genie_ext_${h.toString(36)}`
 }
-/** Marqueur admis au registre des vœux payés : un vœu (genieFxMarker) ou un lot d'effets externes (genieExtMarker). */
+/** 🧞 Empreinte d'un CADEAU D'ÉNERGIE crédité (FrontierProfile.energyGrantPending), gardée le temps de son acquittement :
+ *  un acquittement perdu (ou un 2e onglet) ne le fait plus créditer deux fois (28/10/2026). */
+export function genieGrantMarker(amount: number): string {
+    return `genie_grant_${Math.max(0, Math.floor(amount))}`
+}
+/** Empreinte « EN VOL » (lot d'effets externes ou cadeau d'énergie) : n'a de sens que tant que le serveur le propose encore. */
+export function isGenieInFlightMarker(m: string): boolean {
+    return /^genie_(ext|grant)_/.test(m)
+}
+/** Marqueur admis au registre des vœux payés : un vœu (genieFxMarker), un lot d'effets externes (genieExtMarker) ou un
+ *  cadeau d'énergie (genieGrantMarker) en cours d'acquittement. */
 export function isGeniePaidMarker(m: string): boolean {
-    return isGenieFxMarker(m) || /^genie_ext_[0-9a-z]{1,7}$/.test(m)
+    return isGenieFxMarker(m) || /^genie_ext_[0-9a-z]{1,7}$/.test(m) || /^genie_grant_\d{1,7}$/.test(m)
 }
 
 /** UN VŒU SE PAIE UNE SEULE FOIS PAR JOUEUR, quel que soit le monde (run 1, run 2, rejeu…). Les marqueurs genieFxMarker

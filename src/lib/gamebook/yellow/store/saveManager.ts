@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { setGeniePaid, removeGeniePaid, reapplyGenieWishes, setWorldMayBeDiscardedCheck, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, markGenieArcSeen, restoreDurableWishState, isDurableWishMarker, GENIE_CATCH_PREFIX, ABUNDANCE_CURSE_MARKER, type DurableWishState, genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
+import { setGeniePaid, removeGeniePaid, addGeniePaid, isGeniePaid, pruneGenieInFlight, reapplyGenieWishes, setWorldMayBeDiscardedCheck, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, markGenieArcSeen, restoreDurableWishState, isDurableWishMarker, GENIE_CATCH_PREFIX, ABUNDANCE_CURSE_MARKER, type DurableWishState, genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -14,7 +14,7 @@ import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 import { giftNoteLines } from "../data/energyGiftNote"
 import { migrateBoatBadge, withImpliedAncre } from "../data/boatArena"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
-import { isGeniePaidMarker, genieExtMarker, GENIE_TRAINER_ID, LAMP_RUBBED_MARKER, LAMP_ITEM_ID } from "../data/genieLamp"
+import { isGeniePaidMarker, genieExtMarker, genieGrantMarker, GENIE_TRAINER_ID, LAMP_RUBBED_MARKER, LAMP_ITEM_ID } from "../data/genieLamp"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
@@ -366,6 +366,12 @@ async function loadYellowSaveOnce(): Promise<void> {
             //   reste en attente serveur, re-crédité au prochain chargement. Uniquement en LIVE/NG+ (run3 = source
             //   unique ; replay = bulle jetable).
             const grantAmt = Math.max(0, Math.floor(j?.ctx?.energyGrantPending ?? 0))
+            // 🧞 EMPREINTES « EN VOL » : seules comptent celles des cadeaux ENCORE proposés par le serveur. Les autres ont été
+            //   acquittés (ou consommés par un autre onglet) : les garder avalerait un futur cadeau identique (28/10/2026).
+            {
+                const pendingFx = typeof j?.ctx?.pendingEffects === "string" ? j.ctx.pendingEffects : ""
+                pruneGenieInFlight([...(pendingFx ? [genieExtMarker(pendingFx)] : []), ...(grantAmt > 0 ? [genieGrantMarker(grantAmt)] : [])])
+            }
             // 🍝 LE PETIT MOT qui accompagne le don. Mis en file ICI, affiché par le client en fin de démarrage.
             //   INDÉPENDANT du montant, volontairement : si un don a déjà été crédité par un build antérieur (montant
             //   retombé à 0), le mot est toujours là et sortira quand même. Un monde run3/replay ne l'efface pas non
@@ -390,28 +396,42 @@ async function loadYellowSaveOnce(): Promise<void> {
                             const ack = await fetch("/api/gamebook/yellow/energy-grant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ effects: rawFx }) })
                             // ACQUITTÉ : l'empreinte n'a plus d'objet → un futur lot au texte identique sera versé normalement.
                             const aj = ack.ok ? await ack.json().catch(() => null) : null
-                            if (aj?.effectsConsumed) { removeGeniePaid(genieExtMarker(rawFx)); persistYellowSave() }
+                            if (aj?.effectsConsumed) { removeGeniePaid(genieExtMarker(rawFx)); await persistNow() }
                         } catch { /* non acquitté → ré-acquitté au prochain chargement, sans être réappliqué (registre) */ }
                     }
                 }
             }
             if (shouldCreditEnergyGrant(grantAmt, getActiveWorld()) && !canAbandonNgplus()) { // run 2 encore abandonnable : le cadeau attend (sinon perdu avec le monde)
-                const pBefore = getPlayer()
-                const prevReps = pBefore.reps, prevCap = pBefore.repsCap // capturé AVANT crédit → rollback exact (reps+cap)
-                const credited = creditReps(grantAmt) // live/ngplus garanti → renvoie grantAmt
-                if (credited > 0) {
-                    logEnergyIncome("✨ Cadeau d'énergie", credited) // JOURNAL : vœu du génie / synergie / admin (persisté avec le crédit)
-                    const saved = await persistNow() // persistance CONFIRMÉE avant toute consommation
-                    if (saved) {
-                        // Consommation en DERNIER (CAS sur le montant côté serveur → n'efface pas un cadeau plus récent).
-                        try {
-                            await fetch("/api/gamebook/yellow/energy-grant", {
-                                method: "POST", headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ amount: credited }),
-                            })
-                        } catch { /* consommation ratée : cadeau non effacé → au pire un re-crédit inoffensif au prochain load */ }
-                    } else {
-                        restoreRepsState(prevReps, prevCap) // persistance ratée → rollback EXACT (reps + cap) pour ne pas figer un crédit non consommé
+                const gMark = genieGrantMarker(grantAmt)
+                // Consommation en DERNIER (CAS sur le montant côté serveur → n'efface pas un cadeau plus récent). Acquitté →
+                //   l'empreinte n'a plus d'objet (retrait persisté tout de suite) ; acquittement perdu → elle reste, et le
+                //   chargement suivant ré-acquitte SANS recréditer (avant le 28/10/2026 : crédité une 2e fois).
+                const ackGrant = async (amount: number): Promise<void> => {
+                    try {
+                        const ack = await fetch("/api/gamebook/yellow/energy-grant", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ amount }),
+                        })
+                        const aj = ack.ok ? await ack.json().catch(() => null) : null
+                        if (aj?.consumed) { removeGeniePaid(gMark); await persistNow() }
+                    } catch { /* acquittement perdu : ré-acquitté au prochain chargement, sans recrédit */ }
+                }
+                if (isGeniePaid(gMark)) {
+                    await ackGrant(grantAmt) // DÉJÀ CRÉDITÉ (acquittement perdu, ou 2e onglet sur une save déjà créditée)
+                } else {
+                    const pBefore = getPlayer()
+                    const prevReps = pBefore.reps, prevCap = pBefore.repsCap // capturé AVANT crédit → rollback exact (reps+cap)
+                    const credited = creditReps(grantAmt) // live/ngplus garanti → renvoie grantAmt
+                    if (credited > 0) {
+                        logEnergyIncome("✨ Cadeau d'énergie", credited) // JOURNAL : vœu du génie / synergie / admin (persisté avec le crédit)
+                        addGeniePaid(gMark) // empreinte persistée AVEC le crédit
+                        const saved = await persistNow() // persistance CONFIRMÉE avant toute consommation
+                        if (saved) {
+                            await ackGrant(credited)
+                        } else {
+                            restoreRepsState(prevReps, prevCap) // persistance ratée → rollback EXACT (reps + cap) pour ne pas figer un crédit non consommé
+                            removeGeniePaid(gMark)
+                        }
                     }
                 }
             }

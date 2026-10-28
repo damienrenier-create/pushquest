@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import { emptySave } from "../storage/save"
 
 // Chargement de la page et cadeaux hors save (28/10/2026, « un vœu n'arrive qu'une fois ») : un faux serveur minimal rejoue
@@ -18,13 +18,18 @@ function installServer(s: Server) {
         if (url === "/api/gamebook/yellow/player-stats") return resp({ ctx: { ...s.ctx } })
         if (url === "/api/gamebook/yellow/energy-grant" && method === "POST") {
             if (s.failAcks > 0) { s.failAcks--; throw new TypeError("Failed to fetch") }
-            if (body?.amount > 0 && s.ctx.energyGrantPending === body.amount) s.ctx.energyGrantPending = 0
-            if (body?.effects && s.ctx.pendingEffects === body.effects) delete s.ctx.pendingEffects
-            return resp({ ok: true })
+            // Même réponse que la vraie route (compare-and-swap sur le montant / le texte exact).
+            let consumed = false, effectsConsumed = false
+            if (body?.amount > 0 && s.ctx.energyGrantPending === body.amount) { s.ctx.energyGrantPending = 0; consumed = true }
+            if (body?.effects && s.ctx.pendingEffects === body.effects) { delete s.ctx.pendingEffects; effectsConsumed = true }
+            return resp({ ok: true, consumed, effectsConsumed })
         }
         return resp({ ok: true })
     })
 }
+// Les pages d'un test continuent de sauvegarder (autosave différé) après sa fin : on les laisse finir AVANT que le test suivant
+//   installe son faux serveur, sinon leurs écritures arriveraient chez lui (constaté sous la charge de la suite complète).
+afterEach(async () => { await sleep(2500) })
 /** Nouveau chargement de page : modules (donc stores singletons) neufs. */
 async function freshPage() {
     vi.resetModules()
@@ -46,7 +51,6 @@ describe("cadeaux hors save : versés une seule fois", () => {
         await Promise.all([a, b])
         expect(ps.getPlayer().reps).toBe(100 + 5000 + 2000)
         expect(ps.getPlayer().items.hyper_ball).toBe(3)
-        await sleep(1200) // laisse partir la sauvegarde différée de CETTE page avant que le test suivant installe son faux serveur
     }, 20_000)
 
     it("acquittement perdu après la persistance : au chargement suivant, le lot est ré-acquitté sans être reversé", async () => {
@@ -61,5 +65,32 @@ describe("cadeaux hors save : versés une seule fois", () => {
         expect(page.ps.getPlayer().reps).toBe(2100) // pas de 2e versement
         expect(page.ps.getPlayer().items.hyper_ball).toBe(3)
         expect(s.ctx.pendingEffects).toBeUndefined() // enfin acquitté
+    }, 20_000)
+})
+
+describe("cadeaux hors save : empreintes « en vol »", () => {
+    it("cadeau d'énergie : acquittement perdu → au chargement suivant, ré-acquitté sans être recrédité", async () => {
+        const s: Server = { save: baseSave(), ctx: { energyGrantPending: 5000 }, failAcks: 1, getDelayMs: 0 }
+        installServer(s)
+        let page = await freshPage()
+        await page.sm.loadYellowSave()
+        expect(page.ps.getPlayer().reps).toBe(5100)
+        expect(s.ctx.energyGrantPending).toBe(5000) // acquittement perdu
+        page = await freshPage()
+        await page.sm.loadYellowSave()
+        expect(page.ps.getPlayer().reps).toBe(5100) // pas de 2e crédit
+        expect(s.ctx.energyGrantPending).toBe(0) // enfin acquitté
+    }, 20_000)
+    it("lot d'effets identique reposé plus tard, le 1er étant acquitté : versé à nouveau (l'empreinte n'avale rien)", async () => {
+        const s: Server = { save: baseSave(), ctx: { pendingEffects: FX }, failAcks: 0, getDelayMs: 0 }
+        installServer(s)
+        let page = await freshPage()
+        await page.sm.loadYellowSave()
+        expect(page.ps.getPlayer().reps).toBe(2100)
+        s.ctx.pendingEffects = FX // le créateur repose exactement le même texte
+        page = await freshPage()
+        await page.sm.loadYellowSave()
+        expect(page.ps.getPlayer().reps).toBe(4100)
+        expect(page.ps.getPlayer().items.hyper_ball).toBe(6)
     }, 20_000)
 })
