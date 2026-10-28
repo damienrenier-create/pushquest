@@ -1676,6 +1676,24 @@ export const DEX_LORE: Record<string, DexLore> = {
         dicton: "La queue qui accumule finit toujours par tout rendre, d'un seul coup.",
         note: "Il gardait un tas de cristaux comme un dragon garde son or. Je n'en ai pris qu'un pour l'examiner : ma lampe a grillé, mes cheveux se sont dressés, et il m'a fait un clin d'œil.",
     },
+    // 241 · Coucouminou (PSY/ELEC) — création de Gass
+    coucouminou: {
+        ecology: "Minuscule gremlin vert aux reflets mauves, d'une laideur si appliquée qu'elle en devient attendrissante : on dirait une voiture tunée de mauvais goût montée sur deux pattes griffues. Il grignote l'électricité statique des câbles de la Centrale et, dit-on, les pensées distraites des passants. Imprévisible au possible, il passe sans prévenir du câlin à la morsure, et se croit déjà le patron des lieux.",
+        dicton: "Mignon d'être laid, méchant d'être mignon.",
+        note: "Il s'est blotti contre ma botte comme un chaton. J'ai souri. Il a souri aussi, avec beaucoup trop de dents, et ma lampe torche s'est vidée d'un coup.",
+    },
+    // 242 · Minouminou (PSY/ELEC)
+    minouminou: {
+        ecology: "Plus grand, plus nerveux, et persuadé d'être irrésistible. Une couronne de cristaux crépitants lui a poussé sur le crâne, des pointes sur les épaules, et sa queue se termine désormais par une prise qu'il branche n'importe où pour se recharger, y compris dans les autres Daemons. Ses humeurs basculent sans crier gare : il boude une heure, puis vide une batterie entière pour un regard de travers.",
+        dicton: "Ne laisse jamais une prise libre près d'un Minouminou.",
+        note: "Il a branché sa queue dans le générateur de secours et m'a fixé, très fier, en attendant des applaudissements. Toute l'aile est s'est éteinte. Il a eu l'air sincèrement vexé que je n'applaudisse pas.",
+    },
+    // 243 · Pssscht (PSY/ELEC)
+    pssscht: {
+        ecology: "Le stade final ne cherche plus à être mignon. De grosses épines de cristal lui hérissent le dos, ses yeux globuleux ne clignent presque jamais, et sa queue de rat, lestée de poids métalliques, fouette l'air en crachant des arcs électriques. Casquette rouge vissée sur le crâne, il a l'air franchement pas malin… jusqu'à ce qu'il attaque : ses ondes psychiques et ses décharges frappent avant qu'on ait fini de rire.",
+        dicton: "On rit de sa dégaine ; on ne rit jamais deux fois.",
+        note: "Je l'ai sous-estimé, comme tout le monde : la casquette, le regard vide, le « pssscht » qu'il souffle avant d'attaquer. Le temps de prendre une note, mon carnet avait pris feu.",
+    },
 }
 
 /** FICHES des espèces CUSTOM qui doivent quand même en avoir une (hors couverture des espèces officielles) : les

@@ -8,6 +8,22 @@ import { moveCategory } from "../battle/typeChart"
 // On vérifie : ids réels, moveset bien appliqué à l'instance, ≥2 attaques offensives, ≥1 STAB offensif ALIGNÉ
 // sur la stat dominante (physique ATK vs spécial SpA), max 2 attaques de statut.
 
+describe("Ligue de Fusion — types figés", () => {
+    it("table figée : les types en prod au 28/10 ne bougent plus quand une espèce entre au dex (Coucouminou)", () => {
+        const types: Record<string, string> = {}
+        for (const tr of FUSION_LEAGUE) {
+            const team = buildFusionLeagueTeam(tr.key, "or")
+            const pairs = tierPairs(tr.key, "or", tr.pairs)
+            team.forEach((f, i) => { types[pairs[i].name] = [...getSpecies(f.speciesId)!.types].sort().join("/") })
+        }
+        // types en prod depuis le 27/10 (avant : Ténèbres/Eau, Spectre/Feu, Vol/Fée, Eau/Normal — retour à trancher par Sartay)
+        expect(types["Abyssathonn"]).toBe("ELEC/TENEBRES")
+        expect(types["Thundèbre"]).toBe("ELEC/SPECTRE")
+        expect(types["Lunagron"]).toBe("ELEC/FEE")
+        expect(types["Aquilathonn"]).toBe("ELEC/VOL")
+    })
+})
+
 describe("Ligue de Fusion — movesets curés", () => {
     it("les 30 fusions ont un moveset curé de 4 attaques, toutes des ids réels", () => {
         const pairs = FUSION_LEAGUE.flatMap((t) => t.pairs)

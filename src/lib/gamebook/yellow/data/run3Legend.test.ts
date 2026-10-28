@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import fs from "node:fs"
 import path from "node:path"
 import { flamaroktoGuaranteed, FLAMAROKTO_GUIDE_LINE, RUN3_LEGEND_HINT_DENOM_MULT } from "./run3Legend"
-import { captureGuide } from "./encounters"
+import { captureGuide, rollWildEncounter } from "./encounters"
 import { HH_KID_NOON_LINES } from "./hhKid"
 import { getItem } from "./items"
 
@@ -18,15 +18,30 @@ describe("Flamarokto : capture garantie à l'Hyper Nexus-Ball sous 60 % de PV ou
         expect(flamaroktoGuaranteed("flamarokto", poke, 0.1, "SLEEP")).toBe(false)  // Ball trop faible
         expect(flamaroktoGuaranteed("goshendofy", hyper, 0.1, "SLEEP")).toBe(false) // les autres légendaires : règle inchangée
     })
-    it("le gamin de la plaine le dit à midi, et annonce les pops ×5 ; le guide du Daemomaniaque aussi", () => {
+    it("le gamin de la plaine le dit à midi, et annonce les pops ×2,5 ; le guide du Daemomaniaque aussi", () => {
         const all = HH_KID_NOON_LINES.join(" ")
-        expect(all).toContain("60 %"); expect(all).toContain("HYPER"); expect(all).toContain("CINQ")
-        expect(RUN3_LEGEND_HINT_DENOM_MULT).toBe(0.2)
+        expect(all).toContain("60 %"); expect(all).toContain("HYPER"); expect(all).toContain("DEUX ET DEMI")
+        expect(all).not.toContain("CINQ")
+        expect(RUN3_LEGEND_HINT_DENOM_MULT).toBe(0.4) // Sartay, 28/10/2026 : « 1/40 ça serait mieux » (×5 → ×2,5)
+        expect(FLAMAROKTO_GUIDE_LINE).toContain("×2,5")
         const g = captureGuide("flamarokto", 3, true, false, false, false)
         expect(g.how).toContain(FLAMAROKTO_GUIDE_LINE)
         expect(g.how.some((h) => /Capture IMPOSSIBLE sans statut|Exige une Ball puissante/.test(h))).toBe(false)
     })
-    it("câblage moteur : garantie + shunt des verrous de Ball/PV ; ×5 en run 3 dans les rencontres", () => {
+    it("au meilleur endroit (ligne la plus basse des carrés du bas), à midi après le gamin : 1 rencontre sur 40", () => {
+        let seed = 28
+        const rng = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+        let enc = 0, leg = 0
+        for (let i = 0; i < 400_000; i++) {
+            const m = rollWildEncounter({ mapId: "yellow_hautes_herbes", x: 2, y: 17, leadLevel: 50, run3: true, goshBoost: true, encounterCount: 999, dayKey: "2026-10-28", rng })
+            if (!m) continue
+            enc++
+            if (m.speciesId === "flamarokto") leg++
+        }
+        expect(leg / enc).toBeGreaterThan(1 / 40 - 0.004)
+        expect(leg / enc).toBeLessThan(1 / 40 + 0.004)
+    })
+    it("câblage moteur : garantie + shunt des verrous de Ball/PV ; ×2,5 en run 3 dans les rencontres", () => {
         const eng = read("src/lib/gamebook/yellow/battle/engine.ts")
         expect(eng).toContain("|| flamaroktoGuaranteed(wild.speciesId, ballBonusOf(itemId), wild.currentHp / Math.max(1, maxHpOf(wild)), wild.status)")
         expect(eng).toContain("!isGuaranteedBall(itemId) && !legGuaranteed && ballBonusOf(itemId) < wild.captureMinBallBonus")

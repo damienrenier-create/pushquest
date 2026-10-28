@@ -77,7 +77,7 @@ function howTo(run: ConteurRun): string[] {
         ]
         case "run3": return [
             plaine,
-            `« Un conseil : va écouter le GAMIN de la plaine au ZÉNITH, entre ${HH_KID_NOON_START}h et ${HH_KID_NOON_END}h. Après sa confidence, dans cette fenêtre, ses apparitions sont multipliées par CINQ. »`,
+            `« Un conseil : va écouter le GAMIN de la plaine au ZÉNITH, entre ${HH_KID_NOON_START}h et ${HH_KID_NOON_END}h. Après sa confidence, dans cette fenêtre, ses apparitions sont multipliées par DEUX ET DEMI. »`,
             `« Pour le capturer : dès qu'il est sous ${Math.round(FLAMAROKTO_GUARANTEE_HP_FRAC * 100)} % de ses PV OU sous un statut, une simple HYPER Nexus-Ball le capture À COUP SÛR. Sinon, mêmes exigences que ses frères : statut obligatoire et Hyper Nexus-Ball + au minimum. »`,
         ]
         case "fusion": return [

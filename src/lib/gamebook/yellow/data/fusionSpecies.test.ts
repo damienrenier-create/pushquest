@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeFusion, fuseStats, fuseTypes, fuseMoves, fusionName, fusionWeights, typeRepStat, reorderToStored, withGuaranteedStab, type FusionParent } from "./fusionSpecies"
+import { computeFusion, fuseStats, fuseTypes, fuseMoves, fusionName, fusionWeights, typeRepStat, computeTypeRepStat, reorderToStored, withGuaranteedStab, type FusionParent } from "./fusionSpecies"
 import { getMove } from "./moves"
 import { SPECIES } from "./species"
 import type { PokeType } from "../battle/types"
@@ -114,6 +114,22 @@ describe("fusion — types & divers", () => {
         expect(rep["COMBAT" as PokeType]).toBe("atk")
         expect(rep["ROCHE" as PokeType]).toBe("def")
         expect(rep["PSY" as PokeType]).toBe("spc")
+    })
+
+    it("table FIGÉE (28/10/2026) : couvre tous les types, et une espèce ajoutée au dex ne retype plus aucune fusion", () => {
+        const rep = typeRepStat()
+        for (const s of Object.values(SPECIES)) for (const t of s.types) expect(rep[t], `${s.id} : ${t}`).toBeTruthy()
+        // valeurs EN PROD le 28/10/2026 (Normal et Élec avaient basculé le 27/10 avec Snatchacoolt)
+        expect(rep.NORMAL).toBe("spe"); expect(rep.ELEC).toBe("spc"); expect(rep.FEE).toBe("spe")
+        // l'ajout de Coucouminou (28/10) aurait refait basculer Normal : le calcul d'origine le montre, la table figée non
+        expect(computeTypeRepStat().NORMAL).toBe("hp")
+        const before = { ...rep }
+        const fake = { id: "zz_fake", types: ["NORMAL", "ELEC"], baseStats: { hp: 400, atk: 1, def: 400, spe: 1, spc: 1 } } as unknown as (typeof SPECIES)[string]
+        ;(SPECIES as Record<string, unknown>).zz_fake = fake
+        try {
+            expect(computeTypeRepStat().NORMAL).not.toBe(before.NORMAL) // le calcul d'origine, lui, aurait basculé
+            expect(typeRepStat()).toEqual(before)
+        } finally { delete (SPECIES as Record<string, unknown>).zz_fake }
     })
 })
 

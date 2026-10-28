@@ -3731,6 +3731,57 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Un raton laveur trapu et très touffu, aux yeux jaune électrique, avec une énorme queue annelée qui accumule l'énergie. Il devient impressionnant quand il attaque. Silhouette : corps bas et puissant, petites pattes — Il se croit extrêmement malin, mais il est pataud — 🖋️ Création de DaKumba",
         sprite: "/yellow/sprites/dex/robacoolt.png",
     },
+    // CANON d'une CRÉATION de joueur (Gass) — gremlin PSY/ÉLEC, « mignon d'être laid ». Porté FIDÈLEMENT depuis
+    //   buildCustomSpecies (spec réelle de sa save, 28/10/2026) : stats (BST 241/326/422), learnset PARTAGÉ, éclosion
+    //   moyenne (courbe linéaire, évo 16/34), talent « resistant ». Attaquant spécial rapide (Spé 132, Vit 110).
+    //   Pop sauvage : RUN FUSION, Centrale — 1 Jerbiwat sur 20, au stade Coucouminou (décision Sartay du 28/10/2026).
+    coucouminou: {
+        id: "coucouminou", dexNo: 241, name: "Coucouminou", types: ["PSY", "ELEC"],
+        baseStats: { hp: 43, atk: 20, def: 40, spe: 63, spc: 75 }, // BST 241
+        learnset: [
+            { level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "surtension" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "eveil_divin" },
+            { level: 36, moveId: "fulgurance" }, { level: 42, moveId: "brume_sporale" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "spores_dodo" },
+        ],
+        evolution: { toId: "minouminou", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 108, rarity: "RARE", growthRate: "medium_slow", secretTalent: "resistant",
+        role: "PSY/ELEC — offensif spécial (création)",
+        description: "Un tout tout tout petit Gremlins, mignon d'être laid. Plutôt vert et mauve comme une voiture tunée de mauvais goût. — Imprévisible, imbus de lui même et psychotique — 🖋️ Création de Gass",
+        sprite: "/yellow/sprites/dex/coucouminou.png",
+    },
+    minouminou: {
+        id: "minouminou", dexNo: 242, name: "Minouminou", types: ["PSY", "ELEC"],
+        baseStats: { hp: 58, atk: 27, def: 54, spe: 85, spc: 102 }, // BST 326
+        learnset: [
+            { level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "surtension" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "eveil_divin" },
+            { level: 36, moveId: "fulgurance" }, { level: 42, moveId: "brume_sporale" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "spores_dodo" },
+        ],
+        evolution: { toId: "pssscht", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 147, rarity: "RARE", growthRate: "medium_slow", secretTalent: "resistant",
+        role: "PSY/ELEC — offensif spécial (création)",
+        description: "Un tout tout tout petit Gremlins, mignon d'être laid. Plutôt vert et mauve comme une voiture tunée de mauvais goût. — Imprévisible, imbus de lui même et psychotique — 🖋️ Création de Gass",
+        sprite: "/yellow/sprites/dex/minouminou.png",
+    },
+    pssscht: {
+        id: "pssscht", dexNo: 243, name: "Pssscht", types: ["PSY", "ELEC"],
+        baseStats: { hp: 75, atk: 35, def: 70, spe: 110, spc: 132 }, // BST 422 — attaquant spécial rapide (Spé 132, Vit 110)
+        learnset: [
+            { level: 5, moveId: "patience" }, { level: 5, moveId: "ultrasons" },
+            { level: 12, moveId: "choc_mental" }, { level: 18, moveId: "surtension" },
+            { level: 24, moveId: "vampelec" }, { level: 30, moveId: "eveil_divin" },
+            { level: 36, moveId: "fulgurance" }, { level: 42, moveId: "brume_sporale" },
+            { level: 48, moveId: "ultra_foudre" }, { level: 54, moveId: "spores_dodo" },
+        ],
+        catchRate: 45, baseExp: 190, rarity: "RARE", growthRate: "medium_slow", secretTalent: "resistant",
+        role: "PSY/ELEC — offensif spécial (création)",
+        description: "De grosses épines dorsales, des yeux globuleux, une queue de rat avec des poids sur le bout et une casquette MAGA. L'air con mais puissant. — Imprévisible, imbus de lui même et psychotique — 🖋️ Création de Gass",
+        sprite: "/yellow/sprites/dex/pssscht.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -3762,6 +3813,9 @@ export const CANONIZED_CUSTOM_ALIAS: Record<string, string> = {
     custom_cmtj184wc00276w9_ewokid_s3: "wooky", // TomGotrails
     custom_cmti9xukc002h7k2_dracominus_s3: "thanadrak", // Rob
     custom_cmt7m9eip0009uov_snatchacoolt_s3: "robacoolt", // DaKumba
+    custom_cmvkn4w5z0003wps_coucouminou_s1: "coucouminou", // Gass — les 3 stades : il joue Minouminou (_s2) au 28/10/2026
+    custom_cmvkn4w5z0003wps_coucouminou_s2: "minouminou",
+    custom_cmvkn4w5z0003wps_coucouminou_s3: "pssscht",
 }
 
 // ESPÈCES RÉSOLVABLES CÔTÉ SERVEUR mais HORS DEX : les fusions de base « stabilisées » (Mottelave, Basaltor,
@@ -3834,7 +3888,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "charolyx", "bubolyx", "pestilyx",
     "chadine", "arlpol", "lesleo", "stashex", "stashex2", "stashex3",            // ✨ SHINY CRAFTÉS canonisés (Kingme, Tom) : pop partout post-Dôme Fusion, cachés du dex tant que non capturés
     "ewokid", "endorix", "wooky", "dracominus", "spectragon", "thanadrak",   // ✨ SHINY CRAFTÉS canonisés (TomGotrails, Rob) — cf. data/craftedShinies (charolyx… plus haut : némésis de Possyl, forgé par ACE)
-    "snatchacoolt", "stealacoolt", "robacoolt"]) {                           // création canonisée (DaKumba) — raton chapardeur ÉLEC/TÉNÈBRES, Manoir des Ténèbres du run 2 (~1 %)
+    "snatchacoolt", "stealacoolt", "robacoolt",                              // création canonisée (DaKumba) — raton chapardeur ÉLEC/TÉNÈBRES, Manoir des Ténèbres du run 2 (~1 %)
+    "coucouminou", "minouminou", "pssscht"]) {                               // création canonisée (Gass) — gremlin PSY/ÉLEC, Centrale du run fusion (1 Jerbiwat sur 20)
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 

@@ -556,6 +556,10 @@ export const DEX_SIZE: Record<string, DexSize> = {
     snatchacoolt: { size: [0.35, 0.55], weight: [4, 9], quip: "La taille d'un chat de gouttière, des poches qui n'existent pas mais toujours pleines : on le pèse, on récupère trois pièces et une clé." },
     stealacoolt: { size: [0.65, 0.95], weight: [12, 24], quip: "Le poids d'un gros chien… dont un bon tiers en couronnes, sceptres et colliers qui ne lui appartiennent pas." },
     robacoolt: { size: [1.2, 1.7], weight: [55, 110], quip: "Bas sur pattes et lourd comme un coffre-fort, ce qui tombe bien : il en a souvent un sous le bras. Sa queue, à elle seule, ferait tourner une centrale." },
+    // 241-243 · Coucouminou / Minouminou / Pssscht (PSY/ELEC) — création de Gass : gremlin électrique, attaquant spécial rapide.
+    coucouminou: { size: [0.25, 0.4], weight: [2, 5], quip: "Tient dans une boîte à chaussures, qu'il aura griffée, électrisée et proclamée son royaume avant la fin de la journée." },
+    minouminou: { size: [0.6, 0.9], weight: [9, 18], quip: "La taille d'un gros chat qui se prend pour un tigre, le poids d'une batterie de voiture : ce n'est pas un hasard, il en a vidé plusieurs." },
+    pssscht: { size: [1.1, 1.5], weight: [30, 60], quip: "À peine plus grand qu'un enfant, mais entre les épines, les poids au bout de la queue et la casquette, il prend toute la place. Et l'odeur d'ozone ne part jamais." },
 }
 
 /** Fourchette de mensurations d'une espèce, ou null si pas encore définie. */

@@ -56,6 +56,8 @@ interface WildEntry {
     postSylvebarbe?: boolean       // RUN 1 : ne pop QU'APRÈS l'éveil de Sylvebarbe (endgame). Sinon poids 0. Sert à tenir les TÉNÈBRES
                                    //   (type tardif, cf. table = run 3) hors du run 1 pré-Sylvebarbe (ex. Obscurène/Sépulcru de la Plage).
                                    //   Sans effet en run 2/3 (pools dédiés) : ctx.sylvebarbeAwake n'y est pas requis (voir tenebresGateOff).
+    takesFrom?: string             // REMPLACEMENT : quand l'entrée est active, son poids est PRIS sur celui de cette espèce (même pool) →
+                                   //   les autres espèces gardent leur part (ex. Coucouminou ← Jerbiwat, Centrale du run fusion).
 }
 
 /** Carré d'herbes hautes (grille 3×3) : rectangle (cols × rows) + tier (0 = rangée BAS … 2 = rangée HAUT,
@@ -276,9 +278,13 @@ function guideMatchesRun(target: string, run: number, hideEndgame: boolean): Gui
     for (const mapId of Object.keys(table)) {
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
-        const poolSum = sumBase(z.pool)
+        // `takesFrom` (remplacement) : l'entrée n'ajoute rien au total du pool, et l'espèce remplacée lui cède sa part tant
+        //   qu'elle est active (miroir de rollWildEncounter).
+        const active = (e: WildEntry) => !(preSylvebarbe && e.postSylvebarbe)
+        const poolSum = sumBase(z.pool.filter((e) => !e.takesFrom))
+        const ceded = (e: WildEntry) => (e.takesFrom ? 0 : sumBase(z.pool.filter((t) => t.takesFrom === e.speciesId && active(t))))
         const zBiome = poolHasBiome(z.pool)
-        for (const e of z.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, poolSum), biome: zBiome })
+        for (const e of z.pool) if (active(e) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base - ceded(e), poolSum), biome: zBiome })
         if (z.rects) for (const r of z.rects) { const rs = sumBase(r.pool), rb = poolHasBiome(r.pool); for (const e of r.pool) if (!(preSylvebarbe && e.postSylvebarbe) && entryYields(e, target)) out.push({ mapId, e, pct: pctOf(e.base, rs), biome: rb }) }
         const tg = z.trainingGrid
         if (tg) {
@@ -565,6 +571,10 @@ const NEXUS_HIGH_LEVEL_ECHOES: WildEntry[] = ([
     // (MÉTAL laissé de côté : les 2 seuls finaux — colosfer/magnetor — sont cachés ET runThreeOnly.)
 ] as [string, number][]).map(([speciesId, levelFixed]) => ({ speciesId, base: 1, noEvolve: true, levelFixed, captureMult: 0.4, captureTaunt: NEXUS_ECHO_TAUNT }))
 
+// RUN FUSION — COUCOUMINOU (création de Gass, PSY/ÉLEC) remplace une part des JERBIWAT (PSY/ÉLEC) de la Centrale (Sartay,
+//   28/10/2026 : « un jerbiwat sur 20 dans la centrale elec pourrait être remplacé par coucouminou ? »). 0,05 = 1 sur 20.
+export const FUSION_COUCOUMINOU_SHARE = 0.05
+
 const ZONES: Record<string, Zone> = {
     yellow_route_nord: {
         rate: 0.14,
@@ -804,6 +814,10 @@ const ZONES: Record<string, Zone> = {
             // % visés (par rencontre) : Jerbiwat ~51 · Électroatiss ~20 · Namicha ~12 · Boltah ~10
             // · Heatah ~3 · Thundah ~1,1 · Zappeuréal ~0,7 · Bélunode ~1 (×3 si quota).
             { speciesId: "jerbiwat", base: 230, levelMax: 20 },                              // le + commun, ≤20
+            // RUN FUSION : 1 Jerbiwat sur 20 devient un COUCOUMINOU (création de Gass) — sa part est PRISE sur Jerbiwat
+            //   (`takesFrom`), les autres espèces ne bougent pas. Toujours au stade Coucouminou (niv 12-15, il évolue au 16).
+            //   Run 1 avant l'éveil de Sylvebarbe : poids 0 (Centrale inchangée). Runs 2/3 : pools dédiés → absent.
+            { speciesId: "coucouminou", base: 230 * FUSION_COUCOUMINOU_SHARE, noEvolve: true, levelRange: [12, 15], postSylvebarbe: true, takesFrom: "jerbiwat" },
             { speciesId: "electroatiss", base: 90 },                                         // commun, ≤25
             { speciesId: "namicha", base: 55, levelMode: "weakestTeam", noEvolve: true, openMirage: 1 }, // = + faible équipe, jamais Namizeus, ouvre par 1 Mirage
             { speciesId: "boltah", base: 45, noEvolve: true, fleeMaxTurns: 5 },              // peu commun, ≤25, fuit ≤5 tours
@@ -1287,6 +1301,16 @@ function rollWildEncounterCore(ctx: EncounterCtx, rng: () => number): MonInstanc
         : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
         : (e.postSylvebarbe && !tenebresGateOff(ctx)) ? 0 // TÉNÈBRES de la Plage (Obscurène/Sépulcru) : hors run 1 pré-Sylvebarbe
         : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player, ctx.hour, ctx.funMode, ctx.fusionGoldCleared))
+    // REMPLACEMENT (`takesFrom`) : une entrée active PREND son poids sur l'espèce remplacée du même pool → les autres espèces
+    //   gardent exactement leur part (ex. run fusion : 1 Jerbiwat sur 20 de la Centrale devient Coucouminou).
+    pool.forEach((e, i) => {
+        if (!e.takesFrom || weights[i] <= 0) return
+        const j = pool.findIndex((x) => x.speciesId === e.takesFrom && !x.takesFrom)
+        if (j < 0) return
+        const moved = Math.min(weights[i], weights[j])
+        weights[i] = moved
+        weights[j] -= moved
+    })
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
 
@@ -1363,6 +1387,7 @@ export function funDailyTarget(mapIds: readonly string[], dayKey: string): { spe
         if (!zone) continue
         const raw: WildEntry[] = zone.pool?.length ? zone.pool : (zone.trainingGrid ? Object.values(zone.trainingGrid.typePools).flat() : [])
         for (const e of raw) {
+            if (e.takesFrom) continue // REMPLACEMENT (Coucouminou, run fusion seulement) : jamais « Pokémon du jour »
             if (seen.has(e.speciesId)) continue
             seen.add(e.speciesId)
             if (getSpecies(e.speciesId)?.rarity === "LEGENDARY") continue // pas de légendaire (Goshendofy/Ukognos…)
@@ -1429,7 +1454,8 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
         const leg = legId ? { ...tg.legendary, speciesId: legId } : tg.legendary
         const alreadyCaught = legId ? !!ctx.caughtSpecies?.includes(legId) : !!ctx.goshCaught
         if (!alreadyCaught) {
-            // Confidence du GAMIN entendue, dans sa fenêtre : ×2 (runs 1/2) ; ×5 au RUN 3 (Sartay 26/10/2026, « run 3 hardcore »).
+            // Confidence du GAMIN entendue, dans sa fenêtre : ×2 (runs 1/2) ; ×2,5 au RUN 3 (Sartay : ×5 le 26/10/2026, ramené à
+            //   ×2,5 le 28/10 → 1 rencontre sur 40 au meilleur endroit).
             const boost = ctx.goshBoost ? (ctx.run3 ? RUN3_LEGEND_HINT_DENOM_MULT : 0.5) : 1
             const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
             if (rng() < 1 / denom) return finalizeSpawn(leg, leg.levelFixed ?? 50, rng, ctx)

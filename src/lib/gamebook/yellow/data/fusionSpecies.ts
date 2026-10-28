@@ -362,11 +362,21 @@ export function fuseHeldItems(a: FusionParent, b: FusionParent): string[] {
 }
 
 /** Table stat-représentative par type = la stat où le type dépasse LE PLUS la moyenne globale du roster (le
- *  « caractère » du type). Calculée UNE fois depuis SPECIES (données statiques → déterministe), puis mémoïsée. */
-let _repTable: Record<string, StatKey> | null = null
+ *  « caractère » du type). FIGÉE le 28/10/2026 telle qu'elle était EN PROD ce jour-là (aucun changement pour les joueurs) :
+ *  recalculée depuis SPECIES, elle basculait dès qu'une espèce entrait au dex ou changeait de stats (Plante, Normal, Fée et
+ *  Dragon le 15/10, Fée le 26/10, Normal et Élec le 27/10 avec Snatchacoolt) et retypait en silence les fusions de tout le
+ *  monde, Ligue de Fusion comprise. Revenir à la version d'avant le 27/10 (NORMAL "hp", ELEC "spe") reste à trancher par
+ *  Sartay. Ne plus la recalculer : computeTypeRepStat garde le calcul d'origine pour le diagnostic. */
+const TYPE_REP_STAT: Record<string, StatKey> = {
+    PLANTE: "spc", EAU: "def", FEU: "spe", NORMAL: "spe", VOL: "spe", ROCHE: "def", SOL: "def", COMBAT: "atk", ELEC: "spc",
+    GLACE: "spc", INSECTE: "atk", PSY: "spc", METAL: "def", FEE: "spe", DRAGON: "spc", POISON: "spc", SPECTRE: "spe", TENEBRES: "hp",
+}
 export function typeRepStat(): Record<string, StatKey> {
-    if (_repTable) return _repTable
-    const all = Object.values(SPECIES)
+    return TYPE_REP_STAT
+}
+/** Calcul d'origine de la table sur un roster (par défaut le dex actuel). Diagnostic seulement : le typage des fusions lit
+ *  la table FIGÉE (typeRepStat). */
+export function computeTypeRepStat(all: readonly { types: readonly PokeType[]; baseStats: Record<StatKey, number> }[] = Object.values(SPECIES)): Record<string, StatKey> {
     const keys: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
     const global: Record<string, number> = {}
     for (const k of keys) global[k] = all.reduce((acc, m) => acc + m.baseStats[k], 0) / (all.length || 1)
@@ -381,7 +391,6 @@ export function typeRepStat(): Record<string, StatKey> {
         }
         rep[t] = best
     }
-    _repTable = rep
     return rep
 }
 

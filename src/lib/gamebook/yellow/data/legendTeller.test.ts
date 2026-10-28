@@ -49,7 +49,7 @@ describe("Conteur — dialogues (nom, stats lues dans species.ts, méthode de ca
         const r1 = conteurLines("run1", false).join(" "), r2 = conteurLines("run2", false).join(" "), r3 = conteurLines("run3", false).join(" "), rf = conteurLines("fusion", false).join(" ")
         expect(r1).toContain("HAUTES HERBES"); expect(r1).toContain("dès 21h"); expect(r1).toContain("DOUBLENT"); expect(r1).toContain("Hyper Nexus-Ball +")
         expect(r2).toContain("entre 5h et 11h"); expect(r2).toContain("UKOGNOS"); expect(r2).toContain("type FÉE")
-        expect(r3).toContain("entre 11h et 15h"); expect(r3).toContain("multipliées par CINQ"); expect(r3).toContain("sous 60 % de ses PV OU sous un statut"); expect(r3).toContain("type GLACE/FEU")
+        expect(r3).toContain("entre 11h et 15h"); expect(r3).toContain("multipliées par DEUX ET DEMI"); expect(r3).toContain("sous 60 % de ses PV OU sous un statut"); expect(r3).toContain("type GLACE/FEU")
         expect(rf).toContain("ÎLE ÉMERAUDE"); expect(rf).toContain("SURFER"); expect(rf).toContain("135 espèces"); expect(rf).toContain("150 ESPÈCES"); expect(rf).toContain("200 espèces"); expect(rf).toContain("type FÉE/SPECTRE")
     })
     it("câblage gameStore : toujours présent, sprite et lignes par run, légendaire déjà capturé lu au Pokédex", () => {

@@ -61,6 +61,6 @@ export const HH_KID_DAY_LINES_RUN3 = [
 export const HH_KID_NOON_LINES = [
     "Pssst… pile à l'heure du zénith ! Écoute bien…",
     "Mon grand frère jure avoir vu une traînée de glace ET de flammes filer dans les herbes — si vite que le sol gelait et fumait à la fois…",
-    "Du coup, à cette heure-ci, tes chances de croiser FLAMAROKTO sont multipliées par CINQ ! Ça reste rare… mais bien moins. Ouvre l'œil ! ☄️",
+    "Du coup, à cette heure-ci, tes chances de croiser FLAMAROKTO sont multipliées par DEUX ET DEMI ! Ça reste rare… mais bien moins. Ouvre l'œil ! ☄️",
     "Et un secret de plus : il a l'air féroce, mais sous 60 % de ses PV — ou touché par un STATUT — une HYPER Nexus-Ball le capture À COUP SÛR. Pas besoin d'en gaspiller dix !",
 ]

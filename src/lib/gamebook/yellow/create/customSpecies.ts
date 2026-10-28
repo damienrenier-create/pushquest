@@ -131,15 +131,24 @@ export function maxPowerForLevel(level: number): number {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
 // ── POOL DE PUISSANCE MODULÉ (le « compromis ») : BST faible → un peu plus de puissance · type fort → nerf ──
-let _typeScore: Map<PokeType, number> | null = null
-/** Fraction du dex frappée en super-efficace par ce type (utilité offensive ; mémoïsé). */
+// FIGÉE le 28/10/2026 telle qu'en prod (dex de 240 espèces) : recalculée depuis SPECIES, elle bougeait à chaque espèce
+//   ajoutée et changeait en silence les attaques des anciennes némésis générées, reconstruites à chaque chargement
+//   (reregisterCustomDaemons → buildNemesis) — ex. la Némésis de Dracominus de Rob avec l'ajout de Coucouminou.
+//   Nombre d'espèces que chaque type frappe en super-efficace, sur ce dex de 240.
+const TYPE_SE_COUNT_FROZEN: Record<PokeType, number> = {
+    NORMAL: 0, FEU: 38, EAU: 63, PLANTE: 57, ELEC: 55, GLACE: 75, COMBAT: 58, POISON: 33, SOL: 92,
+    VOL: 49, PSY: 35, INSECTE: 47, ROCHE: 85, SPECTRE: 48, DRAGON: 16, FEE: 56, METAL: 51, TENEBRES: 50,
+}
+const DEX_SIZE_FROZEN = 240
+/** Fraction du dex frappée en super-efficace par ce type (utilité offensive) — table figée, cf. ci-dessus. */
 export function typeOffensivePct(t: PokeType): number {
-    if (!_typeScore) {
-        _typeScore = new Map()
-        const all = Object.values(SPECIES)
-        for (const ty of POKE_TYPES) { let se = 0; for (const s of all) if (typeEffectiveness(ty, s.types) >= 2) se++; _typeScore.set(ty, se / all.length) }
-    }
-    return _typeScore.get(t) ?? 0
+    return (TYPE_SE_COUNT_FROZEN[t] ?? 0) / DEX_SIZE_FROZEN
+}
+/** Calcul d'origine sur un roster (par défaut le dex actuel). Diagnostic seulement : le jeu lit la table figée. */
+export function computeTypeOffensivePct(t: PokeType, all: readonly { types: readonly PokeType[] }[] = Object.values(SPECIES)): number {
+    let se = 0
+    for (const s of all) if (typeEffectiveness(t, [...s.types]) >= 2) se++
+    return all.length ? se / all.length : 0
 }
 /** Modificateur de puissance (−15 %..+15 %) : (a) BST sous 435 → bonus · (b) type STAB fort (couvre bien le
  *  dex) → malus. Un Daemon faible ou d'un type peu utile tape un peu plus fort ; un type dominant est nerfé. */
@@ -790,6 +799,8 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmti9xukc002h7k2_dracominus: ["/yellow/sprites/dex/dracominus.png", "/yellow/sprites/dex/spectragon.png", "/yellow/sprites/dex/thanadrak.png"],
     // Snatchacoolt → Stealacoolt → Robacoolt (DaKumba) : raton chapardeur ÉLEC/TÉNÈBRES (canonisé le 27/10/2026).
     custom_cmt7m9eip0009uov_snatchacoolt: ["/yellow/sprites/dex/snatchacoolt.png", "/yellow/sprites/dex/stealacoolt.png", "/yellow/sprites/dex/robacoolt.png"],
+    // Coucouminou → Minouminou → Pssscht (Gass) : gremlin PSY/ÉLEC (canonisé le 28/10/2026).
+    custom_cmvkn4w5z0003wps_coucouminou: ["/yellow/sprites/dex/coucouminou.png", "/yellow/sprites/dex/minouminou.png", "/yellow/sprites/dex/pssscht.png"],
     // ANCIENNES NÉMÉSIS GÉNÉRÉES (léguées par ACE au run 2 avant le 22/10/2026) : sprites générés le 22/10 (générateur du jeu,
     //   3 stades chaînés) — elles s'affichaient en MissingNo. Plus aucune némésis générée n'est créée depuis (lignées existantes).
     // Némésis de Chadine (Kingme, « Caros ») : PLANTE/ÉLEC, l'orque-liane électrique qui finit en mante.
