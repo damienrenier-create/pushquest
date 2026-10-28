@@ -11,6 +11,10 @@ import { fullStats } from "./stats"
 import { expForLevel } from "./xp"
 
 let seq = 0
+// Sel PAR CHARGEMENT de page : `seq` repart de 0 à chaque chargement, donc avant le 28/10/2026 deux Daemons de même espèce et
+//   même niveau créés lors de sessions différentes pouvaient porter le MÊME uid (« orcaline-35-3 » ×2 chez Frans) — un échange
+//   ou un relâchement retirait alors les deux. Le sel rend les nouveaux uids uniques d'une session à l'autre.
+const UID_SALT = Math.floor(Math.random() * 36 ** 4).toString(36).padStart(4, "0")
 
 export interface MakeMonOpts {
     /** Valeur d'IV uniforme (0..15). Défaut 15. */
@@ -54,7 +58,7 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
     })
 
     const inst: MonInstance = {
-        uid: `${speciesId}-${level}-${++seq}`,
+        uid: `${speciesId}-${level}-${UID_SALT}${++seq}`,
         speciesId,
         level,
         // XP cumulée = plancher du niveau (et NON 0) → la fiche/barre d'XP correspondent

@@ -1441,8 +1441,14 @@ export function executeTrade(giveUid: string, receive: MonInstance): boolean {
     const given = st.team.find((m) => m.uid === giveUid) ?? st.pc.find((m) => m.uid === giveUid)
     const team = st.team.filter((m) => m.uid !== giveUid)
     const pc = st.pc.filter((m) => m.uid !== giveUid)
+    // Le Daemon reçu garde l'uid de son ancien dresseur… sauf s'il est déjà pris ici (28/10/2026) : deux Daemons au même uid,
+    //   c'était les deux retirés au prochain échange ou relâchement. Jamais de verrou « en vente » venu du vendeur.
+    const { tradeState: _ts, tradeListingId: _tl, ...clean } = receive
+    void _ts; void _tl
+    const taken = [...team, ...pc].some((m) => m.uid === receive.uid)
     const got: MonInstance = {
-        ...receive,
+        ...clean,
+        uid: taken ? `trade-${receive.speciesId}-${Date.now()}-${++tradeMonSeq}` : receive.uid,
         owned: true,
         currentOwnerId: currentPlayerId || receive.currentOwnerId,
         originalTrainerId: receive.originalTrainerId ?? receive.currentOwnerId,
@@ -4321,6 +4327,24 @@ export function reconcileListedMons(activeIds: readonly string[]): void {
     if (changed) { st = { ...st, pc }; emit() }
 }
 
+/** AUTO-RÉPARATION (2) à l'ouverture du Grand Marchand : remet le verrou « en vente » sur un Daemon du PC posé sur un étal ou
+ *  proposé dans une offre encore vivante, s'il l'a perdu (la save oubliait ce drapeau avant le 28/10/2026 : 7 étals et 1 offre
+ *  étaient déverrouillés en prod). Renvoie true si un verrou a été remis. */
+export function relockListedMons(active: readonly { id: string; uid?: string }[]): boolean {
+    const byUid = new Map<string, string>()
+    for (const a of active) if (a.uid && a.id) byUid.set(a.uid, a.id)
+    if (!byUid.size) return false
+    let changed = false
+    const pc = st.pc.map((m) => {
+        const id = byUid.get(m.uid)
+        if (!id || (m.tradeState === "listed" && m.tradeListingId === id)) return m
+        changed = true
+        return { ...m, tradeState: "listed" as const, tradeListingId: id }
+    })
+    if (changed) { st = { ...st, pc }; emit() }
+    return changed
+}
+
 /** ÉCHANGE ASYNCHRONE (Grand Marchand) — ajoute au PC un Daemon reçu via une livraison serveur. On lui pose un
  *  uid FRAIS (anti-collision) et on le range dans la réserve. Renvoie false si le blob est invalide (espèce inconnue). */
 let tradeMonSeq = 0
@@ -4328,7 +4352,9 @@ export function addTradedMonToPc(raw: unknown): boolean {
     if (!raw || typeof raw !== "object") return false
     const m = raw as MonInstance
     if (typeof m.speciesId !== "string" || !getSpecies(m.speciesId)) return false
-    const mon: MonInstance = { ...m, uid: `trade-${m.speciesId}-${Date.now()}-${++tradeMonSeq}` }
+    const { tradeState: _ts, tradeListingId: _tl, ...clean } = m // jamais de verrou « en vente » venu du vendeur
+    void _ts; void _tl
+    const mon: MonInstance = { ...clean, uid: `trade-${m.speciesId}-${Date.now()}-${++tradeMonSeq}` }
     // HAUT FAIT run 2 « échanger un shiny » : recevoir un shiny via un échange P2P (scopé au monde actif).
     const dt = m.shiny && !st.defeatedTrainers.includes("ach_trade_shiny") ? [...st.defeatedTrainers, "ach_trade_shiny"] : st.defeatedTrainers
     st = { ...st, pc: [...st.pc, mon], defeatedTrainers: dt }

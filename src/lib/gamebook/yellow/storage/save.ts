@@ -436,6 +436,22 @@ function parseLuxeBackup(raw: unknown): { ivs: Record<StatKey, number>; shiny?: 
     return { ivs, shiny: o.shiny === true ? true : undefined }
 }
 
+/** UIDS UNIQUES dans un monde (équipe puis PC). Avant le 28/10/2026, deux Daemons pouvaient partager un uid (le compteur
+ *  repartait de 1 à chaque chargement) : un échange ou un relâchement retirait alors LES DEUX. Le 1er garde son uid, les
+ *  suivants reçoivent un suffixe stable (« ~2 », « ~3 »…). Idempotent (client et serveur lisent pareil). */
+function uniqueUids(team: MonInstance[], pc: MonInstance[]): [MonInstance[], MonInstance[]] {
+    const seen = new Set<string>()
+    const fix = (m: MonInstance): MonInstance => {
+        if (!seen.has(m.uid)) { seen.add(m.uid); return m }
+        let n = 2
+        while (seen.has(`${m.uid}~${n}`)) n++
+        const uid = `${m.uid}~${n}`
+        seen.add(uid)
+        return { ...m, uid }
+    }
+    return [team.map(fix), pc.map(fix)]
+}
+
 function parseMon(raw: unknown): MonInstance | null {
     if (!raw || typeof raw !== "object") return null
     const o = raw as Record<string, unknown>
@@ -493,6 +509,10 @@ function parseMon(raw: unknown): MonInstance | null {
         capturedMapId: typeof o.capturedMapId === "string" ? o.capturedMapId : undefined,
         capturedQuotaReached: o.capturedQuotaReached === true ? true : undefined,
         disobedient: o.disobedient === true ? true : undefined, // VŒU MAUDIT (Jacanon) : ce Daemon refuse d'obéir jusqu'à la grâce du créateur
+        // ÉTAL DU GRAND MARCHAND : verrou « en vente ». Oublié par la lecture depuis l'étal (17/08) → un Daemon en vente redevenait
+        //   libre à chaque rechargement (relâchable, échangeable ailleurs) tout en restant livrable à l'acheteur. Rétabli le 28/10/2026.
+        tradeState: o.tradeState === "listed" ? "listed" : undefined,
+        tradeListingId: o.tradeState === "listed" && typeof o.tradeListingId === "string" && o.tradeListingId ? o.tradeListingId : undefined,
     }
 }
 
@@ -767,8 +787,10 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
     // à leur défaut (recalibration sur l'équipe actuelle). aceWins est conservé (cf. plus bas).
     const fromVersion = typeof o.version === "number" ? o.version : 0
     const aceRatchetReset = fromVersion < ACE_RATCHET_RESET_VERSION
-    const team = Array.isArray(o.team) ? (o.team as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : []
-    const pc = Array.isArray(o.pc) ? (o.pc as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : []
+    const [team, pc] = uniqueUids(
+        Array.isArray(o.team) ? (o.team as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : [],
+        Array.isArray(o.pc) ? (o.pc as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : [],
+    )
     const dex = (o.pokedex ?? {}) as Record<string, unknown>
     const items: Record<string, number> = {}
     if (o.items && typeof o.items === "object") {
@@ -1074,5 +1096,11 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         capturedMapId: m.capturedMapId,
         capturedQuotaReached: m.capturedQuotaReached ? true : undefined,
         disobedient: m.disobedient ? true : undefined, // VŒU MAUDIT (Jacanon) : persiste le refus d'obéir
+        // Copiés aussi en fin de combat (28/10/2026) : sinon le verrou de la PÂTE DE LUXE (1×/Daemon) et les IV d'origine
+        //   (Tiramisu) sautaient au premier combat du Daemon (oubli du 02/09) ; idem pour le verrou de l'étal.
+        luxeUsed: m.luxeUsed ? true : undefined,
+        luxeIvsBackup: m.luxeIvsBackup ? { ivs: { ...m.luxeIvsBackup.ivs }, ...(m.luxeIvsBackup.shiny ? { shiny: true } : {}) } : undefined,
+        tradeState: m.tradeState === "listed" ? "listed" : undefined,
+        tradeListingId: m.tradeState === "listed" ? m.tradeListingId : undefined,
     }
 }

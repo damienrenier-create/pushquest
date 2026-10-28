@@ -12,7 +12,7 @@ import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { ivTotal } from "@/lib/gamebook/yellow/data/ivConfig"
-import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, grantReps, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, listMonForTrade, unlistMon, removeTradedMon, addTradedMonToPc, reconcileListedMons, relockListedMons, grantReps, getGameMode } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchTroc, postTrocDeposit, postTrocWithdraw, postTrocOffer, postTrocCancelOffer, postTrocRespond, postTrocClaim, postTrocAck, type TrocState, type TrocListing, type TrocOffer } from "@/lib/gamebook/yellow/frontier/trocApi"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -91,6 +91,8 @@ export default function TrocPanel({ onClose, onToast }: { onClose: () => void; o
         let s = await fetchTroc()
         if (s.deliveries.length > 0) { await applyDeliveries(); s = await fetchTroc() }
         reconcileListedMons([...s.myListings.map((l) => l.id), ...s.offersSent.map((o) => o.id)]) // auto-réparation
+        // …et l'inverse : un Daemon encore sur l'étal (ou proposé) qui a perdu son verrou le retrouve.
+        if (relockListedMons([...s.myListings.map((l) => ({ id: l.id, uid: l.ownerUid })), ...s.offersSent.map((o) => ({ id: o.id, uid: o.offererUid }))])) persistYellowSave()
         setSt(s)
     }
     useEffect(() => { refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
