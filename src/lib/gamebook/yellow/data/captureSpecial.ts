@@ -168,8 +168,8 @@ export const SPECIAL_OBTAIN: Record<string, SpecialObtain> = {
     // ── Création canonisée de Jacanon : depuis le 27/10/2026, la lignée ne se croise plus qu'au run 3, dans la Grotte Gelée,
     //    au stade Wallabisan minimum (niv 22+). Ces textes ne servent que hors de cette zone (repli du guide). ──
     joeyrrant: { runs: [], note: "Non obtenable.", how: ["Création canonisée de Jacanon. Sa lignée ne se croise plus qu'au stade Wallabisan (Grotte Gelée, run 3, niv 22+) : le petit Joeyrrant, lui, ne se capture plus."] },
-    wallabisan: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Rare dans la Grotte Gelée pendant le concours (run 3), jamais sous le niv 22. Absent des autres runs."] },
-    kangoudead: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Rare dans la Grotte Gelée pendant le concours (run 3), dès le niv 40 (sinon : fais évoluer un Wallabisan). Absent des autres runs."] },
+    wallabisan: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Très rare dans la Grotte Gelée pendant le concours (run 3) : moins d'une rencontre sur 100, jamais sous le niv 22. Absent des autres runs."] },
+    kangoudead: { runs: [], note: "Sauvage au run 3 uniquement.", how: ["Très rare dans la Grotte Gelée pendant le concours (run 3), dès le niv 40 (sinon : fais évoluer un Wallabisan). Absent des autres runs."] },
 
     // ── PÊCHE (canne offerte par la Fashion Victim, Grotte 1F — face à un plan d'eau) ──
     // ── Starters du run 1 (offerts par le Prof. Chen ; sauvages seulement au run 3, dans la Grotte) ──

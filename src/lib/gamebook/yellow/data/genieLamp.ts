@@ -73,6 +73,23 @@ export function genieFxMarker(n: number, round?: number | null): string {
     const r = Math.max(0, Math.floor(Number(round) || 0))
     return r > 0 ? `genie_fx${n}_r${r}` : `genie_fx${n}`
 }
+/** Ce marqueur est-il celui d'un vœu (genieFxMarker) ? Sert au registre des vœux payés (YellowSave.geniePaid). */
+export function isGenieFxMarker(m: string): boolean {
+    return /^genie_fx[1-3](_r[1-9]\d{0,2})?$/.test(m)
+}
+/** 🧞 Empreinte d'un LOT d'effets externes (FrontierProfile.pendingEffects), rangée au registre des vœux payés une fois le lot
+ *  appliqué : un lot dont l'acquittement s'est perdu (réseau, onglet fermé, 2e chargement) n'est plus jamais réappliqué, il
+ *  est seulement ré-acquitté (28/10/2026). ⚠️ Côté créateur : deux lots au texte IDENTIQUE compteraient pour un seul →
+ *  ajouter un champ unique à chaque lot (ex. "tag": "2026-10-28-zyran"), que runGenieEffect ignore. */
+export function genieExtMarker(raw: string): string {
+    let h = 0x811c9dc5
+    for (let i = 0; i < raw.length; i++) { h ^= raw.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
+    return `genie_ext_${h.toString(36)}`
+}
+/** Marqueur admis au registre des vœux payés : un vœu (genieFxMarker) ou un lot d'effets externes (genieExtMarker). */
+export function isGeniePaidMarker(m: string): boolean {
+    return isGenieFxMarker(m) || /^genie_ext_[0-9a-z]{1,7}$/.test(m)
+}
 
 /** UN VŒU SE PAIE UNE SEULE FOIS PAR JOUEUR, quel que soit le monde (run 1, run 2, rejeu…). Les marqueurs genieFxMarker
  *  vivent dans les marqueurs DU MONDE ; un monde neuf (run 2, bulle de rejeu) les a vides. Avant le 20/10/2026, chaque vœu
@@ -82,6 +99,10 @@ export function genieFxMarker(n: number, round?: number | null): string {
  *  par un marqueur, idempotents : ils doivent suivre le joueur dans chaque monde). Tous les autres sont des DONS UNIQUES. */
 //   casino_cap n'en fait PAS partie : son seul cas réel (Jacanon) a été LEVÉ par le canal pendingEffects (casino_uncap,
 //   15/10/2026), qui ne se rejoue jamais → le rejouer dans un monde neuf le re-bannirait à tort.
+// 28/10/2026 (Sartay : « un vœu n'arrive qu'une fois ! si on rejoue le run, le vœu ne doit plus avoir lieu, sauf s'il dure
+//   dans le temps ») : « déjà payé » ne dépend plus seulement des mondes encore présents. Un monde JETÉ (abandon du run 2,
+//   nouveau départ du run 3, remise à zéro du chapitre) emportait son marqueur, et le vœu se repayait au chargement
+//   suivant. Le registre GLOBAL YellowSave.geniePaid garde chaque vœu payé, quoi qu'il arrive aux mondes.
 export const GENIE_PERSISTENT_EFFECT_KINDS: ReadonlySet<string> = new Set([
     "league_level_boost", "casino_uncap", "ace_daily_cap", "attack_cost_extended", "minitel_unlock", "wild_heal",
 ])
@@ -92,3 +113,8 @@ export const GENIE_ONCE_EFFECT_KINDS: ReadonlySet<string> = new Set([
     "force_encounter", "nemesis_challenge", "abundance_curse", "dex_wish_days", "shop_surtax", "shiny_frenzy",
     "ephemeral_shiny_days", "ev_reset_charges", "guaranteed_captures",
 ])
+/** Ce type d'effet est-il connu de CE build (classé ONCE ou PERSISTENT, donc géré par runGenieEffect) ? Un lot ou un vœu
+ *  qui en contient un INCONNU attend le déploiement EN ENTIER : jamais à moitié payé, puis repayé (28/10/2026). */
+export function isKnownGenieEffectKind(kind: string): boolean {
+    return GENIE_ONCE_EFFECT_KINDS.has(kind) || GENIE_PERSISTENT_EFFECT_KINDS.has(kind)
+}

@@ -7,7 +7,7 @@ import { createMonInstance } from "../battle/factory"
 // VŒU « ABONDANCE MAUDITE » (Jacanon) : 1 objet gratuit/jour + attaques ×10 pendant 1 semaine, puis N Daemons du PC
 // deviennent désobéissants (N = objets pris, max 7) — NON DÉTRUITS (flag réversible). Save-safe, gaté par marqueur.
 const arm = () => applyAcceptedGenieWishEffects({ accepted3: true, effect3: JSON.stringify([{ kind: "abundance_curse" }]) })
-const reset = (pc = 0) => hydratePlayer({ reps: 0, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, pc: Array.from({ length: pc }, () => createMonInstance("razmaree", 10, { owned: true })) })
+const reset = (pc = 0) => hydratePlayer({ reps: 0, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [], pc: Array.from({ length: pc }, () => createMonInstance("razmaree", 10, { owned: true })) })
 
 afterEach(() => vi.useRealTimers())
 

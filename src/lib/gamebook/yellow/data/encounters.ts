@@ -227,7 +227,7 @@ const guideGridTypePool = (pool: WildEntry[], run: number): WildEntry[] =>
     // RUN 2 : mottoche RETIRÉE (exclusive à la Grotte) ; Varovental n'apparaît QU'EN run 2 → retirée hors run 2.
     // RUN 3 : Stashex prend sa part des Nouillon (run3NouillonSwap) — miroir EXACT de rollTrainingGrid.
     run === 2 ? pool.filter((e) => e.speciesId !== "mottoche")
-        : run === 3 ? run3NouillonSwap(pool.filter((e) => e.speciesId !== "varovental"))
+        : run === 3 ? run3NouillonSwap(pool.filter((e) => e.speciesId !== "varovental"), RUN3_STASHEX_GRID_SHARE)
         : pool.filter((e) => e.speciesId !== "varovental")
 /** Une entrée peut faire pop l'espèce cible : directement, OU via speciesAtLevel (forme évoluée in situ), sauf noEvolve. */
 /** Sondes de niveau d'une entrée SCALANTE : GUIDE_EVO_PROBES, relevées au plancher d'espèce (levelMin) s'il existe. */
@@ -292,7 +292,11 @@ function guideMatchesRun(target: string, run: number, hideEndgame: boolean): Gui
 }
 /** Formate un taux en % (une décimale sous 1 % pour les pépites ; entier au-dessus). */
 const fmtPct = (p: number): string => `≈${p >= 1 ? Math.round(p) : p.toFixed(1)}%`
-export interface CaptureGuide { where: string[]; how: string[]; note: string | null }
+export interface CaptureGuide {
+    where: string[]; how: string[]; note: string | null
+    /** Repli sur un pré-évolué : l'espèce RÉELLEMENT décrite par where/how (ex. Dracominus pour Thanadrak). */
+    fromId?: string
+}
 /** Guide « où/quand/comment » d'un Daemon POUR UNE RUN donnée (1/2/3). hideEndgame masque les zones post-Ligue
  *  (run 1 avant la Ligue). Ne renvoie QUE des localisations de cette run → chaque mode du Daemomaniaque reste cohérent. */
 // ÉCLAIREUR (PNJ 7) → localisation PRÉCISE des Daemons de la Grotte Puzzle : coord de l'ÉCHELLE qui débouche dans
@@ -384,7 +388,13 @@ export function captureGuide(speciesId: string, run: number = 1, hideEndgame: bo
         if (preEvo) {
             const base = captureGuide(preEvo.id, run, hideEndgame, champion, eclaireurBeaten, fun)
             if (base.where.length > 0 || base.how.length > 0) {
-                return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${preEvo.name} (ci-dessus) puis fais-le évoluer.` }
+                // Nommer l'espèce que la fiche décrit VRAIMENT (la base, deux crans plus bas pour un stade final) — avant, Thanadrak
+                //   renvoyait à « Spectragon (ci-dessus) » alors que le lieu affiché était celui de Dracominus.
+                const fromId = base.fromId ?? preEvo.id
+                let steps = 0 // nombre RÉEL d'évolutions de la base jusqu'à ce Daemon (lignées longues : jusqu'à 8)
+                for (let cur = getSpecies(fromId); cur && cur.id !== sp.id && steps < 12; steps++) cur = cur.evolution?.toId ? getSpecies(cur.evolution.toId) : null
+                const times = steps <= 1 ? "" : steps === 2 ? " deux fois" : ` ${steps} fois`
+                return { where: base.where, how: base.how, note: `${sp.name} n'est pas capturable directement : obtiens ${getSpecies(fromId)?.name ?? preEvo.name} (ci-dessus) puis fais-le évoluer${times}.`, fromId }
             }
         }
         return { where: [], how: [], note: `${sp.name} ne se croise pas dans cette run — cadeau, boss, ou pas encore accessible.` }
@@ -1010,14 +1020,19 @@ const NGPLUS_ZONES: Record<string, Zone> = {
 // RUN 3 — STASHEX (création de Tom, PSY) apparaît À LA PLACE DE NOUILLON (Sartay, 27/10/2026). Une part
 //   RUN3_STASHEX_SHARE du poids de CHAQUE entrée Nouillon du run 3 passe à Stashex, mêmes niveaux et mêmes règles
 //   (le stade suit le niveau : StasHex dès 16, StasHEX dès 34). 0,1 = un Nouillon sur dix devient un Stashex → RARE.
-//   1 = remplacement TOTAL (Nouillon disparaît du run 3). Appliqué aux pools RUN3_ZONES (Centrale, Route Nord) et au
-//   carré PSY des Hautes Herbes (rollTrainingGrid + guideGridTypePool) → le jeu et le Daemomaniaque restent alignés.
+//   1 = remplacement TOTAL (Nouillon disparaît du run 3). Appliqué aux pools RUN3_ZONES (Centrale, Route Nord). Le carré
+//   PSY des Hautes Herbes a sa propre part, RUN3_STASHEX_GRID_SHARE (3 %), dans rollTrainingGrid ET guideGridTypePool →
+//   le jeu et le Daemomaniaque restent alignés.
 export const RUN3_STASHEX_SHARE = 0.1
-function run3NouillonSwap(pool: WildEntry[]): WildEntry[] {
-    if (RUN3_STASHEX_SHARE <= 0) return pool
+/** Part du CARRÉ PSY des Hautes Herbes : Nouillon y est seul au run 3, sa part y vaut donc le taux de rencontre.
+ *  Plafonnée à 3 % (Sartay, 28/10/2026 : « stashex : 3 % du carré psy max ! ») ; la Centrale et la Route Nord gardent
+ *  RUN3_STASHEX_SHARE. */
+export const RUN3_STASHEX_GRID_SHARE = 0.03
+function run3NouillonSwap(pool: WildEntry[], share = RUN3_STASHEX_SHARE): WildEntry[] {
+    if (share <= 0) return pool
     return pool.flatMap((e): WildEntry[] => e.speciesId !== "nouillon" ? [e]
-        : RUN3_STASHEX_SHARE >= 1 ? [{ ...e, speciesId: "stashex" }]
-        : [{ ...e, base: e.base * (1 - RUN3_STASHEX_SHARE) }, { ...e, speciesId: "stashex", base: e.base * RUN3_STASHEX_SHARE }])
+        : share >= 1 ? [{ ...e, speciesId: "stashex" }]
+        : [{ ...e, base: e.base * (1 - share) }, { ...e, speciesId: "stashex", base: e.base * share }])
 }
 
 // ═══════════════ RENCONTRES DU RUN 3 (concours) ═══════════════
@@ -1059,9 +1074,10 @@ const RUN3_ZONES: Record<string, Zone> = {
             // PHOÉCHAUD (création Guillaume, phénix maudit FEU/SPECTRE) — capturable au STADE 1 puis évolution (22→40).
             // Ajouté ici (choix Sartay 03/08) pour rendre la lignée complétable au dex. levelRange bas = garantit la base.
             { speciesId: "phoechaudi", base: 3, levelRange: [12, 18], captureMult: 0.5 },
-            // SPECTRAGON (stade 2 de Dracominus, création de Rob) — ULTRA-RARE (27/10/2026, Sartay) : ~0,5 % (0,34/67,34).
-            //   Toujours Spectragon (noEvolve), jamais sous son niveau d'évolution (22, levelMin au-dessus des caps).
-            { speciesId: "spectragon", base: 0.34, noEvolve: true, rare: true, levelMin: 22 },
+            // DRACOMINUS (base de la lignée Dracominus → Spectragon → Thanadrak, création de Rob) — ULTRA-RARE : ~0,5 %
+            //   (0,34/67,34). Spectragon y poppait le 27/10/2026 ; Sartay a préféré la BASE le 28/10 (« ok pour la base 1 »).
+            //   Toujours au stade 1 (noEvolve), sous son niveau d'évolution (22) : niv 15-21, comme Possyl.
+            { speciesId: "dracominus", base: 0.34, noEvolve: true, levelRange: [15, 21] },
             // CRÉATIONS (Guizer & Shady) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
         ],
     },
@@ -1076,8 +1092,10 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
             // JOEYRRANT (création de Jacanon), déplacé du manoir du run 2 (27/10/2026, Sartay : « toujours minimum au niveau
             //   Wallabisan, en mode rare ») : la lignée entre au stade WALLABISAN (Ténèbres/Glace), jamais sous le niv 22
-            //   (levelMin, au-dessus des caps) ; Kangoudead dès 40. ~6,5 % (2/31) ; `rare` = un cran au-dessus du lead.
-            { speciesId: "wallabisan", base: 2, rare: true, levelMin: 22 },
+            //   (levelMin, au-dessus des caps) ; Kangoudead dès 40. `rare` = un cran au-dessus du lead.
+            //   28/10/2026 (Sartay : « super bas, une fois sur 100 ! ») : ~0,7 % (0,2/29,2), et 1 % au plus la nuit en mode fun
+            //   (Ténèbres/Glace ×1,5) → jamais plus d'une rencontre sur 100. Il sortait à ~6,5 % (2/31), jusqu'à 9 % la nuit en fun.
+            { speciesId: "wallabisan", base: 0.2, rare: true, levelMin: 22 },
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→
@@ -1435,7 +1453,7 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const pool0 = (ctx.ngplus
         ? (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "mottoche")
         : (tg.typePools[type] ?? []).filter((e) => e.speciesId !== "varovental"))
-    const pool = ctx.run3 ? run3NouillonSwap(pool0) : pool0 // RUN 3 : Stashex prend sa part des Nouillon (miroir de guideGridTypePool)
+    const pool = ctx.run3 ? run3NouillonSwap(pool0, RUN3_STASHEX_GRID_SHARE) : pool0 // RUN 3 : Stashex prend sa part des Nouillon, 3 % du carré (miroir de guideGridTypePool)
     if (pool.length === 0) return null
     // ⚠️ Même filtre `blockedSpecies` que le roll de zone : sinon les lignées « meme » de clan (couperin/COMBAT,
     //   plumiot/VOL, mottoche & sa lignée/ROCHE) leakent dans la grille d'entraînement pour un joueur du mauvais clan

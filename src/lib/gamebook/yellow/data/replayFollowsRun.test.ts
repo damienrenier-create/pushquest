@@ -171,6 +171,6 @@ describe("câblage : le contenu suit le run rejoué, l'économie réelle reste s
         expect(read("src/lib/gamebook/yellow/store/clanChief.ts")).toContain("if (effectiveRunWorld() !== \"run3\" && lvl > CLAN_ENERGY_GIFT_LEVEL")
         const ps = read("src/lib/gamebook/yellow/store/playerStore.ts")
         expect(ps).toContain("const inRun3 = effectiveRunWorld() === \"run3\" // run 3 ET rejeu du run 3 : même sceau")
-        expect(ps).toContain("if (getActiveWorld() === \"replay\" && !elsewhere) continue") // vœux NEUFS : attendent un vrai monde
+        expect(ps).toContain("if ((getActiveWorld() === \"replay\" || worldMayBeDiscarded()) && !elsewhere) return") // vœux NEUFS : attendent un vrai monde (bulle, ou run 2 encore abandonnable)
     })
 })

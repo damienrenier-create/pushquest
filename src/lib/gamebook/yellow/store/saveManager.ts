@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
+import { setGeniePaid, removeGeniePaid, reapplyGenieWishes, setWorldMayBeDiscardedCheck, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, markGenieArcSeen, restoreDurableWishState, isDurableWishMarker, GENIE_CATCH_PREFIX, ABUNDANCE_CURSE_MARKER, type DurableWishState, genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -14,6 +14,7 @@ import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 import { giftNoteLines } from "../data/energyGiftNote"
 import { migrateBoatBadge, withImpliedAncre } from "../data/boatArena"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
+import { isGeniePaidMarker, genieExtMarker, GENIE_TRAINER_ID, LAMP_RUBBED_MARKER, LAMP_ITEM_ID } from "../data/genieLamp"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
@@ -46,6 +47,86 @@ export function markerInOtherWorld(marker: string): boolean {
     return altProfilesStash.some((p) => { const q = p as unknown as Record<string, unknown>; return has(q) || has(q?.ngplusWorld) || has(q?.run3World) || has(q?.replayWorld) })
 }
 setOtherWorldMarkerCheck(markerInOtherWorld)
+// RUN 2 encore abandonnable : un vœu NEUF, un lot d'effets ou un cadeau d'énergie y attendent (payés là, ils disparaîtraient
+//   avec le monde jeté). canAbandonNgplus est lu à l'appel (déclaré plus bas).
+setWorldMayBeDiscardedCheck(() => canAbandonNgplus())
+/** 🧞 VŒUX PAYÉS — registre GLOBAL au compte reconstitué depuis une save : son champ geniePaid + les marqueurs genie_fx* de
+ *  TOUS ses mondes (run 1 à plat, run 2, run 3, bulle) et de ses profils inactifs. Les saves d'avant le registre (28/10/2026)
+ *  sont ainsi rétro-remplies : aucun vœu déjà versé n'est repayé. */
+export function geniePaidOfSave(save: YellowSave): string[] {
+    const out = new Set<string>()
+    const scan = (w: unknown, depth: number) => {
+        if (!w || typeof w !== "object" || depth > 3) return
+        const o = w as Record<string, unknown>
+        for (const k of ["geniePaid", "defeatedTrainers"]) {
+            const a = o[k]
+            if (Array.isArray(a)) for (const m of a) if (typeof m === "string" && isGeniePaidMarker(m)) out.add(m)
+        }
+        for (const k of ["ngplusWorld", "run3World", "replayWorld"]) scan(o[k], depth + 1)
+        if (Array.isArray(o.altProfiles)) for (const p of o.altProfiles) scan(p, depth + 1)
+    }
+    scan(save, 0)
+    return [...out]
+}
+/** Parcourt une save ENTIÈRE : son monde à plat, ses mondes imbriqués (run 2, run 3, bulle) et ses profils inactifs. */
+function eachWorldOfSave(save: unknown, visit: (w: Record<string, unknown>) => void): void {
+    const walk = (w: unknown, depth: number) => {
+        if (!w || typeof w !== "object" || depth > 3) return
+        const o = w as Record<string, unknown>
+        visit(o)
+        for (const k of ["ngplusWorld", "run3World", "replayWorld"]) walk(o[k], depth + 1)
+        if (Array.isArray(o.altProfiles)) for (const p of o.altProfiles) walk(p, depth + 1)
+    }
+    walk(save, 0)
+}
+const markersOf = (w: Record<string, unknown>): string[] => Array.isArray(w.defeatedTrainers) ? w.defeatedTrainers.filter((m): m is string => typeof m === "string") : []
+/** 🧞 COLPORTEUR DU GÉNIE déjà rencontré, n'importe où sur le compte (drapeau, colporteur battu, lampe frottée) : l'embuscade
+ *  ne se rejoue ni dans un nouveau run, ni dans un rejeu, ni dans un nouveau profil. Avant le 28/10/2026, le drapeau était lu
+ *  dans le monde seul : une save d'avant le drapeau (colporteur battu, drapeau absent) rouvrait l'embuscade dans tout monde neuf. */
+export function genieArcSeenOfSave(save: YellowSave): boolean {
+    let seen = false
+    eachWorldOfSave(save, (w) => { if (w.genieArcSeen === true || markersOf(w).some((m) => m === GENIE_TRAINER_ID || m === LAMP_RUBBED_MARKER)) seen = true })
+    return seen
+}
+
+/** 🧞 VŒUX QUI DURENT (Sartay 28/10/2026 : « … sauf évidemment si c'est un vœu qui dure dans le temps ») : leur état (charges,
+ *  durée) vit dans UN monde. Un monde neuf (run 2, run 3, bulle de rejeu) n'en reçoit pas de copie : le vœu y est en PAUSE et
+ *  reprend au retour, sans charge consommée deux fois. Fusion, abandon du run 2 et remise à zéro le CONSERVENT : on complète
+ *  `into` avec l'état de `from` là où `into` n'en a pas (jamais d'écrasement, jamais de somme). */
+export function withDurableWishesFrom(into: YellowSave, from: YellowSave | null | undefined): YellowSave {
+    if (!from) return into
+    const out: YellowSave = { ...into }
+    if (!out.evResetCharges && from.evResetCharges) out.evResetCharges = from.evResetCharges
+    if (!out.shinyWish && from.shinyWish) out.shinyWish = from.shinyWish
+    if (!out.dexWish && from.dexWish) out.dexWish = from.dexWish
+    // Fenêtres DATÉES : une fenêtre échue compte comme absente (sinon elle masquerait celle qui court encore).
+    const now = Date.now()
+    if (!(out.shinyFrenzy && out.shinyFrenzy.until > now) && from.shinyFrenzy && from.shinyFrenzy.until > now) out.shinyFrenzy = from.shinyFrenzy
+    if (!(out.shopSurtax && out.shopSurtax.until > now) && from.shopSurtax && from.shopSurtax.until > now) out.shopSurtax = from.shopSurtax
+    if (!out.forcedEncounter && isWishEncounter(from.forcedEncounter)) out.forcedEncounter = from.forcedEncounter
+    if (!out.ballLockRemaining && from.ballLockRemaining) out.ballLockRemaining = from.ballLockRemaining
+    if (!out.curseAbundanceStart && from.curseAbundanceStart) {
+        out.curseAbundanceStart = from.curseAbundanceStart; out.curseFreeItemsTaken = from.curseFreeItemsTaken; out.curseFreeItemDate = from.curseFreeItemDate
+    }
+    const dt = out.defeatedTrainers ?? [], fromDt = from.defeatedTrainers ?? []
+    const add: string[] = []
+    if (!dt.some((m) => m.startsWith(GENIE_CATCH_PREFIX))) { const c = fromDt.find((m) => m.startsWith(GENIE_CATCH_PREFIX)); if (c) add.push(c) }
+    for (const m of fromDt) if (!m.startsWith(GENIE_CATCH_PREFIX) && isDurableWishMarker(m) && !dt.includes(m) && !add.includes(m)) add.push(m) // malédiction, casino, défi némésis, sceaux
+    if (add.length) out.defeatedTrainers = casinoLiftWins([...dt, ...add])
+    if (!out.genieArcSeen && from.genieArcSeen) out.genieArcSeen = true // colporteur rencontré : vaut pour tout le compte
+    return out
+}
+/** Rencontre imposée PAR UN VŒU (ou le dex wish) : la rencontre Galijah, propre à une partie (≥ 200 espèces), n'en est pas une. */
+function isWishEncounter(enc: string | undefined): enc is string { return !!enc && !enc.includes('"galijah"') }
+const durableWishStateOf = (w: YellowSave): DurableWishState => ({
+    evResetCharges: w.evResetCharges, shinyWish: w.shinyWish, dexWish: w.dexWish, shinyFrenzy: w.shinyFrenzy, shopSurtax: w.shopSurtax,
+    forcedEncounter: isWishEncounter(w.forcedEncounter) ? w.forcedEncounter : undefined, curseAbundanceStart: w.curseAbundanceStart, curseFreeItemsTaken: w.curseFreeItemsTaken,
+    curseFreeItemDate: w.curseFreeItemDate, ballLockRemaining: w.ballLockRemaining, markers: (w.defeatedTrainers ?? []).filter(isDurableWishMarker),
+})
+/** Plafond casino : une LEVÉE posée dans l'un des mondes l'emporte sur le plafond venu de l'autre (union des marqueurs). */
+const casinoLiftWins = (dt: string[]): string[] => dt.includes(CASINO_UNCAPPED_MARKER) ? dt.filter((m) => m !== CASINO_RESTRICTED_MARKER) : dt
+/** Un seul compteur de captures garanties (genie_catch_<n>) après une union de marqueurs : le premier (monde gagnant). */
+const oneCatchMarker = (dt: string[]): string[] => { let seen = false; return dt.filter((m) => !m.startsWith(GENIE_CATCH_PREFIX) || (seen ? false : (seen = true))) }
 // MULTI-PROFILS : profils COMPLETS inactifs (chacun un YellowSave à part entière). Le profil ACTIF vit dans les
 // stores + les 3 slots ci-dessus ; les AUTRES profils sont stashés ici, OPAQUES, réémis tels quels par snapshot.
 let altProfilesStash: YellowSave[] = []
@@ -104,8 +185,19 @@ export function applyServerSave(save: YellowSave): void {
     if (aw === "ngplus") activeData.items = fixNgplusFusioBalls(activeData.items ?? {})
     // PALIER PLATINE : quiconque a déjà bouclé l'OR voit la porte du trône s'ouvrir, sans refaire la Ligue.
     activeData.defeatedTrainers = openPlatineIfOrCleared(activeData.defeatedTrainers ?? [])
+    // 🧞 COLPORTEUR déjà rencontré sur le compte : le drapeau vaut pour TOUS les mondes (stashes compris → une bascule ne le perd
+    //   pas), et un monde ou un profil sans lampe la reçoit (sans elle, impossible de trancher un futur tour de vœux).
+    const arcSeen = genieArcSeenOfSave(save)
+    if (arcSeen) {
+        if (liveStash) liveStash = { ...liveStash, genieArcSeen: true }
+        if (ngplusStash) ngplusStash = { ...ngplusStash, genieArcSeen: true }
+        if (run3Stash) run3Stash = { ...run3Stash, genieArcSeen: true }
+        if (!((activeData.items ?? {})[LAMP_ITEM_ID] > 0)) activeData.items = { ...(activeData.items ?? {}), [LAMP_ITEM_ID]: 1 }
+    }
     // Run 3 (et son rejeu) : plafond d'énergie FIXE (paliers d'arène) → la reprise du badge ANCRE n'y ajoute pas de plafond.
     hydrateFromWorld(activeData, save.customDaemons, aw === "run3" || (aw === "replay" && save.replayRun === "run3"), save.thief ?? null) // customDaemons + thief GLOBAUX (haut niveau)
+    setGeniePaid(geniePaidOfSave(save)) // 🧞 vœux payés : GLOBAL, depuis la save seule (jamais la mémoire : un 409 ne doit rien « payer » de fantôme)
+    if (arcSeen) markGenieArcSeen() // 🧞 colporteur déjà rencontré sur le compte → l'embuscade ne se rejoue nulle part
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
     // RÉCONCILIATION Pokédex ← Daemons POSSÉDÉS : un Daemon DONNÉ (starter, échange) ne passe pas par la capture
@@ -230,7 +322,17 @@ async function claimFirstFeats(): Promise<void> {
 }
 
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
-export async function loadYellowSave(): Promise<void> {
+let loadInFlight: Promise<void> | null = null
+/** Chargement initial. Deux appels CONCURRENTS (ex. rechargement en Ligue de Fusion : deux effets de montage) partagent la MÊME
+ *  promesse — avant le 28/10/2026, le 2e passait la garde `loaded` (posée seulement après le GET) et créditait une 2e fois le
+ *  cadeau d'énergie et les effets en attente. */
+export function loadYellowSave(): Promise<void> {
+    if (loadInFlight) return loadInFlight
+    if (loaded) return Promise.resolve()
+    loadInFlight = loadYellowSaveOnce().finally(() => { loadInFlight = null })
+    return loadInFlight
+}
+async function loadYellowSaveOnce(): Promise<void> {
     if (loaded) return // idempotent : déjà chargé (ex. on arrive sur la page Pokédex en nav interne) → on garde l'état mémoire À JOUR au lieu de réécraser avec la DB (qui peut être en retard du débounce).
     try {
         const r = await fetch("/api/gamebook/yellow/save")
@@ -272,22 +374,28 @@ export async function loadYellowSave(): Promise<void> {
               pendingGiftNote = { raw, lines: giftNoteLines(raw) } }
             // 🧞 EFFETS MACHINE EN ATTENTE (canal générique : un cadeau de vœu SANS slot de vœu, ex. Jacanon). Même
             //   ordre anti-perte que le don d'énergie : on APPLIQUE, on PERSISTE, puis seulement on ACQUITTE (CAS sur
-            //   le texte exact). Un effet inconnu du build → non acquitté → retenté après déploiement (effets idempotents).
+            //   le texte exact). Un effet inconnu du build → rien d'appliqué, non acquitté → retenté après déploiement. Un lot
+            //   déjà appliqué (empreinte au registre des vœux payés) est seulement ré-acquitté, jamais reversé (28/10/2026).
             //   Jamais en run 3 (énergie source unique, fenêtre de shiny hors sujet).
             {
                 const rawFx = typeof j?.ctx?.pendingEffects === "string" ? j.ctx.pendingEffects : ""
                 // Seulement dans un VRAI monde (run 1 / run 2) : appliqués dans une bulle de rejeu, ils seraient acquittés
                 //   puis PERDUS avec la bulle (seuls les Daemons choisis en reviennent). En run 3 / rejeu → ils attendent.
-                if (rawFx && (getActiveWorld() === "live" || getActiveWorld() === "ngplus") && applyExternalEffects(rawFx)) {
+                //   Run 2 encore abandonnable (premiers combats) : ils attendent aussi — appliqués puis jetés avec le monde, ils
+                //   seraient acquittés et perdus (28/10/2026).
+                if (rawFx && !canAbandonNgplus() && (getActiveWorld() === "live" || getActiveWorld() === "ngplus") && applyExternalEffects(rawFx)) {
                     const savedFx = await persistNow()
                     if (savedFx) {
                         try {
-                            await fetch("/api/gamebook/yellow/energy-grant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ effects: rawFx }) })
-                        } catch { /* non acquitté → ré-appliqué au prochain chargement (inoffensif) */ }
+                            const ack = await fetch("/api/gamebook/yellow/energy-grant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ effects: rawFx }) })
+                            // ACQUITTÉ : l'empreinte n'a plus d'objet → un futur lot au texte identique sera versé normalement.
+                            const aj = ack.ok ? await ack.json().catch(() => null) : null
+                            if (aj?.effectsConsumed) { removeGeniePaid(genieExtMarker(rawFx)); persistYellowSave() }
+                        } catch { /* non acquitté → ré-acquitté au prochain chargement, sans être réappliqué (registre) */ }
                     }
                 }
             }
-            if (shouldCreditEnergyGrant(grantAmt, getActiveWorld())) {
+            if (shouldCreditEnergyGrant(grantAmt, getActiveWorld()) && !canAbandonNgplus()) { // run 2 encore abandonnable : le cadeau attend (sinon perdu avec le monde)
                 const pBefore = getPlayer()
                 const prevReps = pBefore.reps, prevCap = pBefore.repsCap // capturé AVANT crédit → rollback exact (reps+cap)
                 const credited = creditReps(grantAmt) // live/ngplus garanti → renvoie grantAmt
@@ -321,7 +429,7 @@ export async function loadYellowSave(): Promise<void> {
 function activeWorldSave(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, casinoSpentToday: p.casinoSpentToday, pastaDayBonus: p.pastaDayBonus, domeChampionships: p.domeChampionships, pokedex: { seen: d.seen, caught: d.caught, seenAt: d.seenAt, firstCatch: d.firstCatch }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, champBattlesToday: p.champBattlesToday ?? 0, consultsToday: p.consultsToday ?? 0, archivisteMatchesToday: p.archivisteMatchesToday ?? 0, archivisteWinsToday: p.archivisteWinsToday ?? 0, badgeRepsClaimed: p.badgeRepsClaimed ?? [], badgeRepsToday: p.badgeRepsToday ?? 0, comparisonConsultsToday: p.comparisonConsultsToday ?? 0, sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? 0, ananasLastBadgeCount: p.ananasLastBadgeCount ?? 0, ananasDate: p.ananasDate ?? "", ananasPeakLevel: p.ananasPeakLevel ?? 0, capturesToday: p.capturesToday ?? 0, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, domeStats: p.domeStats, towerStats: p.towerStats, factoryStats: p.factoryStats, domeTierRecord: p.domeTierRecord ?? {}, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, leagueSixShiny: p.leagueSixShiny, mirrorWinHigherLevel: p.mirrorWinHigherLevel, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, chenGiftClaims: p.chenGiftClaims, funDefis: p.funDefis, achTrack: p.achTrack, pnj5Wins: p.pnj5Wins, ngplusBattles: p.ngplusBattles, moveReminderUses: p.moveReminderUses, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, casinoNetToday: p.casinoNetToday ?? 0, casinoNetDate: p.casinoNetDate ?? "", spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, run3Used: p.run3Used, ngplusMaitreBeaten: p.ngplusMaitreBeaten, run3StarterBase: p.run3StarterBase, ngplusStarterBase: p.ngplusStarterBase, genieArcSeen: p.genieArcSeen, genesisMode: p.genesisMode, run3Defeated: p.run3Defeated, run3EnergyByArena: p.run3EnergyByArena, caughtThisRun: p.caughtThisRun, seenThisRun: p.seenThisRun, fichesUnlockedThisRun: p.fichesUnlockedThisRun, collectionneurDexGiven: p.collectionneurDexGiven, fusionRoster: p.fusionRoster, fusionNames: p.fusionNames, fusionMoveOrders: p.fusionMoveOrders, fusionTypeChoices: p.fusionTypeChoices, fusionHistory: p.fusionHistory, energyLog: p.energyLog, messageLog: p.messageLog, run3LavapetitSeen: p.run3LavapetitSeen, run3LavapetitCaught: p.run3LavapetitCaught, mimimoyReturned: p.mimimoyReturned, mimimoyAppearances: p.mimimoyAppearances, ballLockRemaining: p.ballLockRemaining, evResetCharges: p.evResetCharges, shinyWish: p.shinyWish, dexWish: p.dexWish, galijahDaily: p.galijahDaily, shinyFrenzy: p.shinyFrenzy, shopSurtax: p.shopSurtax, luxeOutcomeQueue: p.luxeOutcomeQueue, bertieOutcomeQueue: p.bertieOutcomeQueue, forcedEncounter: p.forcedEncounter, fusionLeagueCarry: p.fusionLeagueCarry, curseAbundanceStart: p.curseAbundanceStart, curseFreeItemsTaken: p.curseFreeItemsTaken, curseFreeItemDate: p.curseFreeItemDate, potionBuysToday: p.potionBuysToday, jcEnergyBuysToday: p.jcEnergyBuysToday, casinoCapToday: p.casinoCapToday, fusionLeagueDefeats: p.fusionLeagueDefeats, grotteShopBuys: p.grotteShopBuys, chosenAvatar: p.chosenAvatar, clan: p.clan, clanDaemonUid: p.clanDaemonUid, clanCtGiven: p.clanCtGiven, clanTransGiven: p.clanTransGiven, clanVisitDate: p.clanVisitDate, clanTrainByClan: p.clanTrainByClan, craftedItems: p.craftedItems, craftsUsed: p.craftsUsed, craftReady: p.craftReady, megaInLigue: p.megaInLigue, fusionLeagueTryDate: p.fusionLeagueTryDate, fusionChampionRoster: p.fusionChampionRoster, fusionChampionAvatar: p.fusionChampionAvatar, thief: p.thief ?? null, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, casinoSpentToday: p.casinoSpentToday, pastaDayBonus: p.pastaDayBonus, domeChampionships: p.domeChampionships, pokedex: { seen: d.seen, caught: d.caught, seenAt: d.seenAt, firstCatch: d.firstCatch }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, champBattlesToday: p.champBattlesToday ?? 0, consultsToday: p.consultsToday ?? 0, archivisteMatchesToday: p.archivisteMatchesToday ?? 0, archivisteWinsToday: p.archivisteWinsToday ?? 0, badgeRepsClaimed: p.badgeRepsClaimed ?? [], badgeRepsToday: p.badgeRepsToday ?? 0, comparisonConsultsToday: p.comparisonConsultsToday ?? 0, sageSaiyanPointsToday: p.sageSaiyanPointsToday ?? 0, ananasLastBadgeCount: p.ananasLastBadgeCount ?? 0, ananasDate: p.ananasDate ?? "", ananasPeakLevel: p.ananasPeakLevel ?? 0, capturesToday: p.capturesToday ?? 0, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, domeStats: p.domeStats, towerStats: p.towerStats, factoryStats: p.factoryStats, domeTierRecord: p.domeTierRecord ?? {}, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, leagueSixShiny: p.leagueSixShiny, mirrorWinHigherLevel: p.mirrorWinHigherLevel, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, chenGiftClaims: p.chenGiftClaims, funDefis: p.funDefis, achTrack: p.achTrack, pnj5Wins: p.pnj5Wins, ngplusBattles: p.ngplusBattles, moveReminderUses: p.moveReminderUses, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, casinoNetToday: p.casinoNetToday ?? 0, casinoNetDate: p.casinoNetDate ?? "", spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, run3Used: p.run3Used, ngplusMaitreBeaten: p.ngplusMaitreBeaten, run3StarterBase: p.run3StarterBase, ngplusStarterBase: p.ngplusStarterBase, genieArcSeen: p.genieArcSeen, geniePaid: p.geniePaid ?? [], genesisMode: p.genesisMode, run3Defeated: p.run3Defeated, run3EnergyByArena: p.run3EnergyByArena, caughtThisRun: p.caughtThisRun, seenThisRun: p.seenThisRun, fichesUnlockedThisRun: p.fichesUnlockedThisRun, collectionneurDexGiven: p.collectionneurDexGiven, fusionRoster: p.fusionRoster, fusionNames: p.fusionNames, fusionMoveOrders: p.fusionMoveOrders, fusionTypeChoices: p.fusionTypeChoices, fusionHistory: p.fusionHistory, energyLog: p.energyLog, messageLog: p.messageLog, run3LavapetitSeen: p.run3LavapetitSeen, run3LavapetitCaught: p.run3LavapetitCaught, mimimoyReturned: p.mimimoyReturned, mimimoyAppearances: p.mimimoyAppearances, ballLockRemaining: p.ballLockRemaining, evResetCharges: p.evResetCharges, shinyWish: p.shinyWish, dexWish: p.dexWish, galijahDaily: p.galijahDaily, shinyFrenzy: p.shinyFrenzy, shopSurtax: p.shopSurtax, luxeOutcomeQueue: p.luxeOutcomeQueue, bertieOutcomeQueue: p.bertieOutcomeQueue, forcedEncounter: p.forcedEncounter, fusionLeagueCarry: p.fusionLeagueCarry, curseAbundanceStart: p.curseAbundanceStart, curseFreeItemsTaken: p.curseFreeItemsTaken, curseFreeItemDate: p.curseFreeItemDate, potionBuysToday: p.potionBuysToday, jcEnergyBuysToday: p.jcEnergyBuysToday, casinoCapToday: p.casinoCapToday, fusionLeagueDefeats: p.fusionLeagueDefeats, grotteShopBuys: p.grotteShopBuys, chosenAvatar: p.chosenAvatar, clan: p.clan, clanDaemonUid: p.clanDaemonUid, clanCtGiven: p.clanCtGiven, clanTransGiven: p.clanTransGiven, clanVisitDate: p.clanVisitDate, clanTrainByClan: p.clanTrainByClan, craftedItems: p.craftedItems, craftsUsed: p.craftsUsed, craftReady: p.craftReady, megaInLigue: p.megaInLigue, fusionLeagueTryDate: p.fusionLeagueTryDate, fusionChampionRoster: p.fusionChampionRoster, fusionChampionAvatar: p.fusionChampionAvatar, thief: p.thief ?? null, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null }
 }
 
 /** RÉASSEMBLE les 3 mondes → une save unique. Les champs PLATS = monde LIVE/run 1 (TOUJOURS, garde-fou
@@ -334,21 +442,23 @@ export function snapshot(): YellowSave {
     const berryKnown = getPlayer().berrySecretKnown // BAIES : secret GLOBAL — une fois appris, écrit dans TOUS les mondes
     const givenGlobal = getPlayer().collectionneurDexGiven // L'ARCHIVISTE : dex offert = GLOBAL → répliqué dans tous les mondes
     const claimedGlobal = getPlayer().badgeRepsClaimed ?? [] // HAUTS FAITS : trophées payés = GLOBAL → répliqués partout (jamais re-payés)
+    const paidGlobal = getPlayer().geniePaid ?? [] // 🧞 VŒUX PAYÉS : GLOBAL au compte → écrit au haut niveau ET dans chaque monde
     // ARTISANE : compteur À VIE + forge prête = GLOBAUX → même valeur écrite dans TOUS les mondes (comme customDaemons),
     // sinon le plafond se réinitialiserait à chaque bascule de run. (craftedItems reste PER-MONDE : lié aux uid du run.)
     const craftsUsed = getPlayer().craftsUsed
     const craftReady = getPlayer().craftReady
     const aw = getActiveWorld()
     // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
+    const arcGlobal = getPlayer().genieArcSeen === true // 🧞 colporteur rencontré : GLOBAL au compte → recopié dans chaque monde
     const norm = (w: YellowSave | null): YellowSave | null =>
-        w ? { ...w, thief: thiefGlobal, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught], seenAt: pdx.seenAt, firstCatch: pdx.firstCatch }, berrySecretKnown: w.berrySecretKnown || berryKnown, collectionneurDexGiven: w.collectionneurDexGiven || givenGlobal, badgeRepsClaimed: [...new Set([...(w.badgeRepsClaimed ?? []), ...claimedGlobal])], customDaemons: cds, craftsUsed, craftReady, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, altProfiles: undefined } : null
+        w ? { ...w, thief: thiefGlobal, geniePaid: [...paidGlobal], genieArcSeen: (w.genieArcSeen || arcGlobal) ? true : undefined, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught], seenAt: pdx.seenAt, firstCatch: pdx.firstCatch }, berrySecretKnown: w.berrySecretKnown || berryKnown, collectionneurDexGiven: w.collectionneurDexGiven || givenGlobal, badgeRepsClaimed: [...new Set([...(w.badgeRepsClaimed ?? []), ...claimedGlobal])], customDaemons: cds, craftsUsed, craftReady, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, altProfiles: undefined } : null
     // REJEU : la bulle est ACTIVE (dans les stores) → les 3 mondes réels viennent TOUS de leurs stashes.
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
     const replay = aw === "replay" ? active : null // la bulle n'existe QUE pendant un rejeu
     const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS — même pendant un rejeu (= liveStash)
-    return { ...flat, customDaemons: cds, thief: thiefGlobal, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn(), altProfiles: altProfilesStash.length ? altProfilesStash : undefined }
+    return { ...flat, customDaemons: cds, geniePaid: [...paidGlobal], thief: thiefGlobal, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn(), altProfiles: altProfilesStash.length ? altProfilesStash : undefined }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
@@ -389,6 +499,9 @@ async function persistIntentionalReset(): Promise<void> {
  *  garde-fou anti-wipe reste actif (les champs plats = monde LIVE inchangés → jamais de fausse régression). */
 async function persistNow(): Promise<boolean> {
     if (!loaded) return false
+    // 🧞 Monde NEUF (run 2, run 3, rejeu, remise à zéro, profil…) : ses perks de vœux permanents sont posés AVANT d'écrire (tout le
+    //   reste est déjà payé → rien ne se repaie). Sans changement, aucun effet. Avant : absents jusqu'au rechargement suivant.
+    reapplyGenieWishes()
     if (timer) { clearTimeout(timer); timer = null }
     try {
         const r = await fetch("/api/gamebook/yellow/save", {
@@ -481,7 +594,8 @@ export async function abandonNewGamePlus(): Promise<boolean> {
     liveStash = null
     ngplusStash = null
     ngplusOldTeam = null
-    hydrateFromWorld(live, live.customDaemons ?? [])
+    // 🧞 Un VŒU QUI DURE reçu pendant le run 2 (charges, durée) revient au run 1 au lieu de disparaître avec le monde jeté.
+    hydrateFromWorld(withDurableWishesFrom(live, activeWorldSave()), live.customDaemons ?? [])
     setActiveWorld("live")
     reregisterCustomDaemons()
     addItem("daemonflute", 1) // récompense CHEN : la flûte (jamais donnée jusque-là) → Sylvebarbe/Zone de Combat
@@ -512,7 +626,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
     // doivent PAS bloquer la quête Tonytony du monde live — sinon un joueur qui a pris Merorem sans jamais
     // prendre Tonytony resterait verrouillé hors de Tonytony à jamais après la fusion.
     const liveCasino = secondary.labDefi ?? primary.labDefi
-    return {
+    const merged: YellowSave = {
         ...primary,
         pc: [...primary.pc, ...reclaimed],
         pokedex: {
@@ -584,6 +698,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         seenThisRun: uniq([...(primary.seenThisRun ?? []), ...(secondary.seenThisRun ?? [])]),
         fichesUnlockedThisRun: uniq([...(primary.fichesUnlockedThisRun ?? []), ...(secondary.fichesUnlockedThisRun ?? [])]),
         badgeRepsClaimed: uniq([...(primary.badgeRepsClaimed ?? []), ...(secondary.badgeRepsClaimed ?? [])]), // HAUTS FAITS : payés = union (jamais re-payés)
+        geniePaid: uniq([...(primary.geniePaid ?? []), ...(secondary.geniePaid ?? [])]), // 🧞 VŒUX PAYÉS : union (jamais repayés)
         badgeRepsToday: 0, // compteur quotidien → repart à zéro dans le monde fusionné
         berryHarvestDay: "",
         berryHarvestPicked: [],
@@ -606,6 +721,10 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         mimimoyReturned: primary.mimimoyReturned || secondary.mimimoyReturned,
         mimimoyAppearances: Math.max(primary.mimimoyAppearances, secondary.mimimoyAppearances),
         ballLockRemaining: Math.max(primary.ballLockRemaining, secondary.ballLockRemaining), // vœu génie = contrat LIVE, on garde le verrou le plus élevé
+        // 🧞 Pâtes de Luxe / de Bertie : les sacs sont SOMMÉS → les issues garanties des deux mondes aussi (avant, celles du monde
+        //   absorbé — dont le shiny parfait promis par un vœu — disparaissaient à la fusion).
+        luxeOutcomeQueue: [...(primary.luxeOutcomeQueue ?? []), ...(secondary.luxeOutcomeQueue ?? [])].slice(0, 100),
+        bertieOutcomeQueue: [...(primary.bertieOutcomeQueue ?? []), ...(secondary.bertieOutcomeQueue ?? [])].slice(0, 100),
         // FLAGS ONE-TIME MONOTONES : union/OR — sinon ils prennent la valeur (neuve, vide) du monde primary et
         //   RÉSOLVENT ces « uniques » à la fusion : Gékroc réapparaîtrait (duplication d'un unique), Sylvebarbe
         //   re-bloquerait la sortie sud (Zone de Combat re-verrouillée), les dresseurs battus au run 1 mais pas
@@ -616,7 +735,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         // caveTradeDone : sémantique PAR MONDE (run 1 = limaroche→belunode ; run 3 = ruffiant→marmoterre). Après
         //   fusion on est en LIVE → on conserve le statut du troc LIVE = secondary (run 1 dans le merge final).
         caveTradeDone: secondary.caveTradeDone,
-        defeatedTrainers: uniq([...primary.defeatedTrainers, ...secondary.defeatedTrainers]),
+        defeatedTrainers: casinoLiftWins(oneCatchMarker(uniq([...primary.defeatedTrainers, ...secondary.defeatedTrainers]))),
         rematchedTrainers: uniq([...primary.rematchedTrainers, ...secondary.rematchedTrainers]),
         hhSpectresShown: uniq([...primary.hhSpectresShown, ...secondary.hhSpectresShown]),
         hhCollectorWins: Math.max(primary.hhCollectorWins, secondary.hhCollectorWins),
@@ -642,6 +761,9 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         ngplusOldTeam: null,
         run3World: null,
     }
+    // 🧞 VŒUX QUI DURENT du monde absorbé (en pause pendant le run 2 / le run 3) : repris s'ils manquent au monde gagnant —
+    //   avant, charges EV, dex wish, shiny éphémères, surtaxe, malédiction… disparaissaient à la fusion.
+    return withDurableWishesFrom(merged, secondary)
 }
 
 /** NG+ — VICTOIRE au combat de fin de Ligue → FUSION COMPLÈTE des 2 mondes en un seul (le NG+ absorbe la
@@ -685,8 +807,13 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     if (getPlayer().run3Used) return false            // run 3 déjà lancé (one-shot)
     // 1) Stash le run 2 courant (le run 1 est déjà dans liveStash).
     ngplusStash = liveWorldOf(activeWorldSave())
+    // 🧞 Captures garanties restantes (le seul effet de vœu admis au concours) : elles PASSENT au run 3, comme au nouveau
+    //   départ (restartRun3), et quittent le run 2 — sinon la fusion finale les rendrait une 2e fois une fois épuisées au run 3.
+    const catchLeft = genieCatchCharges()
+    if (catchLeft > 0) ngplusStash = { ...ngplusStash, defeatedTrainers: ngplusStash.defeatedTrainers.filter((m) => !m.startsWith(GENIE_CATCH_PREFIX)) }
     // 2) Monde run 3 frais dans les stores (starter, run3Used=true, customDaemons préservés).
     startRun3World(starter)
+    if (catchLeft > 0) setGenieCatchCharges(catchLeft)
     // Baies : le joueur connaît déjà le secret des baies (appris en run 1/2) → récolte dispo dès le run 3.
     // Ressource NON-énergie précieuse dans un run privé de casino/tickets (soin/boost gratuits au combat).
     setBerrySecretKnown()
@@ -927,9 +1054,14 @@ export async function resetYellowChapter(): Promise<void> {
         // SÉCURITÉ : on copie d'abord la save courante dans `history` (best-effort) → un reset reste
         // annulable. Si le backup échoue (hors-ligne), on n'empêche PAS le reset volontaire.
         try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
+        // 🧞 VŒUX : la remise à zéro ne rejoue AUCUN vœu (registre geniePaid conservé par resetForIntro) et n'efface pas ceux
+        //   qui durent : état du monde actif, complété par les mondes en pause (hors bulle de rejeu, qui n'en porte pas).
+        let durable = getActiveWorld() === "replay" ? emptySave() : activeWorldSave()
+        for (const w of [liveStash, ngplusStash, run3Stash]) durable = withDurableWishesFrom(durable, w)
         liveStash = null; ngplusStash = null; run3Stash = null; ngplusOldTeam = null // reset volontaire → efface AUSSI les mondes NG+/run 3
         resetForIntro()
         clearThiefForReset() // 🥷 reset VOLONTAIRE : le Voleur et son larcin repartent à zéro (resetForIntro, lui, conserve l'état)
+        restoreDurableWishState(durableWishStateOf(durable)) // 🧞 les vœux qui durent continuent (ni perdus, ni rejoués)
         hydratePokedex({ seen: [], caught: [] })
         // ÉNERGIE « nouvelle partie » : on re-crédite comme un PREMIER chargement (resetForIntro a remis
         // welcomeGift/spagGift à false et repsBankedTotal à -1) → cadeaux de bienvenue + reps du jour.

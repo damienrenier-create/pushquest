@@ -51,7 +51,7 @@ describe("vœu « captures garanties » (Kingme, 26/10/2026)", () => {
         expect(ydc).toContain("if (!cancelled && j?.wish && applyAcceptedGenieWishEffects(j.wish)) persistYellowSave()")
         const ps2 = read("src/lib/gamebook/yellow/store/playerStore.ts")
         expect(ps2).toContain("export const GENIE_RUN3_ALLOWED_KINDS: ReadonlySet<string> = new Set([\"guaranteed_captures\"])")
-        expect(ps2).toContain("if (inRun3 && !effects.every((e) => GENIE_RUN3_ALLOWED_KINDS.has(e.kind))) continue")
+        expect(ps2).toContain("if (!(archived && elsewhere) && inRun3 && !effects.every((e) => GENIE_RUN3_ALLOWED_KINDS.has(e.kind))) return")
         expect(ps2).not.toContain("if (!row || getActiveWorld() === \"run3\") return false")
         expect(ydc).not.toContain("if (!cancelled && getActiveWorld() !== \"run3\") {\n                try {\n                    const r = await fetch(\"/api/gamebook/yellow/genie-wish\")")
     })

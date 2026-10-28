@@ -28,7 +28,7 @@ import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
-import { LAMP_ITEM_ID, genieFxMarker, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
+import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -229,6 +229,9 @@ interface PlayerState {
     ngplusStarterBase?: string
     /** ARC LAMPE & GÉNIE — colporteur déjà rencontré/battu ? GLOBAL au profil (1 génie/profil, pas par run). */
     genieArcSeen?: boolean
+    /** 🧞 VŒUX DÉJÀ PAYÉS (genieFxMarker) — GLOBAL au compte, jamais vidé : ni par une bascule de monde, ni par un nouveau
+     *  run, ni par la remise à zéro. Cf. YellowSave.geniePaid. */
+    geniePaid?: string[]
     /** MODE GENÈSE — profil « 6 craftés / zéro capture jusqu'à la Ligue de Fusion ». GLOBAL au profil. */
     genesisMode?: boolean
     /** 🥷 LE VOLEUR (Cendreville) — vols commis, jour du dernier vol, Daemon VOLÉ + instantané de l'équipe. GLOBAL au profil
@@ -720,6 +723,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         //   valeur undefined pour un emptySave → efface au lieu de fuiter l'ancien profil via `?? st`).
         ngplusStarterBase: "ngplusStarterBase" in p ? p.ngplusStarterBase : st.ngplusStarterBase,
         genieArcSeen: "genieArcSeen" in p ? p.genieArcSeen : st.genieArcSeen,
+        geniePaid: "geniePaid" in p ? [...(p.geniePaid ?? [])] : (st.geniePaid ?? []), // 🧞 global : clé absente = on garde le registre
         genesisMode: "genesisMode" in p ? p.genesisMode : st.genesisMode,
         thief: "thief" in p ? (p.thief ?? null) : (st.thief ?? null), // 🥷 global au profil (clé fournie = source de vérité)
         run3Defeated: p.run3Defeated ?? st.run3Defeated ?? [],
@@ -738,16 +742,19 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         run3LavapetitCaught: p.run3LavapetitCaught ?? st.run3LavapetitCaught ?? false,
         mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
         mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
-        evResetCharges: p.evResetCharges ?? st.evResetCharges,
-        shinyWish: p.shinyWish ?? st.shinyWish,
-        dexWish: p.dexWish ?? st.dexWish,
+        // 🧞 VŒUX QUI DURENT (charges, durée) : état PAR MONDE → pattern `in` (hydrateFromWorld passe toujours la clé). Avec
+        //   `??`, un monde ou un profil qui n'en avait pas HÉRITAIT de celui en mémoire (28/10/2026 : un profil neuf recevait
+        //   les charges EV, le dex wish, la surtaxe… de l'ancien, qui les gardait aussi → vœu vécu deux fois).
+        evResetCharges: "evResetCharges" in p ? p.evResetCharges : st.evResetCharges,
+        shinyWish: "shinyWish" in p ? p.shinyWish : st.shinyWish,
+        dexWish: "dexWish" in p ? p.dexWish : st.dexWish,
         galijahDaily: p.galijahDaily ?? st.galijahDaily,
-        shinyFrenzy: p.shinyFrenzy ?? st.shinyFrenzy,
-        shopSurtax: p.shopSurtax ?? st.shopSurtax,
+        shinyFrenzy: "shinyFrenzy" in p ? p.shinyFrenzy : st.shinyFrenzy,
+        shopSurtax: "shopSurtax" in p ? p.shopSurtax : st.shopSurtax,
         ballLockRemaining: p.ballLockRemaining ?? st.ballLockRemaining ?? 0,
         luxeOutcomeQueue: p.luxeOutcomeQueue ?? st.luxeOutcomeQueue ?? [],
         bertieOutcomeQueue: p.bertieOutcomeQueue ?? st.bertieOutcomeQueue ?? [],
-        forcedEncounter: p.forcedEncounter ?? st.forcedEncounter,
+        forcedEncounter: "forcedEncounter" in p ? p.forcedEncounter : st.forcedEncounter, // même fuite que ci-dessus (rencontre imposée vécue deux fois)
         fusionLeagueCarry: p.fusionLeagueCarry ?? st.fusionLeagueCarry,
         curseAbundanceStart: "curseAbundanceStart" in p ? p.curseAbundanceStart : st.curseAbundanceStart,
         curseFreeItemsTaken: "curseFreeItemsTaken" in p ? p.curseFreeItemsTaken : st.curseFreeItemsTaken,
@@ -1132,7 +1139,9 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
-    st = { thief: st.thief ?? null, team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    // 🧾 SURTAXE de la boutique (contrepartie DATÉE d'un vœu) : reportée telle quelle, comme au run 2 — un rejeu ne l'efface pas
+    //   (28/10/2026). Le run 3 (concours scellé) ne la reçoit pas : aucun vœu n'y joue, ni faveur ni contrepartie.
+    st = { thief: st.thief ?? null, team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1192,7 +1201,8 @@ export function fixNgplusFusioBalls(items: Record<string, number>): Record<strin
  *  Les OBJETS CROSS-RUN (lampe/canne) sont reportés depuis le run précédent (carryCrossRunItems). */
 export function startNgPlusWorld(starter: MonInstance) {
     const carriedItems = carryCrossRunItems(st.items) // AVANT réassignation de st (= sac du run live)
-    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1204,8 +1214,9 @@ export function startNgPlusWorld(starter: MonInstance) {
 export const RUN3_START_BALLS = 2
 export function startRun3World(starter: MonInstance) {
     const carried = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
+
     const carriedItems = { ...carried, poke_ball: (carried.poke_ball ?? 0) + RUN3_START_BALLS } // + 2 Nexus-Balls de départ
-    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
     emit()
 }
 
@@ -1578,6 +1589,9 @@ export function trackBallLockSpend(n: number) {
 // chaque jour (creditDailyReps). Enforcement CLIENT (le casino jaune est client-authoritative) : chaque jeu vérifie
 // casinoBetAllowed(mise) avant de miser, et recordCasinoSpend(mise) une fois la mise engagée.
 export const CASINO_RESTRICTED_MARKER = "casino_restricted"
+/** Plafond casino LEVÉ (casino_uncap, 15/10/2026). Posé à la levée : une fusion de fin de run ne ré-impose plus le plafond venu
+ *  d'un autre monde (28/10/2026 — avant, une levée reçue au run 2 sautait à la fusion). Un nouveau casino_cap l'efface. */
+export const CASINO_UNCAPPED_MARKER = "casino_uncapped"
 // MALÉDICTION ASSOUPLIE (Sartay, 25/08/2026) : le « banni du casino » (ex-vœu de Jacanon) peut désormais miser
 //   jusqu'à 250 ⚡/JOUR — mise unique ≤ 250, total quotidien ≤ 250 (reset via creditDailyReps). Remplace l'ancien
 //   régime dur (10/mise + plafond progressif 50→1000) par un plafond FLAT, INDÉPENDANT de l'historique de la save
@@ -1680,12 +1694,12 @@ function runGenieEffect(e: GenieEffect): boolean {
             return true
         }
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
-        case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
+        case "casino_cap": if (!st.defeatedTrainers.includes(CASINO_RESTRICTED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers.filter((m) => m !== CASINO_UNCAPPED_MARKER), CASINO_RESTRICTED_MARKER] }; return true // cap casino : mise ≤ 250 + plafond 250/jour, enforcé par les jeux
         case "abundance_curse": if (!st.defeatedTrainers.includes(ABUNDANCE_CURSE_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ABUNDANCE_CURSE_MARKER], curseAbundanceStart: Date.now(), curseFreeItemsTaken: 0, curseFreeItemDate: "" }; return true // 1 sem : objet gratuit 1/j + achat coupé + attaques ×10 ; fin → N Daemons désobéissants
         case "ace_daily_cap": if (!st.defeatedTrainers.includes(ACE_DAILY_CAP_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ACE_DAILY_CAP_MARKER] }; return true // vœu « ACE 7×/jour » (Rob) : lève le plafond quotidien à 7 victoires
         case "attack_cost_extended": if (!st.defeatedTrainers.includes(ATTACK_COST_EXTENDED_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, ATTACK_COST_EXTENDED_MARKER] }; return true // vœu « jauge pleine » (Laura) : coûts jusqu'au niv 80, plafond 13
         case "dex_wish_days": st = { ...st, dexWish: freshDexWish(amt || DEX_WISH_DEFAULT_CHARGES) }; return true // voeu « je choisis le numero » (Guillaume) : N journees sur commande
-        case "casino_uncap": st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((m) => m !== CASINO_RESTRICTED_MARKER) }; return true // lève le plafond casino (ex-vœu de Jacanon, décision Sartay 15/10/2026)
+        case "casino_uncap": st = { ...st, defeatedTrainers: [...st.defeatedTrainers.filter((m) => m !== CASINO_RESTRICTED_MARKER && m !== CASINO_UNCAPPED_MARKER), CASINO_UNCAPPED_MARKER] }; return true // lève le plafond casino (ex-vœu de Jacanon, décision Sartay 15/10/2026)
         case "shop_surtax": st = { ...st, shopSurtax: freshShopSurtax(Date.now(), e.amount, e.hours) }; return true // 🧾 contrôle fiscal : prix de la boutique × amount pendant hours (Jacanon, 20/10/2026)
         case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
@@ -1778,28 +1792,52 @@ export function clearFusionLeagueCarry() { if (st.fusionLeagueCarry) { st = { ..
  *  auto-retry au retour). Renvoie true si l'état a changé (→ l'appelant persiste). */
 /** 🧞 EFFETS EXTERNES — le canal GÉNÉRIQUE (FrontierProfile.pendingEffects) : applique un tableau de GenieEffect
  *  déposé par le créateur, sans passer par un slot de vœu. Renvoie true seulement si TOUS les effets sont reconnus :
- *  un effet inconnu (build antérieur) laisse le lot NON acquitté côté serveur → retenté après déploiement. Les
- *  effets concernés sont idempotents ou ré-armables, donc une ré-application est inoffensive. Jamais en run 3 (l'appelant). */
+ *  un effet inconnu (build antérieur) laisse le lot NON acquitté côté serveur → retenté après déploiement, sans rien
+ *  appliquer. Un lot déjà appliqué (empreinte au registre des vœux payés) n'est jamais réappliqué : true, pour être
+ *  ré-acquitté. Jamais en run 3 ni en bulle de rejeu (l'appelant). */
 export function applyExternalEffects(raw: string): boolean {
+    // DÉJÀ APPLIQUÉ (registre des vœux payés) : l'acquittement s'est perdu, ou la page s'est chargée deux fois → on ré-acquitte
+    //   sans rien reverser. Avant le 28/10/2026, le lot entier était réappliqué : énergie et objets en double, charges ré-armées.
+    const mark = genieExtMarker(raw)
+    if (isGeniePaid(mark)) return true
     let effects: GenieEffect[]
     try { const parsed = JSON.parse(raw); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { return false }
     if (!effects.length) return false
-    let all = true
-    for (const e of effects) { if (!e || typeof e.kind !== "string" || !runGenieEffect(e)) all = false }
+    // TOUT OU RIEN (28/10/2026) : un lot qui contient un effet INCONNU de ce build n'applique RIEN — il reste en attente et
+    //   passe en entier après le déploiement. Avant, les effets connus passaient, le lot n'était pas acquitté… et ils étaient
+    //   reversés à CHAQUE chargement. Tous connus → tout est appliqué et le lot est acquitté (un effet sans prise, ex. Daemon
+    //   introuvable, ne le bloque plus en boucle).
+    if (!effects.every((e) => !!e && typeof e.kind === "string" && isKnownGenieEffectKind(e.kind))) return false
+    if (missingDrainTarget(effects)) return false // contrepartie sans sa cible dans ce monde : le lot attend (avant : acquitté, perdue)
+    for (const e of effects) runGenieEffect(e)
+    st = { ...st, geniePaid: withGeniePaid(mark) }
     emit()
-    return all
+    return true
 }
 
 /** Effets de vœu autorisés PENDANT le run 3 (ne touchent ni l'énergie, ni le sac, ni les stats — le concours reste scellé). */
 export const GENIE_RUN3_ALLOWED_KINDS: ReadonlySet<string> = new Set(["guaranteed_captures"])
-export function applyAcceptedGenieWishEffects(row: {
+export type GenieWishRow = {
     accepted1?: boolean | null; accepted2?: boolean | null; accepted3?: boolean | null
     effect1?: string | null; effect2?: string | null; effect3?: string | null
     condition1?: string | null; condition2?: string | null; condition3?: string | null
     round?: number | null // TOUR de vœux (0 = les 3 premiers) → marqueurs genieFxMarker
     history?: string | null // TOURS ARCHIVÉS (JSON [{ round, acceptedN, effectN… }]) → leurs effets PERMANENTS seulement
-} | null | undefined): boolean {
+}
+/** Dernière ligne de vœux reçue (chargement, lampe) : reapplyGenieWishes() s'en sert pour poser les perks permanents d'un
+ *  monde NEUF dès sa création — avant, ils manquaient jusqu'au rechargement suivant (run 2, rejeu, nouveau profil…). */
+let lastGenieRow: GenieWishRow | null = null
+/** Repose les vœux de la dernière ligne connue dans le monde actif (perks permanents seulement : tout le reste est déjà payé). */
+//   PERKS SEULEMENT : un vœu pas encore versé attend le prochain chargement, où il est versé ET annoncé (versé ici, en cours
+//   de session, son annonce du génie ne serait jamais affichée).
+export function reapplyGenieWishes(): boolean { return lastGenieRow ? applyAcceptedGenieWishEffects(lastGenieRow, { perksOnly: true }) : false }
+/** La cible d'un level_drain (speciesId) est-elle dans l'équipe ou le PC du monde actif ? Sinon le vœu ou le lot ATTEND :
+ *  versé sans elle, sa contrepartie serait perdue (même recherche qu'applyLevelDrain). */
+function levelDrainTargetPresent(id: string | undefined): boolean { return !!id && (st.team.some((m) => m.speciesId === id) || st.pc.some((m) => m.speciesId === id)) }
+const missingDrainTarget = (effects: GenieEffect[]): boolean => effects.some((e) => e.kind === "level_drain" && !levelDrainTargetPresent(e.id))
+export function applyAcceptedGenieWishEffects(row: GenieWishRow | null | undefined, opts?: { perksOnly?: boolean }): boolean {
     if (!row) return false
+    lastGenieRow = row
     // RUN 3 (concours, économie scellée) : SEULS les effets de GENIE_RUN3_ALLOWED_KINDS s'appliquent — un vœu qui en contient
     //   un autre reste en attente du retour dans un vrai monde. Avant le 26/10/2026 TOUT était refusé en run 3 : Kingme a
     //   accepté « 5 captures garanties » en plein concours et n'a jamais reçu ses charges.
@@ -1810,46 +1848,56 @@ export function applyAcceptedGenieWishEffects(row: {
         { acc: row.accepted3, fx: row.effect3, mark: genieFxMarker(3, row.round), cond: row.condition3 },
     ]
     let changed = false
-    for (const w of wishes) {
-        if (w.acc !== true || !w.fx || st.defeatedTrainers.includes(w.mark)) continue
+    /** Verse UN vœu accepté, une seule fois. `archived` = vœu d'un tour ARCHIVÉ (GenieWish.history). */
+    const payWish = (w: { acc?: boolean | null; fx?: string | null; mark: string; cond?: string | null }, archived: boolean): void => {
+        if (w.acc !== true || !w.fx) return
+        if (st.defeatedTrainers.includes(w.mark)) { // déjà appliqué dans CE monde : on s'assure juste que le registre le sait
+            if (!isGeniePaid(w.mark)) { st = { ...st, geniePaid: withGeniePaid(w.mark) }; changed = true }
+            return
+        }
         let effects: GenieEffect[]
-        try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue } // JSON invalide → on saute (pas de crash)
-        if (inRun3 && !effects.every((e) => GENIE_RUN3_ALLOWED_KINDS.has(e.kind))) continue // run 3 : vœu non autorisé → attend un vrai monde
-        // DÉJÀ VERSÉ dans un AUTRE monde (vœu exaucé au run 1, joueur désormais au run 2 ou dans un rejeu) : un vœu ne se
-        //   paie qu'UNE fois par joueur → seuls ses effets PERMANENTS sont rejoués ici (cf. GENIE_PERSISTENT_EFFECT_KINDS) ;
-        //   les dons uniques (énergie, objets, défi némésis…) ne sont JAMAIS reversés. Bug corrigé le 20/10/2026.
-        const elsewhere = markerInOtherWorld(w.mark)
+        try { const parsed = JSON.parse(w.fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { return } // JSON invalide → on saute (pas de crash)
+        // Un effet INCONNU de ce build : le vœu ENTIER attend le déploiement (avant : payé à moitié, puis jamais complété).
+        if (!effects.every((e) => !!e && typeof e.kind === "string" && isKnownGenieEffectKind(e.kind))) return
+        // DÉJÀ VERSÉ (registre global geniePaid, ou marqueur dans un AUTRE monde encore présent) : un vœu ne se paie qu'UNE
+        //   fois par joueur → seuls ses effets PERMANENTS sont rejoués ici (cf. GENIE_PERSISTENT_EFFECT_KINDS) ; les dons
+        //   uniques (énergie, objets, défi némésis, charges…) ne sont JAMAIS reversés, même si le monde qui les a reçus a
+        //   été jeté (abandon du run 2, nouveau départ du run 3, remise à zéro). Bugs corrigés le 20/10 et le 28/10/2026.
+        const elsewhere = isGeniePaid(w.mark) || markerInOtherWorld(w.mark)
+        // Tour ARCHIVÉ : jamais de don, seulement les perks d'un vœu déjà payé. Un vœu archivé sans trace peut avoir été payé
+        //   dans un monde jeté AVANT le registre (28/10/2026) : le verser serait le repayer. Règle côté créateur : ne jamais
+        //   archiver un vœu accepté qui n'a pas encore été versé (vérifier son marqueur dans la save avant d'ouvrir un tour).
+        if (archived && !elsewhere) return
+        // run 3 : vœu non autorisé → attend un vrai monde. Exception inchangée : les perks d'un tour ARCHIVÉ déjà payé y passent.
+        if (!(archived && elsewhere) && inRun3 && !effects.every((e) => GENIE_RUN3_ALLOWED_KINDS.has(e.kind))) return
         // BULLE DE REJEU : un vœu NEUF attend le retour dans un vrai monde (comme le run 3) — payé dans la bulle, il serait
         //   repayé au retour (la bulle et son marqueur sont jetés). Un vœu déjà payé ailleurs y rejoue ses perks, normal.
-        if (getActiveWorld() === "replay" && !elsewhere) continue
+        // RUN 2 encore ABANDONNABLE (fenêtre des premiers combats) : même attente — payé là puis jeté avec le monde, le vœu
+        //   serait perdu, le registre interdisant de le repayer (28/10/2026). Il passe dès la fenêtre refermée.
+        if ((getActiveWorld() === "replay" || worldMayBeDiscarded()) && !elsewhere) return
+        if (opts?.perksOnly && !elsewhere) return // repose de perks en cours de session : rien de NEUF ici
+        if (!elsewhere && missingDrainTarget(effects)) return // contrepartie sans sa cible dans ce monde : le vœu attend
         let handled = false
         for (const e of effects) {
             if (elsewhere && !GENIE_PERSISTENT_EFFECT_KINDS.has(e.kind)) { handled = true; continue } // don unique déjà reçu ailleurs
             if (runGenieEffect(e)) handled = true
         }
-        if (!handled) continue // aucun effet RECONNU (build antérieur à ce type) → NE PAS marquer → re-tenté après déploiement
-        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark] } // marker one-shot par vœu
+        if (!handled) return // aucun effet RECONNU (build antérieur à ce type) → NE PAS marquer → re-tenté après déploiement
+        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, w.mark], geniePaid: withGeniePaid(w.mark) } // marqueur du monde + registre global
         changed = true
         // ANNONCE : quand un vœu ACCEPTÉ (ou IMPOSÉ) s'applique, on empile son message du génie → le client l'affiche
         //   au chargement (« informé, pas le choix »). Le RustyLampModal, lui, jette la file (déjà montrée à l'accept).
         //   Déjà appliqué ailleurs → déjà annoncé : pas de seconde annonce.
         if (!elsewhere && w.cond && w.cond.trim()) pendingGenieAnnouncements.push(w.cond)
     }
-    // TOURS ARCHIVÉS (GenieWish.history, ex. tour 0 de Rob) : leurs dons sont payés depuis longtemps ; seuls leurs effets
-    //   PERMANENTS (ex. « ACE 7×/jour ») doivent aussi exister dans un monde neuf. Uniquement s'ils ont été payés AILLEURS ;
-    //   jamais de don, jamais d'annonce.
+    for (const w of wishes) payWish(w, false)
+    // TOURS ARCHIVÉS (GenieWish.history, ex. tour 0 de Rob) : un vœu déjà payé n'y rejoue que ses effets PERMANENTS (ex.
+    //   « ACE 7×/jour »), jamais de don ni d'annonce (cf. payWish).
     let archived: Record<string, unknown>[] = []
     try { const h = row.history ? JSON.parse(row.history) : []; archived = Array.isArray(h) ? h.filter((x) => x && typeof x === "object") : [] } catch { archived = [] }
     for (const h of archived) for (const n of [1, 2, 3]) {
-        const fx = h[`effect${n}`]
-        if (h[`accepted${n}`] !== true || typeof fx !== "string" || !fx) continue
-        const mark = genieFxMarker(n, typeof h.round === "number" ? h.round : 0)
-        if (st.defeatedTrainers.includes(mark) || !markerInOtherWorld(mark)) continue
-        let effects: GenieEffect[]
-        try { const parsed = JSON.parse(fx); effects = Array.isArray(parsed) ? parsed : [parsed] } catch { continue }
-        for (const e of effects) if (e && GENIE_PERSISTENT_EFFECT_KINDS.has(e.kind)) runGenieEffect(e)
-        st = { ...st, defeatedTrainers: [...st.defeatedTrainers, mark] }
-        changed = true
+        const fx = h[`effect${n}`], cond = h[`condition${n}`]
+        payWish({ acc: h[`accepted${n}`] === true, fx: typeof fx === "string" ? fx : null, mark: genieFxMarker(n, typeof h.round === "number" ? h.round : 0), cond: typeof cond === "string" ? cond : null }, true)
     }
     if (changed) emit()
     return changed
@@ -1860,6 +1908,49 @@ export function applyAcceptedGenieWishEffects(row: {
  *  passer. Par défaut (tests unitaires, pas de saveManager) : aucun autre monde. */
 let markerInOtherWorld: (marker: string) => boolean = () => false
 export function setOtherWorldMarkerCheck(fn: (marker: string) => boolean) { markerInOtherWorld = fn }
+/** Le monde actif peut-il encore être JETÉ (run 2 dans sa fenêtre d'abandon) ? Branché par saveManager (canAbandonNgplus). */
+let worldMayBeDiscarded: () => boolean = () => false
+export function setWorldMayBeDiscardedCheck(fn: () => boolean) { worldMayBeDiscarded = fn }
+
+/** 🧞 REGISTRE DES VŒUX PAYÉS (global au compte, cf. YellowSave.geniePaid) — ce vœu a-t-il déjà été versé, n'importe où ? */
+export function isGeniePaid(marker: string): boolean { return (st.geniePaid ?? []).includes(marker) }
+/** Remplace le registre (chargement d'une save : saveManager le reconstitue depuis tous ses mondes et profils). */
+export function setGeniePaid(markers: readonly string[]): void {
+    st = { ...st, geniePaid: [...new Set(markers.filter(isGeniePaidMarker))] }
+    emit()
+}
+/** ⛓️ SCEAUX du défi némésis perdu (`<espèce>_blocked`, cf. nemesisRewardBlockedMarker) : « plus JAMAIS un X ne croisera ta
+ *  route ». Conservés à la remise à zéro et à la fusion. Volontairement PAS recopiés dans les mondes neufs (run 2, run 3,
+ *  rejeu) : une revanche ne pourrait plus les lever, et le concours changerait de règles (décision laissée à Sartay). */
+export function isNemesisSeal(m: string): boolean { return m.endsWith("_blocked") }
+export function getGeniePaid(): string[] { return [...(st.geniePaid ?? [])] }
+/** Retire une empreinte du registre (lot d'effets externes ACQUITTÉ : un futur lot au texte identique sera versé). */
+export function removeGeniePaid(marker: string): void {
+    if (!(st.geniePaid ?? []).includes(marker)) return
+    st = { ...st, geniePaid: (st.geniePaid ?? []).filter((m) => m !== marker) }
+    emit()
+}
+function withGeniePaid(marker: string): string[] {
+    const cur = st.geniePaid ?? []
+    return cur.includes(marker) ? cur : [...cur, marker]
+}
+
+/** 🧞 VŒUX QUI DURENT — leur état (charges, durée) + les marqueurs qui le portent (captures garanties restantes, malédiction
+ *  d'abondance). Cf. saveManager.withDurableWishesFrom : jamais copié dans un monde neuf, jamais perdu à la fusion, à l'abandon
+ *  du run 2 ni à la remise à zéro. */
+export type DurableWishState = Pick<PlayerState, "evResetCharges" | "shinyWish" | "dexWish" | "shinyFrenzy" | "shopSurtax" | "forcedEncounter" | "curseAbundanceStart" | "curseFreeItemsTaken" | "curseFreeItemDate" | "ballLockRemaining"> & { markers: string[] }
+/** Marqueurs d'un vœu qui dure ou d'une contrepartie : captures garanties, malédiction, plafond casino (et sa levée), défi
+ *  némésis armé/tenté/acompte, sceaux. Conservés à la remise à zéro (sinon : contrepartie effacée, ou défi rejouable). */
+export function isDurableWishMarker(m: string): boolean {
+    return m.startsWith(GENIE_CATCH_PREFIX) || m === ABUNDANCE_CURSE_MARKER || m === CASINO_RESTRICTED_MARKER || m === CASINO_UNCAPPED_MARKER
+        || m === NEMESIS_ARMED_MARKER || m === NEMESIS_DONE_MARKER || m.startsWith("nemesis_acompte_") || isNemesisSeal(m)
+}
+/** Réinstalle un état durable dans le monde actif (remise à zéro du chapitre : le vœu CONTINUE, il ne se rejoue pas). */
+export function restoreDurableWishState(d: DurableWishState): void {
+    const { markers, ...fields } = d
+    st = { ...st, ...fields, defeatedTrainers: [...st.defeatedTrainers.filter((m) => !isDurableWishMarker(m)), ...markers] }
+    emit()
+}
 
 /** File des messages du génie à ANNONCER (vœux imposés/accepted appliqués). Consommée par le client. */
 let pendingGenieAnnouncements: string[] = []

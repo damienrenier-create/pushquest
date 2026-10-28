@@ -238,7 +238,7 @@ describe("run 2 — vocabulaire, surprise du double, arènes re-skinnées", () =
 
 // ───────────────────────── VŒUX DU GÉNIE : UNE FOIS PAR JOUEUR ─────────────────────────
 describe("vœux du génie — jamais rejoués dans un 2e monde (run 2, rejeu…)", () => {
-    const setup = () => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {} }); setActiveWorld("live"); consumeGenieAnnouncements() }
+    const setup = () => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [] }); setActiveWorld("live"); consumeGenieAnnouncements() }
     it("déjà appliqué AILLEURS : le don n'est pas reversé, le perk oui, et pas de seconde annonce", () => {
         setup()
         setOtherWorldMarkerCheck((m) => m === genieFxMarker(1)) // vœu 1 déjà exaucé au run 1
@@ -272,7 +272,7 @@ describe("vœux du génie — jamais rejoués dans un 2e monde (run 2, rejeu…)
         expect(sm).toContain("getActiveWorld() === \"live\" || getActiveWorld() === \"ngplus\") && applyExternalEffects(rawFx)")
     })
     it("bulle de rejeu : un vœu NEUF attend le retour dans un vrai monde (sinon il serait payé deux fois)", () => {
-        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {} }); setActiveWorld("replay")
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [] }); setActiveWorld("replay")
         try {
             expect(applyAcceptedGenieWishEffects({ accepted1: true, effect1: JSON.stringify({ kind: "energy", amount: 500 }) })).toBe(false)
             expect(getPlayer().reps).toBe(100)
@@ -280,7 +280,7 @@ describe("vœux du génie — jamais rejoués dans un 2e monde (run 2, rejeu…)
         } finally { setActiveWorld("live") }
     })
     it("tours ARCHIVÉS : leurs perks suivent le joueur dans un monde neuf, jamais leurs dons (ex. Rob, tour 0)", () => {
-        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {} }); setActiveWorld("live"); consumeGenieAnnouncements()
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [] }); setActiveWorld("live"); consumeGenieAnnouncements()
         setOtherWorldMarkerCheck((m) => m === genieFxMarker(2) || m === genieFxMarker(3)) // payés au run 1
         try {
             const history = JSON.stringify([{ round: 0, accepted2: true, effect2: JSON.stringify({ kind: "energy", amount: 20000 }), accepted3: true, effect3: JSON.stringify({ kind: "ace_daily_cap" }) }])

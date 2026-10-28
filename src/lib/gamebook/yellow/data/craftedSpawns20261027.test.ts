@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import fs from "node:fs"
 import path from "node:path"
-import { rollWildEncounter, captureGuide, runObtainableSpecies, hautesHerbesTypesForDay, RUN3_STASHEX_SHARE, type EncounterCtx } from "./encounters"
+import { rollWildEncounter, captureGuide, runObtainableSpecies, hautesHerbesTypesForDay, RUN3_STASHEX_SHARE, RUN3_STASHEX_GRID_SHARE, type EncounterCtx } from "./encounters"
 import { fishingRareOfMap, fishingRareLevelFor, fishingTier, GUIZER_RARE_SHARE } from "./fishing"
 import { SPECIES, getSpecies, CANONIZED_CUSTOM_ALIAS } from "./species"
 import { CANONIZED_CUSTOM_SPRITES, buildCustomSpecies, type CustomSpec } from "../create/customSpecies"
@@ -16,6 +16,7 @@ import { run3ExclusiveRows, run3ExclusiveSignLines } from "./run3Exclusives"
 //  • « Dakumba a crafté un pokémon ténèbre : 1 % de chance dans la maison des ténèbres du run 2. »
 //  • « Le crafté psy : à la place de Nouillon dans le run 3. » (Stashex, une part des Nouillon : RUN3_STASHEX_SHARE)
 //  • « Spectragon : ultra rare dans la grotte (run 3). » · « Possyl (Zyran) : ultra rare dans la maison spectre (run 1). »
+// Puis le 28/10/2026 : « stashex : 3 % du carré psy max ! » et « spectragon : ok pour la base 1 ! » (Dracominus).
 
 function mulberry32(seed: number): () => number {
     return () => {
@@ -62,19 +63,30 @@ describe("Run 2 — Manoir des Ténèbres : Joeyrrant parti, Snatchacoolt (DaKum
 })
 
 describe("Run 3 — Grotte Gelée : la lignée de Joeyrrant, au stade Wallabisan minimum, rare", () => {
-    it("équipe faible et plafond de badges bas : Wallabisan quand même au niv 22+, ≈ 6-7 %, jamais Joeyrrant", () => {
-        const r = sample({ mapId: "yellow_grotte_gelee", x: 5, y: 5, leadLevel: 10, levelCap: 12, run3: true, encounterCount: 999 }, 120_000)
+    it("équipe faible et plafond de badges bas : Wallabisan quand même au niv 22+, ≈ 0,7 % (moins d'une rencontre sur 100), jamais Joeyrrant", () => {
+        const r = sample({ mapId: "yellow_grotte_gelee", x: 5, y: 5, leadLevel: 10, levelCap: 12, run3: true, encounterCount: 999 }, 400_000)
         expect(r.counts.joeyrrant ?? 0).toBe(0)
         const share = (r.counts.wallabisan ?? 0) / r.total
-        expect(share).toBeGreaterThan(0.05); expect(share).toBeLessThan(0.085)
+        expect(share).toBeGreaterThan(0.005); expect(share).toBeLessThan(0.009)
         expect(Math.min(...r.levels.wallabisan)).toBeGreaterThanOrEqual(22)
         expect(r.counts.kangoudead ?? 0).toBe(0) // < 40 → jamais le stade final
     })
     it("équipe forte : la lignée sort aussi en Kangoudead (niv 40+), toujours sans Joeyrrant", () => {
-        const r = sample({ mapId: "yellow_grotte_gelee", x: 5, y: 5, leadLevel: 60, run3: true, encounterCount: 999 }, 120_000)
+        const r = sample({ mapId: "yellow_grotte_gelee", x: 5, y: 5, leadLevel: 60, run3: true, encounterCount: 999 }, 400_000)
         expect(r.counts.joeyrrant ?? 0).toBe(0)
         expect(r.counts.kangoudead ?? 0).toBeGreaterThan(0)
         expect(Math.min(...r.levels.kangoudead)).toBeGreaterThanOrEqual(40)
+    })
+    it("même la nuit en mode fun (Ténèbres/Glace ×1,5), le kangourou ne dépasse pas une rencontre sur 100", () => {
+        for (const leadLevel of [20, 40]) { // sous 35, Orcaline ne pèse rien → c'est le pire cas
+            const r = sample({ mapId: "yellow_grotte_gelee", x: 5, y: 5, leadLevel, run3: true, encounterCount: 999, hour: 23, funMode: true }, 400_000)
+            expect(sum(r.counts, JOEY_LINE) / r.total, `lead ${leadLevel}`).toBeLessThan(0.0112)
+        }
+    }, 30_000)
+    it("guide : Thanadrak et Robacoolt renvoient à la BASE réellement listée (deux évolutions)", () => {
+        expect(captureGuide("thanadrak", 3).note).toBe("Thanadrak n'est pas capturable directement : obtiens Dracominus (ci-dessus) puis fais-le évoluer deux fois.")
+        expect(captureGuide("spectragon", 3).note).toBe("Spectragon n'est pas capturable directement : obtiens Dracominus (ci-dessus) puis fais-le évoluer.")
+        expect(captureGuide("robacoolt", 2).note).toContain("obtiens Snatchacoolt (ci-dessus) puis fais-le évoluer deux fois")
     })
     it("la lignée n'apparaît plus dans aucune zone du run 1 ni du run 2", () => {
         for (const mapId of ["yellow_grotte_gelee", "yellow_maison_hantee", "yellow_route_nord", "yellow_grotte", "yellow_centrale", "yellow_plage"]) {
@@ -84,16 +96,21 @@ describe("Run 3 — Grotte Gelée : la lignée de Joeyrrant, au stade Wallabisan
     })
 })
 
-describe("Run 3 — Grotte Rocheuse : Spectragon (Rob) ultra-rare", () => {
-    it("≈ 0,5 %, toujours Spectragon (même à haut niveau), jamais sous le niv 22", () => {
+describe("Run 3 — Grotte Rocheuse : Dracominus (base de la lignée de Rob) ultra-rare", () => {
+    it("≈ 0,5 %, toujours au stade 1 (niv 15-21), même avec une équipe de haut niveau ; jamais Spectragon ni Thanadrak", () => {
         const r = sample({ mapId: "yellow_grotte", x: 5, y: 5, leadLevel: 60, run3: true, encounterCount: 999 }, 800_000)
-        const share = (r.counts.spectragon ?? 0) / r.total
+        const share = (r.counts.dracominus ?? 0) / r.total
         expect(share).toBeGreaterThan(0.0038); expect(share).toBeLessThan(0.0065)
-        expect(r.counts.thanadrak ?? 0).toBe(0)
-        const low = sample({ mapId: "yellow_grotte", x: 5, y: 5, leadLevel: 8, levelCap: 12, run3: true, encounterCount: 999 }, 800_000)
-        expect(low.counts.spectragon ?? 0).toBeGreaterThan(0)
-        expect(Math.min(...low.levels.spectragon)).toBeGreaterThanOrEqual(22)
-    })
+        expect(Math.min(...r.levels.dracominus)).toBeGreaterThanOrEqual(15)
+        expect(Math.max(...r.levels.dracominus)).toBeLessThanOrEqual(21)
+        expect((r.counts.spectragon ?? 0) + (r.counts.thanadrak ?? 0)).toBe(0)
+        const low = sample({ mapId: "yellow_grotte", x: 5, y: 5, leadLevel: 8, levelCap: 12, run3: true, encounterCount: 999 }, 300_000)
+        expect(low.counts.dracominus ?? 0).toBeGreaterThan(0)
+        expect(Math.max(...low.levels.dracominus)).toBeLessThanOrEqual(21)
+        // runs 1 et 2 : pas dans la Grotte Rocheuse (le shiny crafté d'après le Dôme Fusion est un autre canal)
+        expect(sample({ mapId: "yellow_grotte", x: 5, y: 5, leadLevel: 30, encounterCount: 999 }, 100_000).counts.dracominus ?? 0).toBe(0)
+        expect(sample({ mapId: "yellow_grotte", x: 5, y: 5, leadLevel: 30, ngplus: true, encounterCount: 999 }, 100_000).counts.dracominus ?? 0).toBe(0)
+    }, 30_000)
 })
 
 describe("Run 1 — Maison Hantée (spectres) : Possyl (Zyran) ultra-rare", () => {
@@ -123,7 +140,8 @@ describe("Run 3 — Stashex (Tom) à la place d'une part des Nouillon", () => {
         expect(sum(sample({ mapId: "yellow_route_nord", x: 5, y: 5, leadLevel: 12, encounterCount: 999 }, 100_000).counts, STASHEX_LINE)).toBe(0)
         expect(sum(sample({ mapId: "yellow_centrale", x: 5, y: 5, leadLevel: 40, ngplus: true, encounterCount: 999 }, 100_000).counts, STASHEX_LINE)).toBe(0)
     })
-    it("carré PSY des Hautes Herbes : même part au run 3, aucune au run 1/2 (le guide suit le même calcul)", () => {
+    it("carré PSY des Hautes Herbes : 3 % max au run 3, aucune au run 1/2 (le guide suit le même calcul)", () => {
+        expect(RUN3_STASHEX_GRID_SHARE).toBeGreaterThan(0); expect(RUN3_STASHEX_GRID_SHARE).toBeLessThanOrEqual(0.03)
         let day = "", slot = -1
         for (let d = 1; d <= 60 && slot < 0; d++) {
             const key = `2026-11-${String(((d - 1) % 30) + 1).padStart(2, "0")}`
@@ -133,11 +151,12 @@ describe("Run 3 — Stashex (Tom) à la place d'une part des Nouillon", () => {
         expect(slot).toBeGreaterThanOrEqual(0)
         const x = [2, 7, 12][slot % 3], y = [15, 9, 3][Math.floor(slot / 3)]
         const base = { mapId: "yellow_hautes_herbes", x, y, leadLevel: 30, dayKey: day, encounterCount: 999 }
-        const r3 = sample({ ...base, run3: true }, 200_000)
+        const r3 = sample({ ...base, run3: true }, 400_000)
         const st = sum(r3.counts, STASHEX_LINE), no = sum(r3.counts, NOUILLON_LINE)
         expect(st).toBeGreaterThan(0)
         const part = st / (st + no)
-        expect(part).toBeGreaterThan(RUN3_STASHEX_SHARE * 0.7); expect(part).toBeLessThan(RUN3_STASHEX_SHARE * 1.3 + 1e-9)
+        expect(part).toBeGreaterThan(RUN3_STASHEX_GRID_SHARE * 0.8); expect(part).toBeLessThan(RUN3_STASHEX_GRID_SHARE * 1.2 + 1e-9)
+        expect(st / r3.total).toBeLessThan(0.033) // ≤ 3 % des rencontres du carré (aux tirages près)
         expect(sum(sample(base, 100_000).counts, STASHEX_LINE)).toBe(0)
         expect(sum(sample({ ...base, ngplus: true }, 100_000).counts, STASHEX_LINE)).toBe(0)
         expect(captureGuide("stashex", 3).where.some((w) => w.includes("carré PSY"))).toBe(true)
@@ -184,9 +203,9 @@ describe("Daemomaniaque — listes et fiches suivent les nouveaux pops", () => {
         expect(g.where[0]).toContain("Maison Hantée"); expect(g.where[0]).toContain("≈1.0%"); expect(g.where[0]).toContain("niv 16-21")
         expect(captureGuide("robacoolt", 2).note).toContain("fais-le évoluer")
     })
-    it("run 3 : Wallabisan/Kangoudead (Grotte Gelée, niv 22+ / 40+), Guizer à la pêche, Stashex et Spectragon ; Nouillon reste", () => {
+    it("run 3 : Wallabisan/Kangoudead (Grotte Gelée, niv 22+ / 40+), Guizer à la pêche, Stashex et Dracominus ; Nouillon reste", () => {
         const r3 = runObtainableSpecies(3, false)
-        for (const id of ["wallabisan", "kangoudead", "guizer", "dalugazer", "mobyd", ...STASHEX_LINE, "spectragon", "thanadrak", "nouillon"]) expect(r3.has(id), id).toBe(true)
+        for (const id of ["wallabisan", "kangoudead", "guizer", "dalugazer", "mobyd", ...STASHEX_LINE, "dracominus", "spectragon", "thanadrak", "nouillon"]) expect(r3.has(id), id).toBe(true)
         expect(r3.has("joeyrrant")).toBe(false)
         const w = captureGuide("wallabisan", 3).where.join(" | ")
         expect(w).toContain("Grotte Gelée"); expect(w).toContain("niv 22+"); expect(w).toContain("pop un peu au-dessus de ton niveau")
@@ -205,8 +224,8 @@ describe("Daemomaniaque — listes et fiches suivent les nouveaux pops", () => {
         expect(gz.note).toBe("PÊCHABLE à la Grotte Gelée — run 3 uniquement (très rare).")
         expect(gz.how.join(" ")).toContain("environ 3 % des lancers")
         expect(captureGuide("dalugazer", 3, true).note).toContain("obtiens Guizer")
-        const sp = captureGuide("spectragon", 3).where.join(" | ")
-        expect(sp).toContain("Grotte Rocheuse"); expect(sp).toContain("≈0.5%"); expect(sp).toContain("niv 22+")
+        const dr = captureGuide("dracominus", 3).where.join(" | ")
+        expect(dr).toContain("Grotte Rocheuse"); expect(dr).toContain("≈0.5%"); expect(dr).toContain("niv 15-21")
         expect(captureGuide("stashex", 3).where.join(" | ")).toContain("Centrale")
     })
     it("run 1 : Possyl à la Maison Hantée (≈0,5 %, niv 15-21) ; Guizer n'y est pas pêchable", () => {
@@ -218,14 +237,15 @@ describe("Daemomaniaque — listes et fiches suivent les nouveaux pops", () => {
     })
     it("panneaux du run 3 : chaque nouvelle lignée inédite a son indice", () => {
         const rows = run3ExclusiveRows()
-        for (const key of ["wallabisan", "guizer", "stashex", "spectragon"]) {
+        for (const key of ["wallabisan", "guizer", "stashex", "dracominus"]) {
             const row = rows.find((r) => r.key === key)
             expect(row, key).toBeTruthy()
             expect(row!.hint, key).not.toBe("introuvable ailleurs")
         }
-        expect(run3ExclusiveSignLines()[0]).toContain("absents des runs 1 et 2") // Guizer/Stashex/Spectragon existent aussi au run fusion ou en shiny crafté
+        expect(run3ExclusiveSignLines()[0]).toContain("absents des runs 1 et 2") // Guizer/Stashex/Dracominus existent aussi au run fusion ou en shiny crafté
+        expect(rows.find((r) => r.key === "dracominus")?.names).toBe("Dracominus → Spectragon → Thanadrak")
         // Taux FIXE dans les pools du run 3 (pas de biome) : pas d'avertissement « taux indicatif » ; il reste au run 1 (biomes).
-        expect(captureGuide("spectragon", 3).how.join(" ")).not.toContain("Taux indicatif")
+        expect(captureGuide("dracominus", 3).how.join(" ")).not.toContain("Taux indicatif")
         expect(captureGuide("stashex", 3).how.join(" ")).not.toContain("Taux indicatif")
         expect(captureGuide("plumiot", 1, true).how.join(" ")).toContain("Taux indicatif")
         expect(rows.some((r) => r.ids.includes("joeyrrant"))).toBe(false)

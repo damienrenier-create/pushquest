@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
     hydratePlayer, setActiveWorld, getPlayer, applyExternalEffects, isCasinoRestricted, casinoBetAllowed,
-    getShinyFrenzy, recordShinyFrenzyCapture, CASINO_RESTRICTED_MARKER, getShopSurtax, surtaxShopPrice,
+    getShinyFrenzy, recordShinyFrenzyCapture, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, getShopSurtax, surtaxShopPrice,
 } from "./playerStore"
 import { shinyFrenzyActive, shinyFrenzyChance } from "../data/shinyFrenzy"
 
@@ -14,7 +14,7 @@ import { shinyFrenzyActive, shinyFrenzyChance } from "../data/shinyFrenzy"
 // nouveaux effets font exactement ce que Sartay a demandé — casino sans plafond, 50 % de shiny jusqu'à 3 captures.
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-const setup = (markers: string[] = []) => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: markers, items: {} }); setActiveWorld("live") }
+const setup = (markers: string[] = []) => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: markers, items: {}, geniePaid: [] }); setActiveWorld("live") }
 
 describe("acquittement : seulement si TOUT est reconnu", () => {
     it("un lot entièrement connu → true", () => {
@@ -51,10 +51,10 @@ describe("casino_uncap — la malédiction du casino est levée", () => {
         expect(getPlayer().defeatedTrainers).not.toContain(CASINO_RESTRICTED_MARKER)
     })
 
-    it("idempotent : réappliqué sur un joueur déjà libre, rien ne change", () => {
+    it("idempotent : réappliqué sur un joueur déjà libre, il reste libre (la levée est notée, pour les fusions de fin de run)", () => {
         setup(["autre_marqueur"])
         expect(applyExternalEffects(JSON.stringify([{ kind: "casino_uncap" }]))).toBe(true)
-        expect(getPlayer().defeatedTrainers).toEqual(["autre_marqueur"])
+        expect(getPlayer().defeatedTrainers).toEqual(["autre_marqueur", CASINO_UNCAPPED_MARKER])
     })
 })
 

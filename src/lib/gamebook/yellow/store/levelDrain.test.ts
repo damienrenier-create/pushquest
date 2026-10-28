@@ -7,7 +7,7 @@ import { createMonInstance } from "../battle/factory"
 // (renvoie false) pour être retenté au prochain login, comme un type d'effet pas encore déployé.
 const setup = (team: string[] = [], pc: string[] = [], level = 77) => {
     hydratePlayer({
-        reps: 0, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {},
+        reps: 0, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [],
         team: team.map((id) => createMonInstance(id, level)),
         pc: pc.map((id) => createMonInstance(id, level)),
     })

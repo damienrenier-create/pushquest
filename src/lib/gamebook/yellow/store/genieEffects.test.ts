@@ -5,7 +5,7 @@ import { genieFxMarker } from "../data/genieLamp"
 
 // VŒU DU GÉNIE — effet MACHINE (JSON en base) appliqué AUTOMATIQUEMENT à l'acceptation (plus d'aller-retour créateur
 // ni de redéploiement). Idempotent (1 marker save par vœu). Appliqué en LIVE **et NG+** ; seul le run 3 est différé.
-const setup = () => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {} }); setActiveWorld("live") }
+const setup = () => { hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: [], items: {}, geniePaid: [] }); setActiveWorld("live") }
 
 describe("Vœu du génie — application AUTO des effets", () => {
     it("energy + ball_lock sur un vœu accepté → crédite, arme le verrou, marque appliqué", () => {
@@ -115,7 +115,7 @@ describe("TOURS DE VŒUX (20/10/2026) — de nouveaux vœux accordés ne butent 
         expect(genieFxMarker(3, 2)).toBe("genie_fx3_r2")
     })
     it("⚠️ un vœu 2 du tour 1 s'applique alors que genie_fx2 (tour 0) est déjà posé — puis une seule fois", () => {
-        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1", "genie_fx2", "genie_fx3"], items: {} }); setActiveWorld("live")
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1", "genie_fx2", "genie_fx3"], items: {}, geniePaid: [] }); setActiveWorld("live")
         const row = { round: 1, accepted1: true, effect1: null, accepted2: true, effect2: JSON.stringify({ kind: "energy", amount: 500 }) }
         expect(applyAcceptedGenieWishEffects(row)).toBe(true)
         expect(getPlayer().reps).toBe(600)
@@ -124,7 +124,7 @@ describe("TOURS DE VŒUX (20/10/2026) — de nouveaux vœux accordés ne butent 
         expect(getPlayer().reps).toBe(600)
     })
     it("le vœu 1 gardé au tour 1 (effet archivé = null) n'est JAMAIS rejoué", () => {
-        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1"], items: {} }); setActiveWorld("live")
+        hydratePlayer({ reps: 100, repsCap: 5000, repsBankedTotal: 0, defeatedTrainers: ["genie_fx1"], items: {}, geniePaid: [] }); setActiveWorld("live")
         expect(applyAcceptedGenieWishEffects({ round: 1, accepted1: true, effect1: null })).toBe(false)
         expect(getPlayer().reps).toBe(100)
     })
