@@ -1657,7 +1657,7 @@ export function spendCasinoBet(bet: number): { ok: boolean; reason?: string } {
 
 /** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
  *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
-export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean; hours?: number; captures?: number }
+export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean; hours?: number; captures?: number; shiny?: boolean }
 /** VŒU DU GÉNIE — retire `levels` niveaux EFFECTIFS à un Daemon (cherché dans l'équipe puis dans le PC), désigné par
  *  son `speciesId`. Plancher au niveau 1. L'espèce n'est PAS touchée : un Divinpâte ramené sous son palier reste un
  *  Divinpâte (pas de dé-évolution). Les PV courants sont re-clampés au nouveau max. Renvoie false si la cible est
@@ -1722,6 +1722,14 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
+        case "give_mon": { // DON / RESTITUTION d'un Daemon (28/10/2026 : Daemons perdus à la sortie d'un rejeu) : un Daemon NEUF
+            //   à ton nom (`id` = espèce, `level`, `shiny` → IV parfaits), en équipe s'il reste de la place, sinon au PC.
+            if (!e.id || !getSpecies(e.id)) return false
+            const lvl = Math.max(1, Math.min(100, Math.floor(e.level ?? 5)))
+            addCaught(createMonInstance(e.id, lvl, { owned: true, shiny: !!e.shiny }))
+            markCaught(e.id)
+            return true
+        }
         case "guaranteed_captures": setGenieCatchCharges(Math.max(0, amt)); return true                       // vœu « 5 Balls qui ne ratent jamais » (Kingme, 26/10/2026) : N prochains lancers garantis
         case "wild_heal": if (!st.defeatedTrainers.includes(WILD_HEAL_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, WILD_HEAL_MARKER] }; return true // vœu de Gass (27/10/2026) : soin après chaque combat SAUVAGE gagné
         case "minitel_unlock": if (!st.defeatedTrainers.includes(MINITEL_UNLOCK_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, MINITEL_UNLOCK_MARKER] }; return true // vœu « équipe de 7 » (Task1) : débloque l'appel MINITEL (renfort 7e à la chute du dernier)
