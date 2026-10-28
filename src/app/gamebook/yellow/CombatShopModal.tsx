@@ -13,7 +13,8 @@ import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { fetchFrontierProfile, postSpend } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { fetchFrontierProfile, postSpend, postStatusCtSpend } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { STATUS_CT_LOT, STATUS_CT_BASE_PRICE, STATUS_CT_SURGE, statusCtPrice, statusCtSales } from "@/lib/gamebook/yellow/data/statusCtPrice"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { HELD_ITEM_LIST, type HeldItemCategory } from "@/lib/gamebook/yellow/data/heldItems"
@@ -25,7 +26,6 @@ const ENERGY = [{ amount: 250, price: 40 }, { amount: 600, price: 85 }]
 // LAMPES TORCHES (Grotte du Nexus) — payées en JC, prix CROISSANTS avec le rayon/l'autonomie (cf. data/items.ts).
 const TORCHES: { id: string; jc: number }[] = [{ id: "torche_1", jc: 40 }, { id: "torche_2", jc: 100 }, { id: "torche_3", jc: 250 }]
 const CT_LOT = ["ct08", "ct12", "ct14", "ct15", "ct16", "ct24", "ct20", "ct10"] // CT fortes (alternative aux badges)
-const STATUS_CT_LOT = ["ct71", "ct72", "ct73", "ct74", "ct75", "ct76"] // CT STATUT inédites (1 par type sans statut : Feu/Glace/Insecte/Ténèbres/Métal/Fée), type-restreintes
 const CT_PRICE = 120
 const NOYAU_PRICE = 200 // Noyau de Métal (évo Magmator → Magnetor), vendu en JC (Sartay 02/08)
 const SYMBOLS = [
@@ -59,12 +59,13 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
     const player = usePlayer()
     const [jc, setJc] = useState<number | null>(null)
     const [symbols, setSymbols] = useState<string[]>([])
+    const [ctSales, setCtSales] = useState<Record<string, number>>({}) // CT STATUT : ventes de chaque CT, tous joueurs confondus
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
     const [confirmGrotte, setConfirmGrotte] = useState(false) // ⚠️ confirmation avant l'entrée grotte (téléport IMMÉDIAT)
     const [confirmEnergy, setConfirmEnergy] = useState<{ amount: number; price: number } | null>(null) // ⚠️ confirm recharge énergie (fait monter le shop +10 %)
 
-    useEffect(() => { fetchFrontierProfile().then((p) => { setJc(p.jc); setSymbols(p.symbols) }) }, [])
+    useEffect(() => { fetchFrontierProfile().then((p) => { setJc(p.jc); setSymbols(p.symbols); setCtSales(p.statusCtSales ?? {}) }) }, [])
 
     // CLIQUET PRIX PAR CATÉGORIE (Sartay) : chaque achat d'une catégorie fait +10 % COMPOSÉ sur TOUTE la catégorie,
     //   remis à zéro PAR RUN (le compteur grotteShopBuys est omis des reset de monde → repart à zéro). Prix AFFICHÉ
@@ -84,6 +85,27 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
         if (r.symbols) setSymbols(r.symbols)
         if (opts.grant) { opts.grant(); persistYellowSave() }
         setMsg(opts.toast)
+    }
+
+    // CT STATUT (Sartay, 29/10/2026) : chaque vente, à n'importe quel joueur, multiplie le prix de la CT par 5 (compteur serveur).
+    //   Prix affiché = cliquet de la catégorie × 5^ventes ; le serveur refuse un prix dépassé et renvoie le nouveau compte.
+    const soldCount = (id: string) => ctSales[id] ?? statusCtSales(id, 0)
+    const statusCtCost = (id: string) => statusCtPrice(catPrice(STATUS_CT_BASE_PRICE, "ct"), soldCount(id))
+    const buyStatusCt = async (id: string, price: number, name: string) => {
+        if (busy) return
+        if (jc === null) { setMsg("Chargement du solde…"); return }
+        if (jc < price) { setMsg(`Pas assez de Jetons (${price} requis, ${jc} dispo).`); return }
+        setBusy(true); setMsg(null)
+        const r = await postStatusCtSpend(id, price)
+        setBusy(false)
+        if (typeof r.jc === "number") setJc(r.jc)
+        if (typeof r.sales === "number") setCtSales((s) => ({ ...s, [id]: r.sales as number }))
+        if (!r.ok) {
+            setMsg(r.reason === "price_changed" ? `💥 Un autre joueur vient d'acheter ${name} : son prix a été multiplié. Vérifie le nouveau prix.` : r.reason === "insufficient" ? "Achat refusé (solde serveur insuffisant)." : "Achat impossible pour l'instant, réessaie.")
+            return
+        }
+        grantCt(id); recordGrotteShopBuy("ct"); persistYellowSave()
+        setMsg(`✅ CT ${name} obtenue ! Pour le prochain acheteur, son prix est multiplié par ${STATUS_CT_SURGE}.`)
     }
 
     const ownedCt = (id: string) => player.ownedCts.includes(id) || player.boughtCts.includes(id)
@@ -134,10 +156,11 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                     </Section>
 
                     <Section title="🎭 CT statut inédites (par type)">
+                        <div style={{ fontSize: 10, opacity: 0.75, color: INK, marginBottom: 6, lineHeight: 1.3 }}>⚠️ Très puissantes, donc très rares : chaque vente, à n&apos;importe quel joueur, multiplie le prix de la CT par {STATUS_CT_SURGE}.</div>
                         {statusCtOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT statut.</Empty> : statusCtOffer.map((id) => {
-                            const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null; const price = catPrice(CT_PRICE, "ct")
-                            return <Row key={id} label={`${mv?.name ?? id}${mv ? ` · ${mv.type}` : ""}`} desc={mv?.description} price={price} disabled={busy || (jc ?? 0) < price}
-                                onBuy={() => spend(price, { grant: () => { grantCt(id); recordGrotteShopBuy("ct") }, toast: `✅ CT ${mv?.name ?? id} obtenue !` })} />
+                            const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null; const price = statusCtCost(id); const sold = soldCount(id)
+                            return <Row key={id} label={`${mv?.name ?? id}${mv ? ` · ${mv.type}` : ""}`} desc={`${mv?.description ?? ""}${mv?.description ? " · " : ""}${sold === 0 ? "jamais vendue" : `déjà vendue ${sold} fois`}`} price={price} disabled={busy || (jc ?? 0) < price}
+                                onBuy={() => buyStatusCt(id, price, mv?.name ?? id)} />
                         })}
                     </Section>
 

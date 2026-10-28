@@ -4,6 +4,7 @@
 //  GET  : renvoie le profil du joueur (défauts si absent / table pas encore créée).
 //  POST : { action: "recordRun" }  → crédite des JC + met à jour le meilleur record d'une salle (+symbole).
 //         { action: "spend" }      → débite des JC (boutique), refuse si solde insuffisant.
+//         { action: "statusCtSpend" } → achète une CT statut : prix ×5 à chaque vente (compteur GLOBAL, cf. data/statusCtPrice).
 //
 // Pattern GATÉ `(prisma as any).frontierProfile` (cf. duel-gift / hall-of-fame) : COMPILE avant
 // `npm run db:push` (qui crée la table FrontierProfile). Try/catch → NEUTRE tant que la table n'existe pas.
@@ -15,6 +16,7 @@ import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { replayCost } from "@/lib/gamebook/yellow/data/replayCost"
 import { buildFrontierBoard, sanitizeFrontierTeam, sanitizeLevelRule } from "@/lib/gamebook/yellow/frontier/frontierBoard"
+import { isStatusCt, parseSalesCount, statusCtPrice, statusCtSales, statusCtSalesKey, STATUS_CT_BASE_PRICE, STATUS_CT_LOT, STATUS_CT_PRICE_MAX } from "@/lib/gamebook/yellow/data/statusCtPrice"
 
 export const dynamic = "force-dynamic"
 
@@ -82,6 +84,18 @@ async function frontierBoard(meId: string) {
     }
 }
 
+// CT STATUT (Sartay, 29/10/2026) : ventes TOTALES de chaque CT, tous joueurs confondus → le prix affiché à la boutique. Lecture
+//   isolée (jamais d'exception) : un souci sur GlobalConfig ne doit pas faire tomber la lecture du solde de JC.
+async function readStatusCtSales(): Promise<Record<string, number>> {
+    let rows: { key: string; value: string }[] = []
+    try {
+        rows = await (prisma as any).globalConfig.findMany({ where: { key: { in: STATUS_CT_LOT.map(statusCtSalesKey) } }, select: { key: true, value: true } })
+    } catch { /* compteurs illisibles → ventes d'avant la règle seulement */ }
+    const out: Record<string, number> = {}
+    for (const id of STATUS_CT_LOT) out[id] = statusCtSales(id, parseSalesCount(rows.find((r) => r.key === statusCtSalesKey(id))?.value))
+    return out
+}
+
 export async function GET(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
@@ -89,7 +103,7 @@ export async function GET(req: NextRequest) {
     try {
         const fp = (prisma as any).frontierProfile
         const p = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
-        return NextResponse.json({ ok: true, profile: p ? pickProfile(p) : { ...DEFAULTS } })
+        return NextResponse.json({ ok: true, profile: { ...(p ? pickProfile(p) : DEFAULTS), statusCtSales: await readStatusCtSales() } })
     } catch {
         return NextResponse.json({ ok: true, profile: { ...DEFAULTS } }) // table pas encore créée → neutre
     }
@@ -182,6 +196,43 @@ export async function POST(req: NextRequest) {
             if (symbol && !symbols.includes(symbol)) symbols.push(symbol) // achat d'un symbole de prestige (atomique)
             const saved = await fp.update({ where: { userId: auth.userId }, data: { jc: jc - amount, ...(symbol ? { symbols } : {}) }, select: PROFILE_SELECT })
             return NextResponse.json({ ok: true, jc: saved.jc, symbols: pickProfile(saved).symbols })
+        }
+
+        if (action === "statusCtSpend") {
+            // CT STATUT : le prix suit les ventes de TOUS les joueurs (×5 à chaque vente). Le serveur refuse tout montant sous le
+            //   prix du moment (onglet resté sur l'ancien prix après la vente d'un autre joueur) et renvoie le nouveau compte ;
+            //   le cliquet +10 % du joueur ne fait qu'ajouter. Débit des JC et vente comptée dans UNE transaction : tout ou rien.
+            const ctId = typeof body.ctId === "string" ? body.ctId : ""
+            if (!isStatusCt(ctId)) return NextResponse.json({ error: "Bad CT" }, { status: 400 })
+            const amount = Math.max(0, Math.floor(Number(body.amount) || 0))
+            const key = statusCtSalesKey(ctId)
+            const gc = (prisma as any).globalConfig
+            const row = (await gc.findUnique({ where: { key }, select: { value: true } })) as { value: string } | null
+            const counted = parseSalesCount(row?.value)
+            const sales = statusCtSales(ctId, counted)
+            if (amount < statusCtPrice(STATUS_CT_BASE_PRICE, sales) || amount > STATUS_CT_PRICE_MAX) {
+                const existing = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
+                return NextResponse.json({ ok: false, reason: "price_changed", jc: existing?.jc ?? 0, sales })
+            }
+            try {
+                const saved = await (prisma as any).$transaction(async (tx: any) => {
+                    const debit = await tx.frontierProfile.updateMany({ where: { userId: auth.userId, jc: { gte: amount } }, data: { jc: { decrement: amount } } })
+                    if (debit.count !== 1) throw new Error("insufficient")
+                    if (row) {
+                        const bump = await tx.globalConfig.updateMany({ where: { key, value: row.value }, data: { value: String(counted + 1) } })
+                        if (bump.count !== 1) throw new Error("price_changed") // vendue entre-temps à un autre joueur
+                    } else {
+                        await tx.globalConfig.create({ data: { key, value: "1" } }) // 1re vente depuis la règle (une 1re vente concurrente échoue ici)
+                    }
+                    return tx.frontierProfile.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
+                })
+                return NextResponse.json({ ok: true, jc: saved?.jc ?? 0, sales: sales + 1 })
+            } catch (e) {
+                const now = (await gc.findUnique({ where: { key }, select: { value: true } })) as { value: string } | null
+                const existing = await fp.findUnique({ where: { userId: auth.userId }, select: PROFILE_SELECT })
+                const reason = e instanceof Error && e.message === "insufficient" ? "insufficient" : "price_changed"
+                return NextResponse.json({ ok: false, reason, jc: existing?.jc ?? 0, sales: statusCtSales(ctId, parseSalesCount(now?.value)) })
+            }
         }
 
         if (action === "replaySpend") {
