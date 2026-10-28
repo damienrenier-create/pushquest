@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { liveStabs, weakDefenseCategory, scoreTyping, bestCounterTypings, findPoolCounters, architectNemesis, profileFromSpecies, type DaemonProfile } from "./nemesisArchitect"
+import { liveStabs, weakDefenseCategory, scoreTyping, bestCounterTypings, findPoolCounters, architectNemesis, profileFromSpecies, existingNemesisBase, type DaemonProfile } from "./nemesisArchitect"
+import { speciesAtLevel } from "../data/ace"
 
 // Cible de référence : Moby D (EAU/GLACE), attaquant SPÉCIAL (spé 132), DÉF 80 basse → à percer en PHYSIQUE.
 const MOBYD: DaemonProfile = { name: "Moby D", types: ["EAU", "GLACE"], stats: { hp: 90, atk: 70, def: 80, spe: 70, spc: 132 } }
@@ -76,6 +77,21 @@ describe("Protocole némésis — généralisation (autre archétype)", () => {
         expect(iceCounter!.offenseMult).toBe(4)        // Glace ×2 Dragon × ×2 Vol
         expect(iceCounter!.hitsWeakDefense).toBe(true) // spécial → tape la SPÉ 45 faible
     })
+    it("némésis EXISTANTE : la finale visée s'atteint par niveau — Coucouminou de Gass → Ruffiant (Regnantaur), les autres créations inchangées", () => {
+        // Psy/Élec : le meilleur contre classé est Rochison, mais Roctaur → Rochison passe par l'ÉCHANGE (ACE restait sur Roctaur).
+        expect(existingNemesisBase({ name: "Coucouminou", types: ["PSY", "ELEC"], stats: { hp: 75, atk: 35, def: 70, spc: 132, spe: 110 } })).toBe("ruffiant")
+        expect(speciesAtLevel("ruffiant", 60)).toBe("regnantaur")
+        // Créations à némésis automatique au 28/10/2026 : la règle ne change rien pour elles.
+        const kept: [DaemonProfile, string][] = [
+            [{ name: "Stashex", types: ["PSY"], stats: { hp: 80, atk: 30, def: 45, spc: 130, spe: 135 } }, "ruffiant"],
+            [{ name: "Ewokid", types: ["DRAGON", "PLANTE"], stats: { hp: 90, atk: 45, def: 80, spc: 130, spe: 100 } }, "ruffiant"],
+            [{ name: "Dracominus", types: ["DRAGON", "SPECTRE"], stats: { hp: 105, atk: 45, def: 100, spc: 125, spe: 100 } }, "bouh"],
+            [{ name: "Chadine", types: ["EAU", "COMBAT"], stats: { hp: 75, atk: 130, def: 70, spc: 49, spe: 90 } }, "blaziper"],
+            [{ name: "Snatchacoolt", types: ["ELEC", "TENEBRES"], stats: { hp: 132, atk: 15, def: 152, spc: 130, spe: 15 } }, "trolystrik"],
+        ]
+        for (const [p, nem] of kept) expect(existingNemesisBase(p), p.name).toBe(nem)
+    })
+
     it("profileFromSpecies lit une espèce réelle", () => {
         const p = profileFromSpecies("razmaree")
         expect(p).toBeTruthy()

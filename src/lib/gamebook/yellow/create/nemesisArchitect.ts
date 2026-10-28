@@ -16,6 +16,7 @@ import { POKE_TYPES, type PokeType, type StatKey, type SpeciesData } from "../ba
 import { typeEffectiveness, moveCategory, moveCategoryOf } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
 import { MOVES } from "../data/moves"
+import { speciesAtLevel, MAX_LEVEL } from "../data/ace"
 
 type Cat = "PHYSICAL" | "SPECIAL"
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -246,6 +247,9 @@ export function profileFromSpecies(id: string): DaemonProfile | null {
 // résiste ses STAB, le frappe ×2 dans sa défense faible), hors légendaires, espèces secrètes, fusions et espèces sans
 // sprite, et hors type FÉE (réservé à Ukognos). On préfère une LIGNÉE (ACE la fait évoluer avec son niveau), puis une espèce visible avant le run 3.
 // Renvoie l'id du STADE 1 de la lignée (speciesAtLevel l'évolue au bon stade). Déterministe : même création → même némésis.
+// La finale visée doit s'atteindre PAR NIVEAU depuis la souche : speciesAtLevel ne suit que les évolutions par niveau, et
+// une lignée qui finit par échange ou par objet laissait ACE à vie sur la forme d'avant (Coucouminou de Gass, 28/10/2026 :
+// Rochison visé, Roctaur fielded jusqu'au niveau 100 → désormais Ruffiant → Regnantaur).
 
 /** Stade 1 d'une lignée canonique (remonte les pré-évolutions). */
 function lineageBaseOf(id: string): string {
@@ -265,7 +269,8 @@ export function existingNemesisBase(p: DaemonProfile): string | null {
         if (s.types.includes("FEE")) return false // FÉE réservée au légendaire Ukognos (même règle que l'ancien buildNemesis)
         return !!s.sprite && !s.sprite.includes("missingno")
     }
-    const ranked = findPoolCounters(p, 400).filter((c) => eligible(c.id))
+    const reachableByLevel = (id: string): boolean => speciesAtLevel(lineageBaseOf(id), MAX_LEVEL) === id
+    const ranked = findPoolCounters(p, 400).filter((c) => eligible(c.id) && reachableByLevel(c.id))
     const best = ranked.find((c) => !c.flags.includes("run3") && lineageBaseOf(c.id) !== c.id)
         ?? ranked.find((c) => !c.flags.includes("run3"))
         ?? ranked[0]

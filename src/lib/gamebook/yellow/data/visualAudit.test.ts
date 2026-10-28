@@ -67,6 +67,9 @@ describe("les causes à la source", () => {
                 expect(isPlaceholderSprite(sp.sprite), `${a}/${b} → ${sp.id}`).toBe(false)
                 expect(sp.types.includes("FEE"), `${a}/${b} → ${sp.id}`).toBe(false)
             }
+            // ACE atteint la FORME FINALE par niveau : jamais une lignée qui finit par échange/objet (bloqué à mi-chemin à vie).
+            const top = speciesAtLevel(base, 100)
+            expect(SPECIES[top].evolution, `${a}/${b} → ${base} plafonne à ${top}`).toBeUndefined()
         }
     })
     it("le jeu ne crée plus de némésis générée, ré-enregistre les anciennes, et ACE lègue un Panthéon", () => {
