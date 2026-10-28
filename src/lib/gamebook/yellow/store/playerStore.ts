@@ -1684,7 +1684,7 @@ export function spendCasinoBet(bet: number): { ok: boolean; reason?: string } {
 
 /** VŒU DU GÉNIE — effet MACHINE d'un vœu (posé EN BASE par le créateur avec conditionN, appliqué AUTOMATIQUEMENT
  *  à l'acceptation → plus d'aller-retour ni de redéploiement pour un type déjà géré). */
-export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean; hours?: number; captures?: number; shiny?: boolean }
+export interface GenieEffect { kind: string; amount?: number; id?: string; qty?: number; level?: number; hard?: boolean; hours?: number; captures?: number; shiny?: boolean; uid?: string; moves?: string[] }
 /** VŒU DU GÉNIE — retire `levels` niveaux EFFECTIFS à un Daemon (cherché dans l'équipe puis dans le PC), désigné par
  *  son `speciesId`. Plancher au niveau 1. L'espèce n'est PAS touchée : un Divinpâte ramené sous son palier reste un
  *  Divinpâte (pas de dé-évolution). Les PV courants sont re-clampés au nouveau max. Renvoie false si la cible est
@@ -1749,6 +1749,15 @@ function runGenieEffect(e: GenieEffect): boolean {
         case "shiny_frenzy": st = { ...st, shinyFrenzy: freshShinyFrenzy(Date.now(), e.hours ?? SHINY_FRENZY_DEFAULT_HOURS, e.captures ?? SHINY_FRENZY_DEFAULT_CAPTURES) }; return true // ✨ anniversaire Jacanon : 50 % de shiny 24 h, jusqu'à N captures
         case "ephemeral_shiny_days": st = { ...st, shinyWish: freshShinyWish(amt || SHINY_WISH_DEFAULT_CHARGES) }; return true // vœu « + de shiny » (Task1) : N jours de chance, shiny éphémères
         case "ev_reset_charges": st = { ...st, evResetCharges: Math.max(0, amt) }; return true                // vœu « remettre mes EV à 0 » (Zyran) : N prochains K.O. → reset au lieu de gain
+        case "set_moves": { // RESTITUTION des ATTAQUES d'un Daemon précis (28/10/2026 : le Magnetor rendu à DaKumba était neuf, sans les
+            //   siennes) : `uid` (+ `id` = espèce attendue), `moves` = 1 à 4 ids d'attaques connues, PP pleins. Rien d'autre ne change.
+            const ids = (e.moves ?? []).filter((id) => typeof id === "string" && !!getMove(id)).slice(0, 4)
+            if (!e.uid || !ids.length || !movesTargetPresent(e)) return false
+            const moves = ids.map((id) => { const pp = getMove(id)?.pp ?? 5; return { moveId: id, pp, ppMax: pp } })
+            const fix = (m: MonInstance): MonInstance => (m.uid === e.uid && (!e.id || m.speciesId === e.id) ? { ...m, moves, pendingMoves: undefined } : m)
+            st = { ...st, team: st.team.map(fix), pc: st.pc.map(fix) }
+            return true
+        }
         case "give_mon": { // DON / RESTITUTION d'un Daemon (28/10/2026 : Daemons perdus à la sortie d'un rejeu) : un Daemon NEUF
             //   à ton nom (`id` = espèce, `level`, `shiny` → IV parfaits), en équipe s'il reste de la place, sinon au PC.
             if (!e.id || !getSpecies(e.id)) return false
@@ -1862,6 +1871,7 @@ export function applyExternalEffects(raw: string): boolean {
     //   introuvable, ne le bloque plus en boucle).
     if (!effects.every((e) => !!e && typeof e.kind === "string" && isKnownGenieEffectKind(e.kind))) return false
     if (missingDrainTarget(effects)) return false // contrepartie sans sa cible dans ce monde : le lot attend (avant : acquitté, perdue)
+    if (missingMovesTarget(effects)) return false // attaques à rendre à un Daemon absent de ce monde : le lot attend
     for (const e of effects) runGenieEffect(e)
     st = { ...st, geniePaid: withGeniePaid(mark) }
     emit()
@@ -1888,6 +1898,10 @@ export function reapplyGenieWishes(): boolean { return lastGenieRow ? applyAccep
  *  versé sans elle, sa contrepartie serait perdue (même recherche qu'applyLevelDrain). */
 function levelDrainTargetPresent(id: string | undefined): boolean { return !!id && (st.team.some((m) => m.speciesId === id) || st.pc.some((m) => m.speciesId === id)) }
 const missingDrainTarget = (effects: GenieEffect[]): boolean => effects.some((e) => e.kind === "level_drain" && !levelDrainTargetPresent(e.id))
+/** La cible d'un set_moves (uid, et espèce si donnée) est-elle dans l'équipe ou le PC du monde actif ? Sinon le lot ATTEND :
+ *  un Daemon resté dans un autre monde (ou une bulle de rejeu ouverte) ne doit pas perdre sa restitution. */
+function movesTargetPresent(e: GenieEffect): boolean { return !!e.uid && [...st.team, ...st.pc].some((m) => m.uid === e.uid && (!e.id || m.speciesId === e.id)) }
+const missingMovesTarget = (effects: GenieEffect[]): boolean => effects.some((e) => e.kind === "set_moves" && !movesTargetPresent(e))
 export function applyAcceptedGenieWishEffects(row: GenieWishRow | null | undefined, opts?: { perksOnly?: boolean }): boolean {
     if (!row) return false
     lastGenieRow = row
