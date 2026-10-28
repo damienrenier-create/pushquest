@@ -10,9 +10,10 @@ import { useEffect, useRef, useState } from "react"
 import { useBattle, getSnapshot as getBattleSnapshot, isFusionLeagueTrainer } from "@/lib/gamebook/yellow/store/battleStore"
 import { setEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { pickTransition, ETX_VARIANTS, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
+import { pickTransition, ETX_VARIANTS, isShinyEncounter, SHINY_ANNOUNCE_MS, SHINY_ANNOUNCE_REDUCED_MS, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
+import ShinyAnnounce from "./ShinyAnnounce"
 
-interface ActiveFx { profile: EtxProfile; variant: EtxVariant; danger: boolean; dur: number; count: number; bloom: boolean; shake: boolean; key: number }
+interface ActiveFx { profile: EtxProfile; variant: EtxVariant; danger: boolean; dur: number; count: number; bloom: boolean; shake: boolean; key: number; shiny?: { sprite?: string; name?: string } }
 
 const prefersReducedMotion = () =>
     typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
@@ -40,10 +41,12 @@ export default function EncounterTransition() {
                 fusionLeague,
             })
             const v = ETX_VARIANTS[variant]
+            // ✨ SHINY SAUVAGE : l'annonce dédiée remplace l'anim de type (cf. ShinyAnnounce).
+            const shiny = isShinyEncounter({ isWild: battle.isWild, shiny: enemy?.shiny }) ? { sprite: sp?.sprite, name: sp?.name } : undefined
             keyRef.current += 1
             setFx({
-                profile, variant, danger,
-                dur: Math.round(profile.durationMs * v.durationScale) + 450, // +0,5 s : l'anim de rencontre un peu plus posée
+                profile, variant, danger, shiny,
+                dur: shiny ? SHINY_ANNOUNCE_MS : Math.round(profile.durationMs * v.durationScale) + 450, // +0,5 s : l'anim de rencontre un peu plus posée
                 count: Math.round(profile.particle.count * v.particleScale),
                 bloom: !!profile.bloom || v.bloom,
                 shake: !!profile.shake || v.shake,
@@ -62,7 +65,7 @@ export default function EncounterTransition() {
     useEffect(() => {
         if (!fx) return
         const reduced = prefersReducedMotion()
-        const t = setTimeout(() => setFx(null), reduced ? 220 : fx.dur)
+        const t = setTimeout(() => setFx(null), reduced ? (fx.shiny ? SHINY_ANNOUNCE_REDUCED_MS : 220) : fx.dur)
         return () => clearTimeout(t)
     }, [fx])
 
@@ -83,6 +86,8 @@ export default function EncounterTransition() {
     const [c1, c2] = profile.palette
     const grad = `linear-gradient(135deg, ${c1}, ${c2})`
     const skip = () => setFx(null)
+
+    if (fx.shiny) return <ShinyAnnounce sprite={fx.shiny.sprite} name={fx.shiny.name} reduced={reduced} onSkip={skip} seed={fx.key} />
 
     // Mode accessible : simple fondu, aucun mouvement/particule/flash.
     if (reduced) {

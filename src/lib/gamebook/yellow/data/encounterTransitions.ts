@@ -115,6 +115,13 @@ export const ETX_VARIANTS: Record<EtxVariant, { durationScale: number; particleS
     epic: { durationScale: 1.3, particleScale: 2.0, bloom: true, shake: true, sparkle: true },
 }
 
+/** ANNONCE SHINY (Sartay, 28/10/2026 : « il existe une animation spéciale par type… il en faudrait une vraiment dingue pour
+ *  annoncer un shiny ! ») : un Daemon SAUVAGE chromatique remplace l'anim de type par la séquence de ShinyAnnounce. */
+export function isShinyEncounter(d: { isWild: boolean; shiny?: boolean }): boolean { return d.isWild && d.shiny === true }
+/** Durée de l'annonce shiny (passable avec B/Échap) ; version « réduire les animations » : simple fondu. */
+export const SHINY_ANNOUNCE_MS = 4200
+export const SHINY_ANNOUNCE_REDUCED_MS = 1300
+
 export interface EncounterData { type?: string; rarity?: string; levelDiff?: number; isSpecial?: boolean; fusionLeague?: boolean }
 
 /** Choisit profil + variante + flag "danger" selon les flags de la rencontre. */
