@@ -1140,12 +1140,15 @@ function buildAutelChimereRoom(): TileType[][] {
 // CHAMBRE DU LÉGENDAIRE ULTIME (14×14) — décor salle_ukognofy.png. Ukognofy est DESSINÉ au centre (bloc solide) ;
 //   le joueur arrive par l'entrée basse et l'affronte à l'arrivée (cf. gameStore). Piliers latéraux décoratifs.
 //   Collisions à affiner en jeu via debugGrid si besoin (le combat se lance à l'entrée → peu critique).
-function buildUkognofyChamber(): TileType[][] {
+function buildUkognofyChamber(emptied = false): TileType[][] {
     const m = buildZoneRoom(14, 14) // bords = murs ; sol intérieur ; porte basse (7,13) ouverte
-    for (let y = 4; y <= 7; y++) for (let x = 5; x <= 8; x++) m[y][x] = "tree" // Ukognofy central (décor) — solide
+    if (!emptied) for (let y = 4; y <= 7; y++) for (let x = 5; x <= 8; x++) m[y][x] = "tree" // Ukognofy central (décor) — solide
     for (const [x, y] of [[2, 5], [2, 6], [11, 5], [11, 6]] as const) m[y][x] = "tree" // 2 piliers latéraux
     return m
 }
+/** Cases de la chambre UNE FOIS UKOGNOFY CAPTURÉ (décor vidé, cf. data/ukognofy UKOGNOFY_CHAMBER_EMPTY_BG) : le bloc central
+ *  redevient du sol. L'Orfèvre, debout en (7,7), bloque sa case comme tout PNJ. Utilisé par le déplacement (gameStore). */
+export const UKOGNOFY_CHAMBER_EMPTY_TILES: TileType[][] = buildUkognofyChamber(true)
 
 // === DÔME DE COMBAT — LES 3 SALLES PHYSIQUES (parcours du champion). Toutes 16×12, sprites 1200×896 (tileSize 75).
 //   1) TOURNOI (yellow_combat_dome) : porte SUD→hub + porte EST (15,6)→salle Dan (gatée MAÎTRE).

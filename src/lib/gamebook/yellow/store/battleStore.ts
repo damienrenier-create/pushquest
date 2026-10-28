@@ -47,12 +47,12 @@ import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALI
 import { SURFER_NPC_ID, SURFER_NAME, SURFER_REWARD_LINES, SURFER_WIN_NO_OUTFIT_LINES, SURFER_REMATCH_WIN_LINES } from "../data/surferTrainer"
 import { isSurfOutfit } from "../data/avatars"
 import { NEMESIS_CHALLENGE_TRAINER_ID, NEMESIS_DONE_MARKER, NEMESIS_REWARD_LEVEL, nemesisRewardBlockedMarker, NEMESIS_CHALLENGE_NPC_NAME, nemesisWonLines, nemesisLostLines, nemesisRewardName, nemesisRewardSpeciesFromTrainerId, buildNemesisReward, nemesisRewardOptionsFor } from "../data/nemesisChallenge"
-import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES, PNJ5_CLEARED_MARKER } from "../data/pnj5"
+import { PNJ5_TRAINER_ID, pnj5VictoryLines, PNJ5_CLEARED_MARKER } from "../data/pnj5"
 import { ANANAS_TRAINER_ID, ANANAS_NPC_ID, ananasRewardBerry, ananasWinLines } from "../data/ananas"
 import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
-import { ORFEVRE_TRAINER_ID, ORFEVRE_NAME, nextOrfevreWinMarker, orfevreWinCount, orfevreVictoryLines, SHINY_BALL_ID } from "../data/orfevre"
+import { ORFEVRE_TRAINER_ID, ORFEVRE_NAME, nextOrfevreWinMarker, orfevreWinCount, orfevreVictoryLines, orfevreDone, SHINY_BALL_ID } from "../data/orfevre"
 import { THIEF_TRAINER_ID, THIEF_NAME, thiefWinLines, thiefMonName } from "../data/thief"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
@@ -1316,7 +1316,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //   → les échelles restent OK même après un refresh (levé seulement après 10 pas hors grotte, cf. gameStore).
             recordPnj5Defeat()
             markTrainerDefeated(PNJ5_CLEARED_MARKER)
-            rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
+            // Ukognofy capturé → le Gardien livre la rumeur de L'ORFÈVRE (tant que ses 6 Shiny Balls ne sont pas gagnées).
+            rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: pnj5VictoryLines(isTrainerDefeated(UKOGNOFY_CAUGHT_MARKER), orfevreDone(isTrainerDefeated)) }
         } else if (storeState.trainer.trainerId === SURFER_NPC_ID) {
             // LE SURFEUR : ré-affrontable (PAS de markTrainerDefeated). Il ne lâche sa CT SURF QU'À qui le bat EN TENUE
             //   de surfeur. Battu SANS tenue → raillerie, aucun cadeau (reviens habillé). Après la CT → rematch 1×/jour.

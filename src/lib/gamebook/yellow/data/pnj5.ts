@@ -104,6 +104,20 @@ export const PNJ5_VICTORY_LINES = [
     "Impressionnant. La voie est libre… POUR CETTE FOIS.",
     "Mais mes Gardiens reviendront plus forts. Défie-les quand tu l'oseras.",
 ]
+/** Une fois UKOGNOFY CAPTURÉ, le Gardien vaincu livre la rumeur de L'ORFÈVRE (Sartay, 28/10/2026 : « comment les joueurs
+ *  vont-ils savoir que l'Orfèvre est là ? il faut un dialogue spécifique au dresseur de geckos une fois Ukognofy capturé »).
+ *  Tant que ses 6 Shiny Balls ne sont pas toutes gagnées. Le chemin décrit est le rituel réel (gameStore : nuit 21 h-3 h,
+ *  un Daemon niveau 100, une fusion sauvage croisée dans la Grotte puis une échelle sans autre rencontre). */
+export const PNJ5_ORFEVRE_LINES = [
+    "…Une dernière chose. C'est toi qui as capturé UKOGNOFY, n'est-ce pas ? Son sanctuaire n'est pas resté vide.",
+    "Un drôle de collectionneur s'y est installé : L'ORFÈVRE. Six Daemons CHROMATIQUES, tous au niveau 100.",
+    "Bats-le et il t'offre une SHINY BALL : le Daemon que tu captures avec devient chromatique. Un seul combat par jour.",
+    "Le chemin n'a pas changé : la nuit, entre 21 h et 3 h, avec un Daemon de niveau 100. Croise une FUSION sauvage dans la Grotte, puis prends une échelle sans croiser aucun autre Daemon.",
+]
+/** Fin de combat gagné contre le Gardien : + la rumeur de l'Orfèvre si Ukognofy est capturé et l'Orfèvre pas épuisé. */
+export function pnj5VictoryLines(ukognofyCaught: boolean, orfevreFinished: boolean): string[] {
+    return ukognofyCaught && !orfevreFinished ? [...PNJ5_VICTORY_LINES, ...PNJ5_ORFEVRE_LINES] : [...PNJ5_VICTORY_LINES]
+}
 // Descente scellée : même si le joueur CONTOURNE le gardien, il ne peut pas descendre sans l'avoir vaincu cette visite.
 export const PNJ5_SEAL_LINES = [
     "*Un grondement sourd monte des profondeurs — une force invisible te repousse de l'échelle.*",

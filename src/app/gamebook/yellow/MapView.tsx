@@ -13,6 +13,7 @@ import { useGameStore, activeNpcs } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
 import { currentPlatineOpponent } from "@/lib/gamebook/yellow/store/platineRun"
 import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
+import { UKOGNOFY_CHAMBER_MAP, UKOGNOFY_CAUGHT_MARKER, UKOGNOFY_CHAMBER_EMPTY_BG } from "@/lib/gamebook/yellow/data/ukognofy"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { CLANS } from "@/lib/gamebook/yellow/data/clans"
@@ -438,9 +439,12 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     const bgPosY = overflowYTiles > 0 ? (originYTiles / overflowYTiles) * 100 : 0
                     // AUTEL DE LA CHIMÈRE : la porte à dragons de la Ligue est FERMÉE tant que la Ligue n'est pas
                     //   débloquée, puis OUVERTE (décor alternatif) une fois une épreuve de fusion remportée.
+                    // SANCTUAIRE : une fois UKOGNOFY CAPTURÉ, le légendaire peint quitte le décor (l'Orfèvre a pris sa place).
                     const bgUrl = (map.id === "yellow_combat_autel" && getPlayer().defeatedTrainers.includes(FUSION_UNLOCK_MARKER))
                         ? "/yellow/sprites/fusion_altar_open.png"
-                        : map.backgroundImage
+                        : (map.id === UKOGNOFY_CHAMBER_MAP && getPlayer().defeatedTrainers.includes(UKOGNOFY_CAUGHT_MARKER))
+                            ? UKOGNOFY_CHAMBER_EMPTY_BG
+                            : map.backgroundImage
                     return (
                         <div style={{
                             position: "absolute",

@@ -14,7 +14,7 @@ import { tryMove } from "../engine/movement"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS, RUN3_ARENA_MAPS, NGPLUS_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
+import { YELLOW_MAPS, RUN3_ARENA_MAPS, NGPLUS_ARENA_MAPS, FUSION_MIROIR_BRONZE, currentArenaMapId, CENDREVILLE_SPAWN, UKOGNOFY_CHAMBER_EMPTY_TILES } from "../maps"
 import { currentGymBadge } from "../data/arenaInfos"
 import { run3ExclusiveSignLines } from "../data/run3Exclusives"
 import type { BadgeId } from "../data/cts"
@@ -1799,7 +1799,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (dialogue || get().trainerAlertId || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().moveReminderOpen || get().combatShopOpen || get().domeMenuOpen || get().espionOpen || get().trocOpen || get().usineMenuOpen || get().fusionMenuOpen || get().fusionAtelierOpen || get().daemomaniaqueOpen || get().sageOpen || get().fashionOpen || get().artisaneOpen || get().fishing || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
-        const next = tryMove(player, dir, map, { canSurf: canSurfNow() })
+        // SANCTUAIRE VIDÉ : une fois Ukognofy capturé, son bloc central (décor) redevient du sol praticable.
+        const moveMap = map.id === UKOGNOFY_CHAMBER_MAP && isTrainerDefeated(UKOGNOFY_CAUGHT_MARKER) ? { ...map, tiles: UKOGNOFY_CHAMBER_EMPTY_TILES } : map
+        const next = tryMove(player, dir, moveMap, { canSurf: canSurfNow() })
 
         // SURF SANS TENUE : le joueur connaît Surf mais n'est pas en tenue de surfeur → l'eau reste bloquante + nudge
         //   (va t'équiper chez la Fashion Victim). Uniquement s'il a VRAIMENT tenté d'entrer dans l'eau (case face = eau).

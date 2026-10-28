@@ -22,6 +22,9 @@ export const UKOGNOFY_MOVES = ["souffle_primordial", "cataclysme_lunaire", "fulg
 /** Map de la CHAMBRE du légendaire (décor salle_ukognofy.png). Atteinte via une échelle interne de la Grotte
  *  quand les 6 conditions sont réunies (cf. gameStore). Ukognofy y est affronté à l'arrivée. */
 export const UKOGNOFY_CHAMBER_MAP = "yellow_ukognofy_chamber"
+/** Décor de la chambre UNE FOIS UKOGNOFY CAPTURÉ : le légendaire peint au centre a disparu, le sol est libre (Sartay,
+ *  28/10/2026 : « une fois Ukognofy battu et l'Orfèvre à sa place, faut enlever le sprite d'Ukognofy »). Même taille. */
+export const UKOGNOFY_CHAMBER_EMPTY_BG = "/yellow/sprites/salle_ukognofy_vide.png"
 
 /** PNJ d'INTERACTION d'Ukognofy dans la chambre (bas-centre du bloc central, sprite invisible : le décor
  *  salle_ukognofy.png montre déjà le légendaire). Sert de point de combat « bump-to-fight » à partir de la
