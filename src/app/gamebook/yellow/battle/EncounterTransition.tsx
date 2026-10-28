@@ -10,10 +10,27 @@ import { useEffect, useRef, useState } from "react"
 import { useBattle, getSnapshot as getBattleSnapshot, isFusionLeagueTrainer } from "@/lib/gamebook/yellow/store/battleStore"
 import { setEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { pickTransition, ETX_VARIANTS, isShinyEncounter, SHINY_ANNOUNCE_MS, SHINY_ANNOUNCE_REDUCED_MS, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
+import { pickTransition, ETX_VARIANTS, isShinyEncounter, pickShinyDecoys, SHINY_ANNOUNCE_MS, SHINY_ANNOUNCE_REDUCED_MS, SHINY_DECOYS, SHINY_DECOY_FALLBACK, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
+import { getPokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { getCurrentMapId, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { zoneSpeciesIds } from "@/lib/gamebook/yellow/data/encounters"
 import ShinyAnnounce from "./ShinyAnnounce"
 
-interface ActiveFx { profile: EtxProfile; variant: EtxVariant; danger: boolean; dur: number; count: number; bloom: boolean; shake: boolean; key: number; shiny?: { sprite?: string; name?: string } }
+interface ActiveFx { profile: EtxProfile; variant: EtxVariant; danger: boolean; dur: number; count: number; bloom: boolean; shake: boolean; key: number; shiny?: { sprite?: string; name?: string; decoys: string[] } }
+
+/** Ombres de la roulette, des plus plausibles aux moins (Sartay, 28/10/2026) : les Daemons déjà croisés DANS CETTE ZONE, puis
+ *  les 5 derniers Daemons vus, puis le reste de la faune de la zone, puis des communs. Avec sprite, hors légendaires. */
+function shinyDecoySprites(targetId: string): string[] {
+    const usable = (id: string) => { const s = getSpecies(id) as { sprite?: string; legendary?: boolean } | null; return !!s?.sprite && !s.legendary }
+    const dex = getPokedex()
+    const mapId = getCurrentMapId()
+    const w = effectiveRunWorld()
+    const run = w === "ngplus" ? 2 : w === "run3" ? 3 : 1
+    const seenHere = dex.seen.filter((id) => dex.seenAt?.[id]?.includes(mapId))
+    const recent = dex.seen.slice(-5).reverse()
+    const tiers = [seenHere, recent, zoneSpeciesIds(mapId, run), SHINY_DECOY_FALLBACK].map((t) => t.filter(usable))
+    return pickShinyDecoys(targetId, tiers, Math.floor(Math.random() * 1e9), SHINY_DECOYS).map((id) => getSpecies(id)?.sprite).filter((s): s is string => !!s)
+}
 
 const prefersReducedMotion = () =>
     typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
@@ -42,7 +59,7 @@ export default function EncounterTransition() {
             })
             const v = ETX_VARIANTS[variant]
             // ✨ SHINY SAUVAGE : l'annonce dédiée remplace l'anim de type (cf. ShinyAnnounce).
-            const shiny = isShinyEncounter({ isWild: battle.isWild, shiny: enemy?.shiny }) ? { sprite: sp?.sprite, name: sp?.name } : undefined
+            const shiny = isShinyEncounter({ isWild: battle.isWild, shiny: enemy?.shiny }) ? { sprite: sp?.sprite, name: sp?.name, decoys: shinyDecoySprites(enemy?.speciesId ?? "") } : undefined
             keyRef.current += 1
             setFx({
                 profile, variant, danger, shiny,
@@ -87,7 +104,7 @@ export default function EncounterTransition() {
     const grad = `linear-gradient(135deg, ${c1}, ${c2})`
     const skip = () => setFx(null)
 
-    if (fx.shiny) return <ShinyAnnounce sprite={fx.shiny.sprite} name={fx.shiny.name} reduced={reduced} onSkip={skip} seed={fx.key} />
+    if (fx.shiny) return <ShinyAnnounce sprite={fx.shiny.sprite} name={fx.shiny.name} decoys={fx.shiny.decoys} reduced={reduced} onSkip={skip} seed={fx.key} />
 
     // Mode accessible : simple fondu, aucun mouvement/particule/flash.
     if (reduced) {

@@ -435,6 +435,19 @@ function run1ChampionCatchup(speciesId: string): string[] {
 }
 /** Espèces spawnables dans une run (base + formes évoluées in situ). Fusions/customs exclus par l'appelant (getSpecies null). Mémoïsé. */
 const _runSpawnCache: Record<string, Set<string>> = {}
+/** Faune d'une ZONE pour un run (mêmes tables que le tirage) : d'abord le biotope où se tient le joueur (si la zone en a et
+ *  que (x,y) est donné), puis le pool général. Sans les remplacements (`takesFrom`) ni les entrées d'après Sylvebarbe.
+ *  Sert aux ombres de l'annonce shiny (ombres plausibles : des Daemons du coin). */
+export function zoneSpeciesIds(mapId: string, run: number, x?: number, y?: number): string[] {
+    const z = guideTable(run)[mapId]
+    if (!z) return []
+    const ids: string[] = []
+    const push = (pool?: readonly WildEntry[]) => { for (const e of pool ?? []) if (e?.speciesId && !e.takesFrom && !e.postSylvebarbe && !ids.includes(e.speciesId)) ids.push(e.speciesId) }
+    if (z.rects && x !== undefined && y !== undefined) push(rectAt(z.rects, x, y)?.pool)
+    push(z.pool)
+    return ids
+}
+
 export function runSpawnableSpecies(run: number, hideEndgame: boolean = false, preSylvebarbe: boolean = false): Set<string> {
     const key = `${run}:${hideEndgame ? 1 : 0}:${preSylvebarbe ? 1 : 0}`
     if (_runSpawnCache[key]) return _runSpawnCache[key]

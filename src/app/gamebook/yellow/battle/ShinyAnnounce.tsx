@@ -2,11 +2,15 @@
 // src/app/gamebook/yellow/battle/ShinyAnnounce.tsx
 //
 // ANNONCE SHINY (Sartay, 28/10/2026 : « il existe une animation spéciale par type… il en faudrait une vraiment dingue pour
-// annoncer un shiny ! », puis « davantage dorée, strass et paillettes plutôt qu'arc-en-ciel »). Remplace l'anim de type quand
-// un Daemon SAUVAGE chromatique apparaît : la nuit dorée tombe, une étincelle grossit, flash et secousse, soleil d'or et rayons,
-// la silhouette se révèle dans ses couleurs, gerbes d'étoiles d'or, pluie de paillettes, cadre de strass qui scintille,
-// « SHINY ! » lettre par lettre avec un reflet qui passe, puis l'écran s'ouvre sur le combat. CSS seul, passable (B/Échap) ;
-// prefers-reduced-motion → simple fondu, sans flash ni mouvement.
+// annoncer un shiny ! », « davantage dorée, strass et paillettes plutôt qu'arc-en-ciel », « elle peut être plus longue puisque
+// c'est une giga bonne nouvelle ! d'ailleurs on pourrait faire une roulette de 3-4 ombres histoire de faire stresser »).
+// Remplace l'anim de type quand un Daemon SAUVAGE chromatique apparaît (≈ 7 s, passable avec B/Échap) :
+//   1. la nuit dorée tombe, une étincelle grossit ; flash et secousse ; le cadre de strass s'allume, les paillettes tombent ;
+//   2. ROULETTE D'OMBRES : les silhouettes de 4 autres Daemons défilent en ralentissant (un cercle d'or à chaque coup,
+//      « ? ? ? » qui tremble), puis la vraie s'arrête… deux battements de cœur ;
+//   3. RÉVÉLATION : grand flash d'or, soleil d'or, gerbes d'étoiles, le Daemon dans ses couleurs, « SHINY ! » lettre par
+//      lettre avec un reflet ; puis l'écran s'ouvre sur le combat.
+// CSS seul ; prefers-reduced-motion → simple fondu, sans flash ni mouvement.
 
 import { useMemo, type CSSProperties } from "react"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
@@ -14,11 +18,15 @@ import { SHINY_ANNOUNCE_MS, SHINY_ANNOUNCE_REDUCED_MS } from "@/lib/gamebook/yel
 
 const T = SHINY_ANNOUNCE_MS
 const BOOM = 1050 // l'étincelle explose
-const REVEAL = 1650 // la silhouette prend ses couleurs
+const SLOTS = [300, 340, 400, 500] // durée de chaque ombre de la roulette : de plus en plus lente
+const ROULETTE = BOOM + 100 // première ombre
+const FINAL = ROULETTE + SLOTS.reduce((a, b) => a + b, 0) // la vraie silhouette s'arrête
+const REVEAL = FINAL + 1150 // révélation (après deux battements de cœur)
 const TITLE = "SHINY !"
 // Ors, du plus clair au plus profond, et le blanc des éclats.
 const GOLDS = ["#fff8d6", "#ffe48a", "#f7c948", "#e8aa1f", "#c98b0e"]
 const SPARK_GLYPHS = ["✦", "✧", "✶", "◆", "✦", "✧"]
+const SIL_FILTER = "brightness(0) drop-shadow(0 0 2px rgba(255,248,214,.95)) drop-shadow(0 0 10px rgba(255,214,90,.8))"
 
 /** Pseudo-hasard déterministe (même graine → même pluie d'or) : rendu identique client/aperçu. */
 function rng(seed: number) {
@@ -35,30 +43,37 @@ function studPositions(): { left: number; top: number }[] {
 }
 const STUDS = studPositions()
 
-export default function ShinyAnnounce({ sprite, name, reduced, onSkip, seed = 1 }: { sprite?: string; name?: string; reduced: boolean; onSkip: () => void; seed?: number }) {
+export default function ShinyAnnounce({ sprite, name, decoys = [], reduced, onSkip, seed = 1 }: { sprite?: string; name?: string; decoys?: string[]; reduced: boolean; onSkip: () => void; seed?: number }) {
     const { sparks, glitter } = useMemo(() => {
         const r = rng(seed)
-        const sparks = Array.from({ length: 36 }, (_, i) => {
-            const angle = (i / 36) * Math.PI * 2 + r() * 0.35
-            const dist = 110 + r() * 150
+        const sparks = Array.from({ length: 40 }, (_, i) => {
+            const angle = (i / 40) * Math.PI * 2 + r() * 0.35
+            const dist = 110 + r() * 160
             return {
                 glyph: SPARK_GLYPHS[i % SPARK_GLYPHS.length],
                 color: i % 6 === 0 ? "#ffffff" : GOLDS[i % 4],
                 tx: Math.round(Math.cos(angle) * dist), ty: Math.round(Math.sin(angle) * dist),
                 rot: Math.round(180 + r() * 360) * (i % 2 ? 1 : -1),
-                size: Math.round(13 + r() * 15),
-                delay: BOOM + 40 + (i % 12) * 45 + Math.round(r() * 120),
+                size: Math.round(13 + r() * 16),
+                delay: REVEAL + 40 + (i % 12) * 45 + Math.round(r() * 140),
             }
         })
-        const glitter = Array.from({ length: 72 }, (_, i) => ({
-            left: Math.round(r() * 1000) / 10, top: Math.round(r() * 1000) / 10,
-            size: 3 + Math.round(r() * 4), diamond: i % 3 !== 0,
-            color: i % 7 === 0 ? "#ffffff" : GOLDS[Math.floor(r() * GOLDS.length)],
-            dur: 1100 + Math.round(r() * 800), delay: BOOM + Math.round(r() * 900),
-        }))
+        // Paillettes : une pluie fine pendant la roulette, puis une averse à la révélation.
+        const glitter = Array.from({ length: 76 }, (_, i) => {
+            const early = i < 30
+            return {
+                left: Math.round(r() * 1000) / 10, top: Math.round(r() * 1000) / 10,
+                size: (early ? 2 : 3) + Math.round(r() * (early ? 3 : 4)), diamond: i % 3 !== 0,
+                color: i % 7 === 0 ? "#ffffff" : GOLDS[Math.floor(r() * GOLDS.length)],
+                dur: 1100 + Math.round(r() * 800),
+                delay: early ? BOOM + Math.round(r() * (REVEAL - BOOM)) : REVEAL + Math.round(r() * 900),
+            }
+        })
         return { sparks, glitter }
     }, [seed])
     const label = name ? `${name} chromatique` : "Un Daemon chromatique"
+    const shadows = decoys.slice(0, SLOTS.length)
+    const slotStart = (i: number) => ROULETTE + SLOTS.slice(0, i).reduce((a, b) => a + b, 0)
 
     if (reduced) {
         return (
@@ -71,14 +86,15 @@ export default function ShinyAnnounce({ sprite, name, reduced, onSkip, seed = 1 
     }
 
     return (
-        <div style={{ ...S.overlay, animation: `shx-shake 420ms ease-in-out ${BOOM}ms, shx-out 650ms ease-in ${T - 650}ms forwards` }} role="status" aria-live="polite" aria-label={`SHINY ! ${label}`}>
+        <div style={{ ...S.overlay, animation: `shx-shake 420ms ease-in-out ${BOOM}ms, shx-shake 560ms ease-in-out ${REVEAL}ms, shx-out 650ms ease-in ${T - 650}ms forwards` }} role="status" aria-live="polite" aria-label={`SHINY ! ${label}`}>
             <style>{KEYFRAMES}</style>
             {/* Nuit dorée */}
             <div style={{ ...S.fill, background: "radial-gradient(circle at 50% 44%, #3d2a07 0%, #1a1104 55%, #070402 100%)" }} />
-            {/* Soleil d'or (reflets métalliques) + rayons or pâle qui tournent en sens inverse */}
-            <div style={{ ...S.disk, background: "conic-gradient(from 0deg, #fff3b0, #f5c542 12%, #9c6a08 25%, #ffe48a 37%, #d99a1e 50%, #fff8d6 62%, #f5c542 75%, #9c6a08 87%, #fff3b0)", mixBlendMode: "screen", animation: `shx-burst 2300ms cubic-bezier(.16,.84,.3,1) ${BOOM}ms both` }} />
-            <div style={{ ...S.disk, background: "repeating-conic-gradient(rgba(255,240,180,.62) 0deg 3deg, transparent 3deg 12deg)", animation: `shx-rays 3000ms linear ${BOOM - 50}ms both` }} />
-            {/* Pluie de paillettes sur tout l'écran */}
+            {/* Rayons or pâle : discrets pendant la roulette, éclatants à la révélation */}
+            <div style={{ ...S.disk, background: "repeating-conic-gradient(rgba(255,240,180,.62) 0deg 3deg, transparent 3deg 12deg)", animation: `shx-rays ${T - BOOM}ms linear ${BOOM - 50}ms both` }} />
+            {/* Soleil d'or (reflets métalliques) : il éclate à la révélation */}
+            <div style={{ ...S.disk, background: "conic-gradient(from 0deg, #fff3b0, #f5c542 12%, #9c6a08 25%, #ffe48a 37%, #d99a1e 50%, #fff8d6 62%, #f5c542 75%, #9c6a08 87%, #fff3b0)", mixBlendMode: "screen", animation: `shx-burst 2400ms cubic-bezier(.16,.84,.3,1) ${REVEAL}ms both` }} />
+            {/* Pluie de paillettes */}
             {glitter.map((g, i) => (
                 <span key={`g${i}`} style={{
                     position: "absolute", left: `${g.left}%`, top: `${g.top}%`, width: g.size, height: g.size, pointerEvents: "none",
@@ -89,13 +105,20 @@ export default function ShinyAnnounce({ sprite, name, reduced, onSkip, seed = 1 
             ))}
             {/* L'étincelle qui grossit avant l'explosion */}
             <div style={{ ...S.center, ...S.star, animation: `shx-star ${BOOM - 150}ms cubic-bezier(.55,0,.9,.4) 150ms both` }}>✦</div>
-            {/* Le Daemon : silhouette noire, puis ses couleurs chromatiques (sur un halo sombre : un Daemon doré ressort sur l'or) */}
+            {/* ROULETTE D'OMBRES : lumière dorée derrière les silhouettes, 4 autres Daemons qui défilent, puis la vraie */}
+            <div style={{ ...S.center, ...S.spotLight, animation: `shx-window ${REVEAL + 300 - ROULETTE}ms ease-out ${ROULETTE}ms both` }} />
+            {shadows.map((src, i) => (
+                <img key={`d${i}`} src={src} alt="" style={{ ...S.center, ...S.sprite, filter: SIL_FILTER, animation: `shx-slot ${SLOTS[i]}ms ease-out ${slotStart(i)}ms both` }} />
+            ))}
+            {[...shadows.map((_, i) => slotStart(i)), FINAL].map((at, i) => (
+                <div key={`r${i}`} style={{ ...S.center, ...S.ring, animation: `shx-ring 520ms ease-out ${at}ms both` }} />
+            ))}
             {sprite && (
                 <>
-                    <div style={{ ...S.center, ...S.spot, animation: `shx-orbit-in 500ms ease-out ${REVEAL - 200}ms both` }} />
-                    <img src={sprite} alt="" style={{ ...S.center, ...S.sprite, filter: "brightness(0) drop-shadow(0 0 6px rgba(255,236,170,.95))", animation: `shx-sil ${REVEAL + 250 - BOOM}ms ease-out ${BOOM + 80}ms both` }} />
+                    <img src={sprite} alt="" style={{ ...S.center, ...S.sprite, filter: SIL_FILTER, animation: `shx-sil-final ${REVEAL + 260 - FINAL}ms ease-out ${FINAL}ms both` }} />
+                    {/* Révélé : sur un halo sombre (un Daemon doré ressort sur l'or), étoiles d'or en orbite */}
+                    <div style={{ ...S.center, ...S.spot, animation: `shx-orbit-in 500ms ease-out ${REVEAL - 100}ms both` }} />
                     <img src={sprite} alt="" style={{ ...S.center, ...S.sprite, filter: SHINY_FILTER, animation: `shx-reveal 700ms cubic-bezier(.34,1.56,.64,1) ${REVEAL}ms both, shx-bob 1200ms ease-in-out ${REVEAL + 700}ms infinite alternate` }} />
-                    {/* Étoiles d'or en orbite autour du Daemon */}
                     <div style={{ ...S.center, ...S.orbit, animation: `shx-orbit-in 400ms ease-out ${REVEAL}ms both, shx-spin 2400ms linear ${REVEAL}ms infinite` }}>
                         {Array.from({ length: 8 }).map((_, i) => (
                             <span key={i} style={{ position: "absolute", left: "50%", top: "50%", fontSize: i % 2 ? 13 : 17, color: i % 4 === 0 ? "#ffffff" : "#ffe48a", textShadow: "0 0 6px #ffd75a, 0 0 12px #e8aa1f", transform: `rotate(${i * 45}deg) translateY(-78px) rotate(${-i * 45}deg)`, transformOrigin: "0 0" }}>✦</span>
@@ -103,7 +126,7 @@ export default function ShinyAnnounce({ sprite, name, reduced, onSkip, seed = 1 
                     </div>
                 </>
             )}
-            {/* Gerbes d'étoiles d'or en spirale */}
+            {/* Gerbes d'étoiles d'or en spirale, à la révélation */}
             {sparks.map((p, i) => (
                 <span key={i} style={{
                     ...S.center, fontSize: p.size, lineHeight: 1, pointerEvents: "none", color: p.color, textShadow: "0 0 6px #ffd75a, 0 0 14px #e8aa1f",
@@ -120,18 +143,22 @@ export default function ShinyAnnounce({ sprite, name, reduced, onSkip, seed = 1 
                     animation: `shx-stud-in 300ms ease-out ${BOOM + (i % 6) * 40}ms both, shx-twinkle 900ms ease-in-out ${BOOM + 300 + (i * 70) % 900}ms infinite`,
                 }} />
             ))}
-            {/* SHINY ! lettre par lettre, en or, avec un reflet qui passe */}
+            {/* « ? ? ? » qui tremble pendant la roulette… */}
+            <div style={{ ...S.title, ...S.qmarks, animation: `shx-window ${REVEAL - ROULETTE}ms ease-in-out ${ROULETTE}ms both` }}>
+                <span style={{ display: "inline-block", animation: `shx-jitter 160ms steps(2) ${ROULETTE}ms ${Math.ceil((REVEAL - ROULETTE) / 160)}` }}>? ? ?</span>
+            </div>
+            {/* … puis SHINY ! lettre par lettre, en or, avec un reflet qui passe */}
             <div style={S.title}>
                 {Array.from(TITLE).map((ch, i) => (
-                    <span key={i} style={{ display: "inline-block", whiteSpace: "pre", animation: `shx-letter 620ms cubic-bezier(.34,1.56,.64,1) ${1350 + i * 85}ms both, shx-wave 900ms ease-in-out ${2100 + i * 85}ms infinite alternate` }}>
-                        <span style={{ ...S.gold, animation: `shx-sheen 1600ms linear ${1900 + i * 110}ms infinite` }}>{ch}</span>
+                    <span key={i} style={{ display: "inline-block", whiteSpace: "pre", animation: `shx-letter 620ms cubic-bezier(.34,1.56,.64,1) ${REVEAL + 250 + i * 85}ms both, shx-wave 900ms ease-in-out ${REVEAL + 1000 + i * 85}ms infinite alternate` }}>
+                        <span style={{ ...S.gold, animation: `shx-sheen 1600ms linear ${REVEAL + 550 + i * 110}ms infinite` }}>{ch}</span>
                     </span>
                 ))}
             </div>
-            <div style={{ ...S.subtitle, animation: `shx-sub 500ms ease-out 1900ms both` }}><span style={S.pill}>✦ {label} ✦</span></div>
-            {/* Flashs (blanc chaud, puis or) */}
+            <div style={{ ...S.subtitle, animation: `shx-sub 500ms ease-out ${REVEAL + 800}ms both` }}><span style={S.pill}>✦ {label} ✦</span></div>
+            {/* Flashs : blanc chaud à l'explosion, grand flash d'or à la révélation */}
             <div style={{ ...S.fill, background: "#fff8e1", opacity: 0, pointerEvents: "none", animation: `shx-flash 480ms ease-out ${BOOM}ms both` }} />
-            <div style={{ ...S.fill, background: "#ffe9a0", opacity: 0, pointerEvents: "none", animation: `shx-flash-soft 420ms ease-out ${REVEAL}ms both` }} />
+            <div style={{ ...S.fill, background: "#ffe9a0", opacity: 0, pointerEvents: "none", animation: `shx-flash 620ms ease-out ${REVEAL}ms both` }} />
             <button onClick={onSkip} style={S.skipBtn}>⏩ Passer (B)</button>
         </div>
     )
@@ -146,8 +173,11 @@ const S: Record<string, CSSProperties> = {
     sprite: { width: 116, height: 116, objectFit: "contain", imageRendering: "pixelated", pointerEvents: "none" },
     orbit: { width: 0, height: 0 },
     spot: { width: 240, height: 240, borderRadius: "50%", background: "radial-gradient(circle, rgba(36,22,2,.66) 0%, rgba(36,22,2,.38) 45%, transparent 70%)", pointerEvents: "none" },
+    spotLight: { width: 250, height: 250, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,214,90,.42) 0%, rgba(232,170,31,.18) 45%, transparent 70%)", pointerEvents: "none" },
+    ring: { width: 150, height: 150, borderRadius: "50%", border: "3px solid #ffe48a", boxShadow: "0 0 12px rgba(255,214,90,.9), inset 0 0 10px rgba(255,214,90,.6)", pointerEvents: "none" },
     pill: { display: "inline-block", padding: "4px 14px", borderRadius: 999, background: "rgba(30,18,2,.62)", border: "1px solid rgba(255,226,140,.55)" },
     title: { position: "absolute", left: 0, right: 0, top: "64%", textAlign: "center", fontSize: "clamp(40px, 13vw, 68px)", fontWeight: 900, letterSpacing: 2, fontFamily: "'Courier New', monospace", pointerEvents: "none" },
+    qmarks: { color: "#c9a24a", textShadow: "0 0 10px rgba(255,214,90,.7)" },
     gold: { background: "linear-gradient(110deg, #b8860b 0%, #ffe48a 22%, #fffbe6 30%, #ffd75a 38%, #d99a1e 58%, #fff3b0 74%, #b8860b 100%)", backgroundSize: "260% 100%", backgroundPosition: "100% 0", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextStroke: "1px rgba(92,56,0,.9)", filter: "drop-shadow(0 3px 0 rgba(66,38,0,.9)) drop-shadow(0 0 6px rgba(255,214,90,.95)) drop-shadow(0 0 16px rgba(232,170,31,.55))" },
     goldStatic: { background: "linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #f5a300 62%, #fff2a8 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" },
     subtitle: { position: "absolute", left: 0, right: 0, top: "79%", textAlign: "center", fontSize: 14, fontWeight: 800, letterSpacing: 1, color: "#fff2a8", textShadow: "0 0 8px rgba(255,200,80,.9)", fontFamily: "'Courier New', monospace", pointerEvents: "none" },
@@ -159,22 +189,25 @@ const S: Record<string, CSSProperties> = {
 const KEYFRAMES = `
 @keyframes shx-star { 0% { transform: translate(-50%,-50%) scale(0) rotate(0); opacity: 0 } 20% { opacity: 1 } 92% { transform: translate(-50%,-50%) scale(2.8) rotate(220deg); opacity: 1 } 100% { transform: translate(-50%,-50%) scale(3.4) rotate(250deg); opacity: 0 } }
 @keyframes shx-burst { 0% { transform: translate(-50%,-50%) scale(0) rotate(0); opacity: 0 } 12% { opacity: .95 } 100% { transform: translate(-50%,-50%) scale(1) rotate(300deg); opacity: .45 } }
-@keyframes shx-rays { 0% { transform: translate(-50%,-50%) scale(.2) rotate(0); opacity: 0 } 15% { opacity: .8 } 80% { opacity: .5 } 100% { transform: translate(-50%,-50%) scale(1) rotate(-220deg); opacity: .25 } }
+@keyframes shx-rays { 0% { transform: translate(-50%,-50%) scale(.3) rotate(0); opacity: 0 } 6% { opacity: .3 } 44% { opacity: .3; transform: translate(-50%,-50%) scale(.6) rotate(-80deg) } 50% { opacity: .85; transform: translate(-50%,-50%) scale(.95) rotate(-110deg) } 85% { opacity: .5 } 100% { transform: translate(-50%,-50%) scale(1) rotate(-260deg); opacity: .25 } }
 @keyframes shx-glitter { 0% { opacity: 0; transform: translateY(0) rotate(45deg) scale(.3) } 45% { opacity: 1; transform: translateY(12px) rotate(135deg) scale(1.25) } 100% { opacity: 0; transform: translateY(26px) rotate(225deg) scale(.4) } }
 @keyframes shx-stud-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes shx-twinkle { 0%, 100% { filter: brightness(1); box-shadow: 0 0 5px rgba(255,236,170,.8) } 50% { filter: brightness(1.9); box-shadow: 0 0 12px #fff, 0 0 20px rgba(255,214,90,.95) } }
-@keyframes shx-sil { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 0 } 35% { transform: translate(-50%,-50%) scale(1.1); opacity: 1 } 80% { transform: translate(-50%,-50%) scale(1); opacity: 1 } 100% { transform: translate(-50%,-50%) scale(1.05); opacity: 0 } }
+@keyframes shx-window { 0% { opacity: 0 } 8% { opacity: 1 } 92% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes shx-slot { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.8) } 18% { opacity: 1; transform: translate(-50%,-50%) scale(1.08) } 35% { transform: translate(-50%,-50%) scale(1) } 85% { opacity: 1 } 100% { opacity: 0; transform: translate(-50%,-50%) scale(.96) } }
+@keyframes shx-ring { 0% { opacity: .95; transform: translate(-50%,-50%) scale(.45) } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.7) } }
+@keyframes shx-sil-final { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.8) } 9% { opacity: 1; transform: translate(-50%,-50%) scale(1.1) } 16% { transform: translate(-50%,-50%) scale(1) } 44% { transform: translate(-50%,-50%) scale(1) } 50% { transform: translate(-50%,-50%) scale(1.09) } 56% { transform: translate(-50%,-50%) scale(1) } 68% { transform: translate(-50%,-50%) scale(1) } 74% { transform: translate(-50%,-50%) scale(1.09) } 80% { transform: translate(-50%,-50%) scale(1) } 90% { opacity: 1 } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.06) } }
 @keyframes shx-reveal { 0% { transform: translate(-50%,-50%) scale(1.35); opacity: 0 } 40% { opacity: 1 } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1 } }
 @keyframes shx-bob { from { transform: translate(-50%,-50%) translateY(0) } to { transform: translate(-50%,-50%) translateY(-6px) } }
 @keyframes shx-orbit-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes shx-spin { from { transform: translate(-50%,-50%) rotate(0) } to { transform: translate(-50%,-50%) rotate(360deg) } }
 @keyframes shx-spark { 0% { transform: translate(-50%,-50%) scale(.2) rotate(0); opacity: 0 } 12% { opacity: 1 } 100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.15) rotate(var(--rot)); opacity: 0 } }
+@keyframes shx-jitter { 0% { transform: translate(0,0) rotate(0) } 50% { transform: translate(2px,-1px) rotate(-2deg) } 100% { transform: translate(-2px,1px) rotate(2deg) } }
 @keyframes shx-letter { 0% { transform: translateY(-70px) scale(0) rotate(-25deg); opacity: 0 } 60% { transform: translateY(6px) scale(1.35) rotate(6deg); opacity: 1 } 100% { transform: translateY(0) scale(1) rotate(0); opacity: 1 } }
 @keyframes shx-wave { from { transform: translateY(0) } to { transform: translateY(-7px) } }
 @keyframes shx-sheen { from { background-position: 100% 0 } to { background-position: -160% 0 } }
 @keyframes shx-sub { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
 @keyframes shx-flash { 0% { opacity: 0 } 14% { opacity: .95 } 100% { opacity: 0 } }
-@keyframes shx-flash-soft { 0% { opacity: 0 } 20% { opacity: .55 } 100% { opacity: 0 } }
 @keyframes shx-shake { 0%,100% { transform: translate(0,0) } 20% { transform: translate(-7px,5px) } 40% { transform: translate(7px,-5px) } 60% { transform: translate(-5px,-4px) } 80% { transform: translate(5px,4px) } }
 @keyframes shx-out { from { opacity: 1; transform: scale(1); filter: blur(0) } to { opacity: 0; transform: scale(1.12); filter: blur(5px) } }
 @keyframes shx-reduced { 0% { opacity: 0 } 15% { opacity: 1 } 80% { opacity: 1 } 100% { opacity: 0 } }

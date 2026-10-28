@@ -118,9 +118,31 @@ export const ETX_VARIANTS: Record<EtxVariant, { durationScale: number; particleS
 /** ANNONCE SHINY (Sartay, 28/10/2026 : « il existe une animation spéciale par type… il en faudrait une vraiment dingue pour
  *  annoncer un shiny ! ») : un Daemon SAUVAGE chromatique remplace l'anim de type par la séquence de ShinyAnnounce. */
 export function isShinyEncounter(d: { isWild: boolean; shiny?: boolean }): boolean { return d.isWild && d.shiny === true }
-/** Durée de l'annonce shiny (passable avec B/Échap) ; version « réduire les animations » : simple fondu. */
-export const SHINY_ANNOUNCE_MS = 4200
+/** Durée de l'annonce shiny (passable avec B/Échap) ; version « réduire les animations » : simple fondu. Allongée le 28/10/2026
+ *  (Sartay : « elle peut être plus longue puisque c'est une giga bonne nouvelle ! ») pour la roulette d'ombres. */
+export const SHINY_ANNOUNCE_MS = 7000
 export const SHINY_ANNOUNCE_REDUCED_MS = 1300
+
+/** ROULETTE D'OMBRES (Sartay, 28/10/2026 : « une sorte de roulette de 3-4 ombres histoire de faire stresser encore plus ») :
+ *  avant la vraie, les silhouettes de SHINY_DECOYS autres Daemons défilent en ralentissant. */
+export const SHINY_DECOYS = 4
+/** Espèces de repli quand le joueur a vu trop peu de Daemons (toutes communes, aucun spoiler). */
+export const SHINY_DECOY_FALLBACK = ["feuillichot", "braisille", "gouttiny", "plumiot", "pampousse", "cailloutchi"]
+/** Tire `n` ombres, PAR ORDRE DE PRÉFÉRENCE de `tiers` (Sartay, 28/10/2026 : « les ombres des 5 derniers Daemons vus / des
+ *  Daemons du biotope, pour que ça soit plus plausible ») : on mélange chaque palier, on le vide avant de passer au suivant,
+ *  sans l'espèce rencontrée ni doublon. Tirage déterministe pour une graine donnée. */
+export function pickShinyDecoys(targetId: string, tiers: readonly (readonly string[])[], seed: number, n: number = SHINY_DECOYS): string[] {
+    let s = (Math.floor(seed) * 2654435761) >>> 0 || 1
+    const r = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
+    const out: string[] = []
+    for (const tier of tiers) {
+        const cands = [...new Set(tier)].filter((id) => !!id && id !== targetId && !out.includes(id))
+        for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [cands[i], cands[j]] = [cands[j], cands[i]] }
+        for (const id of cands) { if (out.length >= n) break; out.push(id) }
+        if (out.length >= n) break
+    }
+    return out
+}
 
 export interface EncounterData { type?: string; rarity?: string; levelDiff?: number; isSpecial?: boolean; fusionLeague?: boolean }
 
