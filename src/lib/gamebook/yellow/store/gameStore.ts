@@ -46,7 +46,7 @@ import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, setChosenAvatar, claimFishingRod, isTrainerDefeated, markTrainerDefeated, clearTrainerMarker, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, grantBonusEnergyUncapped, logEnergyIncome, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, sageAvailableToday, pnj5WinsCount, addItem, spendReps, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun, clearForcedEncounter, setFusionLeagueCarry, clearFusionLeagueCarry, setFusionRoster, armGalijahByDex, isGalijahArmed, poseGalijahEncounter, combatLockedByDebt, pushupDebtRemaining, beginFusionLeagueTry, getFusionChampionRoster, ananasAvailable, ananasVariant, markAnanasStarted, getAnanasPeakLevel, hasSurfCt, grantSurfCt, surferRematchAvailableToday, galijahCanAppear, markGalijahAppeared, galijahTier, galijahStrengthTier, getGalijahDaily, setGalijahDaily, GALIJAH_TIER_LEVELS, GALIJAH_TIER_EVPCT, getGameMode, getClansEverJoined, getClan, claimChenGift, chenGiftsRemaining, ownCreationNemesisSpecies, getCurrentPlayerId, getShinyWish, setShinyWish, setShinyPopMessage, getDexWish, setDexWish, armForcedEncounter, forcedEncounterSlotFree, getShinyFrenzy, getThief, commitTheft, thiefVictimsNow } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
-import { getFusionChampionAvatar } from "./playerStore"
+import { getFusionChampionAvatar, aceWinsCount } from "./playerStore"
 import { avatarFilter } from "../data/avatars"
 import { currentVilleJauneTip } from "../data/villeJauneTips"
 import { recordCalepinTip } from "./calepinStore"
@@ -1380,7 +1380,8 @@ function tryLaunchAce(): ActiveDialogue | null {
     const run3 = effectiveRunWorld() === "run3"
     const nemesisSpeciesId = ngplus ? (getNgplusNemesisSpeciesId() ?? undefined) : run3 ? (getRun3AceNemesis() ?? undefined) : undefined
     // ⚓ Panthères d'ACE : paliers calibrés sur 5 arènes (3 → 1 évoluée, 4 → 2, 5 → 3) → le badge du bateau n'en compte pas.
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: gymBadgeCount(getPlayerSave().badges), ngplus, run3, nemesisSpeciesId })
+    // RUN 3 : n° du match contre ACE (victoires + 1) → ses 2 Panthéon évoluent (5e match : Florapanthe, 6e : + Voltapanthe).
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: gymBadgeCount(getPlayerSave().badges), ngplus, run3, nemesisSpeciesId, aceMatch: aceWinsCount() + 1 })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.

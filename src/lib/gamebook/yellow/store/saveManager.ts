@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { setGeniePaid, removeGeniePaid, addGeniePaid, isGeniePaid, pruneGenieInFlight, reapplyGenieWishes, setWorldMayBeDiscardedCheck, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, markGenieArcSeen, restoreDurableWishState, isDurableWishMarker, GENIE_CATCH_PREFIX, ABUNDANCE_CURSE_MARKER, type DurableWishState, genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
+import { setGeniePaid, setNemesisSeals, syncSealsToWorld, isNemesisSeal, removeGeniePaid, addGeniePaid, isGeniePaid, pruneGenieInFlight, reapplyGenieWishes, setWorldMayBeDiscardedCheck, CASINO_RESTRICTED_MARKER, CASINO_UNCAPPED_MARKER, markGenieArcSeen, restoreDurableWishState, isDurableWishMarker, GENIE_CATCH_PREFIX, ABUNDANCE_CURSE_MARKER, type DurableWishState, genieCatchCharges, setGenieCatchCharges, setOtherWorldMarkerCheck, getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, creditReps, logEnergyIncome, restoreRepsState, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, clearThiefForReset, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, setCollectionneurDexGiven, setBadgeRepsClaimed, seedSeenThisRun, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext, getGameMode, reconcileCrossRunItems, fixNgplusFusioBalls, openPlatineIfOrCleared, applyExternalEffects } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { getSpecies, SPECIES } from "../data/species"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION, ENERGY_LOG_MAX, MSG_LOG_MAX } from "../storage/save"
@@ -14,6 +14,7 @@ import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 import { giftNoteLines } from "../data/energyGiftNote"
 import { migrateBoatBadge, withImpliedAncre } from "../data/boatArena"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
+import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER } from "../data/nemesisChallenge"
 import { isGeniePaidMarker, genieExtMarker, genieGrantMarker, GENIE_TRAINER_ID, LAMP_RUBBED_MARKER, LAMP_ITEM_ID } from "../data/genieLamp"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
@@ -68,6 +69,24 @@ export function geniePaidOfSave(save: YellowSave): string[] {
     scan(save, 0)
     return [...out]
 }
+/** ⛓️ SCEAUX du compte depuis une save : son registre `nemesisSeals` s'il existe (source de vérité : une revanche y a pu lever un
+ *  sceau encore présent dans un vieux monde) ; sinon (save d'avant le registre) l'union des `_blocked` de tous ses mondes et
+ *  profils — un profil inactif apporte son propre registre s'il en a un. */
+export function nemesisSealsOfSave(save: YellowSave): string[] {
+    if (Array.isArray(save.nemesisSeals)) return save.nemesisSeals.filter((m) => typeof m === "string" && isNemesisSeal(m))
+    // Save d'avant le registre : une REVANCHE déjà armée et pas encore jouée (défi armé sans essai) a levé le sceau dans SON
+    //   monde ; les autres en gardent la copie de l'ancien essai → ne pas la ressusciter par l'union.
+    let revanchePending = false
+    eachWorldOfSave(save, (w) => { const dt = markersOf(w); if (dt.includes(NEMESIS_ARMED_MARKER) && !dt.includes(NEMESIS_DONE_MARKER)) revanchePending = true })
+    if (revanchePending) return []
+    const out = new Set<string>()
+    eachWorldOfSave(save, (w) => {
+        const reg = w.nemesisSeals
+        const src = Array.isArray(reg) ? reg : markersOf(w)
+        for (const m of src) if (typeof m === "string" && isNemesisSeal(m)) out.add(m)
+    })
+    return [...out]
+}
 /** Parcourt une save ENTIÈRE : son monde à plat, ses mondes imbriqués (run 2, run 3, bulle) et ses profils inactifs. */
 function eachWorldOfSave(save: unknown, visit: (w: Record<string, unknown>) => void): void {
     const walk = (w: unknown, depth: number) => {
@@ -111,7 +130,10 @@ export function withDurableWishesFrom(into: YellowSave, from: YellowSave | null 
     const dt = out.defeatedTrainers ?? [], fromDt = from.defeatedTrainers ?? []
     const add: string[] = []
     if (!dt.some((m) => m.startsWith(GENIE_CATCH_PREFIX))) { const c = fromDt.find((m) => m.startsWith(GENIE_CATCH_PREFIX)); if (c) add.push(c) }
-    for (const m of fromDt) if (!m.startsWith(GENIE_CATCH_PREFIX) && isDurableWishMarker(m) && !dt.includes(m) && !add.includes(m)) add.push(m) // malédiction, casino, défi némésis, sceaux
+    // Revanche armée et pas encore jouée dans `into` : l'ancien essai (DONE, acompte) de `from` ne doit pas la consommer.
+    const pendingRevanche = dt.includes(NEMESIS_ARMED_MARKER) && !dt.includes(NEMESIS_DONE_MARKER)
+    for (const m of fromDt) if (!m.startsWith(GENIE_CATCH_PREFIX) && isDurableWishMarker(m) && !dt.includes(m) && !add.includes(m)
+        && !(pendingRevanche && (m === NEMESIS_DONE_MARKER || m.startsWith("nemesis_acompte_")))) add.push(m) // malédiction, casino, défi némésis
     if (add.length) out.defeatedTrainers = casinoLiftWins([...dt, ...add])
     if (!out.genieArcSeen && from.genieArcSeen) out.genieArcSeen = true // colporteur rencontré : vaut pour tout le compte
     return out
@@ -123,6 +145,13 @@ const durableWishStateOf = (w: YellowSave): DurableWishState => ({
     forcedEncounter: isWishEncounter(w.forcedEncounter) ? w.forcedEncounter : undefined, curseAbundanceStart: w.curseAbundanceStart, curseFreeItemsTaken: w.curseFreeItemsTaken,
     curseFreeItemDate: w.curseFreeItemDate, ballLockRemaining: w.ballLockRemaining, markers: (w.defeatedTrainers ?? []).filter(isDurableWishMarker),
 })
+/** Fusion : marqueurs du monde absorbé, SAUF l'ancien essai du défi némésis (DONE, acomptes) quand le monde gagnant porte une
+ *  REVANCHE armée et pas encore jouée — sinon la fusion la consommerait sans combat (revue du 28/10/2026). */
+function secondaryMarkersFor(primary: YellowSave, secondary: YellowSave): string[] {
+    const pdt = primary.defeatedTrainers ?? []
+    if (!(pdt.includes(NEMESIS_ARMED_MARKER) && !pdt.includes(NEMESIS_DONE_MARKER))) return secondary.defeatedTrainers ?? []
+    return (secondary.defeatedTrainers ?? []).filter((m) => m !== NEMESIS_DONE_MARKER && !m.startsWith("nemesis_acompte_"))
+}
 /** Plafond casino : une LEVÉE posée dans l'un des mondes l'emporte sur le plafond venu de l'autre (union des marqueurs). */
 const casinoLiftWins = (dt: string[]): string[] => dt.includes(CASINO_UNCAPPED_MARKER) ? dt.filter((m) => m !== CASINO_RESTRICTED_MARKER) : dt
 /** Un seul compteur de captures garanties (genie_catch_<n>) après une union de marqueurs : le premier (monde gagnant). */
@@ -147,7 +176,8 @@ function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[], fi
     if (boat.changed) w = { ...w, badges: boat.badges, items: boat.items, repsCap: boat.repsCap, ananasLastBadgeCount: boat.ananasLastBadgeCount }
     // 🥷 VOLEUR : état GLOBAL au profil → fourni explicitement (chargement/profil), sinon on GARDE celui des stores (une
     //   bascule de monde ne doit jamais relire la copie PÉRIMÉE d'un stash : le vol a pu avoir lieu dans l'autre monde).
-    hydratePlayer({ thief: thief !== undefined ? thief : (getPlayer().thief ?? null), team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, casinoSpentToday: w.casinoSpentToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, champBattlesToday: w.champBattlesToday, consultsToday: w.consultsToday, archivisteMatchesToday: w.archivisteMatchesToday, archivisteWinsToday: w.archivisteWinsToday, badgeRepsClaimed: w.badgeRepsClaimed, badgeRepsToday: w.badgeRepsToday, comparisonConsultsToday: w.comparisonConsultsToday, sageSaiyanPointsToday: w.sageSaiyanPointsToday, ananasLastBadgeCount: w.ananasLastBadgeCount, ananasDate: w.ananasDate, ananasPeakLevel: w.ananasPeakLevel, capturesToday: w.capturesToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, domeStats: w.domeStats, towerStats: w.towerStats, factoryStats: w.factoryStats, domeTierRecord: w.domeTierRecord, stats: w.stats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, leagueSixShiny: w.leagueSixShiny, mirrorWinHigherLevel: w.mirrorWinHigherLevel, berrySecretKnown: w.berrySecretKnown, berryHarvestDay: w.berryHarvestDay, berryHarvestPicked: w.berryHarvestPicked, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, chenGiftClaims: w.chenGiftClaims, funDefis: w.funDefis, achTrack: w.achTrack, pnj5Wins: w.pnj5Wins, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, pokerFirstGameDone: w.pokerFirstGameDone, pokerBossStacks: w.pokerBossStacks, pokerCashCap: w.pokerCashCap, pokerCashDate: w.pokerCashDate, casinoNetToday: w.casinoNetToday, casinoNetDate: w.casinoNetDate, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, ngplusStartedAt: w.ngplusStartedAt, playtimeMs: w.playtimeMs, leaguePotions: w.leaguePotions, ngplusUsed: w.ngplusUsed, run3Used: w.run3Used, ngplusMaitreBeaten: w.ngplusMaitreBeaten, run3StarterBase: w.run3StarterBase, ngplusStarterBase: w.ngplusStarterBase, genieArcSeen: w.genieArcSeen, genesisMode: w.genesisMode, run3Defeated: w.run3Defeated, run3EnergyByArena: w.run3EnergyByArena, caughtThisRun: w.caughtThisRun, seenThisRun: w.seenThisRun, fichesUnlockedThisRun: w.fichesUnlockedThisRun, collectionneurDexGiven: w.collectionneurDexGiven, fusionRoster: w.fusionRoster, fusionNames: w.fusionNames, fusionMoveOrders: w.fusionMoveOrders, fusionTypeChoices: w.fusionTypeChoices, fusionHistory: w.fusionHistory, energyLog: w.energyLog, messageLog: w.messageLog, run3LavapetitSeen: w.run3LavapetitSeen, run3LavapetitCaught: w.run3LavapetitCaught, mimimoyReturned: w.mimimoyReturned, mimimoyAppearances: w.mimimoyAppearances, ballLockRemaining: w.ballLockRemaining, evResetCharges: w.evResetCharges, shinyWish: w.shinyWish, dexWish: w.dexWish, galijahDaily: w.galijahDaily, shinyFrenzy: w.shinyFrenzy, shopSurtax: w.shopSurtax, luxeOutcomeQueue: w.luxeOutcomeQueue, bertieOutcomeQueue: w.bertieOutcomeQueue, forcedEncounter: w.forcedEncounter, fusionLeagueCarry: w.fusionLeagueCarry, curseAbundanceStart: w.curseAbundanceStart, curseFreeItemsTaken: w.curseFreeItemsTaken, curseFreeItemDate: w.curseFreeItemDate, potionBuysToday: w.potionBuysToday, jcEnergyBuysToday: w.jcEnergyBuysToday, casinoCapToday: w.casinoCapToday, fusionLeagueDefeats: w.fusionLeagueDefeats, grotteShopBuys: w.grotteShopBuys, chosenAvatar: w.chosenAvatar, clan: w.clan, clanDaemonUid: w.clanDaemonUid, clanCtGiven: w.clanCtGiven, clanTransGiven: w.clanTransGiven, clanVisitDate: w.clanVisitDate, clanTrainByClan: w.clanTrainByClan, craftedItems: w.craftedItems, craftsUsed: w.craftsUsed, craftReady: w.craftReady, megaInLigue: w.megaInLigue, fusionLeagueTryDate: w.fusionLeagueTryDate, fusionChampionRoster: w.fusionChampionRoster, fusionChampionAvatar: w.fusionChampionAvatar, domeChampionships: w.domeChampionships, customDaemons })
+    hydratePlayer({ thief: thief !== undefined ? thief : (getPlayer().thief ?? null), team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, casinoSpentToday: w.casinoSpentToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, champBattlesToday: w.champBattlesToday, consultsToday: w.consultsToday, archivisteMatchesToday: w.archivisteMatchesToday, archivisteWinsToday: w.archivisteWinsToday, badgeRepsClaimed: w.badgeRepsClaimed, badgeRepsToday: w.badgeRepsToday, comparisonConsultsToday: w.comparisonConsultsToday, sageSaiyanPointsToday: w.sageSaiyanPointsToday, ananasLastBadgeCount: w.ananasLastBadgeCount, ananasDate: w.ananasDate, ananasPeakLevel: w.ananasPeakLevel, capturesToday: w.capturesToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, domeStats: w.domeStats, towerStats: w.towerStats, factoryStats: w.factoryStats, domeTierRecord: w.domeTierRecord, stats: w.stats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, leagueSixShiny: w.leagueSixShiny, mirrorWinHigherLevel: w.mirrorWinHigherLevel, berrySecretKnown: w.berrySecretKnown, berryHarvestDay: w.berryHarvestDay, berryHarvestPicked: w.berryHarvestPicked, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, chenGiftClaims: w.chenGiftClaims, funDefis: w.funDefis, achTrack: w.achTrack, pnj5Wins: w.pnj5Wins, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, pokerFirstGameDone: w.pokerFirstGameDone, pokerBossStacks: w.pokerBossStacks, pokerCashCap: w.pokerCashCap, pokerCashDate: w.pokerCashDate, casinoNetToday: w.casinoNetToday, casinoNetDate: w.casinoNetDate, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, ngplusStartedAt: w.ngplusStartedAt, playtimeMs: w.playtimeMs, leaguePotions: w.leaguePotions, ngplusUsed: w.ngplusUsed, run3Used: w.run3Used, ngplusMaitreBeaten: w.ngplusMaitreBeaten, run3StarterBase: w.run3StarterBase, ngplusStarterBase: w.ngplusStarterBase, genieArcSeen: w.genieArcSeen, nemesisSeals: getPlayer().nemesisSeals, genesisMode: w.genesisMode, run3Defeated: w.run3Defeated, run3EnergyByArena: w.run3EnergyByArena, caughtThisRun: w.caughtThisRun, seenThisRun: w.seenThisRun, fichesUnlockedThisRun: w.fichesUnlockedThisRun, collectionneurDexGiven: w.collectionneurDexGiven, fusionRoster: w.fusionRoster, fusionNames: w.fusionNames, fusionMoveOrders: w.fusionMoveOrders, fusionTypeChoices: w.fusionTypeChoices, fusionHistory: w.fusionHistory, energyLog: w.energyLog, messageLog: w.messageLog, run3LavapetitSeen: w.run3LavapetitSeen, run3LavapetitCaught: w.run3LavapetitCaught, mimimoyReturned: w.mimimoyReturned, mimimoyAppearances: w.mimimoyAppearances, ballLockRemaining: w.ballLockRemaining, evResetCharges: w.evResetCharges, shinyWish: w.shinyWish, dexWish: w.dexWish, galijahDaily: w.galijahDaily, shinyFrenzy: w.shinyFrenzy, shopSurtax: w.shopSurtax, luxeOutcomeQueue: w.luxeOutcomeQueue, bertieOutcomeQueue: w.bertieOutcomeQueue, forcedEncounter: w.forcedEncounter, fusionLeagueCarry: w.fusionLeagueCarry, curseAbundanceStart: w.curseAbundanceStart, curseFreeItemsTaken: w.curseFreeItemsTaken, curseFreeItemDate: w.curseFreeItemDate, potionBuysToday: w.potionBuysToday, jcEnergyBuysToday: w.jcEnergyBuysToday, casinoCapToday: w.casinoCapToday, fusionLeagueDefeats: w.fusionLeagueDefeats, grotteShopBuys: w.grotteShopBuys, chosenAvatar: w.chosenAvatar, clan: w.clan, clanDaemonUid: w.clanDaemonUid, clanCtGiven: w.clanCtGiven, clanTransGiven: w.clanTransGiven, clanVisitDate: w.clanVisitDate, clanTrainByClan: w.clanTrainByClan, craftedItems: w.craftedItems, craftsUsed: w.craftsUsed, craftReady: w.craftReady, megaInLigue: w.megaInLigue, fusionLeagueTryDate: w.fusionLeagueTryDate, fusionChampionRoster: w.fusionChampionRoster, fusionChampionAvatar: w.fusionChampionAvatar, domeChampionships: w.domeChampionships, customDaemons })
+    syncSealsToWorld() // ⛓️ sceaux du COMPTE → ce monde (bascule, sortie de bulle, abandon, fusion) : un monde stashé n'en garde pas de périmé
     // POKÉDEX : PAS hydraté ici — il est GLOBAL/cumulatif (persiste d'un run à l'autre) → hydraté UNE SEULE FOIS
     // au chargement (applyServerSave, union de tous les mondes) et jamais réinitialisé par une bascule de monde.
 }
@@ -197,6 +227,7 @@ export function applyServerSave(save: YellowSave): void {
     // Run 3 (et son rejeu) : plafond d'énergie FIXE (paliers d'arène) → la reprise du badge ANCRE n'y ajoute pas de plafond.
     hydrateFromWorld(activeData, save.customDaemons, aw === "run3" || (aw === "replay" && save.replayRun === "run3"), save.thief ?? null) // customDaemons + thief GLOBAUX (haut niveau)
     setGeniePaid(geniePaidOfSave(save)) // 🧞 vœux payés : GLOBAL, depuis la save seule (jamais la mémoire : un 409 ne doit rien « payer » de fantôme)
+    setNemesisSeals(nemesisSealsOfSave(save)) // ⛓️ sceaux du défi némésis : GLOBAL au compte, appliqués au monde actif
     if (arcSeen) markGenieArcSeen() // 🧞 colporteur déjà rencontré sur le compte → l'embuscade ne se rejoue nulle part
     // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
     const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
@@ -463,6 +494,8 @@ export function snapshot(): YellowSave {
     const givenGlobal = getPlayer().collectionneurDexGiven // L'ARCHIVISTE : dex offert = GLOBAL → répliqué dans tous les mondes
     const claimedGlobal = getPlayer().badgeRepsClaimed ?? [] // HAUTS FAITS : trophées payés = GLOBAL → répliqués partout (jamais re-payés)
     const paidGlobal = getPlayer().geniePaid ?? [] // 🧞 VŒUX PAYÉS : GLOBAL au compte → écrit au haut niveau ET dans chaque monde
+    const sealsGlobal = getPlayer().nemesisSeals // ⛓️ SCEAUX : GLOBAL au compte → chaque monde écrit EXACTEMENT ces sceaux
+    const withSeals = (dt: string[]): string[] => sealsGlobal ? [...dt.filter((m) => !isNemesisSeal(m)), ...sealsGlobal] : dt
     // ARTISANE : compteur À VIE + forge prête = GLOBAUX → même valeur écrite dans TOUS les mondes (comme customDaemons),
     // sinon le plafond se réinitialiserait à chaque bascule de run. (craftedItems reste PER-MONDE : lié aux uid du run.)
     const craftsUsed = getPlayer().craftsUsed
@@ -471,14 +504,14 @@ export function snapshot(): YellowSave {
     // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
     const arcGlobal = getPlayer().genieArcSeen === true // 🧞 colporteur rencontré : GLOBAL au compte → recopié dans chaque monde
     const norm = (w: YellowSave | null): YellowSave | null =>
-        w ? { ...w, thief: thiefGlobal, geniePaid: [...paidGlobal], genieArcSeen: (w.genieArcSeen || arcGlobal) ? true : undefined, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught], seenAt: pdx.seenAt, firstCatch: pdx.firstCatch }, berrySecretKnown: w.berrySecretKnown || berryKnown, collectionneurDexGiven: w.collectionneurDexGiven || givenGlobal, badgeRepsClaimed: [...new Set([...(w.badgeRepsClaimed ?? []), ...claimedGlobal])], customDaemons: cds, craftsUsed, craftReady, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, altProfiles: undefined } : null
+        w ? { ...w, thief: thiefGlobal, geniePaid: [...paidGlobal], nemesisSeals: sealsGlobal ? [...sealsGlobal] : undefined, defeatedTrainers: withSeals(w.defeatedTrainers ?? []), genieArcSeen: (w.genieArcSeen || arcGlobal) ? true : undefined, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught], seenAt: pdx.seenAt, firstCatch: pdx.firstCatch }, berrySecretKnown: w.berrySecretKnown || berryKnown, collectionneurDexGiven: w.collectionneurDexGiven || givenGlobal, badgeRepsClaimed: [...new Set([...(w.badgeRepsClaimed ?? []), ...claimedGlobal])], customDaemons: cds, craftsUsed, craftReady, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, altProfiles: undefined } : null
     // REJEU : la bulle est ACTIVE (dans les stores) → les 3 mondes réels viennent TOUS de leurs stashes.
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
     const replay = aw === "replay" ? active : null // la bulle n'existe QUE pendant un rejeu
     const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS — même pendant un rejeu (= liveStash)
-    return { ...flat, customDaemons: cds, geniePaid: [...paidGlobal], thief: thiefGlobal, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn(), altProfiles: altProfilesStash.length ? altProfilesStash : undefined }
+    return { ...flat, customDaemons: cds, geniePaid: [...paidGlobal], nemesisSeals: sealsGlobal ? [...sealsGlobal] : undefined, thief: thiefGlobal, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn(), altProfiles: altProfilesStash.length ? altProfilesStash : undefined }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
@@ -755,7 +788,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         // caveTradeDone : sémantique PAR MONDE (run 1 = limaroche→belunode ; run 3 = ruffiant→marmoterre). Après
         //   fusion on est en LIVE → on conserve le statut du troc LIVE = secondary (run 1 dans le merge final).
         caveTradeDone: secondary.caveTradeDone,
-        defeatedTrainers: casinoLiftWins(oneCatchMarker(uniq([...primary.defeatedTrainers, ...secondary.defeatedTrainers]))),
+        defeatedTrainers: casinoLiftWins(oneCatchMarker(uniq([...primary.defeatedTrainers, ...secondaryMarkersFor(primary, secondary)]))),
         rematchedTrainers: uniq([...primary.rematchedTrainers, ...secondary.rematchedTrainers]),
         hhSpectresShown: uniq([...primary.hhSpectresShown, ...secondary.hhSpectresShown]),
         hhCollectorWins: Math.max(primary.hhCollectorWins, secondary.hhCollectorWins),
@@ -959,7 +992,8 @@ export async function startNewProfileFromRun1(): Promise<boolean> {
     if (altProfilesStash.length >= MAX_ALT_PROFILES) return false
     const cur = snapshot()                                        // profil actif COMPLET (tous mondes + Pokédex + méta)
     const stashedCurrent: YellowSave = { ...cur, altProfiles: undefined } // un profil stashé ne re-porte pas les autres
-    const fresh: YellowSave = { ...emptySave(), altProfiles: [...(cur.altProfiles ?? []), stashedCurrent] }
+    // ⛓️ Le registre des sceaux est celui du COMPTE : le profil neuf part du registre courant (pas de l'union des copies rangées).
+    const fresh: YellowSave = { ...emptySave(), nemesisSeals: cur.nemesisSeals, altProfiles: [...(cur.altProfiles ?? []), stashedCurrent] }
     applyServerSave(fresh)                                        // hydrate stores + Pokédex VIDES ; l'actif devient inactif
     await persistNow()
     return true
@@ -975,7 +1009,8 @@ export async function switchProfile(index: number): Promise<boolean> {
     const target = parseSave(others[index])                      // re-valide le profil cible avant de l'activer
     const remaining = others.filter((_, i) => i !== index)
     const stashedCurrent: YellowSave = { ...cur, altProfiles: undefined }
-    const activated: YellowSave = { ...target, altProfiles: [...remaining, stashedCurrent] }
+    // ⛓️ Sceaux : le registre COURANT du compte suit dans le profil activé (sa copie rangée peut être périmée).
+    const activated: YellowSave = { ...target, nemesisSeals: cur.nemesisSeals ?? target.nemesisSeals, altProfiles: [...remaining, stashedCurrent] }
     applyServerSave(activated)
     await persistNow()
     return true
@@ -989,7 +1024,7 @@ export async function startGenesisProfile(team: MonInstance[], customDaemons: St
     if (altProfilesStash.length >= MAX_ALT_PROFILES) return false
     const cur = snapshot()
     const stashedCurrent: YellowSave = { ...cur, altProfiles: undefined }
-    const fresh: YellowSave = { ...emptySave(), team, customDaemons, introSeen: true, genesisMode: true, altProfiles: [...(cur.altProfiles ?? []), stashedCurrent] }
+    const fresh: YellowSave = { ...emptySave(), team, customDaemons, introSeen: true, genesisMode: true, nemesisSeals: cur.nemesisSeals, altProfiles: [...(cur.altProfiles ?? []), stashedCurrent] }
     applyServerSave(fresh)
     reregisterCustomDaemons() // les 6 créations doivent être résolvables en combat (getSpecies) dès le départ
     await persistNow()

@@ -65,6 +65,16 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }).team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
     })
 
+    it("RUN 3 : les 2 Panthéon d'ACE évoluent au fil des MATCHS (5e : Florapanthe, 6e : + Voltapanthe), au niveau d'ACE", () => {
+        const at = (aceMatch?: number) => buildAceTeam({ aceLevel: 45, playerLastTypes: ["EAU"], run3: true, nemesisSpeciesId: "coccipoing", aceMatch }).team
+        for (const m of [undefined, 1, 4]) expect(at(m).slice(4).map((x) => x.speciesId), String(m)).toEqual(["pantheon", "pantheon"])
+        expect(at(5).slice(4).map((x) => x.speciesId)).toEqual(["florapanthe", "pantheon"])
+        expect(at(6).slice(4).map((x) => x.speciesId)).toEqual(["florapanthe", "voltapanthe"])
+        expect(at(12).slice(4).map((x) => x.speciesId)).toEqual(["florapanthe", "voltapanthe"])
+        expect(at(6).every((x) => x.level === 45)).toBe(true)
+        expect(at(6).slice(0, 4).map((x) => x.speciesId)).toEqual(at(1).slice(0, 4).map((x) => x.speciesId)) // le reste de l'équipe ne bouge pas
+    })
+
     it("CLIQUET : buildAceTeam prend le niveau fourni TEL QUEL (aucune recalibration sur le joueur)", () => {
         // Le bug corrigé : ACE recalibrait son niveau à CHAQUE rencontre sur le meilleur Daemon
         // du joueur. Désormais buildAceTeam ne fait que refléter le niveau cliquet (figé entre

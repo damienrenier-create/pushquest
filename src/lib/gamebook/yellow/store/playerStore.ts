@@ -28,7 +28,7 @@ import { BADGE_REPS, BADGE_REPS_DAILY_CAP } from "../data/run1Badges"
 import { getEvoSpriteFromMemory } from "../data/fusionSpriteRegistry"
 import { craftLifetimeCap, dedupeCraftedItemIds, uniqueCraftedItemId, craftsUsedFloor, type CraftStat, type CraftedItem } from "../data/artisane"
 import { FISHING_ROD_ITEM_ID } from "../data/fishing"
-import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isGenieInFlightMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
+import { LAMP_ITEM_ID, genieFxMarker, genieExtMarker, isGeniePaidMarker, isGenieInFlightMarker, isNemesisSealMarker, isKnownGenieEffectKind, GENIE_PERSISTENT_EFFECT_KINDS } from "../data/genieLamp"
 import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -232,6 +232,8 @@ interface PlayerState {
     /** 🧞 VŒUX DÉJÀ PAYÉS (genieFxMarker) — GLOBAL au compte, jamais vidé : ni par une bascule de monde, ni par un nouveau
      *  run, ni par la remise à zéro. Cf. YellowSave.geniePaid. */
     geniePaid?: string[]
+    /** ⛓️ SCEAUX DU DÉFI NÉMÉSIS — registre GLOBAL au compte (cf. YellowSave.nemesisSeals). undefined = pas encore chargé. */
+    nemesisSeals?: string[]
     /** MODE GENÈSE — profil « 6 craftés / zéro capture jusqu'à la Ligue de Fusion ». GLOBAL au profil. */
     genesisMode?: boolean
     /** 🥷 LE VOLEUR (Cendreville) — vols commis, jour du dernier vol, Daemon VOLÉ + instantané de l'équipe. GLOBAL au profil
@@ -724,6 +726,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         ngplusStarterBase: "ngplusStarterBase" in p ? p.ngplusStarterBase : st.ngplusStarterBase,
         genieArcSeen: "genieArcSeen" in p ? p.genieArcSeen : st.genieArcSeen,
         geniePaid: "geniePaid" in p ? [...(p.geniePaid ?? [])] : (st.geniePaid ?? []), // 🧞 global : clé absente = on garde le registre
+        nemesisSeals: "nemesisSeals" in p ? (p.nemesisSeals ? [...p.nemesisSeals] : undefined) : st.nemesisSeals, // ⛓️ global au compte
         genesisMode: "genesisMode" in p ? p.genesisMode : st.genesisMode,
         thief: "thief" in p ? (p.thief ?? null) : (st.thief ?? null), // 🥷 global au profil (clé fournie = source de vérité)
         run3Defeated: p.run3Defeated ?? st.run3Defeated ?? [],
@@ -1141,7 +1144,8 @@ export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
     // 🧾 SURTAXE de la boutique (contrepartie DATÉE d'un vœu) : reportée telle quelle, comme au run 2 — un rejeu ne l'efface pas
     //   (28/10/2026). Le run 3 (concours scellé) ne la reçoit pas : aucun vœu n'y joue, ni faveur ni contrepartie.
-    st = { thief: st.thief ?? null, team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, nemesisSeals: st.nemesisSeals, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    syncSealsToWorld() // ⛓️ « plus jamais » : les sceaux du compte valent aussi dans ce monde neuf (rejeu du run 1, remise à zéro)
     emit()
 }
 
@@ -1202,7 +1206,8 @@ export function fixNgplusFusioBalls(items: Record<string, number>): Record<strin
 export function startNgPlusWorld(starter: MonInstance) {
     const carriedItems = carryCrossRunItems(st.items) // AVANT réassignation de st (= sac du run live)
 
-    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", ngplusStarterBase: starter.speciesId, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, shopSurtax: st.shopSurtax, nemesisSeals: st.nemesisSeals, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, domeChampionships: st.domeChampionships, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    syncSealsToWorld() // ⛓️ « plus jamais » vaut aussi au run 2
     emit()
 }
 
@@ -1216,7 +1221,8 @@ export function startRun3World(starter: MonInstance) {
     const carried = carryCrossRunItems(st.items) // OBJETS CROSS-RUN reportés (AVANT réassignation de st = sac du run 2)
 
     const carriedItems = { ...carried, poke_ball: (carried.poke_ball ?? 0) + RUN3_START_BALLS } // + 2 Nexus-Balls de départ
-    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    st = { thief: st.thief ?? null, team: [starter], pc: [], items: carriedItems, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, casinoSpentToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, collectionneurDexGiven: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", chenGiftClaims: 0, pnj5Wins: 0, ngplusBattles: 0, moveReminderUses: 0, achTrack: emptyAchTrack(), sylvebarbeAwake: false, labDefi: emptyLabDefi(), funDefis: emptyFunDefis(), customDaemons: st.customDaemons, clansEverJoined: st.clansEverJoined ?? [], ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, domeChampionships: st.domeChampionships, run3StarterBase: starter.speciesId, ngplusStarterBase: st.ngplusStarterBase, genieArcSeen: st.genieArcSeen, geniePaid: st.geniePaid, nemesisSeals: st.nemesisSeals, genesisMode: st.genesisMode, chosenAvatar: st.chosenAvatar, run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], seenThisRun: [], fichesUnlockedThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0, ballLockRemaining: 0, luxeOutcomeQueue: [], bertieOutcomeQueue: [] }
+    syncSealsToWorld() // ⛓️ « plus jamais » vaut aussi au run 3 (décision de Sartay, 28/10/2026)
     emit()
 }
 
@@ -1245,6 +1251,8 @@ export function combatLockedByDebt(): boolean { return pushupDebtRemaining() > 0
 export function markTrainerDefeated(trainerId: string) {
     if (st.defeatedTrainers.includes(trainerId)) return
     st = { ...st, defeatedTrainers: [...st.defeatedTrainers, trainerId] }
+    // ⛓️ Un SCEAU (défi némésis perdu) entre aussi au registre du compte → il suivra le joueur dans tous ses mondes.
+    if (isNemesisSeal(trainerId)) st = { ...st, nemesisSeals: [...new Set([...(st.nemesisSeals ?? st.defeatedTrainers.filter(isNemesisSeal)), trainerId])] }
     emit()
 }
 
@@ -1690,7 +1698,9 @@ function runGenieEffect(e: GenieEffect): boolean {
             // (RE-)ARME le défi némésis. REVANCHE : on efface l'essai précédent (DONE), les scellés (_blocked, EXCLUSIFS
             //   à la némésis) et l'acompte déjà versé → le PNJ réapparaît et le combat se rejoue À NEUF. 1er arme = simple ajout.
             const kept = st.defeatedTrainers.filter((m) => m !== NEMESIS_DONE_MARKER && !m.endsWith("_blocked") && !m.startsWith("nemesis_acompte_"))
-            st = { ...st, defeatedTrainers: kept.includes(NEMESIS_ARMED_MARKER) ? kept : [...kept, NEMESIS_ARMED_MARKER] }
+            // La revanche lève les sceaux du COMPTE (registre vidé) : aucun monde ne les remettra (avant le 28/10/2026, levés ici
+            //   seulement, ils pouvaient revenir d'un autre monde).
+            st = { ...st, defeatedTrainers: kept.includes(NEMESIS_ARMED_MARKER) ? kept : [...kept, NEMESIS_ARMED_MARKER], nemesisSeals: [] }
             return true
         }
         case "league_level_boost": if (!st.defeatedTrainers.includes(LEAGUE_PLUS3_MARKER)) st = { ...st, defeatedTrainers: [...st.defeatedTrainers, LEAGUE_PLUS3_MARKER] }; return true // Ligue de Fusion +3 niveaux (le montant est appliqué côté Ligue)
@@ -1920,9 +1930,25 @@ export function setGeniePaid(markers: readonly string[]): void {
     emit()
 }
 /** ⛓️ SCEAUX du défi némésis perdu (`<espèce>_blocked`, cf. nemesisRewardBlockedMarker) : « plus JAMAIS un X ne croisera ta
- *  route ». Conservés à la remise à zéro et à la fusion. Volontairement PAS recopiés dans les mondes neufs (run 2, run 3,
- *  rejeu) : une revanche ne pourrait plus les lever, et le concours changerait de règles (décision laissée à Sartay). */
-export function isNemesisSeal(m: string): boolean { return m.endsWith("_blocked") }
+ *  route ». « Plus jamais c'est plus jamais » (Sartay, 28/10/2026) : registre GLOBAL au compte (st.nemesisSeals), recopié
+ *  dans CHAQUE monde — run 2, run 3, rejeux, remise à zéro, profils. Une revanche vide le registre : tous les mondes suivent. */
+export function isNemesisSeal(m: string): boolean { return isNemesisSealMarker(m) }
+/** Aligne les sceaux du MONDE ACTIF sur le registre du compte (no-op tant que le registre n'est pas chargé). */
+export function syncSealsToWorld(): void {
+    const reg = st.nemesisSeals
+    if (!reg) return
+    const others = st.defeatedTrainers.filter((m) => !isNemesisSeal(m))
+    const next = [...others, ...reg]
+    if (next.length === st.defeatedTrainers.length && next.every((m) => st.defeatedTrainers.includes(m))) return
+    st = { ...st, defeatedTrainers: next }
+}
+/** Remplace le registre des sceaux (chargement d'une save) et l'applique au monde actif. */
+export function setNemesisSeals(seals: readonly string[]): void {
+    st = { ...st, nemesisSeals: [...new Set(seals.filter(isNemesisSeal))] }
+    syncSealsToWorld()
+    emit()
+}
+export function getNemesisSeals(): string[] | undefined { return st.nemesisSeals ? [...st.nemesisSeals] : undefined }
 export function getGeniePaid(): string[] { return [...(st.geniePaid ?? [])] }
 /** Retire une empreinte du registre (cadeau ACQUITTÉ : un futur cadeau identique sera versé). */
 export function removeGeniePaid(marker: string): void {
@@ -1954,15 +1980,17 @@ function withGeniePaid(marker: string): string[] {
  *  du run 2 ni à la remise à zéro. */
 export type DurableWishState = Pick<PlayerState, "evResetCharges" | "shinyWish" | "dexWish" | "shinyFrenzy" | "shopSurtax" | "forcedEncounter" | "curseAbundanceStart" | "curseFreeItemsTaken" | "curseFreeItemDate" | "ballLockRemaining"> & { markers: string[] }
 /** Marqueurs d'un vœu qui dure ou d'une contrepartie : captures garanties, malédiction, plafond casino (et sa levée), défi
- *  némésis armé/tenté/acompte, sceaux. Conservés à la remise à zéro (sinon : contrepartie effacée, ou défi rejouable). */
-export function isDurableWishMarker(m: string): boolean {
+ *  némésis armé/tenté/acompte. Conservés à la remise à zéro (sinon : contrepartie effacée, ou défi rejouable). Les sceaux,
+ *  eux, vivent dans le registre du compte (st.nemesisSeals). */
+export function isDurableWishMarker(m: string): boolean { // (les sceaux, eux, vivent dans le registre du compte : st.nemesisSeals)
     return m.startsWith(GENIE_CATCH_PREFIX) || m === ABUNDANCE_CURSE_MARKER || m === CASINO_RESTRICTED_MARKER || m === CASINO_UNCAPPED_MARKER
-        || m === NEMESIS_ARMED_MARKER || m === NEMESIS_DONE_MARKER || m.startsWith("nemesis_acompte_") || isNemesisSeal(m)
+        || m === NEMESIS_ARMED_MARKER || m === NEMESIS_DONE_MARKER || m.startsWith("nemesis_acompte_")
 }
 /** Réinstalle un état durable dans le monde actif (remise à zéro du chapitre : le vœu CONTINUE, il ne se rejoue pas). */
 export function restoreDurableWishState(d: DurableWishState): void {
     const { markers, ...fields } = d
     st = { ...st, ...fields, defeatedTrainers: [...st.defeatedTrainers.filter((m) => !isDurableWishMarker(m)), ...markers] }
+    syncSealsToWorld()
     emit()
 }
 

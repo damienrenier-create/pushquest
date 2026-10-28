@@ -91,6 +91,12 @@ export function genieExtMarker(raw: string): string {
 export function genieGrantMarker(amount: number): string {
     return `genie_grant_${Math.max(0, Math.floor(amount))}`
 }
+/** ⛓️ Marqueur de SCEAU du défi némésis (`<espèce>_blocked`). UN SEUL prédicat pour le jeu ET pour parseSave : un filtre plus
+ *  étroit au chargement jetterait du registre un sceau valide (ex. espèce custom à l'id long), puis l'effacerait de tous les
+ *  mondes (revue du 28/10/2026). */
+export function isNemesisSealMarker(m: unknown): m is string {
+    return typeof m === "string" && m.length <= 160 && m.endsWith("_blocked")
+}
 /** Empreinte « EN VOL » (lot d'effets externes ou cadeau d'énergie) : n'a de sens que tant que le serveur le propose encore. */
 export function isGenieInFlightMarker(m: string): boolean {
     return /^genie_(ext|grant)_/.test(m)

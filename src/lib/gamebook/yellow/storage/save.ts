@@ -5,7 +5,7 @@
 // (isolée de l'arc v3 → aucune migration). Versionné pour rester compatible.
 
 import { parseShopSurtax } from "../data/shopSurtax"
-import { isGeniePaidMarker } from "../data/genieLamp"
+import { isGeniePaidMarker, isNemesisSealMarker } from "../data/genieLamp"
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
@@ -230,6 +230,10 @@ export interface YellowSave {
      *  28/10/2026 : « un vœu n'arrive qu'une fois »). Écrit au haut niveau, recopié dans chaque monde, reconstitué au
      *  chargement depuis les marqueurs de tous les mondes (saveManager.geniePaidOfSave). */
     geniePaid?: string[]
+    /** ⛓️ SCEAUX DU DÉFI NÉMÉSIS (`<espèce>_blocked`) — registre GLOBAL au compte, source de vérité (Sartay, 28/10/2026 :
+     *  « plus jamais c'est plus jamais ») : recopié dans CHAQUE monde (run 2, run 3, rejeux, remise à zéro, profils) ; une
+     *  revanche le vide, et tous les mondes suivent. Absent = save d'avant le registre → reconstitué depuis les mondes. */
+    nemesisSeals?: string[]
     /** MODE GENÈSE — profil « 6 Daemons craftés / zéro capture » : on démarre avec 6 créations et la Ball est
      *  VERROUILLÉE jusqu'à la victoire à la Ligue de Fusion (marqueur fusleague_or). GLOBAL au profil. La fusion
      *  reste autorisée. Absent/false = mode normal. */
@@ -882,6 +886,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         ngplusStarterBase: typeof o.ngplusStarterBase === "string" ? o.ngplusStarterBase : undefined,
         genieArcSeen: o.genieArcSeen === true ? true : undefined,
         geniePaid: Array.isArray(o.geniePaid) ? [...new Set((o.geniePaid as unknown[]).filter((v): v is string => typeof v === "string" && isGeniePaidMarker(v)))].slice(0, 120) : undefined,
+        nemesisSeals: Array.isArray(o.nemesisSeals) ? [...new Set((o.nemesisSeals as unknown[]).filter(isNemesisSealMarker))].slice(0, 40) : undefined,
         genesisMode: o.genesisMode === true ? true : undefined,
         thief: parseThief(o.thief), // 🥷 Voleur : global au profil (haut niveau = source de vérité, recopié dans les mondes)
         // RUN 3 — ennemis vaincus (score). Parse défensif (façon chips) : ne garde que les entrées {key,level}

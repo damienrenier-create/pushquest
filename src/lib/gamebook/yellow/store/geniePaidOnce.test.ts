@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { applyServerSave, snapshot, resetYellowChapter, abandonNewGamePlus, restartRun3, startRun3, startReplay, exitReplay, startNewProfileFromRun1, geniePaidOfSave, mergeWorlds } from "./saveManager"
-import { getPlayer, getActiveWorld, applyAcceptedGenieWishEffects, applyExternalEffects, consumeGenieAnnouncements, isGeniePaid, getGeniePaid, genieCatchCharges, consumeGenieCatchCharge, getEvResetCharges, consumeEvResetCharges, getDexWish, getShopSurtax, isGenieArcSeen, reapplyGenieWishes, isCasinoRestricted, genieCatchCharges as catchLeft, WILD_HEAL_MARKER } from "./playerStore"
+import { applyServerSave, snapshot, resetYellowChapter, abandonNewGamePlus, restartRun3, startRun3, startNewGamePlus, switchProfile, startReplay, exitReplay, startNewProfileFromRun1, geniePaidOfSave, mergeWorlds } from "./saveManager"
+import { getPlayer, getActiveWorld, applyAcceptedGenieWishEffects, applyExternalEffects, consumeGenieAnnouncements, isGeniePaid, getGeniePaid, genieCatchCharges, consumeGenieCatchCharge, getEvResetCharges, consumeEvResetCharges, getDexWish, getShopSurtax, isGenieArcSeen, reapplyGenieWishes, isCasinoRestricted, genieCatchCharges as catchLeft, markTrainerDefeated, WILD_HEAL_MARKER } from "./playerStore"
 import { emptySave, parseSave, type YellowSave } from "../storage/save"
 import { createMonInstance } from "../battle/factory"
 
@@ -188,14 +188,20 @@ describe("ce qui DURE suit le joueur partout, une seule fois", () => {
         expect(isGenieArcSeen()).toBe(true)
         expect(getPlayer().items.lampe_rouillee).toBe(1) // la lampe du compte : de quoi trancher un futur tour de vœux
     })
-    it("sceau du défi némésis : PAS recopié dans un rejeu ni un run neuf (une revanche doit pouvoir le lever ; le concours garde ses règles)", async () => {
-        applyServerSave(live({ defeatedTrainers: ["blaziper_blocked"] }))
+    it("« plus jamais c'est plus jamais » : le sceau suit le joueur dans un rejeu (run 1 et run 3), une bulle déjà ouverte et un profil neuf", async () => {
+        applyServerSave(live({ defeatedTrainers: ["blaziper_blocked"] })) // save d'avant le registre : reconstitué depuis le monde
         expect(await startReplay("run1")).toBe(true)
-        expect(getPlayer().defeatedTrainers).not.toContain("blaziper_blocked")
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
         await exitReplay()
-        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked") // intact au monde réel
+        expect(await startReplay("run3", createMonInstance("elefer", 5))).toBe(true)
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked") // le concours aussi
+        await exitReplay()
+        // bulle ouverte AVANT le registre, sceau seulement au run 1 : recopié au chargement
         applyServerSave({ ...live({ defeatedTrainers: ["voltapanthe_blocked"] }), activeWorld: "replay", replayRun: "run3", replayReturn: "live", replayWorld: { ...emptySave(), team: [createMonInstance("elefer", 5)] } })
-        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked")
+        expect(getPlayer().defeatedTrainers).toContain("voltapanthe_blocked")
+        await exitReplay()
+        expect(await startNewProfileFromRun1()).toBe(true)
+        expect(getPlayer().defeatedTrainers).toContain("voltapanthe_blocked")
     })
     it("perk permanent : reposé dès l'entrée dans un monde neuf (sans attendre le rechargement)", async () => {
         applyServerSave(live())
@@ -289,5 +295,73 @@ describe("retour de revue du 28/10 : ni perte, ni doublon, ni contournement", ()
         expect(getPlayer().defeatedTrainers).toEqual(expect.arrayContaining(["nemesis_challenge_armed", "nemesis_challenge_done", "blaziper_blocked"]))
         expect(catchLeft()).toBe(2)
         expect(getPlayer().forcedEncounter).toBeUndefined()
+    })
+})
+
+describe("sceaux du défi némésis : un registre du compte (« plus jamais c'est plus jamais »)", () => {
+    it("suit le joueur au run 2 et après une remise à zéro ; écrit dans chaque monde de la save", async () => {
+        applyServerSave({ ...live({ isChampion: true, defeatedTrainers: ["blaziper_blocked"] }) })
+        expect(await startNewGamePlus(createMonInstance("elefer", 5), [])).toBe(true)
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
+        const snap = snapshot()
+        expect(snap.nemesisSeals).toEqual(["blaziper_blocked"])
+        expect(snap.ngplusWorld?.defeatedTrainers).toContain("blaziper_blocked")
+        expect(parseSave(JSON.parse(JSON.stringify(snap))).nemesisSeals).toEqual(["blaziper_blocked"])
+        await resetYellowChapter()
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
+    })
+    it("une défaite pose le sceau au registre ; une REVANCHE le lève dans TOUS les mondes, sans retour au rechargement", async () => {
+        applyServerSave({ ...live({ isChampion: true }) })
+        expect(await startNewGamePlus(createMonInstance("elefer", 5), [])).toBe(true)
+        markTrainerDefeated("voltapanthe_blocked") // défi perdu au run 2
+        expect(snapshot().defeatedTrainers).toContain("voltapanthe_blocked") // recopié aussi au run 1 (stash)
+        applyServerSave(parseSave(JSON.parse(JSON.stringify(snapshot())))) // rechargement
+        expect(getPlayer().defeatedTrainers).toContain("voltapanthe_blocked")
+        // revanche accordée par le créateur (canal externe) : sceau levé partout
+        expect(applyExternalEffects(fx([{ kind: "nemesis_challenge", tag: "revanche-test" }]))).toBe(true)
+        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked")
+        const snap = snapshot()
+        expect(snap.defeatedTrainers).not.toContain("voltapanthe_blocked") // run 1 stashé : plus de sceau périmé
+        expect(snap.nemesisSeals).toEqual([])
+        applyServerSave(parseSave(JSON.parse(JSON.stringify(snap))))
+        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked") // ne revient pas
+        expect(getPlayer().defeatedTrainers).toContain("nemesis_challenge_armed")
+    })
+})
+
+describe("sceaux : retour de revue (profils, prédicat unique, revanche en attente)", () => {
+    it("run 3 neuf et nouveau départ du run 3 : le sceau suit", async () => {
+        applyServerSave({ ...live({ isChampion: true, ngplusUsed: true, defeatedTrainers: ["blaziper_blocked"] }), activeWorld: "ngplus", ngplusWorld: { ...live({ isChampion: true, ngplusUsed: true }), ngplusBattles: 40 } })
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
+        expect(await startRun3(createMonInstance("elefer", 5))).toBe(true)
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
+        expect(await restartRun3(createMonInstance("cornaive", 5))).toBe(true)
+        expect(getPlayer().defeatedTrainers).toContain("blaziper_blocked")
+    })
+    it("profils : le registre des sceaux est celui du COMPTE (bascule, revanche, profil neuf)", async () => {
+        applyServerSave(live())
+        expect(await startNewProfileFromRun1()).toBe(true) // profil B
+        markTrainerDefeated("voltapanthe_blocked") // défi perdu dans B
+        expect(await switchProfile(0)).toBe(true) // retour au profil A
+        expect(getPlayer().defeatedTrainers).toContain("voltapanthe_blocked") // « plus jamais » vaut aussi dans A
+        expect(applyExternalEffects(fx([{ kind: "nemesis_challenge", tag: "revanche-profils" }]))).toBe(true) // revanche dans A
+        expect(await switchProfile(0)).toBe(true) // retour à B : sa copie rangée est périmée
+        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked")
+        expect(await startNewProfileFromRun1()).toBe(true) // profil C : pas ressuscité par les copies rangées
+        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked")
+    })
+    it("un sceau d'espèce custom à l'id long survit au rechargement (même prédicat pour le jeu et parseSave)", () => {
+        const long = "custom_clx9q2w3e4r5t6y7u8i9o0p1a_dragonfeu_s1_blocked"
+        expect(parseSave({ ...emptySave(), nemesisSeals: [long, "pas_un_sceau"] }).nemesisSeals).toEqual([long])
+    })
+    it("revanche armée et pas encore jouée : ni la fusion de fin de run, ni une save d'avant le registre ne la consomment", () => {
+        const m = mergeWorlds({ ...emptySave(), defeatedTrainers: ["nemesis_challenge_armed"] }, { ...emptySave(), defeatedTrainers: ["nemesis_challenge_armed", "nemesis_challenge_done", "nemesis_acompte_voltapanthe", "voltapanthe_blocked"] })
+        expect(m.defeatedTrainers).toContain("nemesis_challenge_armed")
+        expect(m.defeatedTrainers).not.toContain("nemesis_challenge_done")
+        expect(m.defeatedTrainers).not.toContain("nemesis_acompte_voltapanthe")
+        // save d'avant le registre : ancien essai perdu au run 1, revanche armée au run 2 → le sceau n'est pas ressuscité
+        applyServerSave({ ...live({ defeatedTrainers: ["voltapanthe_blocked", "nemesis_challenge_armed", "nemesis_challenge_done"] }), activeWorld: "ngplus", ngplusWorld: { ...live(), defeatedTrainers: ["nemesis_challenge_armed"], ngplusBattles: 40 } })
+        expect(getPlayer().defeatedTrainers).not.toContain("voltapanthe_blocked")
+        expect(snapshot().nemesisSeals).toEqual([])
     })
 })

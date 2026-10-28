@@ -158,6 +158,16 @@ export const ACE_NGPLUS_CORE = ["tonytony", "enclumind", "torturoche"]
 // (aceTeamSizeFor, min 3), ce sont les 2 Panthéon (base) qui sautent en premier, pas les menaces. lavapetit
 // → magmator via speciesAtLevel au niveau d'ACE (forme naturelle). gekraise/orcaline = mono-stade.
 export const ACE_RUN3_TEAM = ["gekraise", "orcaline", "lavapetit", "pantheon", "pantheon"]
+// RUN 3 : les 2 Panthéon d'ACE ÉVOLUENT au fil des MATCHS contre lui (Sartay, 28/10/2026) : le 1er devient FLORAPANTHE au
+//   5e match, le 2e VOLTAPANTHE au 6e. N° du match = victoires contre ACE + 1 (son niveau, lui aussi, ne monte qu'à sa défaite).
+export const ACE_RUN3_PANTHER_STEPS: readonly { match: number; species: string }[] = [
+    { match: 5, species: "florapanthe" },
+    { match: 6, species: "voltapanthe" },
+]
+/** Les 2 Panthéon d'ACE au run 3 pour le n° de match donné (1 = 1re rencontre). */
+export function aceRun3PanthersFor(match: number): string[] {
+    return ACE_RUN3_PANTHER_STEPS.map((s) => (match >= s.match ? s.species : "pantheon"))
+}
 export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ta MOYENNE d'équipe +2
 export const ACE_EASY_START = -1      // 1re rencontre : ta moyenne -1 (un poil facile)
 
@@ -241,6 +251,7 @@ export interface AceBuildInput {
     badgeCount?: number          // nb de badges du joueur → paliers d'évolution des Panthéon (3→1, 4→2, 5→3)
     ngplus?: boolean             // 2e run → trio thématisé (tonytony/enclumind/tortoracle) + Némésis à la place de Divin Pâte
     run3?: boolean               // 3e run (concours) → équipe FIXE : contre-starter + 2 Panthéon + Lavapetit + Orcaline + Gékraise (aucun contre adaptatif)
+    aceMatch?: number            // run3 : n° du match contre ACE (victoires + 1) → les Panthéon évoluent (5 → Florapanthe, 6 → + Voltapanthe)
     nemesisSpeciesId?: string    // NG+/run3 : lignée Némésis (stade 1) à fielder — NG+ = à la place de Divin Pâte ; run3 = le contre-STARTER en tête
 }
 
@@ -258,7 +269,9 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
         const nem = i.nemesisSpeciesId ?? ACE_NOUILLON_BASE // fallback défensif si le starter run 3 est inconnu
         const team: AceMon[] = [
             { speciesId: speciesAtLevel(nem, L), level: L },
-            ...ACE_RUN3_TEAM.map((id) => ({ speciesId: speciesAtLevel(baseSpeciesOf(id), L), level: L })),
+            ...ACE_RUN3_TEAM.slice(0, 3).map((id) => ({ speciesId: speciesAtLevel(baseSpeciesOf(id), L), level: L })),
+            // Les 2 Panthéon (derniers slots) : panthères élémentaires selon le n° du match (cf. ACE_RUN3_PANTHER_STEPS).
+            ...aceRun3PanthersFor(i.aceMatch ?? 1).map((id) => ({ speciesId: id, level: L })),
         ]
         return { team, counterSpecies: nem }
     }
