@@ -40,7 +40,7 @@ import { funFactFor } from "../data/collectionneurFunFacts" // L'ARCHIVISTE : r�
 import { archivisteDefeatLines } from "../data/collectionneurNpc" // L'ARCHIVISTE : dialogue de défaite (félicitations + dex + fun fact + revanche)
 import { leagueFusionIdForParents } from "../data/leagueFusionDex" // FUSIODEX : fusions de Ligue rencontrées
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
-import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel, baseSpeciesOf } from "../data/ace"
+import { ACE_TRAINER_ID, aceReward, aceWinTaunt, npcSpeciesAtLevel, baseSpeciesOf } from "../data/ace"
 import { trainerBoost } from "../data/trainers"
 import { CLANS, clanTrainDailyMarker, type ClanKey } from "../data/clans"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
@@ -548,7 +548,7 @@ export function startClanChiefBattle(clan: ClanKey, today: string): boolean {
         const baseId = baseSpeciesOf(roster[Math.min(i, roster.length - 1)]) // roster[dernier] = finale du clan (l'AS)
         const lvl = Math.max(peaks[i] ?? 0, mine.level, 5) // cliquet : jamais sous le pic déjà opposé ce run
         newPeaks[i] = lvl
-        const speciesId = speciesAtLevel(baseId, lvl) // stade naturel pour ce niveau (souche aux bas niveaux)
+        const speciesId = npcSpeciesAtLevel(baseId, lvl) // stade naturel pour ce niveau (souche aux bas niveaux ; Mégalithe au 80)
         return createMonInstance(speciesId, lvl, { owned: false, ...trainerBoost(speciesId, lvl, "elite") })
     })
     setClanTrainPeaks(clan, newPeaks)

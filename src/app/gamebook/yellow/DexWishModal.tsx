@@ -32,9 +32,12 @@ export default function DexWishModal({ onClose }: { onClose: () => void }) {
         const w = getActiveWorld()
         const run = w === "ngplus" ? 2 : w === "run3" ? 3 : 1
         const hideEndgame = run === 1 && !getPlayer().isChampion
+        // Avant le réveil de Sylvebarbe, les Daemons « post-Sylvebarbe » (Coucouminou, Sépulcru, Obscurène…) ne popent pas : le
+        //   vœu ne doit pas les accepter (28/10/2026), comme le tirage des rencontres.
+        const preSylvebarbe = run === 1 && !getPlayer().sylvebarbeAwake
         return {
             candidates: Object.values(SPECIES).map((s) => ({ id: s.id, dexNo: s.dexNo, name: s.name, rarity: String(s.rarity) })),
-            spawnable: runSpawnableSpecies(run, hideEndgame),
+            spawnable: runSpawnableSpecies(run, hideEndgame, preSylvebarbe),
         }
     }, [])
 

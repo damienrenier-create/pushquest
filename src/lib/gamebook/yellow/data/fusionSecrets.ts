@@ -62,6 +62,8 @@ export const FUSION_SECRET_RIDDLES: Record<string, string> = {
     "pair:bouhbou|karatame": "Deux arts martiaux.",
     "pair:brookhante|namizeus": "Deux âmes errantes.",
     "pair:druidours|iorours": "Deux ours : l'un des bois, l'autre des glaces.",
+    "pair:iorours|pyrozly": "Deux ours : l'un des glaces, l'autre des braises.", // Pyrozly rejoint les ursidés (28/10/2026)
+    "pair:druidours|pyrozly": "Deux ours : l'un des bois, l'autre des braises.",
     "pair:crocavern|morrow": "Deux créatures qu'on n'obtient qu'en troquant.",
     "pair:coccimperatrice|colosfer": "L'impératrice et le fer.",
     "mimimoy": "Le plus insignifiant de tous… mais pas en fusion.",

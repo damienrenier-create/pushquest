@@ -269,12 +269,13 @@ const poolHasBiome = (pool: readonly WildEntry[]): boolean => pool.some((e) => (
 // avertissement « taux indicatif » est ajouté dans le COMMENT pour ces cas.
 const sumBase = (pool: readonly WildEntry[]): number => pool.reduce((s, e) => s + e.base, 0)
 const pctOf = (base: number, sum: number): number | undefined => (sum > 0 ? (base / sum) * 100 : undefined)
-function guideMatchesRun(target: string, run: number, hideEndgame: boolean): GuideMatch[] {
+function guideMatchesRun(target: string, run: number, hideEndgame: boolean, preSylvebarbeIn?: boolean): GuideMatch[] {
     const table = guideTable(run)
     const out: GuideMatch[] = []
-    // RUN 1 avant la Ligue : les entrées `postSylvebarbe` (Ténèbres) ont un poids NUL au runtime → le guide ne doit pas
-    //   les annoncer (ex. Obscurène à la Plage) — « erreur » du Daemomaniaque relevée par Sartay le 26/10/2026.
-    const preSylvebarbe = run === 1 && hideEndgame
+    // RUN 1 avant le réveil de Sylvebarbe : les entrées `postSylvebarbe` (Ténèbres, Coucouminou…) ont un poids NUL au runtime → le
+    //   guide ne doit pas les annoncer (ex. Obscurène à la Plage) — « erreur » du Daemomaniaque relevée par Sartay le 26/10/2026.
+    //   Par défaut : avant la Ligue. L'appelant qui connaît Sylvebarbe le passe (Champion pas encore réveillé : 28/10/2026).
+    const preSylvebarbe = preSylvebarbeIn ?? (run === 1 && hideEndgame)
     for (const mapId of Object.keys(table)) {
         if (hideEndgame && GUIDE_ENDGAME_MAPS.has(mapId)) continue
         const z = table[mapId]
@@ -331,10 +332,10 @@ function grotteLadderHints(speciesId: string): string[] {
 }
 
 /** `fun` (mode fun) : aucun effort encodé → le guide ne parle JAMAIS d'exercices ; il annonce le créneau horaire du type. */
-export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false, eclaireurBeaten: boolean = false, fun: boolean = false): CaptureGuide {
+export function captureGuide(speciesId: string, run: number = 1, hideEndgame: boolean = false, champion: boolean = false, eclaireurBeaten: boolean = false, fun: boolean = false, preSylvebarbe?: boolean): CaptureGuide {
     const sp = getSpecies(speciesId)
     if (!sp) return { where: [], how: [], note: "Créature spéciale — introuvable dans les hautes herbes." }
-    const matches = guideMatchesRun(speciesId, run, hideEndgame)
+    const matches = guideMatchesRun(speciesId, run, hideEndgame, preSylvebarbe)
     const where: string[] = []
     const how = new Set<string>()
     let modulated = false // biomes (Route Nord/Grotte) ou effort (tag player) → le % affiché n'est qu'indicatif
@@ -465,16 +466,19 @@ export function runSpawnableSpecies(run: number, hideEndgame: boolean = false, p
  *  rattrapage post-Ligue) ; `endgame` = Grotte du Nexus visible — SEULEMENT au run fusion et après le run 3 : les runs
  *  1, 2 et 3 n'y ont pas accès. Mémoïsé. */
 const _runObtainCache: Record<string, Set<string>> = {}
-export function runObtainableSpecies(run: number, endgame: boolean): Set<string> {
-    const key = `${run}:${endgame ? 1 : 0}`
+export function runObtainableSpecies(run: number, endgame: boolean, preSylvebarbeIn?: boolean): Set<string> {
+    // Avant le réveil de Sylvebarbe : par défaut au run 1 avant la Ligue ; l'appelant le force pour un Champion pas encore
+    //   réveillé (run fusion pré-Sylvebarbe, 28/10/2026).
+    const preSylvebarbe = preSylvebarbeIn ?? (run === 1 && !endgame)
+    const key = `${run}:${endgame ? 1 : 0}:${preSylvebarbe ? 1 : 0}`
     if (_runObtainCache[key]) return _runObtainCache[key]
     const poolRun = run === 4 ? 1 : run
-    const set = new Set<string>(runSpawnableSpecies(poolRun, !endgame, run === 1 && !endgame))
+    const set = new Set<string>(runSpawnableSpecies(poolRun, !endgame, preSylvebarbe))
     // PÊCHE (canne de la Fashion Victim) : commun de la run + signature de chaque plan d'eau + rares horaires + Geaucké ;
     //   Onirail à Cendreville et Guizer à la Grotte Gelée au run 3. Obscurène (Ténèbres, Cendreville) : pas au run 1 avant
     //   Sylvebarbe → run fusion.
     for (const id of FISHING_COMMONS[`run${poolRun}`] ?? FISHING_COMMONS.run1) set.add(id)
-    for (const [mapId, ids] of Object.entries(FISHING_BY_MAP)) { if (mapId === "yellow_cendreville" && run === 1) continue; for (const id of ids) set.add(id) }
+    for (const [mapId, ids] of Object.entries(FISHING_BY_MAP)) { if (mapId === "yellow_cendreville" && (run === 1 || preSylvebarbe)) continue; for (const id of ids) set.add(id) }
     set.add("osquille"); set.add("ro"); set.add(GEAUCKE_ID)
     if (run === 3) { set.add("onirail"); set.add("guizer") } // rares de pêche du concours (cf. fishingRareOfMap)
     // RATTRAPAGE post-Ligue (run fusion) : des inédits du run 3 rôdent en live une fois Champion (cf. run1ChampionCatchup).

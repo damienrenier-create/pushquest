@@ -12,7 +12,7 @@ import type { MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies, DEX_ULTRA_SECRET } from "./species"
 import { funFactFor } from "./collectionneurFunFacts"
-import { baseSpeciesOf, speciesAtLevel } from "./ace"
+import { baseSpeciesOf, npcSpeciesAtLevel } from "./ace"
 import { Rng } from "../battle/rng"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 
@@ -189,7 +189,7 @@ export function buildArchivisteTeam(pool: readonly string[], playerMean: number,
         const level = Math.max(1, Math.min(100, playerMean + offs[i] + levelBonus))
         // MÊME STADE que le joueur : on évolue l'espèce tirée au stade NATUREL pour ce niveau (comme les équipes de
         //   dresseurs), pour ne jamais aligner un stade de base sous-évolué face à des finales.
-        const staged = speciesAtLevel(baseSpeciesOf(id), level)
+        const staged = npcSpeciesAtLevel(baseSpeciesOf(id), level) // PNJ : évolutions par échange comprises
         return createMonInstance(staged, level, allocated ? { owned: false, allocated } : { owned: false })
     })
 }

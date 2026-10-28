@@ -65,8 +65,11 @@ export default function DaemomaniaquePanel() {
     //   le guide ne liste que les Daemons OBTENABLES dans la run consultée.
     const endgame = mode === "run4" || mode === "post"
     const hideEndgame = !endgame
+    // RUN FUSION avant le réveil de Sylvebarbe (Champion seulement) : les zones de fin de jeu sont ouvertes, mais pas encore les
+    //   Daemons « post-Sylvebarbe » (Coucouminou, Ténèbres…) — le tirage leur donne un poids nul (28/10/2026).
+    const preSylvebarbe = mode === "run4" && !player.sylvebarbeAwake ? true : undefined
     const availRun = mode === "run4" ? 4 : queryRun
-    const avail = useMemo(() => runObtainableSpecies(availRun, endgame), [availRun, endgame])
+    const avail = useMemo(() => runObtainableSpecies(availRun, endgame, preSylvebarbe), [availRun, endgame, preSylvebarbe])
     const seenSet = useMemo(() => new Set([...dex.seen, ...dex.caught]), [dex.seen, dex.caught])
     const infoAllowed = (id: string) => mode !== "run2" || seenSet.has(id) || id === "ukognos"
 
@@ -107,12 +110,12 @@ export default function DaemomaniaquePanel() {
     const pick = (sp: SpeciesData) => {
         setErr(null)
         if (!infoAllowed(sp.id)) { setErr("Le Daemomaniaque ne parle que des Daemons que tu as déjà croisés."); return }
-        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun") }); return }
+        if (revealed.has(sp.id)) { setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun", preSylvebarbe) }); return }
         const r = consultDaemomaniaque()
         if (!r.ok) { setErr(`Pas assez d'énergie (${CONSULT_COST}⚡ requis pour une consultation).`); return }
         if (r.paid) setSpendFx((n) => n + 1) // consultation PAYANTE → on montre l'énergie qui part
         setRevealed((s) => new Set(s).add(sp.id))
-        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun") })
+        setSel({ sp, guide: captureGuide(sp.id, queryRun, hideEndgame, player.isChampion, eclaireurBeaten, getGameMode() === "fun", preSylvebarbe) })
     }
 
     const left = freeConsultsLeft()

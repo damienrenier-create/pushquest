@@ -606,9 +606,14 @@ export function getNgplusNemesisSpeciesId(): string | null {
     // 2) Sinon : Daemon CUSTOM (wizard) → le meilleur CONTRE parmi les espèces EXISTANTES du jeu (22/10/2026, Sartay :
     //    « un némésis qui existe déjà plutôt que d'en créer un ». L'ancienne lignée GÉNÉRÉE n'avait ni sprite ni fiche).
     //    Déterministe : même création → même némésis.
-    const teamCustom = st.team.find((m) => isCustomSpeciesId(m.speciesId))
-    if (!teamCustom) return null
-    const stored = st.customDaemons.find((d) => teamCustom.speciesId.startsWith(customLineageBaseId(d)))
+    //    La CRÉATION DU JOUEUR, et non le 1er Daemon hors Pokédex de l'équipe (fusion de Ligue, espèce hors-dex permanente,
+    //    création d'un autre joueur reçue en échange) : avant le 28/10/2026, un Shady en tête renvoyait null → Nouillon.
+    let stored: (typeof st.customDaemons)[number] | undefined
+    for (const m of st.team) {
+        if (!isCustomSpeciesId(m.speciesId)) continue
+        stored = st.customDaemons.find((d) => m.speciesId.startsWith(customLineageBaseId(d)))
+        if (stored) break
+    }
     if (!stored) return null
     try {
         return existingNemesisBase({ name: stored.spec.name, types: [...stored.spec.finalTypes], stats: { ...stored.spec.finalStats } })

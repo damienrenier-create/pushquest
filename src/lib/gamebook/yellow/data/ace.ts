@@ -208,7 +208,8 @@ export function bestCounter(playerLastTypes: PokeType[]): string {
  *  stade selon le niveau d'ACE (sinon une finale apparaissait au niveau d'une souche, ex. dragon stade-3 niv 4). */
 export function baseSpeciesOf(id: string): string {
     let cur = id
-    for (let g = 0; g < 6; g++) {
+    // Borne large : la lignée Mottoche compte 9 stades (une borne à 6 la coupait : souche de Mégalithe = Quadroc).
+    for (let g = 0; g < 12; g++) {
         const parent = Object.values(SPECIES).find((s) => s.evolution?.toId === cur)
         if (!parent) break
         cur = parent.id
@@ -219,11 +220,46 @@ export function baseSpeciesOf(id: string): string {
 /** Espèce au bon STADE d'évolution pour un niveau donné (suit la chaîne par niveau). */
 export function speciesAtLevel(baseId: string, level: number): string {
     let id = baseId
-    for (let guard = 0; guard < 5; guard++) {
+    // Borne large : la lignée Mottoche compte 8 évolutions (une borne à 5 la bloquait à Diamantine — 28/10/2026).
+    for (let guard = 0; guard < 12; guard++) {
         const evo = getSpecies(id)?.evolution
         const lvl = evo ? (evo.method as { level?: number }).level : undefined
         if (evo && typeof lvl === "number" && lvl <= level) id = evo.toId
         else break
+    }
+    return id
+}
+
+/** ÉVOLUTIONS PAR ÉCHANGE chez les PNJ (Sartay, 28/10/2026 : « vas-y, règle ») : Roctaur → Rochison et Aquilothan → Aquilord
+ *  n'évoluent que par échange, donc ACE, le Défi Némésis, les clones du Voleur, l'Archiviste, la Zone de Combat… restaient
+ *  bloqués au stade d'avant à vie (ACE alignait Roctaur contre 53 typages sur 171). Un PNJ fait ces évolutions au niveau 36,
+ *  et au moins 10 niveaux après avoir atteint le stade (Aquilothan, atteint au 36 → Aquilord au 46). Jamais pour les sauvages. */
+export const NPC_TRADE_EVO_LEVEL = 36
+export const NPC_TRADE_EVO_GAP = 10
+let _levelReached: Map<string, number> | null = null
+/** Niveau auquel on ATTEINT une espèce par évolution de niveau (1 pour une souche ou une évolution d'un autre type). */
+function levelReached(id: string): number {
+    if (!_levelReached) {
+        _levelReached = new Map()
+        for (const s of Object.values(SPECIES)) {
+            const m = s.evolution?.method as { kind?: string; level?: number } | undefined
+            if (s.evolution && m?.kind === "LEVEL" && typeof m.level === "number") _levelReached.set(s.evolution.toId, m.level)
+        }
+    }
+    return _levelReached.get(id) ?? 1
+}
+/** Comme speciesAtLevel, pour une équipe de PNJ : les évolutions par ÉCHANGE se font aussi (cf. NPC_TRADE_EVO_LEVEL). */
+export function npcSpeciesAtLevel(baseId: string, level: number): string {
+    let id = baseId
+    let reachedAt = levelReached(baseId)
+    for (let guard = 0; guard < 12; guard++) {
+        const evo = getSpecies(id)?.evolution
+        if (!evo) break
+        const m = evo.method as { kind?: string; level?: number }
+        const at = m.kind === "TRADE" ? Math.max(NPC_TRADE_EVO_LEVEL, reachedAt + NPC_TRADE_EVO_GAP) : m.level
+        if (typeof at !== "number" || at > level) break
+        id = evo.toId
+        reachedAt = at
     }
     return id
 }
@@ -264,12 +300,12 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
     const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
     // RUN 3 (concours) : équipe FIXE — contre-starter (némésis) EN TÊTE + Gékraise + Orcaline + Lavapetit(→Magmator)
-    //   + 2 Panthéon. Chaque espèce au bon STADE pour le niveau d'ACE (speciesAtLevel). Aucun contre adaptatif.
+    //   + 2 Panthéon. Chaque espèce au bon STADE pour le niveau d'ACE (npcSpeciesAtLevel). Aucun contre adaptatif.
     if (i.run3) {
         const nem = i.nemesisSpeciesId ?? ACE_NOUILLON_BASE // fallback défensif si le starter run 3 est inconnu
         const team: AceMon[] = [
-            { speciesId: speciesAtLevel(nem, L), level: L },
-            ...ACE_RUN3_TEAM.slice(0, 3).map((id) => ({ speciesId: speciesAtLevel(baseSpeciesOf(id), L), level: L })),
+            { speciesId: npcSpeciesAtLevel(nem, L), level: L },
+            ...ACE_RUN3_TEAM.slice(0, 3).map((id) => ({ speciesId: npcSpeciesAtLevel(baseSpeciesOf(id), L), level: L })),
             // Les 2 Panthéon (derniers slots) : panthères élémentaires selon le n° du match (cf. ACE_RUN3_PANTHER_STEPS).
             ...aceRun3PanthersFor(i.aceMatch ?? 1).map((id) => ({ speciesId: id, level: L })),
         ]
@@ -278,13 +314,13 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
     // NG+ (2e run) : trio thématisé (rétro-évolué au bon stade) + NÉMÉSIS à la place de Divin Pâte + Feu + contre.
     if (i.ngplus) {
         const team: AceMon[] = [
-            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[0]), L), level: L },
-            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[1]), L), level: L },
-            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[2]), L), level: L },
+            { speciesId: npcSpeciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[0]), L), level: L },
+            { speciesId: npcSpeciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[1]), L), level: L },
+            { speciesId: npcSpeciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[2]), L), level: L },
             // Némésis (stade 1 déjà = souche) évolué au bon stade ; fallback Nouillon/Divin Pâte si pas de custom.
-            { speciesId: speciesAtLevel(i.nemesisSpeciesId ?? ACE_NOUILLON_BASE, L), level: L },
-            { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
-            { speciesId: speciesAtLevel(baseSpeciesOf(counter), L), level: L },
+            { speciesId: npcSpeciesAtLevel(i.nemesisSpeciesId ?? ACE_NOUILLON_BASE, L), level: L },
+            { speciesId: npcSpeciesAtLevel(ACE_FIRE_BASE, L), level: L },
+            { speciesId: npcSpeciesAtLevel(baseSpeciesOf(counter), L), level: L },
         ]
         return { team, counterSpecies: counter }
     }
@@ -293,11 +329,11 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
         { speciesId: panthers[0], level: L },
         { speciesId: panthers[1], level: L },
         { speciesId: panthers[2], level: L }, // Panthéon → panthère élémentaire si badge Éclair
-        { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
-        { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
+        { speciesId: npcSpeciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
+        { speciesId: npcSpeciesAtLevel(ACE_FIRE_BASE, L), level: L },
         // Contre adaptatif RÉTRO-ÉVOLUÉ au bon stade pour le niveau d'ACE (les ACE_BOX sont des finales :
         // sans ça, une finale apparaissait au niveau d'une souche, ex. dragon stade-3 au niv 4 après reset).
-        { speciesId: speciesAtLevel(baseSpeciesOf(counter), L), level: L },
+        { speciesId: npcSpeciesAtLevel(baseSpeciesOf(counter), L), level: L },
     ]
     return { team, counterSpecies: counter }
 }

@@ -254,7 +254,7 @@ export function profileFromSpecies(id: string): DaemonProfile | null {
 /** Stade 1 d'une lignée canonique (remonte les pré-évolutions). */
 function lineageBaseOf(id: string): string {
     let cur = id
-    for (let g = 0; g < 6; g++) {
+    for (let g = 0; g < 12; g++) { // borne large : la lignée Mottoche compte 9 stades (28/10/2026)
         const parent = Object.values(SPECIES).find((s) => s.evolution?.toId === cur)
         if (!parent) break
         cur = parent.id
@@ -262,10 +262,16 @@ function lineageBaseOf(id: string): string {
     return cur
 }
 
+/** Lignées EXCLUES des némésis. Mottoche (la lignée « mème », 9 stades) : depuis que sa finale Mégalithe s'atteint enfin par
+ *  niveau (28/10/2026), elle serait devenue la némésis de 29 typages sur 171. Exclue pour garder les némésis telles quelles ;
+ *  à rouvrir seulement sur décision de Sartay. */
+const NEMESIS_EXCLUDED_LINEAGES: ReadonlySet<string> = new Set(["mottoche"])
+
 export function existingNemesisBase(p: DaemonProfile): string | null {
     const eligible = (id: string): boolean => {
         const s = SPECIES[id] as (SpeciesData & { legendary?: boolean; hiddenUntilCaught?: boolean; exclusive?: boolean; fusionParents?: unknown }) | undefined
         if (!s || s.legendary || s.hiddenUntilCaught || s.exclusive || s.fusionParents) return false
+        if (NEMESIS_EXCLUDED_LINEAGES.has(lineageBaseOf(id))) return false
         if (s.types.includes("FEE")) return false // FÉE réservée au légendaire Ukognos (même règle que l'ancien buildNemesis)
         return !!s.sprite && !s.sprite.includes("missingno")
     }

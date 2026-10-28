@@ -11,7 +11,7 @@
 import type { MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
-import { bestCounter, baseSpeciesOf, speciesAtLevel } from "./ace"
+import { bestCounter, baseSpeciesOf, npcSpeciesAtLevel } from "./ace"
 
 /** Un défi némésis = un pseudo + le Daemon qu'il gagne s'il l'emporte. Les champs optionnels permettent des
  *  DEALS sur-mesure (revanche du génie) : récompense niveau/shiny custom + énergie créditée au lancement/à la victoire. */
@@ -93,7 +93,7 @@ export function buildNemesisChallengeTeam(playerTeam: readonly MonInstance[]): M
         const sp = getSpecies(m.speciesId)
         if (!sp) continue // Daemon custom non enregistré (rare) → pas de contre calculable, on saute
         const counterBase = baseSpeciesOf(bestCounter([...sp.types]))
-        const counterId = speciesAtLevel(counterBase, m.level)
+        const counterId = npcSpeciesAtLevel(counterBase, m.level) // PNJ : évolutions par échange comprises (Rochison)
         out.push(createMonInstance(counterId, m.level, { owned: false }))
     }
     return out

@@ -6,7 +6,7 @@
 // Cf. GDD : Documents/PushQuest-Pokedex/GDD-ZoneDeCombat.md. Aucune dépendance map/UI/save ici.
 
 import { SPECIES } from "../data/species"
-import { baseSpeciesOf, speciesAtLevel } from "../data/ace"
+import { baseSpeciesOf, npcSpeciesAtLevel } from "../data/ace"
 import { typeMultiplier } from "../battle/typeChart"
 import { POKE_TYPES, type PokeType } from "../battle/types"
 import type { Rng } from "../battle/rng"
@@ -100,7 +100,7 @@ export function formsAtLevel(level: number): string[] {
     const hit = _formsCache.get(level)
     if (hit) return hit
     const set = new Set<string>()
-    for (const id of Object.keys(SPECIES)) set.add(speciesAtLevel(baseSpeciesOf(id), level))
+    for (const id of Object.keys(SPECIES)) set.add(npcSpeciesAtLevel(baseSpeciesOf(id), level)) // PNJ : évolutions par échange comprises
     const arr = [...set]
     _formsCache.set(level, arr)
     return arr
@@ -158,7 +158,7 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     //    = formes terminales (évite le leak d'un stade intermédiaire d'une lignée à double base, ex. golemini→megalithe).
     const forms = (opts.streak <= FRONTIER_EVOLVED_MIN_STREAK && !opts.boss)
         ? allFrontierForms()
-        : formsAtLevel(level).filter((id) => speciesAtLevel(id, level) === id)
+        : formsAtLevel(level).filter((id) => npcSpeciesAtLevel(id, level) === id)
     const eligible = forms.filter((id) => frontierEligible(id, opts.streak))
     let pool = eligible.filter((id) => { const b = bstOf(id); return b >= lo && b <= hi })
 

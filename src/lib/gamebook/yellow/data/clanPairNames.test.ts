@@ -62,7 +62,7 @@ describe("noms sur mesure des paires de clan (Sartay 19/10/2026)", () => {
 describe("noms sur mesure des duos de synergie (Sartay 19/10/2026)", () => {
     const duos = fusionSecretCatalog().filter((d) => d.kind === "pair").map((d) => d.pair!)
     it("chaque duo a un vrai nom en jeu : officiel (Karabouh, Impérafer) ou sur mesure, jamais le mot-valise", () => {
-        expect(duos).toHaveLength(9) // + Morrow × Crocavern (26/10/2026)
+        expect(duos).toHaveLength(11) // + Morrow × Crocavern (26/10/2026) ; + Pyrozly × Iorours et Pyrozly × Druidours (28/10/2026)
         for (const [a, b] of duos) {
             const official = officialFusionForParents(a, b)?.name
             const custom = synergyPairName(a, b)

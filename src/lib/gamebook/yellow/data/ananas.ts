@@ -10,7 +10,7 @@
 
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
-import { baseSpeciesOf, speciesAtLevel } from "./ace"
+import { baseSpeciesOf, npcSpeciesAtLevel } from "./ace"
 import { distributeDomeTraining } from "../frontier/domeBudgets"
 import { arenaInfo, run3ArenaInfo } from "./arenaInfos"
 import { BERRY_IDS, HELD_ITEMS } from "./heldItems"
@@ -78,7 +78,7 @@ export function buildAnanasTeam(variant: AnanasVariant, level: number): MonInsta
     const evBudget = Math.round(FULL_EV * pct), saiyanBudget = Math.round(FULL_SAIYAN * pct)
     const lvl = clampLvl(level)
     return ROSTERS[variant].map(({ base, berry }) => {
-        const speciesId = speciesAtLevel(baseSpeciesOf(base), lvl)
+        const speciesId = npcSpeciesAtLevel(baseSpeciesOf(base), lvl) // PNJ : évolutions par échange comprises
         const sp = getSpecies(speciesId)
         const opts = sp ? distributeDomeTraining(sp.baseStats, evBudget, saiyanBudget) : { ev: undefined, allocated: undefined }
         const mon = createMonInstance(speciesId, lvl, { owned: false, ev: opts.ev, allocated: opts.allocated })

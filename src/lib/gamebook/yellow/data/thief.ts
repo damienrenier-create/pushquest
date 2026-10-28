@@ -26,7 +26,7 @@ import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { dexLore } from "./dexLore"
 import { THIEF_ITEM_ID, getHeldItem, isHeldItem } from "./heldItems"
-import { bestCounter, baseSpeciesOf, speciesAtLevel } from "./ace"
+import { bestCounter, baseSpeciesOf, npcSpeciesAtLevel } from "./ace"
 import { PATE_LUXE_VOLEUR_ITEM_ID } from "./items"
 import { distributeEvs } from "./evConfig"
 
@@ -149,7 +149,7 @@ function stolenFighter(m: MonInstance, i: number): MonInstance {
 function nemesisOf(m: MonInstance, i: number): MonInstance | null {
     const sp = getSpecies(m.speciesId)
     if (!sp) return null
-    const counterId = speciesAtLevel(baseSpeciesOf(bestCounter([...sp.types])), m.level)
+    const counterId = npcSpeciesAtLevel(baseSpeciesOf(bestCounter([...sp.types])), m.level) // PNJ : évolutions par échange comprises
     const csp = getSpecies(counterId)
     if (!csp) return null
     const evTotal = Object.values(m.ev ?? {}).reduce((a, v) => a + (v ?? 0), 0)
