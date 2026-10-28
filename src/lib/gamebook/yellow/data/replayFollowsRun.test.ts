@@ -135,6 +135,17 @@ describe("câblage : le contenu suit le run rejoué, l'économie réelle reste s
         expect(rb).toContain("if (getActiveWorld() === \"replay\" && !isRun3) footNote = \"🔁 Rejeu : ces hauts faits sont pour l'honneur.") // aucune énergie promise en bulle
         expect(rb).toContain("const isRun2 = effectiveRunWorld() === \"ngplus\""); expect(rb).toContain("const isRun3 = effectiveRunWorld() === \"run3\"")
     })
+    it("Hall of Fame (arènes et Ligue) : un rejeu ouvre le run REJOUÉ ; les combats d'arène sont ceux du run rejoué (Sartay, 28/10/2026)", () => {
+        const arena = read("src/app/gamebook/yellow/ArenaHallOfFamePanel.tsx")
+        expect(arena).toContain("const runWorld = activeWorld === \"replay\" ? effectiveRunWorld() : activeWorld")
+        expect(arena).toContain("useState<\"live\" | \"ngplus\" | \"run3\">(runWorld)")
+        expect(arena).toContain("const myWorld = runWorld") // affrontements gatés sur le run rejoué (badges de la bulle)
+        const league = read("src/app/gamebook/yellow/HallOfFameViewer.tsx")
+        expect(league).toContain("(activeWorld === \"replay\" ? effectiveRunWorld() : activeWorld)")
+        for (const [f, s] of [["arènes", arena], ["Ligue", league]]) expect(s, f).not.toContain("activeWorld === \"replay\" ? \"live\"")
+        // Une conquête « bis » ne se grave toujours pas au Hall of Fame RÉEL (partagé).
+        expect(read("src/app/gamebook/yellow/YellowDevClient.tsx")).toContain("REJEU : une conquête d'arène « bis » ne se grave PAS au Hall of Fame d'arène RÉEL (partagé)")
+    })
     it("combats (ACE, revanches, boss d'arène, VOLTA, Collectionneur, dresseur d'Orcaline, Lavapetit)", () => {
         const bs = read("src/lib/gamebook/yellow/store/battleStore.ts")
         for (const s of [

@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
-import { useActiveWorld, usePlayer, champBattlesLeft, MAX_CHAMP_BATTLES_PER_DAY } from "@/lib/gamebook/yellow/store/playerStore"
+import { useActiveWorld, usePlayer, champBattlesLeft, MAX_CHAMP_BATTLES_PER_DAY, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { arenaGate, type ArenaGate } from "@/lib/gamebook/yellow/data/arenaInfos"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
@@ -84,10 +84,12 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
 
     // Le HoF d'arène est PARTAGÉ, mais les arènes des RUN 2/3 sont re-typées → badges préfixés "ngplus:"/"run3:".
     // Un TOGGLE laisse choisir le run à consulter, MAIS uniquement parmi les runs que le spectateur a ATTEINTS
-    // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant.
+    // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant ; en REJEU, le run
+    // REJOUÉ (Sartay 28/10/2026 : un rejeu du run 3 affronte les champions du run 3, pas ceux du run 1).
     const activeWorld = useActiveWorld()
     const player = usePlayer()
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld === "replay" ? "live" : activeWorld)
+    const runWorld = activeWorld === "replay" ? effectiveRunWorld() : activeWorld
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(runWorld)
     const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : viewWorld === "ngplus" ? ARENAS_RUN2 : ARENAS
     // Runs visibles au toggle : run 1 toujours ; run 2/3 si DÉJÀ LANCÉS (flags permanents ngplusUsed/run3Used) —
     // et PAS hasNgPlusWorld/hasRun3World, qui deviennent faux après la méga-fusion de fin de run 3 (mondes effacés)
@@ -118,7 +120,8 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     const list = byBadge[tab] ?? []
     const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"
     // GATING par badges — uniquement pour SON PROPRE run (consulter un autre run = lecture seule, pas d'affrontement).
-    const myWorld = activeWorld === "replay" ? "live" : activeWorld
+    //   En rejeu : le run rejoué, gaté par les badges gagnés dans la bulle.
+    const myWorld = runWorld
     const gate: ArenaGate | "consult" = viewWorld === myWorld ? arenaGate(arena.id, player.badges) : "consult"
     const dimmed = gate === "beaten" || gate === "locked"
     const gateNote: React.CSSProperties = { marginTop: 8, fontSize: 11.5, textAlign: "center", opacity: 0.75 }

@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
-import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { useActiveWorld, usePlayer, effectiveRunWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { CLANS, CLAN_KEYS } from "@/lib/gamebook/yellow/data/clans"
 import type { ClanHallMember } from "@/lib/gamebook/yellow/store/clanHof"
 import { useFusionSprite } from "./useFusionSprite"
@@ -51,7 +51,8 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const activeWorld = useActiveWorld()
     const player = usePlayer()
     const fusionUnlocked = player.defeatedTrainers.includes("autel_visited") // arrivé au Dôme Fusion → onglet FUSION
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "live_post" | "fusion" | "clans">(activeWorld === "replay" ? "live" : activeWorld)
+    // Défaut = le run courant ; en REJEU, le run REJOUÉ (comme le Hall of Fame des arènes).
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3" | "live_post" | "fusion" | "clans">(activeWorld === "replay" ? effectiveRunWorld() : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used) || (w.id === "live_post" && player.run3Used && activeWorld !== "run3"))
