@@ -96,7 +96,7 @@ describe("Pâte du Voleur : le Dieu Spaghetti ne présente pas un tiers de shiny
         }
         expect(pateDeLuxeGodLines("shiny_perfect", "Rochison", 0).join(" ")).toContain("sur mille")
         expect(pateDeLuxeGodLines("min", "Rochison", 0, { thief: true })).toEqual(pateDeLuxeGodLines("min", "Rochison", 0))
-        expect(read("src/app/gamebook/yellow/YellowDevClient.tsx")).toContain("pateDeLuxeGodLines(r.outcome, nm, Math.random(), { thief: item === PATE_LUXE_VOLEUR_ITEM_ID })")
+        expect(read("src/app/gamebook/yellow/YellowDevClient.tsx")).toContain("pateDeLuxeGodLines(outcome, nm, Math.random(), { thief: item === PATE_LUXE_VOLEUR_ITEM_ID })")
     })
 })
 

@@ -25,6 +25,7 @@ import { getItem } from "../data/items"
 import { getTodayISO } from "@/lib/challenge"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
+import { queueShinyTransform } from "./shinyTransform"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
@@ -1031,6 +1032,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
             //   ✨ Un shiny FORGÉ par la Shiny Ball (L'Orfèvre) n'en est pas une : ni fête, ni prime de parrainage.
             if (wild.shiny && !b.shinyBallCapture) reportShiny("captured", wild.uid, wild.speciesId)
+            //   ✨ TRANSFORMATION CHROMATIQUE : la Shiny Ball l'a rendu shiny → sa cinématique se joue dès la fin du combat.
+            if (wild.shiny && b.shinyBallCapture) queueShinyTransform({ speciesId: wild.speciesId, name: wild.nickname || getSpecies(wild.speciesId)?.name || wild.speciesId, source: "shiny_ball" })
             // 🐈‍⬛ GALIJAH : à 150 ESPÈCES → arme sa chasse (décompte UI). Il se CAPTURE sur l'ÎLE ÉMERAUDE (rencontre
             //   25 %/combat, cf. gameStore) — plus de CADEAU au 200ᵉ dex (grantGalijahIfDexMilestone RETIRÉ) : à 200 il
             //   RÉAPPARAÎT sur l'île s'il avait été manqué. (Le dex global compte même les espèces vues en rejeu.)

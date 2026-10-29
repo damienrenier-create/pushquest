@@ -20,6 +20,7 @@ import {
 import { funSprintReward, funArenaRewardScaled, funLevelMultiplier, funArenaOpen, FUN_ARENA_COUNT } from "@/lib/gamebook/yellow/data/funDefis"
 import { chenLabRoute } from "@/lib/gamebook/yellow/data/labDialogues"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { queueShinyTransform } from "@/lib/gamebook/yellow/store/shinyTransform"
 import { persistYellowSave, canAbandonNgplus } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, physEnergyBase, physEnergyRewardLabel, QUOTA2X_MULT,
@@ -156,6 +157,8 @@ export default function LabPanel() {
         const where = makeTonytonyShiny()
         persistYellowSave()
         setMsg(where ? `✨ Ton ${pillar.name} est désormais SHINY ! La chance t'a souri.` : "Pas encore éligible (5000 requis).")
+        // ✨ TRANSFORMATION CHROMATIQUE : le pilier du casino a droit à sa cinématique (dès la fermeture du terminal).
+        if (where) queueShinyTransform({ speciesId: pillar.species, name: pillar.name, source: "casino" })
     }
 
     return (

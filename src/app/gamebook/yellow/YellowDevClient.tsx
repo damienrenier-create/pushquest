@@ -8,7 +8,7 @@
 //
 // Pas encore : interaction A/B (NPCs, dialogues), START (menu), SELECT.
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import GameBoyShell, { type GbButton } from "./GameBoyShell"
 import MapView from "./MapView"
@@ -30,6 +30,8 @@ import { FusionPickerView } from "./FusionPickerView"
 import { FusionCompareView } from "./FusionCompareView"
 import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
+import ShinyTransform from "./battle/ShinyTransform"
+import { queueShinyTransform, finishShinyTransform, currentShinyTransform, subscribeShinyTransform } from "@/lib/gamebook/yellow/store/shinyTransform"
 import { EvolvedFicheModal } from "./EvolvedFicheModal"
 import { dexSize, computeMensuration, formatSize, formatWeight, sizeTag } from "@/lib/gamebook/yellow/data/dexMensurations"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
@@ -330,6 +332,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const pressB = useGameStore((s) => s.pressB)
     const hydrate = useGameStore((s) => s.hydrate)
     const hydrated = useGameStore((s) => s.hydrated)
+    const shinyTx = useSyncExternalStore(subscribeShinyTransform, currentShinyTransform, () => null) // ✨ transformation chromatique à jouer
     const shopOpen = useGameStore((s) => s.shopOpen)
     const closeShop = useGameStore((s) => s.closeShop)
     const interiorReturn = useGameStore((s) => s.interiorReturn) // ville d'entrée d'un intérieur partagé (shop/centre)
@@ -1472,6 +1475,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
             if (championRun || arenaFight || ghostFight || replayKeep || pendingLearn || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
+            // TRANSFORMATION CHROMATIQUE en cours (hors combat) : la cinématique a ses propres touches (B = passer).
+            if (!battle && currentShinyTransform()) { e.preventDefault(); return }
             const inB = !!battle
             // En combat, menu pause ouvert → le D-pad/A pilotent le menu (tactile), pas le combat.
             const inBMenu = inB && menu !== "none"
@@ -5458,11 +5463,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 else if (r.reason === "none") { setToast("Tu n'as plus de Tiramisu."); setTiramisuPick(false) }
                                 return
                             }
+                            const before = [...getPlayer().team, ...getPlayer().pc].find((m) => m.uid === uid)
                             const r = useLuxePasta(uid, item ?? PATE_LUXE_ITEM_ID)
                             if (r.ok && r.outcome) {
                                 // Le DIEU SPAGHETTI commente le résultat de la bouchée (parfait / rang D / shiny+parfait).
                                 setLuxePick(false)
-                                showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(r.outcome, nm, Math.random(), { thief: item === PATE_LUXE_VOLEUR_ITEM_ID }))
+                                const outcome = r.outcome
+                                const comment = () => showDialogue(PATE_LUXE_GOD_NPC, PATE_LUXE_GOD_NAME, pateDeLuxeGodLines(outcome, nm, Math.random(), { thief: item === PATE_LUXE_VOLEUR_ITEM_ID }))
+                                // ✨ TRANSFORMATION CHROMATIQUE (29/10/2026) : un Daemon qui DEVIENT shiny a droit à sa cinématique,
+                                //   puis le Dieu Spaghetti commente la bouchée.
+                                if (outcome === "shiny_perfect" && before && !before.shiny) queueShinyTransform({ speciesId: before.speciesId, name: nm, source: item === PATE_LUXE_VOLEUR_ITEM_ID ? "pate_voleur" : "pate_luxe", after: comment })
+                                else comment()
                             } else if (r.reason === "locked") {
                                 setToast(`${nm} a déjà mangé une Pâte de Luxe : c'est définitif.`)
                             } else if (r.reason === "none") {
@@ -5972,6 +5983,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 )
             })()}
+
+            {/* ✨ TRANSFORMATION CHROMATIQUE (Pâte de Luxe ou du Voleur, Shiny Ball, pilier du casino) : hors combat, au-dessus de tout. */}
+            {!battle && shinyTx && (
+                <ShinyTransform key={shinyTx.id} seed={shinyTx.id} sprite={getSpecies(shinyTx.speciesId)?.sprite} name={shinyTx.name} source={shinyTx.source} onDone={() => finishShinyTransform(shinyTx.id)} />
+            )}
 
             {/* Cinématique d'évolution (post-combat, après QUITTER) */}
             {!battle && evolutions.length > 0 && (
