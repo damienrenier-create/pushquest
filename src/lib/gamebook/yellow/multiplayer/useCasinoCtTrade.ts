@@ -37,12 +37,13 @@ interface CtMsg {
     data?: { ctId?: string }
 }
 
-function post(body: Record<string, unknown>) {
+function post(body: Record<string, unknown>, keepalive = false) {
     try {
         void fetch("/api/gamebook/yellow/broadcast", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ channel: CHANNEL, ...body }),
+            keepalive,
         })
     } catch { /* best-effort */ }
 }
@@ -148,7 +149,18 @@ export function useCasinoCtTrade(opts: {
         channel.bind("cttrade:confirm", onConfirm)
         channel.bind("cttrade:cancel", onCancel)
         channel.bind("player:disconnect", onPartnerLeft)
+        // PAGE QUITTÉE avec un échange de CT ouvert : on l'ANNULE des deux côtés (cf. useCasinoTrade : sinon le retour
+        //   « Précédent » permettait un échange fait d'un seul côté).
+        const onPageHide = () => {
+            const s = sessionRef.current
+            if (!s) return
+            post({ type: "cttrade:cancel", targetUserId: s.partnerUserId, battleId: s.tradeId }, true)
+            sessionRef.current = null
+            setSession(null)
+        }
+        window.addEventListener("pagehide", onPageHide)
         return () => {
+            window.removeEventListener("pagehide", onPageHide)
             channel.unbind("cttrade:offer", onOffer)
             channel.unbind("cttrade:respond", onRespond)
             channel.unbind("cttrade:confirm", onConfirm)

@@ -42,12 +42,13 @@ interface TradeMsg {
     data?: { mon?: MonInstance }
 }
 
-function post(body: Record<string, unknown>) {
+function post(body: Record<string, unknown>, keepalive = false) {
     try {
         void fetch("/api/gamebook/yellow/broadcast", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ channel: CHANNEL, ...body }),
+            keepalive,
         })
     } catch { /* best-effort */ }
 }
@@ -160,7 +161,19 @@ export function useCasinoTrade(opts: {
         channel.bind("trade:confirm", onConfirm)
         channel.bind("trade:cancel", onCancel)
         channel.bind("player:disconnect", onPartnerLeft)
+        // PAGE QUITTÉE (navigation, cache « Précédent » de Safari…) avec un échange ouvert : on l'ANNULE des deux côtés.
+        //   Sinon, revenir par « Précédent » rouvrait la fenêtre avec la confirmation de l'autre, qui avait déjà fermé
+        //   l'échange chez lui (player:disconnect) : l'échange se faisait d'un seul côté (Daemon dupliqué / perdu).
+        const onPageHide = () => {
+            const s = sessionRef.current
+            if (!s) return
+            post({ type: "trade:cancel", targetUserId: s.partnerUserId, battleId: s.tradeId }, true)
+            sessionRef.current = null
+            setSession(null)
+        }
+        window.addEventListener("pagehide", onPageHide)
         return () => {
+            window.removeEventListener("pagehide", onPageHide)
             channel.unbind("trade:offer", onOffer)
             channel.unbind("trade:respond", onRespond)
             channel.unbind("trade:confirm", onConfirm)

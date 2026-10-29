@@ -8,7 +8,7 @@
 //
 // Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
-import { useSyncExternalStore, useState, useEffect } from "react"
+import { useSyncExternalStore, useState, useEffect, useRef } from "react"
 import { useGameStore, activeNpcs } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
 import { currentPlatineOpponent } from "@/lib/gamebook/yellow/store/platineRun"
@@ -1167,6 +1167,7 @@ const PLAYER_GEN3_SPRITE: Record<string, string> = {
     "l'archiviste": "/yellow/sprites/archiviste_gen3.png", // L'ARCHIVISTE (Collectionneur du dex) — sheet Gen3 19×4, clé = pseudo lowercased
 }
 
+const REMOTE_GLIDE = "left 0.12s linear, top 0.12s linear"
 function RemotePlayerSprite({
     rp,
     screenPos,
@@ -1176,6 +1177,14 @@ function RemotePlayerSprite({
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     bubble?: string
 }) {
+    // Glissement CSS quand LE JOUEUR DISTANT a bougé ; net quand SEULE la caméra locale a bougé (grandes cartes : sinon
+    //   il « dérivait » d'une case à chaque pas du joueur local) ; inchangé sinon (un re-rendu en plein glissement ne
+    //   doit pas l'interrompre).
+    const anchor = screenPos(rp.posX, rp.posY)
+    const lastRef = useRef({ x: rp.posX, y: rp.posY, left: anchor.left, top: anchor.top, glide: REMOTE_GLIDE })
+    const prev = lastRef.current
+    const glide = prev.x !== rp.posX || prev.y !== rp.posY ? REMOTE_GLIDE : prev.left !== anchor.left || prev.top !== anchor.top ? "none" : prev.glide
+    useEffect(() => { lastRef.current = { x: rp.posX, y: rp.posY, left: anchor.left, top: anchor.top, glide } })
     const hue = hashHue(rp.userId)
     const cells = FIRERED_PLAYER[rp.direction] ?? FIRERED_PLAYER.down
     // Le stepFrame distant n'est pas diffusé : on alterne les 2 frames de marche
@@ -1190,8 +1199,8 @@ function RemotePlayerSprite({
     const customTint = avatarRaw ? avatarFilter(avatarRaw) : "" // teinte de PERSONNALISATION (avatar diffusé en présence)
     const dirRow = rp.direction === "up" ? NPC40_ROW_UP : rp.direction === "left" ? NPC40_ROW_LEFT : rp.direction === "right" ? NPC40_ROW_RIGHT : NPC40_ROW_DOWN
     const containerStyle: React.CSSProperties = customSheet
-        ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
-        : { position: "absolute", ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 3, transition: "left 0.12s linear, top 0.12s linear", pointerEvents: "none" }
+        ? { ...npc40ContainerStyle(screenPos, rp.posX, rp.posY), zIndex: 3, transition: glide, pointerEvents: "none" }
+        : { position: "absolute", ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 3, transition: glide, pointerEvents: "none" }
     const spriteStyle: React.CSSProperties = customSheet
         // Marche : alterne les 2 frames de pas par parité de case (stepFrame non diffusé) → jambes animées à distance.
         ? { position: "absolute", inset: 0, ...npc40CellStyle(customSheet, NPC40_WALK_COLS[(rp.posX + rp.posY) % 2], dirRow), filter: `${customTint} drop-shadow(0 1px 1px rgba(0,0,0,0.45))`.trim() }

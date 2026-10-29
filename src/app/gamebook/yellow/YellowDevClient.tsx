@@ -15,6 +15,7 @@ import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
+import { presenceChannelFor } from "@/lib/gamebook/yellow/multiplayer/presenceMaps"
 import { setOnlineCount } from "@/lib/gamebook/yellow/multiplayer/onlinePresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
@@ -763,11 +764,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Salle de FUSION : présence + défi + combat PvP sur un canal DÉDIÉ `yellow_autel`
     // (les coordonnées sont propres à une carte → on ne mélange pas les positions casino/salle).
     const inAutel = mapPlayer.mapId === "yellow_combat_autel"
+    // DÉFI PvP : casino et salle de fusion seulement (mpActive/mpChannel ci-dessous servent au défi).
     const mpChannel = inAutel ? "yellow_autel" : "yellow_casino"
     const mpActive = (inCasino || inAutel) && !battle && !showIntro && !!userId
+    // PRÉSENCE (Sartay, 29/10/2026 : « go option 2 ») : casino, salle de fusion ET les 7 lieux sociaux (Ville Jaune,
+    //   Cendreville, hub de la Zone de Combat, Centre, Labo, boutique, Chapelle) ; on s'y VOIT, sans défi ni échange.
+    //   Centre, Labo et boutique : un canal par ville d'entrée (interiorReturn).
+    //   Pas avant le chargement de la position (sinon chacun apparaîtrait un instant à l'entrée de la Ville Jaune), ni
+    //   pendant le retour au Centre après un K.O.
+    const presenceChannel = presenceChannelFor(mapPlayer.mapId, interiorReturn?.mapId)
     const remotePlayers = useCasinoPresence({
-        active: mpActive,
-        channel: mpChannel,
+        active: hydrated && !whiteout && !!presenceChannel && !battle && !showIntro && !!userId,
+        channel: presenceChannel ?? mpChannel,
         myUserId: userId,
         posX: mapPlayer.posX,
         posY: mapPlayer.posY,
@@ -781,6 +789,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const funGlobalPlayers = useCasinoPresence({
         active: getGameMode() === "fun" && !battle && !showIntro && !!userId,
         channel: "yellow_nexus",
+        countOnly: true, // seul le NOMBRE est lu : pas de message à chaque pas (le heartbeat suffit)
         myUserId: userId,
         posX: mapPlayer.posX,
         posY: mapPlayer.posY,
@@ -2837,7 +2846,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <BattleScreen />
                     </BattleBoundary>
                 ) : (
-                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts, ...archivistes]} onArenaClick={handleArenaClick} myAvatar={player.chosenAvatar} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={inCasino ? chat.bubbles : undefined} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts, ...archivistes]} onArenaClick={handleArenaClick} myAvatar={player.chosenAvatar} />
                 )}
             </GameBoyShell>
 
