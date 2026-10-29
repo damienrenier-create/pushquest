@@ -15,8 +15,8 @@ export interface FrontierProfile {
     domeBest: number
     symbols: string[]
     replaysUsed: number
-    /** CT STATUT : ventes totales de chaque CT, tous joueurs confondus (→ prix ×5 par vente). Absent = serveur d'avant la règle. */
-    statusCtSales?: Record<string, number>
+    /** CT STATUT : combien de fois CE joueur a déjà acheté chaque CT (→ prix ×5 par rachat). Absent = serveur d'avant la règle. */
+    statusCtBuys?: Record<string, number>
 }
 
 const EMPTY: FrontierProfile = { jc: 0, towerBest: 0, factoryBest: 0, domeBest: 0, symbols: [], replaysUsed: 0 }
@@ -56,9 +56,9 @@ export async function postSpend(amount: number, symbol?: string): Promise<{ ok: 
     } catch { return { ok: false, jc: 0 } }
 }
 
-/** CT STATUT : achète `ctId` au prix affiché. Le serveur refuse un prix dépassé (« price_changed », un autre joueur vient de
- *  l'acheter) et renvoie le nouveau nombre de ventes ; succès → solde à jour et ventes après cet achat. */
-export async function postStatusCtSpend(ctId: string, amount: number): Promise<{ ok: boolean; jc?: number; sales?: number; reason?: string }> {
+/** CT STATUT : achète `ctId` au prix affiché. Le serveur refuse un prix dépassé (« price_changed » : le joueur l'a rachetée
+ *  entre-temps, depuis un autre onglet) et renvoie son nouveau nombre d'achats ; succès → solde à jour et achats après celui-ci. */
+export async function postStatusCtSpend(ctId: string, amount: number): Promise<{ ok: boolean; jc?: number; buys?: number; reason?: string }> {
     try {
         const r = await fetch(BASE, {
             method: "POST",
@@ -66,7 +66,7 @@ export async function postStatusCtSpend(ctId: string, amount: number): Promise<{
             body: JSON.stringify({ action: "statusCtSpend", ctId, amount }),
         })
         const j = await r.json()
-        return { ok: !!j?.ok, jc: typeof j?.jc === "number" ? j.jc : undefined, sales: typeof j?.sales === "number" ? j.sales : undefined, reason: typeof j?.reason === "string" ? j.reason : undefined }
+        return { ok: !!j?.ok, jc: typeof j?.jc === "number" ? j.jc : undefined, buys: typeof j?.buys === "number" ? j.buys : undefined, reason: typeof j?.reason === "string" ? j.reason : undefined }
     } catch { return { ok: false } }
 }
 
