@@ -129,7 +129,7 @@ describe("onglet resté sur une version d'avant les boîtes (route serveur de la
         const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8")
         expect(read("src/app/api/gamebook/yellow/save/route.ts")).toContain("if (existing?.flags && !body.intentionalReset && !(Array.isArray(body.caps) && body.caps.includes(\"pcBoxes\"))) keepPcBoxesFromStored(existing.flags, save)")
         const sm = read("src/lib/gamebook/yellow/store/saveManager.ts")
-        expect(sm).toContain("const SAVE_CAPS = [\"pcBoxes\"]")
+        expect(sm).toContain("const SAVE_CAPS = [\"pcBoxes\", \"thief9\"]")
         expect(sm.split("caps: SAVE_CAPS").length - 1).toBe(3)
     })
 })

@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — signale au serveur qu'un SHINY a été croisé/capturé → déclenche la fête
 // communautaire (+50 énergie pour tous, réclamée au login). Best-effort (jamais bloquant).
 
-import { getActiveWorld, getShinyFrenzy } from "./store/playerStore"
+import { getActiveWorld, getShinyFrenzy, thiefFrenzyActiveHere } from "./store/playerStore"
 import { shinyFrenzyActive } from "./data/shinyFrenzy"
 
 /** Signale un shiny croisé ("encounter") ou capturé ("captured"). Idempotent côté serveur (eventKey). */
@@ -16,6 +16,8 @@ export function reportShiny(kind: "encounter" | "captured", uid: string, species
     // 🤫 FRÉNÉSIE SHINY : pendant le cadeau d'anniversaire (50 % de shiny), ses shinies restent un SECRET → pas de fête
     //   communautaire. Le serveur applique la même règle en lisant la save ; ici on s'épargne juste la requête.
     if (shinyFrenzyActive(getShinyFrenzy(), Date.now())) return
+    // 🥷 FRÉNÉSIE DU VOLEUR (vol 9) : même secret tant qu'elle court ICI (elle dort au run 3, où un shiny garde sa fête).
+    if (thiefFrenzyActiveHere()) return
     try {
         void fetch("/api/gamebook/yellow/shiny-gift", {
             method: "POST",

@@ -14,6 +14,7 @@ import { isHeldItem } from "../data/heldItems"
 import { CRAFT_STATS, type CraftStat, type CraftedItem } from "../data/artisane"
 import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
 import { parsePcBoxes, pcLiveUids, type PcBoxes } from "../data/pcBoxes"
+import { THIEF_MAX_THEFTS, THIEF_LOOT_CATCHES, THIEF_LOOT_HEALS, THIEF_LOOT_MINITEL, THIEF_LOOT_FREE_FIGHTS, THIEF_FRENZY_CAPTURES } from "../data/thiefLimits"
 
 /** Compteurs de séries pour les hauts faits « consolation » (poisse). */
 export interface AchTrack {
@@ -517,15 +518,23 @@ function parseMon(raw: unknown): MonInstance | null {
 }
 
 /** 🥷 VOLEUR — parse défensif de l'état global (cf. data/thief.ThiefState). Daemon volé et instantané passent par parseMon
- *  (mêmes garanties que l'équipe) ; un volé absent/corrompu → aucun vol en cours (jamais de Daemon fantôme). */
+ *  (mêmes garanties que l'équipe) ; un volé absent/corrompu → aucun vol en cours (jamais de Daemon fantôme). Neuf vols au plus
+ *  (31/10/2026) ; BUTINS des vols 5 à 9 : chaque charge est bornée par la taille de son butin et absente si nulle ; une frénésie
+ *  EN ATTENTE (until = 0 : vol commis au run 3, lancée plus tard) est gardée. */
 function parseThief(raw: unknown): import("../data/thief").ThiefState | null {
     if (!raw || typeof raw !== "object") return null
     const o = raw as Record<string, unknown>
-    const thefts = typeof o.thefts === "number" && isFinite(o.thefts) ? Math.max(0, Math.min(3, Math.floor(o.thefts))) : 0
+    const cnt = (v: unknown, max: number) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.min(max, Math.floor(v))) : 0)
+    const thefts = cnt(o.thefts, THIEF_MAX_THEFTS)
     const stolen = parseMon(o.stolen)
     const snapshot = Array.isArray(o.snapshot) ? (o.snapshot as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null).slice(0, 6) : []
     const lastTheftDay = typeof o.lastTheftDay === "string" ? o.lastTheftDay.slice(0, 10) : ""
     if (thefts === 0 && !stolen && !lastTheftDay) return null
+    const lootCatches = cnt(o.lootCatches, THIEF_LOOT_CATCHES), lootHeals = cnt(o.lootHeals, THIEF_LOOT_HEALS)
+    const lootMinitel = cnt(o.lootMinitel, THIEF_LOOT_MINITEL), lootFreeFights = cnt(o.lootFreeFights, THIEF_LOOT_FREE_FIGHTS)
+    const fz = o.lootFrenzy && typeof o.lootFrenzy === "object" ? (o.lootFrenzy as Record<string, unknown>) : null
+    const fzLeft = fz ? cnt(fz.left, THIEF_FRENZY_CAPTURES) : 0
+    const fzUntil = fz && typeof fz.until === "number" && isFinite(fz.until) && fz.until >= 0 ? Math.floor(fz.until) : -1
     return {
         thefts,
         lastTheftDay,
@@ -533,7 +542,62 @@ function parseThief(raw: unknown): import("../data/thief").ThiefState | null {
         snapshot: stolen ? snapshot : [],
         stolenAt: stolen && typeof o.stolenAt === "string" ? o.stolenAt.slice(0, 40) : "",
         stolenWorld: stolen && typeof o.stolenWorld === "string" ? o.stolenWorld.slice(0, 16) : "",
+        ...(lootCatches ? { lootCatches } : {}),
+        ...(lootHeals ? { lootHeals } : {}),
+        ...(lootMinitel ? { lootMinitel } : {}),
+        ...(lootFreeFights ? { lootFreeFights } : {}),
+        ...(fzLeft > 0 && fzUntil >= 0 ? { lootFrenzy: { until: fzUntil, left: fzLeft } } : {}),
     }
+}
+
+/** uids des Daemons d'une save brute ou parsée (équipe, PC, Daemon volé et instantané du Voleur, mondes imbriqués), sans le préfixe
+ *  « ret- » d'un retour re-tagué — pour reconnaître le même profil d'une écriture à l'autre. */
+function saveDaemonUids(raw: unknown): Set<string> {
+    const out = new Set<string>()
+    const add = (m: unknown) => { const u = (m as { uid?: unknown } | null | undefined)?.uid; if (typeof u === "string") out.add(u.replace(/^(ret-)+/, "")) }
+    const scan = (w: unknown) => {
+        const o = (w && typeof w === "object" ? w : {}) as { team?: unknown; pc?: unknown; thief?: { stolen?: unknown; snapshot?: unknown } | null }
+        for (const arr of [o.team, o.pc, o.thief?.snapshot]) if (Array.isArray(arr)) arr.forEach(add)
+        add(o.thief?.stolen)
+    }
+    const o = (raw && typeof raw === "object" ? raw : {}) as { ngplusWorld?: unknown; run3World?: unknown; replayWorld?: unknown }
+    for (const w of [raw, o.ngplusWorld, o.run3World, o.replayWorld]) scan(w)
+    return out
+}
+
+/** 🛡️ ONGLET RESTÉ SUR UNE VERSION D'AVANT LES 9 VOLS (31/10/2026) — la route l'appelle quand le client ne déclare pas
+ *  `caps: ["thief9"]`. Un tel client plafonne les vols à 3 et ignore les butins : on garde ceux de la save STOCKÉE (compteur le
+ *  plus haut, dernier jour de vol le plus récent, charges, frénésie). Le Daemon volé et l'instantané viennent TOUJOURS de la save
+ *  REÇUE : ils vont avec l'équipe envoyée (sinon le Daemon existerait deux fois au retour). Recopié dans chaque monde présent.
+ *  Rien à garder (3 vols au plus, aucun butin stocké) → false, la save reçue passe telle quelle. */
+export function keepThiefFromStored(stored: unknown, save: YellowSave): boolean {
+    const old = parseThief((stored as { thief?: unknown } | null | undefined)?.thief)
+    if (!old) return false
+    const hasLoot = !!(old.lootCatches || old.lootHeals || old.lootMinitel || old.lootFreeFights || old.lootFrenzy)
+    if (old.thefts <= 3 && !hasLoot) return false
+    // MÊME PROFIL seulement (revue du 31/10/2026) : un vieil onglet qui change de profil (ou en crée un) ne doit pas greffer le
+    //   compteur et les charges d'un AUTRE profil. Deux profils n'ont aucun Daemon en commun ; le même, vu d'un vieil onglet, presque
+    //   tous. Sans Daemon d'un côté, on ne peut pas trancher : on garde la règle commune.
+    const a = saveDaemonUids(stored), b = saveDaemonUids(save)
+    if (a.size > 0 && b.size > 0 && ![...b].some((u) => a.has(u))) return false
+    const cur = save.thief ?? null
+    const curDay = cur?.lastTheftDay ?? ""
+    const merged: import("../data/thief").ThiefState = {
+        thefts: Math.max(old.thefts, cur?.thefts ?? 0),
+        lastTheftDay: curDay > old.lastTheftDay ? curDay : old.lastTheftDay, // AAAA-MM-JJ : l'ordre du texte est celui des dates
+        stolen: cur?.stolen ?? null,
+        snapshot: cur?.snapshot ?? [],
+        stolenAt: cur?.stolenAt ?? "",
+        stolenWorld: cur?.stolenWorld ?? "",
+        ...(old.lootCatches ? { lootCatches: old.lootCatches } : {}),
+        ...(old.lootHeals ? { lootHeals: old.lootHeals } : {}),
+        ...(old.lootMinitel ? { lootMinitel: old.lootMinitel } : {}),
+        ...(old.lootFreeFights ? { lootFreeFights: old.lootFreeFights } : {}),
+        ...(old.lootFrenzy ? { lootFrenzy: { ...old.lootFrenzy } } : {}),
+    }
+    save.thief = merged
+    for (const w of [save.ngplusWorld, save.run3World, save.replayWorld]) if (w) w.thief = merged
+    return true
 }
 
 /** Parse défensif des points alloués (Saiyan) : sous-ensemble de stats → entiers >= 0. */

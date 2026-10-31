@@ -57,9 +57,20 @@ export function frenzyFromFlags(flags: unknown): ShinyFrenzyState | null {
     return { until, left }
 }
 
+/** 🥷 FRÉNÉSIE DU VOLEUR (vol 9, 31/10/2026) — lue dans l'état GLOBAL du Voleur, au HAUT de la save (`thief.lootFrenzy`) : valable
+ *  quel que soit le monde actif. ⚠️ Pas d'import de data/thief (il importe ce module, et il pèserait sur la route serveur). */
+export function thiefFrenzyFromFlags(flags: unknown): ShinyFrenzyState | null {
+    const thief = (flags as { thief?: unknown } | null | undefined)?.thief
+    if (!thief || typeof thief !== "object") return null
+    return frenzyFromFlags({ shinyFrenzy: (thief as { lootFrenzy?: unknown }).lootFrenzy })
+}
+
 /** Les shinies d'un joueur en FRÉNÉSIE sont un secret entre lui et le Dieu Spaghetti (règle de Sartay, 15/10/2026) :
  *  AUCUNE fête communautaire (+50⚡ à tous), ni bonus de clan, ni prime de parrainage. Sans cette garde, 50 % de
- *  shiny = 40 annonces et 2 000⚡ pour tout le Nexus en dix minutes (constaté sur Jacanon). */
+ *  shiny = 40 annonces et 2 000⚡ pour tout le Nexus en dix minutes (constaté sur Jacanon). Même règle pour la Frénésie du
+ *  Voleur — sauf quand elle DORT (run 3, rejeu) : un shiny croisé là n'est pas le sien et garde sa fête. */
 export function shinyFeteSuppressed(flags: unknown, now: number): boolean {
-    return shinyFrenzyActive(frenzyFromFlags(flags), now)
+    const world = (flags as { activeWorld?: unknown } | null | undefined)?.activeWorld
+    const thiefAsleep = world === "run3" || world === "replay"
+    return shinyFrenzyActive(frenzyFromFlags(flags), now) || (!thiefAsleep && shinyFrenzyActive(thiefFrenzyFromFlags(flags), now))
 }

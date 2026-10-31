@@ -3,6 +3,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { YELLOW_MAPS } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
+import { isBlockingTile } from "@/lib/gamebook/mapEngine"
+import { TRAINER_SIGHTS, sightTiles } from "./trainerSight"
 import { createMonInstance } from "../battle/factory"
 import { createBattle, resolveTurn, type BattleState } from "../battle/engine"
 import { fullStats } from "../battle/stats"
@@ -16,9 +18,9 @@ import {
     thiefProtectedUids, thiefVictimsNow,
 } from "../store/playerStore"
 import {
-    THIEF_NPC_ID, THIEF_MAP_ID, THIEF_HOME, THIEF_HIDEOUTS, THIEF_SPRITE, THIEF_MAX_THEFTS, THIEF_LUXE_GIFT, THIEF_LUXE_ITEM_ID, THIEF_BALL_GIFT_ID,
-    THIEF_STRANGER_NAME, THIEF_NOTHING_TEMPTING_LINES, type ThiefState,
-    emptyThiefState, thiefDayKey, thiefCanStealToday, thiefGone, thiefEligibleVictims, stateAfterTheft, buildThiefTeam, nextThiefSpotIdx, pickThiefVictim,
+    THIEF_NPC_ID, THIEF_MAP_ID, THIEF_HOME, THIEF_HIDEOUT_POOLS, THIEF_SPRITE, THIEF_MAX_THEFTS, THIEF_LUXE_GIFT, THIEF_LUXE_ITEM_ID, THIEF_BALL_GIFT_ID,
+    THIEF_STRANGER_NAME, THIEF_NOTHING_TEMPTING_LINES, type ThiefState, type ThiefSpot,
+    emptyThiefState, thiefDayKey, thiefCanStealToday, thiefGone, thiefEligibleVictims, stateAfterTheft, buildThiefTeam, nextThiefSpot, thiefHideoutPool, pickThiefVictim,
     thiefHomeLines, thiefStoleLines, thiefFoundLines, thiefWinLines, thiefAnecdote, thiefMonName, THIEF_ALREADY_TODAY_LINES, THIEF_LONELY_LINES,
 } from "./thief"
 
@@ -39,18 +41,47 @@ const stolenState = (stolen: MonInstance, snapshot: MonInstance[], thefts = 1): 
 const counterOf = (speciesId: string, level: number) => speciesAtLevel(baseSpeciesOf(bestCounter([...getSpecies(speciesId)!.types])), level)
 
 describe("Voleur — cases, planche, objet", () => {
-    it("chez lui (37,18) et ses 3 cachettes sont praticables, hors sorties/PNJ/spots ; (26,11) est un mur → (25,11)", () => {
-        const m = YELLOW_MAPS[THIEF_MAP_ID]
-        for (const [x, y] of [[THIEF_HOME.x, THIEF_HOME.y], ...THIEF_HIDEOUTS]) {
-            expect(m.tiles[y][x], `${x},${y}`).toBe("path")
-            expect((m.exits ?? []).some((e) => e.x === x && e.y === y), `${x},${y}`).toBe(false)
-            expect(YELLOW_NPCS.some((n) => n.mapId === THIEF_MAP_ID && n.initialX === x && n.initialY === y), `${x},${y}`).toBe(false)
-            expect(DAEMO_SPOTS.some(([sx, sy]) => sx === x && sy === y), `${x},${y}`).toBe(false)
+    it("chez lui (37,18) et ses 19 cachettes (5 cartes) sont praticables, hors sorties/PNJ/regards/spots ; (26,11) est un mur → (25,11)", () => {
+        const cendre = YELLOW_MAPS[THIEF_MAP_ID]
+        expect(cendre.tiles[THIEF_HOME.y][THIEF_HOME.x]).toBe("path")
+        expect(cendre.tiles[11][26]).toBe("tree")
+        const all = THIEF_HIDEOUT_POOLS.flatMap((p) => p.spots.map(([x, y]) => ({ mapId: p.mapId, x, y })))
+        expect(all).toHaveLength(19)
+        expect(new Set(all.map((s) => `${s.mapId}:${s.x},${s.y}`)).size).toBe(19)
+        for (const s of [{ mapId: THIEF_MAP_ID, x: THIEF_HOME.x, y: THIEF_HOME.y }, ...all]) {
+            const m = YELLOW_MAPS[s.mapId], k = `${s.mapId} ${s.x},${s.y}`
+            expect(m, k).toBeTruthy()
+            expect(s.x >= 0 && s.y >= 0 && s.x < m.width && s.y < m.height, k).toBe(true)
+            expect(isBlockingTile(m.tiles[s.y][s.x]), k).toBe(false)
+            expect((m.exits ?? []).some((e) => e.x === s.x && e.y === s.y), k).toBe(false)
+            expect(YELLOW_NPCS.some((n) => n.mapId === s.mapId && n.initialX === s.x && n.initialY === s.y), k).toBe(false)
+            const blocked = (x: number, y: number) => { const t = m.tiles[y]?.[x]; return !t || isBlockingTile(t) }
+            for (const sp of TRAINER_SIGHTS.filter((t) => t.mapId === s.mapId)) {
+                expect(sightTiles(sp, blocked).some((t) => t.x === s.x && t.y === s.y), `${k} dans le regard de ${sp.trainerId}`).toBe(false)
+            }
+            if (s.mapId === THIEF_MAP_ID) expect(DAEMO_SPOTS.some(([sx, sy]) => sx === s.x && sy === s.y), k).toBe(false)
         }
-        expect(m.tiles[11][26]).toBe("tree")
-        expect(THIEF_HIDEOUTS).toEqual([[37, 27], [6, 32], [25, 11]])
+        // Les cachettes validées par Sartay (page de choix du 31/10/2026 : « toutes gardées », paliers « dès la fuite du 3e et du 6e vol »).
+        expect(THIEF_HIDEOUT_POOLS.map((p) => [p.mapId, p.fromThefts, p.spots])).toEqual([
+            ["yellow_cendreville", 1, [[37, 27], [6, 32], [25, 11]]],
+            ["yellow_entrance", 3, [[7, 29], [14, 33], [41, 31], [38, 4]]],
+            ["yellow_grotte_gelee", 6, [[6, 6], [15, 4], [22, 15], [6, 28]]],
+            ["yellow_plage", 6, [[13, 12], [17, 30], [6, 34], [7, 26]]],
+            ["yellow_hautes_herbes", 6, [[5, 2], [10, 2], [2, 6], [13, 6]]],
+        ])
         expect(fs.existsSync(path.join(process.cwd(), "public", THIEF_SPRITE))).toBe(true)
         expect(THIEF_NPC_ID).toBe("y_voleur")
+    })
+    it("paliers : Cendreville seule aux vols 1-2 ; + Ville Jaune dès la fuite du 3e ; + Gelée, Plage, plaine dès celle du 6e (badges du monde actif)", () => {
+        const maps = (thefts: number, badges: string[]) => [...new Set(thiefHideoutPool(thefts, badges).map((s) => s.mapId))]
+        const all6 = ["plante", "roche", "feu", "ancre", "elec", "eau"]
+        expect(maps(1, all6)).toEqual(["yellow_cendreville"]); expect(maps(2, all6)).toEqual(["yellow_cendreville"])
+        expect(maps(3, all6)).toEqual(["yellow_cendreville", "yellow_entrance"]); expect(maps(5, all6)).toEqual(["yellow_cendreville", "yellow_entrance"])
+        expect(maps(6, all6)).toEqual(["yellow_cendreville", "yellow_entrance", "yellow_grotte_gelee", "yellow_plage", "yellow_hautes_herbes"])
+        expect(thiefHideoutPool(9, all6)).toHaveLength(19)
+        expect(maps(7, ["plante", "roche", "feu"])).toEqual(["yellow_cendreville", "yellow_entrance", "yellow_grotte_gelee", "yellow_plage"]) // sans badge Éclair : pas la plaine
+        expect(maps(7, ["plante"])).toEqual(["yellow_cendreville", "yellow_entrance"]) // nouveau run : Gelée et Plage hors d'atteinte
+        expect(thiefHideoutPool(0, all6)).toEqual([])
     })
     it("Surin du Voleur : objet tenu connu (survit à parseMon), effet de début de combat, jamais à l'étal, hérité par une fusion", () => {
         expect(isHeldItem(THIEF_ITEM_ID)).toBe(true)
@@ -122,18 +153,25 @@ describe("Voleur — état global (vol, instantané, cadeau du vol)", () => {
         expect(thiefGone({ ...emptyThiefState(), thefts: THIEF_MAX_THEFTS })).toBe(true)
         expect(thiefGone({ ...emptyThiefState(), thefts: THIEF_MAX_THEFTS, stolen: a })).toBe(false)
     })
-    it("cachette : toujours DIFFÉRENTE de la précédente ; au premier tirage, n'importe laquelle", () => {
-        for (let prev = 0; prev < THIEF_HIDEOUTS.length; prev++) {
-            const seen = new Set<number>()
-            for (let i = 0; i < 50; i++) { const k = nextThiefSpotIdx(prev, i / 50); expect(k).not.toBe(prev); seen.add(k) }
-            expect(seen.size).toBe(THIEF_HIDEOUTS.length - 1)
+    it("cachette : toujours DIFFÉRENTE de la précédente, sur n'importe quelle carte du tirage ; au premier tirage, n'importe laquelle", () => {
+        const key = (s: ThiefSpot | null) => (s ? `${s.mapId}:${s.x},${s.y}` : "∅")
+        for (const thefts of [1, 4, 9]) {
+            const pool = thiefHideoutPool(thefts, ["plante", "roche", "feu", "ancre", "elec", "eau"])
+            for (const prev of pool) {
+                const seen = new Set<string>()
+                for (let i = 0; i < 200; i++) { const s = nextThiefSpot(pool, prev, i / 200); expect(key(s)).not.toBe(key(prev)); seen.add(key(s)) }
+                expect(seen.size).toBe(pool.length - 1)
+            }
+            expect(new Set(Array.from({ length: 400 }, (_, i) => key(nextThiefSpot(pool, null, i / 400)))).size).toBe(pool.length)
         }
-        expect(new Set(Array.from({ length: 30 }, (_, i) => nextThiefSpotIdx(-1, i / 30))).size).toBe(THIEF_HIDEOUTS.length)
+        expect(nextThiefSpot([], null, 0.5)).toBeNull()
+        const one = { mapId: THIEF_MAP_ID, x: 37, y: 27 }
+        expect(nextThiefSpot([one], one, 0.5)).toEqual(one) // une seule cachette : il y retourne
     })
 })
 
 describe("Voleur — playerStore (vol, cadeaux au vol, récupération TELLE QUELLE, protections, rejeu)", () => {
-    it("3 vols : cadeau remis AU VOL (Surin, 3 Pâtes, Hyper +), retour tel quel à chaque victoire, puis il disparaît", () => {
+    it("les 3 premiers vols : cadeau remis AU VOL (Surin, 3 Pâtes, Hyper +), retour tel quel à chaque victoire ; au 3e, il ne disparaît plus", () => {
         setActiveWorld("live")
         const t = team3()
         hydratePlayer({ team: t, pc: [], items: {}, thief: null, clanDaemonUid: undefined, craftedItems: [] })
@@ -151,8 +189,7 @@ describe("Voleur — playerStore (vol, cadeaux au vol, récupération TELLE QUEL
         expect(c.gift.theftNo).toBe(3); expect(getPlayer().items[THIEF_BALL_GIFT_ID]).toBe(1) // dès le vol
         expect(thiefGone(getThief())).toBe(false) // le 3e larcin court encore
         r = recoverStolen()!
-        expect(r.theftNo).toBe(3); expect(thiefGone(getThief())).toBe(true)
-        expect(commitTheft(t[0].uid)).toBeNull() // plus jamais de vol
+        expect(r.theftNo).toBe(3); expect(thiefGone(getThief())).toBe(false) // de faux adieux : il revient (9 vols depuis le 31/10/2026)
         expect(getPlayer().team).toHaveLength(3)
     })
     it("1er vol : l'ancien objet tenu du volé retombe au sac ; objet inconnu → le Surin va au sac", () => {
@@ -210,7 +247,7 @@ describe("Voleur — playerStore (vol, cadeaux au vol, récupération TELLE QUEL
         const s = parseSave({ ...emptySave(), thief: r.state })
         expect(s.thief?.thefts).toBe(1); expect(s.thief?.stolen?.uid).toBe(t[1].uid); expect(s.thief?.stolen?.heldItem).toBe(THIEF_ITEM_ID)
         expect(s.thief?.snapshot).toHaveLength(3); expect(s.thief?.stolenWorld).toBe("run3"); expect(s.thief?.lastTheftDay).toBe(r.state.lastTheftDay)
-        expect(parseSave({ ...emptySave(), thief: { thefts: 9, stolen: "nope", snapshot: 3 } }).thief).toEqual({ thefts: 3, lastTheftDay: "", stolen: null, snapshot: [], stolenAt: "", stolenWorld: "" })
+        expect(parseSave({ ...emptySave(), thief: { thefts: 12, stolen: "nope", snapshot: 3 } }).thief).toEqual({ thefts: 9, lastTheftDay: "", stolen: null, snapshot: [], stolenAt: "", stolenWorld: "" })
         expect(parseSave({ ...emptySave(), thief: null }).thief).toBeNull()
         expect(parseSave(emptySave()).thief).toBeNull()
     })
@@ -261,7 +298,10 @@ describe("Voleur — dialogues et câblage", () => {
         expect(s2).not.toMatch(/tiramisu/i) // le Tiramisu ne s'obtient pas en jeu (Sartay, 27/10/2026) : jamais promis comme rattrapage
         expect(thiefStoleLines("X", { theftNo: 3 }).join(" ")).toContain("HYPER NEXUS-BALL +")
         expect(thiefWinLines(2, "X", "pc").join(" ")).toContain("boîte PC")
-        expect(thiefWinLines(3, "X", "team").join(" ")).toContain("tu ne me reverras plus")
+        expect(thiefWinLines(3, "X", "team").join(" ")).toContain("tu ne me reverras plus") // de FAUX adieux (il revient au 4e vol)
+        expect(thiefWinLines(9, "X", "team").join(" ")).toContain("je raccroche pour de vrai")
+        expect(thiefWinLines(6, "X", "team").join(" ")).toContain("Six fois")
+        expect(thiefWinLines(4, "X", "team").join(" ")).toContain("On se reverra")
         expect(thiefMonName({ nickname: "Caillou", speciesId: "rochison" })).toBe("Caillou")
         expect(THIEF_STRANGER_NAME).toBe("INCONNU")
     })
@@ -272,10 +312,19 @@ describe("Voleur — dialogues et câblage", () => {
         expect(gs).toContain("void persistYellowSaveNow() // save IMMÉDIATE")
         expect(gs).toContain("const victims = thiefVictimsNow()")
         expect(gs).toContain("const victim = pickThiefVictim(victims, thiefDayKey(), th.thefts)")
-        expect(gs).toContain("if (thiefSpotIdx < 0 && useGameStore.getState().map?.id === THIEF_MAP_ID) { thiefSpotIdx = nextThiefSpotIdx(thiefLastSpotIdx, Math.random())")
-        expect(gs).toContain("if (thiefSpotIdx >= 0) {")
+        // Cachette re-tirée à CHAQUE ENTRÉE sur une carte du tirage (Sartay, 31/10/2026 : « retirée à chaque entrée »), clé = la carte.
+        expect(gs).toContain("const pool = thiefMustStayHidden() ? [] : thiefHideoutPool(Math.max(1, th.thefts), getPlayerSave().badges)")
+        expect(gs).toContain("if (curMap !== thiefDrawMap && pool.some((s) => s.mapId === curMap)) { thiefSpot = nextThiefSpot(pool, thiefLastSpot, Math.random()); thiefLastSpot = thiefSpot; thiefDrawMap = curMap }")
+        expect(gs).toContain("if (spot && pool.some((s) => s.mapId === spot.mapId && s.x === spot.x && s.y === spot.y)) {") // jamais une cachette d'un autre tirage
+        expect(gs).toContain("id: THIEF_NPC_ID, name: THIEF_NAME, mapId: spot.mapId")
         expect(gs).toContain("startTrainerBattle(team, buildThiefTeam(th), seed, { trainerId: THIEF_TRAINER_ID, reward: 0, aiLevel: \"hof\" })")
-        expect((gs.match(/thiefSpotIdx = -1/g) ?? []).length).toBeGreaterThanOrEqual(4)
+        expect((gs.match(/thiefDrawMap = ""/g) ?? []).length).toBeGreaterThanOrEqual(4)
+        expect(gs).not.toContain("thiefSpotIdx")
+        // Les baladeurs de la Ville Jaune (Sage, Fashion Victim) ne se posent jamais sur une cachette ni sur une case d'où on lui parle.
+        expect(gs).toContain("const occupied = [[KEY_GUARD_POS.x, KEY_GUARD_POS.y] as const, ...fixedNpcs, ...thiefSpots, ...extraOccupied]")
+        expect(gs).toContain(".filter(([x, y]) => !thiefSpots.some(([tx, ty]) => Math.abs(tx - x) + Math.abs(ty - y) <= 1))")
+        expect(gs).toContain("{ comeback: th.thefts === THIEF_FAKE_FAREWELL }")
+        expect(gs).toContain("} else if (!thiefGone(th) && !(th.thefts === THIEF_FAKE_FAREWELL && th.lastTheftDay === thiefDayKey())) {") // le jour des faux adieux, il n'est pas chez lui
         const bs = read("src/lib/gamebook/yellow/store/battleStore.ts")
         expect(bs).toContain("const r = getActiveWorld() === \"replay\" ? null : recoverStolen()")
         expect(bs).toContain("const isThiefLoss = storeState.trainer?.trainerId === THIEF_TRAINER_ID && b.outcome !== \"win\"")
@@ -284,6 +333,7 @@ describe("Voleur — dialogues et câblage", () => {
         expect(sm).toContain("thief: thiefGlobal, activeWorld: aw"); expect(sm).toContain("save.thief ?? null"); expect(sm).toContain("thief: p.thief ?? null")
         expect(sm).toMatch(/resetForIntro\(\)\r?\n\s+clearThiefForReset\(\)/)
         expect(read("src/lib/gamebook/yellow/storage/save.ts")).toContain("thief: parseThief(o.thief)")
+        expect(read("src/app/api/gamebook/yellow/save/route.ts")).toContain("if (existing?.flags && !body.intentionalReset && !(Array.isArray(body.caps) && body.caps.includes(\"thief9\"))) keepThiefFromStored(existing.flags, save)")
         const ps = read("src/lib/gamebook/yellow/store/playerStore.ts")
         expect(ps).toContain("st = { thief: st.thief ?? null, team: [], pc: []")
         expect((ps.match(/st = \{ thief: st\.thief \?\? null, team: \[/g) ?? []).length).toBe(3)

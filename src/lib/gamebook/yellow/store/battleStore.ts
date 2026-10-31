@@ -12,6 +12,7 @@ import {
     resolveTurnPvp,
     applyForfeitWin,
     maxHpOf,
+    catchGuaranteeDecisive,
     type BattleState,
     type BattleEvent,
     type PlayerAction,
@@ -20,7 +21,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam, thiefCatchCharges, consumeThiefCatch, thiefHealsUsable, consumeThiefHeal, thiefMinitelCalls, consumeThiefMinitelCall, thiefFreeFightsUsable, consumeThiefFreeFight, recordThiefFrenzyCapture, consumeThiefFrenzyStartMessage } from "./playerStore"
 import { getItem } from "../data/items"
 import { getTodayISO } from "@/lib/challenge"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
@@ -54,7 +55,7 @@ import { BERRY_IDS } from "../data/heldItems"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo, ECLAIREUR_PRECISION_MARKER } from "../data/pnj7"
 import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
 import { ORFEVRE_TRAINER_ID, ORFEVRE_NAME, nextOrfevreWinMarker, orfevreWinCount, orfevreVictoryLines, orfevreDone, SHINY_BALL_ID } from "../data/orfevre"
-import { THIEF_TRAINER_ID, THIEF_NAME, thiefWinLines, thiefMonName } from "../data/thief"
+import { THIEF_TRAINER_ID, THIEF_NAME, THIEF_FRENZY_CAUGHT_LINE, thiefWinLines, thiefMonName, thiefFreeFightStartLine, thiefHealUsedLine, thiefMinitelUsedLine, thiefCatchUsedLine } from "../data/thief"
 import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
@@ -191,7 +192,7 @@ interface BattleStoreState {
     /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon.
      *  `energySpent` = énergie dépensée par le VAINQUEUR (reversée au joueur mirouté) ; `faints` = nb de SES Daemons
      *  mis K.O. dans le duel (plus il a galéré → plus il est remboursé). */
-    duelResult: { won: boolean; energySpent: number; faints: number; enemyHigher: boolean } | null
+    duelResult: { won: boolean; energySpent: number; faints: number; enemyHigher: boolean; giftBasis?: number } | null
     /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série.
      *  `energySpent` = énergie dépensée DANS ce combat (le Dôme diffère son remboursement à la fin du tournoi). */
     frontierResult: { won: boolean; energySpent: number } | null
@@ -395,9 +396,22 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: opts?.fleeChance ?? wildFleeChance(), playerBadgeCount: getPlayer().badges.length, obedienceRun3: effectiveRunWorld() === "run3", evResetCharges: getEvResetCharges() })
     // VŒU DE TASK1 : le génie annonce le shiny du jour en OUVERTURE du combat — c'est là qu'on le voit briller.
     { const m = consumeShinyPopMessage(); if (m) battle.events.unshift({ kind: "message", text: m }) }
+    // 🥷 FRÉNÉSIE DU VOLEUR qui démarre (vol 9 commis au run 3, lancée au premier pas de chasse) : annoncée ici, comme le génie.
+    { const m = consumeThiefFrenzyStartMessage(); if (m) battle.events.unshift({ kind: "message", text: m }) }
+    markThiefFree(battle)
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
+}
+
+/** 🥷 COUPS GRATUITS DU VOLEUR (vol 8, Sartay 31/10/2026) : s'il reste des combats offerts (hors règles du run 3), CE combat
+ *  l'est — attaques du joueur à 0⚡, annoncé à l'ouverture. Tous les combats y ont droit SAUF la Zone de Combat (l'appelant ne
+ *  l'appelle pas) et le PvP (chemin à part). Décompté en fin de combat, seulement si une attaque qui aurait coûté est partie. */
+function markThiefFree(battle: BattleState): void {
+    const left = thiefFreeFightsUsable()
+    if (left <= 0) return
+    battle.thiefFree = true
+    battle.events.unshift({ kind: "message", text: thiefFreeFightStartLine(left) })
 }
 
 /** Daemons DEJA a terre a l'ouverture du combat. Le couloir platine reporte les PV de salle en salle : sans
@@ -459,6 +473,7 @@ export function startTrainerBattle(
     // VŒU DE ZYRAN : armé sur les combats qui engagent sa VRAIE équipe (sauvage + dresseur), pas sur la Zone
     //   de Combat (équipes louées, EV non persistés) ni sur la Ligue de Fusion (chimères éphémères).
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length, obedienceRun3: effectiveRunWorld() === "run3", evResetCharges: isFrontier ? 0 : getEvResetCharges() })
+    if (!isFrontier) markThiefFree(battle) // 🥷 coups gratuits : jamais en Zone de Combat
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -522,6 +537,7 @@ export function startHofBattle(label: string, champTeam: ChampionMon[], expMult 
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
     // expMult : 0 = Ligue/HoF (challenge pur, défaut) ; 2 = arène du prochain objectif (Panthéon) ; 1 = 1 cran au-dessus.
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult, playerBadgeCount: getPlayer().badges.length })
+    markThiefFree(battle)
     syncPokedex(battle)
     // champ: = rematch d'une team JOUEUR du palmarès (récompense Super Ball + baie run2+) ; hof: = Ligue/HoF (pas de cadeau).
     setStore({ battle, evolutions: [], trainer: { trainerId: `${championReward ? "champ" : "hof"}:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -556,6 +572,7 @@ export function startClanChiefBattle(clan: ClanKey, today: string): boolean {
     setDailyMarker(`clan_train_${clan}_`, clanTrainDailyMarker(clan, today))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: false, expMult, costMult, playerBadgeCount: player.badges.length })
+    markThiefFree(battle) // offert même chez un clan rival (le ×3 ne s'applique pas à 0)
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: `clan_train_${clan}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
@@ -583,6 +600,7 @@ export function isFusionLeagueTrainer(trainerId?: string): boolean {
 export function startFusionTrialBattle(fusionTeam: MonInstance[], enemyTeam: MonInstance[], seed: number): boolean {
     if (fusionTeam.length === 0 || enemyTeam.length === 0) return false
     const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
+    // 🥷 Pas de coups gratuits ici : ce bac à sable se quitte sans fin de combat (« QUITTER LE TEST »), ils n'y seraient jamais décomptés.
     // Pas de syncPokedex : l'épreuve ne marque AUCUN Pokédex (bac à sable). Le garde interne de syncPokedex couvre les tours suivants.
     setStore({ battle, evolutions: [], trainer: { trainerId: "fusion:TRIAL", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
@@ -615,6 +633,7 @@ export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: Mo
     //   il n'existe aucun autre soin (onglet Équipe fusion = lecture seule) → sinon gel/toxik = wipe garanti. Le défi
     //   reste entier : objets FINIS, aucun soin gratuit entre salles. applyItem cible le mon actif (= la fusion).
     const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel, noItems: false, expMult: 1, playerBadgeCount: getPlayer().badges.length })
+    markThiefFree(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
@@ -631,6 +650,7 @@ export function startNgPlusFinalBattle(oldTeam: ChampionMon[]): boolean {
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 40503)) >>> 0
     // Pas d'expMult:0 → XP NORMALE (choix de Sartay). Pas de noItems → sac autorisé (vrai combat).
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", playerBadgeCount: getPlayer().badges.length })
+    markThiefFree(battle)
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: "ngplus:final", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null, ngplusFinalPending: false })
     persistBattleSnapshot()
@@ -648,6 +668,7 @@ export function startRun3BossBattle(badge: string, bossTrainerId: string): boole
     const enemyTeam = enemyChamp.map((m, i) => championToInstance(m, i))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2246822519)) >>> 0
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", playerBadgeCount: getPlayer().badges.length })
+    markThiefFree(battle) // run 3 : sans effet (le pouvoir y dort) ; gardé pour que la règle « tout sauf PvP et Zone de Combat » se lise partout
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: bossTrainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
@@ -674,14 +695,19 @@ function isMinitelReserveUid(uid: string): boolean { return uid.startsWith(MINIT
 /** Retire le renfort MINITEL d'une liste d'équipe AVANT toute écriture save (idempotent, no-op sans renfort). */
 function stripMinitelReserve<T extends { uid: string }>(team: readonly T[]): T[] { return team.filter((m) => !isMinitelReserveUid(m.uid)) }
 
-/** État MINITEL pour l'UI (perk débloqué ? déjà armé ce combat ? peut-on armer maintenant ?). */
-export function getMinitelState(): { unlocked: boolean; armed: boolean; canArm: boolean } {
+/** 📟 Appels du MINITEL DU VOLEUR utilisables dans CE combat : jamais à l'épreuve de fusion de l'Autel (bac à sable qu'on quitte
+ *  sans fin de combat : l'appel n'y serait jamais décompté). Le vœu de Task1, illimité, n'est pas concerné. */
+function thiefMinitelCallsHere(): number { return storeState.trainer?.trainerId?.startsWith("fusion:") ? 0 : thiefMinitelCalls() }
+/** État MINITEL pour l'UI (perk débloqué ? déjà armé ce combat ? peut-on armer maintenant ?). `calls` : appels restants du
+ *  MINITEL DU VOLEUR (vol 7 ; 0 sous les règles du run 3), null quand c'est le vœu entier (Task1 : illimité). */
+export function getMinitelState(): { unlocked: boolean; armed: boolean; canArm: boolean; calls: number | null } {
     const b = storeState.battle
-    const unlocked = isMinitelUnlocked()
+    const calls = isMinitelUnlocked() ? null : thiefMinitelCallsHere()
+    const unlocked = calls === null || calls > 0
     const armed = !!b?.minitelArmed
     // Armable : perk + combat en cours + pas déjà armé/utilisé + PAS de PvP (désync) + une source de renfort dispo.
     const canArm = unlocked && !!b && b.phase !== "ended" && !b.pvp && !armed && !b.minitelUsed && minitelReserveAvailable()
-    return { unlocked, armed, canArm }
+    return { unlocked, armed, canArm, calls }
 }
 
 /** Y a-t-il un renfort disponible à appeler ? PC non vide (combat normal) OU une fusion créée non engagée (Ligue de Fusion). */
@@ -708,7 +734,7 @@ function availableFusionReserves(): { a: string; b: string }[] {
 export function armMinitel(): string | null {
     const b = storeState.battle
     if (!b || b.phase === "ended" || b.minitelArmed || b.minitelUsed) return null
-    if (!isMinitelUnlocked()) return null
+    if (!isMinitelUnlocked() && thiefMinitelCallsHere() <= 0) return null // ni le vœu de Task1, ni d'appel du Voleur ici
     if (b.pvp) return "📟 …tût tût tût. Pas de réseau MINITEL en plein duel PvP !"
     let reserve: MonInstance | null = null
     if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) {
@@ -740,7 +766,9 @@ export function armMinitel(): string | null {
 
 /** Coût en reps de l'attaque du Daemon actif (0 si introuvable). `mon` : override le Daemon dont on calcule le coût
  *  (PvP : le mon LOCAL peut être côté "enemy" si on est le joueur B ; sinon défaut = b.player). */
-function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInstance): number {
+function moveCostRepsForAction(b: BattleState, moveIndex: number, mon?: MonInstance, ignoreThiefFree = false): number {
+    // 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : tout le combat est offert. `ignoreThiefFree` → ce que l'attaque AURAIT coûté (décompte).
+    if (b.thiefFree && !ignoreThiefFree) return 0
     const me = mon ?? b.player.team[b.player.activeIndex]
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
@@ -824,8 +852,25 @@ export function submitPlayerAction(action: PlayerAction) {
     // 🧞 VŒU « CAPTURES GARANTIES » (Kingme) : tant qu'il reste des charges, un lancer de Ball est garanti (drapeau lu par le
     //   moteur) ; une charge part à chaque CAPTURE réussie (un lancer bloqué — fusion sans Fusio-Ball — ne coûte rien).
     const genieCatch = action.kind === "ball" && genieCatchCharges() > 0
-    const next = resolveTurn(genieCatch ? { ...battle, genieCatchGuaranteed: true } : battle, action)
+    // 🥷 CAPTURES GARANTIES DU VOLEUR (vol 5) : prennent le relais quand le génie n'en a plus — une charge par capture RÉUSSIE, et
+    //   seulement quand la garantie change quelque chose (jamais sur une fusion, un unique déjà possédé, une Ball déjà sûre).
+    const thiefCatch = action.kind === "ball" && !genieCatch && thiefCatchCharges() > 0 && catchGuaranteeDecisive(battle, action.itemId)
+    const next = thiefCatch
+        ? resolveTurn({ ...battle, genieCatchGuaranteed: true, catchGuaranteeBy: "thief" }, action)
+        : resolveTurn(genieCatch ? { ...battle, genieCatchGuaranteed: true } : battle, action)
     if (genieCatch) { if (next.outcome === "caught") consumeGenieCatchCharge(); next.genieCatchGuaranteed = false }
+    if (thiefCatch) {
+        if (next.outcome === "caught") next.events.push({ kind: "message", text: thiefCatchUsedLine(consumeThiefCatch()) })
+        next.genieCatchGuaranteed = false; next.catchGuaranteeBy = undefined
+    }
+    // 📟 MINITEL DU VOLEUR (vol 7) : le renfort vient d'arriver → le compte s'affiche ici, dans le combat (décompté en fin de combat).
+    if (!battle.minitelUsed && next.minitelUsed && !isMinitelUnlocked()) next.events.push({ kind: "message", text: thiefMinitelUsedLine(Math.max(0, thiefMinitelCalls() - 1)) })
+    // 🥷 COUPS GRATUITS (vol 8) : le combat sera décompté (en fin de combat) dès qu'est PARTIE une attaque qui aurait coûté ; ce
+    //   qu'elle aurait coûté est gardé : le cadeau croisé d'un duel-reflet se calcule dessus, pas sur zéro.
+    if (battle.thiefFree && action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX && next.lastPlayerActed !== false) {
+        const would = moveCostRepsForAction(battle, action.moveIndex, undefined, true)
+        if (would > 0) { next.thiefFreeCounted = true; next.thiefFreeWould = (battle.thiefFreeWould ?? 0) + would }
+    }
     // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
     // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
@@ -920,6 +965,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
 
     // NG+ : chaque combat (sauvages inclus) consomme la fenêtre d'abandon (≤ NGPLUS_ABANDON_LIMIT). No-op hors NG+.
     if (getActiveWorld() === "ngplus") incNgplusBattles()
+
+    // 🥷 BUTINS DU VOLEUR consommés par CE combat, quelle qu'en soit l'issue : un appel MINITEL dont le renfort est ARRIVÉ (sauf
+    //   vœu entier de Task1, illimité ; son compte s'est affiché à l'arrivée) et un combat offert dont une attaque qui aurait coûté
+    //   est partie. Les lignes du pansement et de la frénésie (plus bas) vont au JOURNAL DU COMBAT (b.events : même objet, la
+    //   lecture continue sans repartir de zéro) — une fenêtre d'après-combat écraserait celle d'ACE, du sbire, d'un duel…
+    if (b.minitelUsed && !isMinitelUnlocked()) consumeThiefMinitelCall()
+    if (b.thiefFree && b.thiefFreeCounted) consumeThiefFreeFight()
 
     // HAUT FAIT « un Daemon utilise une baie » : une baie tenue est CONSOMMÉE en combat → le moteur vide heldItem du
     //   BattleMon (copie), l'équipe RÉELLE garde le sien. On compare : baie réelle présente + copie vidée = consommée.
@@ -1889,7 +1941,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 📟 le renfort MINITEL emprunté ne compte pas dans les stats du duel (Σ niveaux / K.O.) → badge « reflet niveau-sup » juste.
     const duelPlayerTeam = stripMinitelReserve(b.player.team)
     const duelEnemyHigher = b.enemy.team.reduce((s, m) => s + m.level, 0) > duelPlayerTeam.reduce((s, m) => s + m.level, 0)
-    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent, faints: duelPlayerTeam.filter((m) => m.currentHp <= 0).length, enemyHigher: duelEnemyHigher } : null
+    // 🥷 giftBasis : un combat offert par le Voleur ne coûte rien au vainqueur, mais le reflet reçoit le double de ce que ses attaques
+    //   AURAIENT coûté (plafond du combat), pas le repli de 30⚡. Le remboursement au K.O., lui, reste sur la dépense réelle.
+    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent, faints: duelPlayerTeam.filter((m) => m.currentHp <= 0).length, enemyHigher: duelEnemyHigher, giftBasis: Math.min(battleEnergyCap(getPlayer().badges.length), storeState.energySpent + (b.thiefFreeWould ?? 0)) } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.
@@ -1924,6 +1978,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   pleins) ET APRÈS (PV pleins au nouveau maximum) ; cancelEvolution re-plafonne les PV (revue du 27/10).
     const wildHeal = b.isWild && (b.outcome === "win" || b.outcome === "caught") && hasWildHealPerk() && effectiveRunWorld() !== "run3"
     if (wildHeal) healStandingTeam()
+    // 🥷 PANSEMENTS DU VOLEUR (vol 6) : le même soin quand le vœu de Gass n'y est pas, mais DÉCOMPTÉ — et seulement s'il a servi
+    //   (rien à soigner → rien d'usé). Décidé ici, AVANT les évolutions (le soin d'après ne fait que compléter) : un seul décompte.
+    //   thiefHealsUsable() vaut 0 au run 3 et en rejeu (pouvoir en pause).
+    const thiefHealed = !wildHeal && b.isWild && (b.outcome === "win" || b.outcome === "caught") && thiefHealsUsable() > 0 && healStandingTeam()
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     //    EXCEPTION USINE : on n'a pas touché l'équipe réelle (rentals) → pas d'évolution parasite.
     const team = getPlayer().team
@@ -1934,6 +1992,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         setTeam([...team])
     }
     if (wildHeal) healStandingTeam() // …et APRÈS les évolutions : PV pleins au nouveau maximum d'un Daemon qui vient d'évoluer
+    if (thiefHealed) { healStandingTeam(); b.events.push({ kind: "message", text: thiefHealUsedLine(consumeThiefHeal()) }) }
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // KO en LIGUE DE FUSION (y_fusion_*) : on FORCE un whiteout → la carte renvoie au DÔME DE FUSION (Autel). L'épreuve
@@ -1969,6 +2028,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             if (fz) rematchReward = rematchReward
                 ? { ...rematchReward, lines: [...rematchReward.lines, shinyFrenzyCaptureMessage(fz.left)] }
                 : { npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lines: [shinyFrenzyCaptureMessage(fz.left)] }
+            // 🥷 FRÉNÉSIE DU VOLEUR (vol 9) : le premier shiny capturé l'éteint (celle du génie, si elle court, passe d'abord). Seul un
+            //   shiny NÉ compte : ni un chromatique forgé par la Shiny Ball, ni un shiny éphémère du vœu de Task1.
+            else if (!b.shinyBallCapture && !isEphemeralShiny(foe) && recordThiefFrenzyCapture()) b.events.push({ kind: "message", text: THIEF_FRENZY_CAUGHT_LINE })
         }
     }
     // VŒU DE TASK1 : le génie prévient qu'un shiny éphémère a usé une charge (ou s'est éteint). Sur le canal

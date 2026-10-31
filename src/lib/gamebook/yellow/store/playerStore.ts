@@ -9,10 +9,10 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, SPECIES, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS, PERMANENT_OFF_DEX_SPECIES } from "../data/species"
 import { freshShinyWish, SHINY_WISH_DEFAULT_CHARGES, type ShinyWishState } from "../data/ephemeralShiny"
-import { emptyThiefState, stateAfterTheft, thiefEligibleVictims, THIEF_ITEM_ID, THIEF_LUXE_GIFT, THIEF_LUXE_ITEM_ID, THIEF_BALL_GIFT_ID, THIEF_MAX_THEFTS, type ThiefState, type ThiefGift } from "../data/thief"
+import { emptyThiefState, stateAfterTheft, thiefEligibleVictims, THIEF_ITEM_ID, THIEF_LUXE_GIFT, THIEF_LUXE_ITEM_ID, THIEF_BALL_GIFT_ID, THIEF_MAX_THEFTS, THIEF_BONBON_GIFT, THIEF_SWAP_PATES, thiefFrenzyPending, thiefFrenzyRunning, startPendingThiefFrenzy, thiefFrenzyAfterCapture, thiefFrenzyEndLabel, thiefDayKey, THIEF_FAKE_FAREWELL, type ThiefState, type ThiefGift, type ThiefLootView } from "../data/thief"
 import { freshDexWish, DEX_WISH_DEFAULT_CHARGES, type DexWishState } from "../data/dexWish"
 import { galijahDailyRegime, galijahDailyAvailable, isoDay, type GalijahDailyState } from "../data/galijahDaily"
-import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, type ShinyFrenzyState } from "../data/shinyFrenzy"
+import { freshShinyFrenzy, onShinyCaptured, SHINY_FRENZY_DEFAULT_HOURS, SHINY_FRENZY_DEFAULT_CAPTURES, SHINY_FRENZY_CHANCE, type ShinyFrenzyState } from "../data/shinyFrenzy"
 import { freshShopSurtax, shopSurtaxMult, surtaxedPrice, type ShopSurtaxState } from "../data/shopSurtax"
 import { cashAllowanceLeft, settleDailyCashout, openCashDay } from "../poker/cashGame"
 import { NEMESIS_ARMED_MARKER, NEMESIS_DONE_MARKER, nemesisRewardBlockedMarker } from "../data/nemesisChallenge"
@@ -4105,8 +4105,9 @@ export function healAllTeam() {
 }
 
 /** 🧞 VŒU DE GASS — soin des Daemons ENCORE DEBOUT (PV max, statut levé, PP pleins) ; les K.O. le restent (choix de Sartay :
- *  le Centre garde son utilité). Ne compte pas comme un soin d'équipe (stat « heals » intacte). */
-export function healStandingTeam(): void {
+ *  le Centre garde son utilité). Ne compte pas comme un soin d'équipe (stat « heals » intacte). Renvoie true si le soin a SERVI
+ *  (au moins un Daemon debout n'était pas au complet) : les pansements du Voleur ne sont décomptés qu'à cette condition. */
+export function healStandingTeam(): boolean {
     let changed = false
     const team = st.team.map((m): MonInstance => {
         if (m.currentHp <= 0) return m
@@ -4116,9 +4117,10 @@ export function healStandingTeam(): void {
         changed = true
         return { ...m, currentHp: max, status: "NONE", statusCounter: 0, moves: m.moves.map((mv) => ({ ...mv, pp: mv.ppMax })) }
     })
-    if (!changed) return
+    if (!changed) return false
     st = { ...st, team }
     emit()
+    return true
 }
 
 /**
@@ -4543,16 +4545,24 @@ export function thiefVictimsNow(): MonInstance[] { return thiefEligibleVictims(s
 /** VOL : retire `victimUid` de l'équipe (jamais le dernier Daemon, ni un Daemon posé sur l'étal, ni un uid protégé), fige
  *  l'INSTANTANÉ de l'équipe entière (base des némésis du combat) et remet le CADEAU DU VOL (Sartay : « lors du Nème vol ») :
  *  1 → Surin glissé au Daemon volé (son ancien objet tenu retombe au sac ; objet inconnu → le Surin va au sac) ;
- *  2 → 3 Pâtes de Luxe ; 3 → 1 Hyper Nexus-Ball +. Renvoie le Daemon volé + le cadeau, ou null si rien n'a été volé.
+ *  2 → 3 Pâtes de Luxe ; 3 → 1 Hyper Nexus-Ball + ; 4 → 2 Bons Bonbons EV ; 5 à 9 → des CHARGES dans l'état global (captures,
+ *  soins, MINITEL, coups gratuits, frénésie — cf. data/thief), ou 2 Pâtes de Luxe du Voleur si le vœu est déjà entier.
+ *  Renvoie le Daemon volé + le cadeau, ou null si rien n'a été volé.
  *  ⚠️ Le Daemon n'est PAS détruit : il vit dans `thief.stolen` (sérialisé, parsé serveur) jusqu'à sa récupération. */
 export function commitTheft(victimUid: string): { stolen: MonInstance; gift: ThiefGift } | null {
-    const r = stateAfterTheft(st.thief, st.team, victimUid, activeWorld, { protectedUids: thiefProtectedUids() })
+    const r = stateAfterTheft(st.thief, st.team, victimUid, activeWorld, {
+        protectedUids: thiefProtectedUids(),
+        ownsMinitel: ownsGeniePerk(MINITEL_UNLOCK_MARKER, "minitel_unlock"), ownsWildHeal: ownsGeniePerk(WILD_HEAL_MARKER, "wild_heal"),
+        run3Rules: thiefPowersAsleep(),
+    })
     if (!r) return null
     st = { ...st, team: r.remaining, thief: r.state }
     if (r.gift.returnedItem) addItem(r.gift.returnedItem, 1)
     if (r.gift.surin === "bag") addItem(THIEF_ITEM_ID, 1)
     if (r.gift.theftNo === 2) addItem(THIEF_LUXE_ITEM_ID, THIEF_LUXE_GIFT)
     if (r.gift.theftNo === 3) addItem(THIEF_BALL_GIFT_ID, 1)
+    if (r.gift.loot === "bonbons") addItem(BONBON_EV_ITEM_ID, THIEF_BONBON_GIFT)
+    if (r.gift.loot === "pates") addItem(THIEF_LUXE_ITEM_ID, THIEF_SWAP_PATES)
     emit()
     return { stolen: r.stolen, gift: r.gift }
 }
@@ -4568,12 +4578,112 @@ export function recoverStolen(): { mon: MonInstance; placed: "team" | "pc"; thef
     let mon: MonInstance = { ...th.stolen, owned: true }
     const taken = new Set([...st.team, ...st.pc].map((m) => m.uid))
     if (taken.has(mon.uid)) { let u = `ret-${mon.uid}`; while (taken.has(u)) u = `ret-${u}`; mon = { ...mon, uid: u } }
-    st = { ...st, thief: { ...th, stolen: null, snapshot: [], stolenAt: "", stolenWorld: "" } }
+    // 3e vol résolu : ses (faux) adieux valent pour la journée — il ne réapparaît chez lui que le LENDEMAIN (cf. activeNpcs).
+    const lastTheftDay = theftNo === THIEF_FAKE_FAREWELL ? thiefDayKey() : th.lastTheftDay
+    st = { ...st, thief: { ...th, stolen: null, snapshot: [], stolenAt: "", stolenWorld: "", lastTheftDay } }
     let placed: "team" | "pc"
     if (st.team.length < TEAM_MAX) { st = { ...st, team: [...st.team, mon] }; placed = "team" }
     else { st = { ...st, pc: [...st.pc, healedForPc(mon)] }; placed = "pc" }
     emit()
     return { mon, placed, theftNo }
+}
+
+// ═══════ 🥷 BUTINS DU VOLEUR (vols 5 à 9, Sartay 31/10/2026) — charges GLOBALES (ThiefState) ; règles dans data/thief ═══════
+/** Les POUVOIRS du Voleur (soins, MINITEL, coups gratuits, frénésie) dorment sous les règles du run 3 (run 3 ET son rejeu),
+ *  comme les vœux du génie, et dans TOUTE bulle de rejeu : un vœu à charges n'y entre pas (la bulle part de zéro) et le Voleur
+ *  n'y vient jamais (Sartay, 28/10). Les captures garanties, elles, marchent même au run 3 (comme celles de Kingme). */
+export function thiefPowersAsleep(): boolean { return runMode() === "run3" || activeWorld === "replay" }
+/** Le monde actif peut-il encore être JETÉ (run 2 dans sa fenêtre d'abandon, run 3 sans badge, qu'on peut recommencer) ? Le
+ *  Voleur ne s'y cache pas : un Daemon récupéré là disparaîtrait avec le monde. Avec les cachettes de la Ville Jaune, sans badge
+ *  requis, ce cas devenait atteignable (revue du 31/10/2026 ; jusque-là, Cendreville exigeait le badge Flamme). */
+export function thiefMustStayHidden(): boolean { return worldMayBeDiscarded() || (activeWorld === "run3" && st.badges.length === 0) }
+/** La dernière ligne de vœux connue ACCORDE-t-elle l'effet `kind` (vœu accepté du tour COURANT) ? Couvre le vœu accepté qui attend
+ *  encore d'être versé (accepté au run 3 ou dans la fenêtre d'abandon du run 2) : aucun marqueur n'existe encore. Un tour ARCHIVÉ
+ *  n'est pas lu : déjà payé, son perk a un marqueur (repris ci-dessus) ; jamais payé, il ne le sera plus (cf. payWish). */
+function genieRowGrants(kind: string): boolean {
+    const row = lastGenieRow
+    if (!row) return false
+    const grants = (fx: unknown, acc: unknown): boolean => {
+        if (acc !== true || typeof fx !== "string") return false
+        try { const p: unknown = JSON.parse(fx); return (Array.isArray(p) ? p : [p]).some((e) => !!e && typeof e === "object" && (e as { kind?: unknown }).kind === kind) } catch { return false }
+    }
+    return grants(row.effect1, row.accepted1) || grants(row.effect2, row.accepted2) || grants(row.effect3, row.accepted3)
+}
+/** Le joueur a-t-il DÉJÀ ce perk permanent du génie (MINITEL de Task1, soin de Gass) ? Le marqueur du monde actif ne suffit pas
+ *  (jamais reposé au run 3) : on regarde aussi les autres mondes et profils du compte, puis la ligne de vœux (vœu en attente). */
+function ownsGeniePerk(marker: string, kind: string): boolean { return st.defeatedTrainers.includes(marker) || markerInOtherWorld(marker) || genieRowGrants(kind) }
+type ThiefLootKey = "lootCatches" | "lootHeals" | "lootMinitel" | "lootFreeFights"
+/** Pose une charge (0 → le champ disparaît). Renvoie la valeur posée. */
+function setThiefLoot(key: ThiefLootKey, n: number): number {
+    const th = st.thief
+    if (!th) return 0
+    const next: ThiefState = { ...th }
+    if (n > 0) next[key] = n
+    else delete next[key]
+    st = { ...st, thief: next }
+    emit()
+    return Math.max(0, n)
+}
+/** 🎯 Captures garanties du Voleur utilisables ICI : partout, run 3 compris — sauf en bulle de rejeu. */
+export function thiefCatchCharges(): number { return activeWorld === "replay" ? 0 : (st.thief?.lootCatches ?? 0) }
+export function consumeThiefCatch(): number { return setThiefLoot("lootCatches", (st.thief?.lootCatches ?? 0) - 1) }
+/** 🩹 Pansements utilisables ICI (0 sous les règles du run 3). */
+export function thiefHealsUsable(): number { return thiefPowersAsleep() ? 0 : (st.thief?.lootHeals ?? 0) }
+/** Un pansement a servi : renvoie le nombre RESTANT. */
+export function consumeThiefHeal(): number { return setThiefLoot("lootHeals", (st.thief?.lootHeals ?? 0) - 1) }
+/** 📟 Appels MINITEL du Voleur utilisables ICI (0 sous les règles du run 3). */
+export function thiefMinitelCalls(): number { return thiefPowersAsleep() ? 0 : (st.thief?.lootMinitel ?? 0) }
+/** Un renfort est ARRIVÉ par le MINITEL du Voleur : renvoie le nombre d'appels RESTANTS. */
+export function consumeThiefMinitelCall(): number { return setThiefLoot("lootMinitel", (st.thief?.lootMinitel ?? 0) - 1) }
+/** ⚔️ Combats à coups gratuits utilisables ICI (0 sous les règles du run 3). */
+export function thiefFreeFightsUsable(): number { return thiefPowersAsleep() ? 0 : (st.thief?.lootFreeFights ?? 0) }
+/** Un combat offert a vu sa première attaque : renvoie le nombre RESTANT. */
+export function consumeThiefFreeFight(): number { return setThiefLoot("lootFreeFights", (st.thief?.lootFreeFights ?? 0) - 1) }
+
+/** Annonce du LANCEMENT d'une frénésie qui attendait (vol 9 commis au run 3), lue à l'ouverture du combat sauvage suivant — avec la
+ *  fin de fenêtre qu'elle annonce : un autre profil, le run 3 ou un rejeu ne la reçoivent jamais (cf. consume). */
+let thiefFrenzyStartMsg: { text: string; until: number } | null = null
+/** ✨ Taux shiny de la FRÉNÉSIE DU VOLEUR au pop sauvage (undefined = taux normal). Elle dort sous les règles du run 3. Une
+ *  frénésie EN ATTENTE démarre ici, au premier pas de chasse hors run 3 : 24 h à partir de maintenant. */
+export function thiefFrenzyChance(now: number): number | undefined {
+    const th = st.thief
+    if (!th?.lootFrenzy || thiefPowersAsleep()) return undefined
+    if (thiefFrenzyPending(th)) {
+        const next = startPendingThiefFrenzy(th, now)
+        st = { ...st, thief: next }
+        const until = next.lootFrenzy?.until ?? now
+        thiefFrenzyStartMsg = { text: `🥷 La FRÉNÉSIE DU VOLEUR commence : jusqu'au ${thiefFrenzyEndLabel(until)}, un Daemon sauvage sur deux sera SHINY, jusqu'à ce que tu captures un shiny.`, until }
+        emit()
+    }
+    return thiefFrenzyRunning(st.thief, now) ? SHINY_FRENZY_CHANCE : undefined
+}
+export function consumeThiefFrenzyStartMessage(): string | null {
+    const m = thiefFrenzyStartMsg
+    if (!m || !thiefFrenzyActiveHere() || st.thief?.lootFrenzy?.until !== m.until) return null // pas ici (autre profil, run 3, rejeu)
+    thiefFrenzyStartMsg = null
+    return m.text
+}
+/** La Frénésie du Voleur court-elle ICI (hors règles du run 3) ? Ses shinies ne déclenchent pas la fête du Nexus. */
+export function thiefFrenzyActiveHere(now = Date.now()): boolean { return !thiefPowersAsleep() && thiefFrenzyRunning(st.thief, now) }
+/** Un shiny vient d'être CAPTURÉ : la Frénésie du Voleur s'éteint. true si elle courait ici. */
+export function recordThiefFrenzyCapture(now = Date.now()): boolean {
+    const th = st.thief
+    if (!th || thiefPowersAsleep()) return false
+    const next = thiefFrenzyAfterCapture(th, now)
+    if (!next) return false
+    st = { ...st, thief: next }
+    emit()
+    return true
+}
+/** 🥷 Ce qui reste des butins du Voleur (poche « Butins du Voleur » du sac). `frenzyUntil` : fin d'une frénésie EN COURS. */
+export function getThiefLoot(now = Date.now()): ThiefLootView {
+    const th = st.thief
+    return {
+        catches: th?.lootCatches ?? 0, heals: th?.lootHeals ?? 0, minitel: th?.lootMinitel ?? 0, freeFights: th?.lootFreeFights ?? 0,
+        frenzyUntil: th?.lootFrenzy && thiefFrenzyRunning(th, now) ? th.lootFrenzy.until : null,
+        frenzyPending: thiefFrenzyPending(th),
+        asleep: activeWorld === "replay" ? "replay" : runMode() === "run3" ? "run3" : null,
+    }
 }
 
 /** Retire l'objet tenu d'un Daemon → il retourne au sac. Renvoie false si aucun objet tenu. */

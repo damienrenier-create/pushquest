@@ -51,7 +51,7 @@ export function duelGiftEnergy(energySpent: number, fallback: number): number {
 
 /** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. `fun` : sans « sueur »
  *  (un joueur fun n'encode aucun effort réel). */
-export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string; chips?: number }, fun = false): string[] {
+export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number; ballLabel: string; chips?: number; offered?: boolean }, fun = false): string[] {
     const gifts = ["✨ XP DOUBLÉE", `🎁 ${r.ballLabel}`]
     if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (${fun ? "tu as bien galéré" : "tu as sué"} pour cette victoire !)`)
     if (r.chips && r.chips > 0) gifts.push(`🎰 +${r.chips} jetons casino (tente ta chance à la roulette !)`)
@@ -59,7 +59,9 @@ export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: bo
     return [
         fill(pick(WIN_LINES), oppNick),
         "🎉 Pour ta bravoure : " + gifts.join(" · ") + " !",
-        `Et par équité de la Grande Marmite, le reflet de ${oppNick} reçoit le double de ${fun ? "l'énergie que tu as dépensée" : "l'énergie de ta sueur"} : ${r.energyToOpp}⚡ (un seul cadeau de toi en attente à la fois). Régale-toi, champion !`,
+        // `offered` : combat offert par le Voleur (coups gratuits) — rien n'a été dépensé, le reflet reçoit le double de ce que les
+        //   attaques AURAIENT coûté.
+        `Et par équité de la Grande Marmite, le reflet de ${oppNick} reçoit le double de ${r.offered ? "ce que tes attaques auraient coûté (combat offert par le Voleur)" : fun ? "l'énergie que tu as dépensée" : "l'énergie de ta sueur"} : ${r.energyToOpp}⚡ (un seul cadeau de toi en attente à la fois). Régale-toi, champion !`,
     ]
 }
 

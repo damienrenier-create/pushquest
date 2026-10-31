@@ -9,7 +9,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID, YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { parseSave, emptySave } from "@/lib/gamebook/yellow/storage/save"
+import { parseSave, emptySave, keepThiefFromStored } from "@/lib/gamebook/yellow/storage/save"
 import { keepPcBoxesFromStored } from "@/lib/gamebook/yellow/data/pcBoxes"
 import { classifyOverwrite, appendBackup, energyGuard } from "@/lib/gamebook/yellow/storage/saveGuard"
 
@@ -27,14 +27,25 @@ function teamPcUids(flags: unknown): Set<string> {
     }
     return ids
 }
+/** uid du Daemon que garde le VOLEUR (haut de la save), ou null. */
+function thiefStolenUid(flags: unknown): string | null {
+    const uid = (flags as { thief?: { stolen?: { uid?: unknown } | null } | null } | null | undefined)?.thief?.stolen?.uid
+    return typeof uid === "string" ? uid : null
+}
 // Un Daemon a-t-il DISPARU (uid présent avant, absent après) ? Couvre échange, don, relâcher… — PAS l'évolution
 // (elle conserve l'uid) ni le dépôt/retrait PC (l'uid reste dans l'union équipe+PC). Sert de FILET DE SÉCURITÉ :
 // avant toute perte de Daemon, on grave une copie dans `history` → un échange accidentel redevient annulable.
+// 🥷 Le Daemon que garde le VOLEUR compte aussi (31/10/2026 : neuf vols, il le garde plus longtemps) — mais il n'est « en règle »
+//   que s'il est ENCORE chez le Voleur après : un vieil onglet qui le perd, ou qui le lui rend après une victoire, grave sa copie ;
+//   un vol (équipe → Voleur) aussi, comme avant.
 function daemonDisappeared(prevFlags: unknown, nextFlags: unknown): boolean {
     const before = teamPcUids(prevFlags)
+    const prevStolen = thiefStolenUid(prevFlags)
+    if (prevStolen) before.add(prevStolen)
     if (before.size === 0) return false
     const after = teamPcUids(nextFlags)
-    for (const uid of before) if (!after.has(uid)) return true
+    const kept = prevStolen && prevStolen === thiefStolenUid(nextFlags) ? prevStolen : null
+    for (const uid of before) if (!after.has(uid) && uid !== kept) return true
     return false
 }
 
@@ -75,6 +86,9 @@ export async function POST(req: NextRequest) {
     // 📦 BOÎTES DU PC (28/10/2026) : un onglet resté sur une version d'AVANT les boîtes n'envoie ni `pcBoxes` ni `caps` → on
     //   garde les boîtes déjà stockées au lieu de les effacer. Jamais lors d'une remise à zéro volontaire.
     if (existing?.flags && !body.intentionalReset && !(Array.isArray(body.caps) && body.caps.includes("pcBoxes"))) keepPcBoxesFromStored(existing.flags, save)
+    // 🥷 LE VOLEUR À 9 VOLS (31/10/2026) : un onglet d'avant ne déclare pas « thief9 » — il ramènerait les vols à 3 (butins repayés)
+    //   et effacerait les charges des butins. On garde celles de la save stockée. Jamais lors d'une remise à zéro volontaire.
+    if (existing?.flags && !body.intentionalReset && !(Array.isArray(body.caps) && body.caps.includes("thief9"))) keepThiefFromStored(existing.flags, save)
 
     // GARDE ANTI-TRICHE ÉNERGIE : reps ne peut légitimement dépasser 2× le cap → on PLAFONNE (jamais de refus 409,
     //   sinon perte de session) + on TRACE. Appliqué AVANT toutes les branches d'écriture et INDÉPENDAMMENT de

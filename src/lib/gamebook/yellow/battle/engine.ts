@@ -96,6 +96,14 @@ export interface BattleState {
     /** 🧞 VŒU « captures garanties » (Kingme, 26/10/2026) : posé par le store le temps d'UN lancer de Ball → capture à coup
      *  sûr (hors fusions, qui exigent leur Fusio-Ball). Jamais persisté au-delà du tour. */
     genieCatchGuaranteed?: boolean
+    /** 🥷 …et cette garantie vient du VOLEUR (captures du vol 5, 31/10/2026) : seul le message change. Transitoire, comme le drapeau. */
+    catchGuaranteeBy?: "thief"
+    /** 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : ce combat est OFFERT, les attaques du joueur coûtent 0 (posé par le store à la création). */
+    thiefFree?: boolean
+    /** …et une attaque qui aurait coûté est partie : le store décompte ce combat à la fin (fuir avant d'attaquer ne coûte rien). */
+    thiefFreeCounted?: boolean
+    /** …et ce que ces attaques AURAIENT coûté : base du cadeau croisé d'un duel-reflet (sinon le reflet n'aurait que le repli). */
+    thiefFreeWould?: number
     /** ✨ SHINY BALL (L'Orfèvre, 26/10/2026) : la capture de CE combat a FORGÉ un chromatique (le captif n'était pas shiny
      *  de naissance) → le store n'en fait ni fête shiny ni prime de parrainage. Posé par performCapture. */
     shinyBallCapture?: boolean
@@ -1628,6 +1636,18 @@ export function applyForfeitWin(
     return state
 }
 
+/** 🥷 Une capture GARANTIE changerait-elle quelque chose à ce lancer ? (captures du Voleur : la charge n'est jamais gâchée.) Non
+ *  sur une fusion (sa Fusio-Ball a son propre seuil), avec une Fusio-Ball, sur un UNIQUE déjà possédé, ni quand la Ball est déjà
+ *  infaillible (Master-Éclair, Super Méga sur son légendaire affaibli, Flamarokto). Miroir des verrous de performCapture. */
+export function catchGuaranteeDecisive(state: BattleState, itemId: string): boolean {
+    const wild = state.enemy.team[state.enemy.activeIndex]
+    if (!wild || !state.isWild) return false
+    const isFusion = FUSION_BASE_IDS.includes(wild.speciesId) || wild.speciesId === "ukognofy" || wild.speciesId.startsWith("fusion_")
+    if (isFusion || itemId === "fusio_ball" || wild.captureBlockedOwned || isGuaranteedBall(itemId)) return false
+    if (itemId === SUPER_MEGA_BALL_ID && isSuperMegaTarget(wild.speciesId) && wild.currentHp < maxHpOf(wild) * 0.5) return false
+    return !flamaroktoGuaranteed(wild.speciesId, ballBonusOf(itemId), wild.currentHp / Math.max(1, maxHpOf(wild)), wild.status)
+}
+
 /** Tentative de capture (combat sauvage). Met outcome = "caught" si réussi. */
 function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
     const wild = active(state.enemy)
@@ -1644,7 +1664,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         || flamaroktoGuaranteed(wild.speciesId, ballBonusOf(itemId), wild.currentHp / Math.max(1, maxHpOf(wild)), wild.status)
         || state.genieCatchGuaranteed === true // 🧞 vœu « captures garanties »
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
-    if (state.genieCatchGuaranteed) events.push({ kind: "message", text: "🧞 Le génie guide ta Ball : cette capture est GARANTIE." })
+    if (state.genieCatchGuaranteed) events.push({ kind: "message", text: state.catchGuaranteeBy === "thief" ? "🥷 Le Voleur guide ta Ball : cette capture est GARANTIE." : "🧞 Le génie guide ta Ball : cette capture est GARANTIE." })
     // RAILLERIE (créations finales niv 75 de la Grotte du Nexus) : au 1er lancer, la bête toise le dresseur. Une
     //   seule fois par combat (flag captureTauntShown). Purement flavor → n'affecte pas les chances de capture.
     if (wild.captureTaunt && !state.captureTauntShown) { events.push({ kind: "message", text: wild.captureTaunt }); state.captureTauntShown = true }

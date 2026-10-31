@@ -376,7 +376,9 @@ export default function BattleScreen() {
             // ÉPREUVE DE FUSION : quitter le test à tout moment (bac à sable, aucune écriture) → retour direct à l'Atelier.
             if (isFusionTrial) options.push({ label: "🚪 QUITTER LE TEST", onSelect: () => endBattle(), detail: "Termine le combat-test tout de suite et revient à l'Atelier (aucune conséquence)." })
             // 📟 MINITEL (perk vœu) : armer l'appel — à la chute du dernier Daemon, un 7e surgit (au hasard du PC / fusion créée).
-            if (getMinitelState().canArm) options.push({ label: "📟 MINITEL", onSelect: () => { const msg = armMinitel(); if (msg) { setMinitelMsg(msg); setTimeout(() => setMinitelMsg(null), 3200) } }, detail: "Passe un coup de fil à ton PC : si ton DERNIER Daemon tombe K.O., un 7e renfort débarque au hasard ! (1×/combat)" })
+            //   🥷 MINITEL DU VOLEUR (vol 7) : ses appels restants s'affichent dans l'option (le vœu de Task1, lui, est illimité).
+            const minitel = getMinitelState()
+            if (minitel.canArm) options.push({ label: minitel.calls === null ? "📟 MINITEL" : `📟 MINITEL (${minitel.calls} appel${minitel.calls > 1 ? "s" : ""})`, onSelect: () => { const msg = armMinitel(); if (msg) { setMinitelMsg(msg); setTimeout(() => setMinitelMsg(null), 3200) } }, detail: "Passe un coup de fil à ton PC : si ton DERNIER Daemon tombe K.O., un 7e renfort débarque au hasard ! (1×/combat)" })
         } else if (menu === "moves") {
             // Coût AFFICHÉ = miroir EXACT de la déduction du store (inclut ×3 entraînement rival, ×10 vœu maudit,
             //   quota run3/fun, coût ∝ PV manquants) → source de vérité unique, plus de désync affichage/débit.
@@ -398,6 +400,8 @@ export default function BattleScreen() {
                     label: `${mv?.name ?? slot.moveId}${freePvp ? "" : `  ⚡${pays[i]}`}`,
                     onSelect: () => doMove(i), disabled: !canUse(pays[i]), moveSlot: i,
                     ...(lastAttack ? { detail: `Dernière attaque : elle prend toute ton énergie restante (⚡${pays[i]} au lieu de ⚡${costs[i]}).` } : {}),
+                    // 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : rappel durable (le message d'ouverture ne survit pas à un rechargement).
+                    ...(battle.thiefFree && !lastAttack ? { detail: "🥷 Offert par le Voleur" } : {}),
                 })
             })
             options.push({ label: "RETOUR", onSelect: () => setMenu("root"), detail: "Revenir au menu de combat sans attaquer." })

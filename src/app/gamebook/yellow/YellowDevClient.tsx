@@ -96,6 +96,8 @@ import { customStarterSpeciesId, type StoredCustomDaemon, type CustomSpec } from
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, recordFrontierResult, surtaxShopPrice, shopSurtaxFactor, effectiveRunWorld, addItem, spendReps, grantReps, logEnergyIncome, grantBonusEnergyUncapped, grantRepsSoftCap, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, swapTeamPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, addCaught, markCaughtThisRun, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, recordTeamCompoAchievements, grantCt, ctAlreadyReceived, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, getGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, getReplayReturn, getPcBoxes, pcBoxCreate, pcBoxRename, pcBoxDelete, pcBoxAssign, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker, recordPlayerTrade, getPotionBuysToday, recordPotionBuy, getJcEnergyBuysToday, getClan, useSuperPastaItem, useLuxePasta, useTiramisu, useBertieCrochue, getFusionName, setFusionName, getFusionMoves, setFusionMoves, getFusionTypeChoice, setFusionTypeChoice, setFusionNaturalTypes, getCurrentMapId, logDialogueMessage } from "@/lib/gamebook/yellow/store/playerStore"
 import { freezeChampionTeam } from "@/lib/gamebook/yellow/admin/progressionRecipe"
 import { equippedCraftedItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { getThiefLoot } from "@/lib/gamebook/yellow/store/playerStore"
+import { thiefLootRows, thiefLootAsleepNote } from "@/lib/gamebook/yellow/data/thief"
 import { CRAFT_STAT_LABEL } from "@/lib/gamebook/yellow/data/artisane"
 import { isDomeChampion, isMasterCtClaimed, setMegaInLigue, reregisterCustomDaemons, setCollectionneurDexGiven, archivisteMatchesToday, archivisteWinsToday, recordArchivisteMatch, dripBadgeReps, joinClan, releaseAnyMon, getClansEverJoined, isRunFusion, getDomeTierRecord, recordDomeTierResult, markSynergyDiscovered } from "@/lib/gamebook/yellow/store/playerStore"
 import { earnedRepsBadgeIds, badgeInputFromSave, rewardLabel, evaluateBadges, BADGE_LABELS, MEDAL_EMOJI } from "@/lib/gamebook/yellow/data/run1Badges"
@@ -1651,14 +1653,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const ctDropped = Math.random() < 0.05 && grantCt("ct60")
             // Énergie reversée au reflet : la formule du SERVEUR (duel-gift), partagée → le dialogue annonce le vrai versement
             //   (×2 la dépense, plafond anti-triche). Avant le 20/10/2026 : la dépense bornée à [30, 3000], un autre montant.
-            const energyToOpp = duelGiftEnergy(duelResult.energySpent, MIRROR_GIFT_ENERGY)
+            //   🥷 Combat offert par le Voleur : la base est ce que les attaques AURAIENT coûté (giftBasis), pas zéro.
+            const giftBasis = duelResult.giftBasis ?? duelResult.energySpent
+            const energyToOpp = duelGiftEnergy(giftBasis, MIRROR_GIFT_ENERGY)
             persistYellowSave()
             // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant) — il reçoit l'énergie du vainqueur.
             fetch("/api/gamebook/yellow/duel-gift", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
+                body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: giftBasis }),
             }).catch(() => {})
-            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label, chips: duelChips }, getGameMode() === "fun"))
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp, ballLabel: rewardBall.label, chips: duelChips, offered: giftBasis > duelResult.energySpent }, getGameMode() === "fun"))
         } else {
             logEnergyIncome("⚔️ Consolation de duel", grantReps(DUEL_LOSS_CONSOLE_REPS))
             persistYellowSave()
@@ -3458,6 +3462,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🥷 Poche « Butins du Voleur » (vols 5 à 9) — lecture seule : chaque charge restante avec son MODE D'EMPLOI (Sartay :
+                                        « bien expliquer le fonctionnement de chaque objet à tous »), et pourquoi ils dorment au run 3 / en rejeu. */}
+                                    {(() => {
+                                        const loot = getThiefLoot()
+                                        const rows = thiefLootRows(loot)
+                                        if (rows.length === 0) return null
+                                        const asleep = thiefLootAsleepNote(loot.asleep)
+                                        return (
+                                            <div>
+                                                <div style={pocketHdrStyle}>🥷 Butins du Voleur</div>
+                                                {asleep && <div style={{ fontSize: 10, opacity: 0.75, padding: "2px 6px 6px", whiteSpace: "normal", lineHeight: 1.3 }}>{asleep}</div>}
+                                                {rows.map((r) => (
+                                                    <button key={r.name} style={{ ...menuBtnDimStyle, display: "block", textAlign: "left", height: "auto" }} disabled>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{r.emoji} {r.name}</span><span>{r.count}</span>
+                                                        </span>
+                                                        <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{r.how}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
@@ -3486,7 +3512,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )
                                     })()}
-                                    {player.ownedCts.length === 0 && player.labDefi.grantedTickets.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
+                                    {player.ownedCts.length === 0 && player.labDefi.grantedTickets.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && thiefLootRows(getThiefLoot()).length === 0 && (
                                         <div style={{ fontSize: 11, opacity: 0.6, padding: 10 }}>Sac vide. Va à la boutique !</div>
                                     )}
                                 </div>

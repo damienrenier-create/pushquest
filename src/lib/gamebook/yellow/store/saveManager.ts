@@ -516,8 +516,9 @@ export function snapshot(): YellowSave {
 }
 
 /** Ce que ce client sait écrire dans la save : sans « pcBoxes », le serveur garde les boîtes du PC déjà stockées (onglet
- *  resté sur une version d'avant les boîtes, qui les effacerait sinon). */
-const SAVE_CAPS = ["pcBoxes"]
+ *  resté sur une version d'avant les boîtes, qui les effacerait sinon) ; sans « thief9 », il garde le compteur de vols et les
+ *  butins du Voleur stockés (onglet d'avant les 9 vols, qui plafonnerait à 3 et effacerait les charges). */
+const SAVE_CAPS = ["pcBoxes", "thief9"]
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
  *  Si le serveur REFUSE l'écriture (409 : un autosave vierge allait écraser un compte avancé), on
