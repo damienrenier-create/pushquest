@@ -774,9 +774,12 @@ function performMoveCore(state: BattleState, side: SideId, moveIndex: number, ev
         events.push({ kind: "message", text: VANISH_LINES.passThrough(displayName(defender)) })
         return
     }
-    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris).
-    //     EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité). ---
-    if (defender.semiInvuln && !move.effect?.sureHit) {
+    // --- TUNNEL / VOL : une cible SOUS TERRE ou EN VOL (semiInvuln) est INTOUCHABLE → tout move qui la VISE la manque (statut
+    //     infligé compris). EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité).
+    //     Les attaques SUR SOI marchent (Sartay, 01/11/2026), comme contre un Daemon invisible (cf. targetsFoe) ; une décharge /
+    //     émergence de l'attaquant qui la vise se perd et le ramène à découvert (sinon deux Daemons enfouis se rateraient sans fin). ---
+    if (defender.semiInvuln && !move.effect?.sureHit && targetsFoe(move, attacker.chargingMove === (slot?.moveId ?? move.id))) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) clearChargeLocks(attacker)
         events.push({ kind: "message", text: `${displayName(defender)} est hors d'atteinte : l'attaque le manque !` })
         return
     }

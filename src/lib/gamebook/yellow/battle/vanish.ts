@@ -37,7 +37,8 @@ export function isVanishMove(mv: Pick<MoveData, "effect"> | null | undefined): b
  *  cible invisible : Repos, Danse-Lames, Mur de Fer, Mirage, Machination, Aromathérapie, Cristallisation… */
 const SELF_ONLY_EFFECTS: ReadonlySet<string> = new Set(["chance", "healPct", "restSleep", "selfVolatile", "healTeamStatus", "statChanges", "vanish"])
 
-/** Ce move, CE tour, VISE-t-il l'adversaire (→ il manque une cible invisible, sauf coup sûr) ? NON pour (Sartay, 01/11/2026) :
+/** Ce move, CE tour, VISE-t-il l'adversaire (→ il manque une cible invisible, sous terre ou en vol, sauf coup sûr) ? NON pour
+ *  (Sartay, 01/11/2026 ; même règle pour Rancœur Céleste et pour Tunnel/Vol) :
  *  - un statut SUR SOI (tous ses effets touchent le lanceur : soin, Repos, hausses de stats sur soi, carapace…) ;
  *  - la PHASE 1 d'un move en deux tours qui ne frappe pas encore : concentration (Mitra-Poing), creuser (Tunnel), s'envoler
  *    (Vol). `releasing` = le lanceur libère sa charge (phase 2) : ce coup-là vise l'adversaire.

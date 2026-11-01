@@ -4855,8 +4855,8 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
 
 // ===== MAÎTRE DES CAPACITÉS (étage du Centre) — réapprendre une attaque du learnset contre reps (prix croissant) =====
 
-/** Attaques du learnset RÉAPPRENABLES par ce Daemon : palier atteint (level ≥), pas déjà connues ni en attente — et JAMAIS une
- *  signature apprise en montant de niveau (`levelUpOnly` : Ronces Vampires, Rancœur Céleste, Raitei ; Sartay, 01/11/2026). */
+/** Attaques du learnset RÉAPPRENABLES par ce Daemon : palier atteint (level ≥), pas déjà connues ni en attente. Les signatures
+ *  (Ronces Vampires, Rancœur Céleste, Raitei) en font partie : c'est leur propre lignée (Sartay, 01/11/2026 : « c'est ok »). */
 export function relearnableMoves(mon: MonInstance): string[] {
     const sp = getSpecies(mon.speciesId)
     if (!sp) return []
@@ -4864,7 +4864,6 @@ export function relearnableMoves(mon: MonInstance): string[] {
     const seen = new Set<string>()
     for (const l of sp.learnset) {
         if (mon.level < l.level || seen.has(l.moveId)) continue
-        if (getMove(l.moveId)?.levelUpOnly) continue // signature : en montant de niveau, nulle part ailleurs (jamais vendue ici)
         seen.add(l.moveId)
         if (mon.moves.some((s) => s.moveId === l.moveId)) continue
         if (mon.pendingMoves?.includes(l.moveId)) continue
