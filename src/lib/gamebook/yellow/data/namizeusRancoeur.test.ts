@@ -146,5 +146,6 @@ describe("garde-fous : némésis d'ACE et PvP", () => {
         expect(MP_VERSION).not.toBe("mp-2026-07-20.1")
         expect(MP_VERSION).not.toBe("mp-2026-11-01.1") // 01/11 : les attaques sur soi marchent contre un Daemon invisible
         expect(MP_VERSION).not.toBe("mp-2026-11-01.2") // 01/11 : … et contre une cible sous terre / en vol (Tunnel, Vol)
+        expect(MP_VERSION).not.toBe("mp-2026-11-01.3") // 01/11 : PvP — verrou de charge (Tunnel/Vol obligés de finir)
     })
 })

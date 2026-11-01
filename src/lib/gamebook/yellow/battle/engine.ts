@@ -540,6 +540,21 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
         return commit(state, events, rng, prev.turn, false)
     }
 
+    // VERROU DE CHARGE — MÊME RÈGLE qu'en solo (resolveTurn) : un Daemon en pleine charge (Tunnel, Vol, Mitra-Poing, Surtension…)
+    //   LIBÈRE sa décharge ce tour ; seul un rappel (switch) l'annule (Sartay, 01/11/2026 : « obligé de finir Tunnel ou Vol »).
+    //   Appliqué sur l'état PARTAGÉ → les deux clients forcent la même action (déterminisme, checksum). Sans lui, un Daemon
+    //   restait sous terre / en vol (intouchable) indéfiniment en enchaînant d'autres attaques.
+    const lockCharge = (side: SideId, a: PlayerAction): PlayerAction => {
+        const me = active(state[side])
+        if (!me.chargingMove || a.kind === "switch") return a
+        const ci = me.moves.findIndex((m) => m.moveId === me.chargingMove)
+        if (ci >= 0) return { kind: "move", moveIndex: ci }
+        clearChargeLocks(me) // soupape : move disparu → on déverrouille (comme en solo)
+        return a
+    }
+    actionA = lockCharge("player", actionA)
+    actionB = lockCharge("enemy", actionB)
+
     // v1 PvP : seuls move/switch sont relayés ; tout le reste retombe sur "move" idx 0
     // par sécurité (ne devrait jamais arriver — le client ne propose que move/switch).
     const toResolved = (side: SideId, a: PlayerAction): ResolvedAction => ({
@@ -777,8 +792,12 @@ function performMoveCore(state: BattleState, side: SideId, moveIndex: number, ev
     // --- TUNNEL / VOL : une cible SOUS TERRE ou EN VOL (semiInvuln) est INTOUCHABLE → tout move qui la VISE la manque (statut
     //     infligé compris). EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité).
     //     Les attaques SUR SOI marchent (Sartay, 01/11/2026), comme contre un Daemon invisible (cf. targetsFoe) ; une décharge /
-    //     émergence de l'attaquant qui la vise se perd et le ramène à découvert (sinon deux Daemons enfouis se rateraient sans fin). ---
-    if (defender.semiInvuln && !move.effect?.sureHit && targetsFoe(move, attacker.chargingMove === (slot?.moveId ?? move.id))) {
+    //     émergence de l'attaquant qui la vise se perd et le ramène à découvert (sinon deux Daemons enfouis se rateraient sans fin).
+    //     EXCEPTION : creuser / s'envoler face à une cible DÉJÀ sous terre ou en vol échoue, comme avant — sinon les deux se cachent
+    //     chaque tour : le plus rapide rate sa sortie, l'autre frappe (Vol contre Tunnel : 0 dégât, immunisé) → combat en boucle
+    //     (HARA-KIRI² en solo, sans fin en PvP), et le plus lent gagnait tous les duels Vol/Vol ou Tunnel/Tunnel. ---
+    if (defender.semiInvuln && !move.effect?.sureHit && (targetsFoe(move, attacker.chargingMove === (slot?.moveId ?? move.id))
+        || ((move.effect?.dig || move.effect?.fly) && attacker.chargingMove !== (slot?.moveId ?? move.id)))) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) clearChargeLocks(attacker)
         events.push({ kind: "message", text: `${displayName(defender)} est hors d'atteinte : l'attaque le manque !` })
         return

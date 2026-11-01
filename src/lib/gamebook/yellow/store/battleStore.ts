@@ -818,6 +818,22 @@ function showRefusal(b: BattleState, text: string): void {
     setStore({ battle: { ...b, events: [{ kind: "message", text }] } })
 }
 
+/** 🔒 VERROU DE CHARGE (Sartay, 01/11/2026 : « obligé de finir Tunnel ou Vol ») — un Daemon en pleine charge (Tunnel, Vol, Mitra-Poing,
+ *  Surtension…) doit LIBÉRER sa décharge ; seul un rappel l'annule (le moteur la force déjà, en solo comme en PvP). Ici, AVANT toute
+ *  facturation ou consommation : une autre attaque DEVIENT la décharge (on paie ce qui part vraiment) ; une Ball, un objet ou la
+ *  fuite sont refusés sans rien consommer (avant, la Ball ou la potion quittait le sac pour rien). La Charge Désespérée reste
+ *  telle quelle (gratuite : le moteur la remplace par la décharge). `side` = camp du joueur LOCAL (l'invité B d'un PvP = "enemy"). */
+function chargeLock(b: BattleState, action: PlayerAction, side: SideId = "player"): { action: PlayerAction; refusal?: string } {
+    const me = b[side].team[b[side].activeIndex]
+    if (!me?.chargingMove || b.forcedSwitch === side || b.enemySendOut) return { action }
+    const ci = me.moves.findIndex((m) => m.moveId === me.chargingMove)
+    if (ci < 0) return { action } // move disparu : le moteur déverrouille (soupape)
+    if (action.kind === "move") return { action: action.moveIndex === STRUGGLE_INDEX ? action : { kind: "move", moveIndex: ci } }
+    if (action.kind === "ball" || action.kind === "item" || action.kind === "run")
+        return { action, refusal: `${displayName(me)} doit finir ${getMove(me.chargingMove)?.name ?? "son attaque"} ! Seul un changement de Daemon l'interrompt.` }
+    return { action }
+}
+
 export function submitPlayerAction(action: PlayerAction) {
     const battle = storeState.battle
     // Défense-en-profondeur : après la fin d'un combat, storeState.battle reste l'objet ENDED (non null) → sans le
@@ -827,6 +843,8 @@ export function submitPlayerAction(action: PlayerAction) {
     if (!battle || battle.phase === "ended") return
     // Combat PvP : chemin réseau dédié (pas d'IA, résolution dual-déterministe).
     if (storeState.pvpCtx) { submitPvpAction(action); return }
+    // 🔒 VERROU DE CHARGE : autre attaque → la décharge (facturée elle) ; Ball / objet / fuite → refus lisible, rien de consommé.
+    { const lk = chargeLock(battle, action); if (lk.refusal) { showRefusal(battle, lk.refusal); return } action = lk.action }
     // VŒU DU GÉNIE : Balls VERROUILLÉES tant que le quota d'⚡ n'est pas dépensé → refus AUTORITAIRE avant toute
     //   consommation/stat/tour (backstop du grisage UI). Couvre TOUTES les Balls (kind==="ball").
     if (action.kind === "ball" && isBallLocked()) return
@@ -2341,6 +2359,8 @@ function submitPvpAction(action: PlayerAction) {
     if (ctx.myAction) return // déjà joué ce tour
     // Changement forcé de l'ADVERSAIRE : je dois attendre (je ne joue pas ce tour).
     if (battle.forcedSwitch && battle.forcedSwitch !== mySide(ctx)) return
+    // 🔒 VERROU DE CHARGE (même règle qu'en solo) : une autre attaque devient la décharge, envoyée et facturée telle quelle.
+    { const lk = chargeLock(battle, action, mySide(ctx)); if (lk.refusal) { showRefusal(battle, lk.refusal); return } action = lk.action }
     // 🌩️ RANCŒUR CÉLESTE : relance en étant invisible → refus LOCAL lisible (rien n'est envoyé ni facturé ; l'état partagé et le
     //   checksum ne bougent pas, seule la file d'affichage change).
     { const r = vanishRefusal(battle, action, mySide(ctx)); if (r) { showRefusal(battle, r); return } }

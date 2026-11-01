@@ -57,6 +57,19 @@ describe("Tunnel / Vol : les attaques SUR SOI marchent contre une cible enfouie 
         expect(E(s).semiInvuln).toBeFalsy()           // Rochison jaillit ensuite et le touche
         expect(P(s).currentHp).toBeLessThan(hp0)
     })
+    it("creuser / s'envoler face à une cible DÉJÀ sous terre ou en vol échoue : Vol contre Tunnel ne tourne plus en boucle", () => {
+        // Aquilothan (Vol, type VOL : immunisé contre Tunnel), plus rapide que Gékroc (Tunnel). Si Gékroc pouvait creuser pendant que
+        //   l'autre vole, les deux se cachaient chaque tour sans jamais perdre de PV → HARA-KIRI² (solo) ou combat sans fin (PvP).
+        for (let seed = 1; seed <= 20; seed++) {
+            let s = createBattle([createMonInstance("aquilothan", 50, { owned: true, ivs: 8, moveIds: ["vol"] })], [createMonInstance("gekroc", 50, { ivs: 8, moveIds: ["tunnel"] })], { isWild: false, seed, aiLevel: "trainer" })
+            for (let t = 0; t < 40 && s.phase !== "ended"; t++) {
+                s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+                expect(!!(P(s).semiInvuln && E(s).semiInvuln), `seed ${seed} tour ${t}`).toBe(false)
+                expect(msgs(s).some((x) => x.includes("HARA-KIRI")), `seed ${seed} tour ${t}`).toBe(false)
+            }
+            expect(s.phase, `seed ${seed}`).toBe("ended")
+        }
+    })
     it("deux Daemons qui creusent ne se ratent jamais sans fin : le combat avance", () => {
         for (let seed = 1; seed <= 20; seed++) {
             const user = createMonInstance("gekroc", 50, { owned: true, ivs: 8, moveIds: ["tunnel"] })

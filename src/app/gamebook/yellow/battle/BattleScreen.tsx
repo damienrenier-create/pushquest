@@ -370,6 +370,9 @@ export default function BattleScreen() {
     type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string; moveSlot?: number; detail?: string }
     const options: Opt[] = []
     let canBack = false
+    // 🔒 VERROU DE CHARGE (Tunnel, Vol, Mitra-Poing, Surtension…) : le Daemon actif DOIT libérer sa décharge, seul un changement de
+    //   Daemon l'interrompt (moteur + store) → les autres attaques, le sac et la fuite sont grisés, raison sur la ligne.
+    const chargingName = player.chargingMove && player.moves.some((s) => s.moveId === player.chargingMove) ? (getMove(player.chargingMove)?.name ?? player.chargingMove) : null
     if (playbackDone && isEnded) {
         options.push({ label: "QUITTER ▶", onSelect: () => endBattle() })
     } else if (playbackDone && needSwitch) {
@@ -400,10 +403,10 @@ export default function BattleScreen() {
             // plus sur le SAC (évite de lancer une Ball payante par mégarde en spammant le bouton).
             options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
             // En PvP (v1) : ni SAC ni FUITE. En série Frontier (noItems) : pas de SAC non plus (« pas de potion »).
-            if (!battle.pvp && !battle.noItems) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
+            if (!battle.pvp && !battle.noItems) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag"), ...(chargingName ? { disabled: true, right: "en pleine charge" } : {}) })
             if (!battle.pvp) {
                 // FUITE → écran de confirmation (évite la fuite accidentelle).
-                options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
+                options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild || !!chargingName, ...(chargingName && battle.isWild ? { right: "en pleine charge" } : {}) })
             }
             // ÉPREUVE DE FUSION : quitter le test à tout moment (bac à sable, aucune écriture) → retour direct à l'Atelier.
             if (isFusionTrial) options.push({ label: "🚪 QUITTER LE TEST", onSelect: () => endBattle(), detail: "Termine le combat-test tout de suite et revient à l'Atelier (aucune conséquence)." })
@@ -427,12 +430,16 @@ export default function BattleScreen() {
             //   grisée n'affiche pas son détail). Invisible → rappel « 1 chance sur 2 ». Cible invisible → l'attaque la manquera.
             const meVeiled = isVanished(player), foeVeiled = isVanished(enemy)
             const veilLocked = (i: number) => meVeiled && isVanishMove(getMove(player.moves[i]?.moveId ?? ""))
+            // 🔒 En pleine charge : seule la décharge (le même move) reste jouable.
+            const chargeLocked = (i: number) => !!chargingName && player.moves[i]?.moveId !== player.chargingMove
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
-            if (!pays.some((c, i) => canUse(c) && !veilLocked(i))) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
+            //   En pleine charge, c'est la DÉCHARGE qui part (gratuite, sans contrecoup) : la ligne le dit.
+            if (!pays.some((c, i) => canUse(c) && !veilLocked(i) && !chargeLocked(i))) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: chargingName ? `🔒 En pleine charge : ${chargingName} part quand même, sans énergie.` : "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 const lastAttack = !freePvp && pays[i] < costs[i]
                 const locked = veilLocked(i)
+                const cLocked = chargeLocked(i)
                 const detail = [
                     lastAttack ? `Dernière attaque : elle prend toute ton énergie restante (⚡${pays[i]} au lieu de ⚡${costs[i]}).` : "",
                     // 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : rappel durable (le message d'ouverture ne survit pas à un rechargement).
@@ -446,11 +453,13 @@ export default function BattleScreen() {
                             : (mv.effect?.focusCharge || mv.effect?.dig || mv.effect?.fly) && player.chargingMove !== slot.moveId ? VANISH_UI.menuFoeCharge
                                 : targetsFoe(mv, player.chargingMove === slot.moveId) ? VANISH_UI.menuFoe : ""
                     ) : "",
+                    // 🔒 Verrou de charge : rappel COURT et en DERNIER (le cadre de détail est petit : les avertissements ci-dessus passent avant).
+                    chargingName && !cLocked ? `🔒 Doit finir ${chargingName} (ou change de Daemon).` : "",
                 ].filter(Boolean).join(" · ")
                 options.push({
-                    label: `${mv?.name ?? slot.moveId}${freePvp || locked ? "" : `  ⚡${pays[i]}`}`,
-                    onSelect: () => doMove(i), disabled: !canUse(pays[i]) || locked, moveSlot: i,
-                    ...(locked ? { right: VANISH_UI.menuLocked } : {}),
+                    label: `${mv?.name ?? slot.moveId}${freePvp || locked || cLocked ? "" : `  ⚡${pays[i]}`}`,
+                    onSelect: () => doMove(i), disabled: !canUse(pays[i]) || locked || cLocked, moveSlot: i,
+                    ...(locked ? { right: VANISH_UI.menuLocked } : cLocked ? { right: "en pleine charge" } : {}),
                     ...(detail ? { detail } : {}),
                 })
             })
