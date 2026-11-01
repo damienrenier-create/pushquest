@@ -4,7 +4,8 @@ import { createMonInstance } from "./factory"
 import { Rng } from "./rng"
 import { getMove } from "../data/moves"
 import { moveCategoryOf } from "./typeChart"
-import { VANISH_LINES } from "./vanish"
+import { VANISH_LINES, targetsFoe } from "./vanish"
+import { MOVES } from "../data/moves"
 
 // RANCŒUR CÉLESTE (signature de Namizeus, Sartay 01/11/2026) + RAITEI (Élec PHYSIQUE 150/90).
 // Lancement 90 % (jet plat, sur soi) → disparu 1 à 5 tours : intouchable (seul un coup sûr le touche), n'agit qu'une fois sur
@@ -95,6 +96,65 @@ describe("Rancœur Céleste — intouchable", () => {
             expect(E(s).chargingMove).toBeUndefined()
         }
         expect(cases).toBeGreaterThan(0)
+    })
+})
+
+describe("Rancœur Céleste — les attaques SUR SOI marchent contre un Daemon invisible (Sartay, 01/11/2026)", () => {
+    // Adversaire disparu et INOFFENSIF (son action cachée est Mur de Fer) : rien ne vient perturber l'attaque testée.
+    const hiddenFoe = (turns: number) => { const en = nami(["rancoeur_celeste", "mur_de_fer"], 60, false); Object.assign(en, { vanishTurns: turns }); return en }
+    const start = (moveId: string, sp = "rochison", turns = 3) => {
+        const user = createMonInstance(sp, 60, { owned: true, ivs: 8, moveIds: [moveId] })
+        return createBattle([user], [hiddenFoe(turns)], { isWild: false, seed: 2, aiLevel: "trainer" })
+    }
+    it("Repos, Danse-Lames, Mur de Fer, Mirage, Machination, Danse du Fauve : l'effet s'applique, rien ne « traverse l'orage »", () => {
+        const cases: [string, (m: ReturnType<typeof P>) => boolean][] = [
+            ["repos", (m) => m.status === "SLEEP" && m.currentHp > 60],
+            ["danse_lames", (m) => m.stages.atk === 2],
+            ["mur_de_fer", (m) => m.stages.def === 1],
+            ["mirage", (m) => m.stages.eva === 2],
+            ["machination", (m) => m.stages.spc === 2],
+            ["danse_fauve", (m) => m.stages.atk === 1 && m.stages.spe === 1],
+        ]
+        for (const [mv, ok] of cases) {
+            const s0 = start(mv)
+            if (mv === "repos") s0.player.team[0].currentHp = 60
+            const s = resolveTurn(s0, { kind: "move", moveIndex: 0 })
+            expect(ok(P(s)), mv).toBe(true)
+            expect(has(s, VANISH_LINES.passThrough(NZ)), mv).toBe(false)
+        }
+    })
+    it("Mitra-Poing : la concentration marche ; le coup, lui, manque s'il est toujours invisible (verrous levés)", () => {
+        let s = resolveTurn(start("mitra_poing", "rochison", 4), { kind: "move", moveIndex: 0 })
+        expect(msgs(s).some((t) => t.includes("concentre toute son énergie"))).toBe(true)
+        expect(P(s).chargingMove).toBe("mitra_poing")
+        expect(P(s).focusing).toBe(true)
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(has(s, VANISH_LINES.passThrough(NZ))).toBe(true)
+        expect(P(s).chargingMove).toBeUndefined()
+        expect(P(s).focusing).toBeUndefined()
+    })
+    it("Tunnel : creuser marche ; l'émergence manque une cible toujours invisible, sans rester bloqué sous terre", () => {
+        let s = resolveTurn(start("tunnel", "crocavern", 4), { kind: "move", moveIndex: 0 })
+        expect(P(s).semiInvuln).toBe(true)
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(has(s, VANISH_LINES.passThrough(NZ))).toBe(true)
+        expect(P(s).semiInvuln).toBeUndefined()
+        expect(P(s).chargingMove).toBeUndefined()
+    })
+    it("une attaque qui vise AUSSI la cible (Atrophie : −2 Atq pour les deux) la manque en entier", () => {
+        const s = resolveTurn(start("atrophie"), { kind: "move", moveIndex: 0 })
+        expect(has(s, VANISH_LINES.passThrough(NZ))).toBe(true)
+        expect(P(s).stages.atk).toBe(0)
+        expect(E(s).stages.atk).toBe(0)
+    })
+    it("classement FIGÉ de tout le jeu : 16 statuts sur soi, 3 préparations ; toute autre attaque vise l'adversaire", () => {
+        const all = Object.values(MOVES)
+        expect(all.filter((m) => m.power <= 0 && !targetsFoe(m, false)).map((m) => m.id).sort()).toEqual([
+            "aimantation", "aromatherapie", "carapace_diamant", "cristallisation", "danse_fauve", "danse_lames", "elan", "focalisation",
+            "linceul", "machination", "mirage", "mur_de_fer", "rancoeur_celeste", "repos", "reprise_ailes", "visee",
+        ])
+        expect(all.filter((m) => m.power > 0 && !targetsFoe(m, false)).map((m) => m.id).sort()).toEqual(["mitra_poing", "tunnel", "vol"])
+        for (const m of all) if (m.power > 0) expect(targetsFoe(m, true), m.id).toBe(true) // phase 2 / attaque normale : vise l'adversaire
     })
 })
 

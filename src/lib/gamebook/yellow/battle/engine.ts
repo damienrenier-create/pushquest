@@ -31,7 +31,7 @@ import { flamaroktoGuaranteed } from "../data/run3Legend"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN, EV_STAT_CAP } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
-import { isVanished, isVanishMove, aiMayCastVanish, VANISH_TURNS_MIN, VANISH_TURNS_MAX, VANISH_ACT_PCT, VANISH_LINES } from "./vanish"
+import { isVanished, isVanishMove, aiMayCastVanish, targetsFoe, VANISH_TURNS_MIN, VANISH_TURNS_MAX, VANISH_ACT_PCT, VANISH_LINES } from "./vanish"
 
 // ============================================================
 // Types d'état & événements
@@ -765,9 +765,11 @@ function performMoveCore(state: BattleState, side: SideId, moveIndex: number, ev
 
     // --- 🌩️ RANCŒUR CÉLESTE : move sur SOI → ni l'esquive ni l'invulnérabilité adverses ne s'en mêlent. ---
     if (move.effect?.vanish) { castVanish(state, side, move, events, rng); return }
-    // --- 🌩️ RANCŒUR CÉLESTE : une cible DISPARUE est INTOUCHABLE → TOUT move la manque (statut compris), comme sous Tunnel/Vol ;
-    //     seul un coup sûr (Météores, sureHit) la touche. Une décharge / émergence de l'attaquant se perd (pas de verrou bloqué). ---
-    if (isVanished(defender) && !move.effect?.sureHit) {
+    // --- 🌩️ RANCŒUR CÉLESTE : une cible DISPARUE est INTOUCHABLE → tout move qui la VISE la manque (statut infligé compris) ; seul
+    //     un coup sûr (Météores, sureHit) la touche. Les attaques SUR SOI marchent (Sartay, 01/11/2026) : Repos, Danse-Lames, Mur de
+    //     Fer…, et la phase 1 de Mitra-Poing / Tunnel / Vol (cf. targetsFoe). Une décharge / émergence de l'attaquant se perd
+    //     (pas de verrou bloqué). ---
+    if (isVanished(defender) && !move.effect?.sureHit && targetsFoe(move, attacker.chargingMove === (slot?.moveId ?? move.id))) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) clearChargeLocks(attacker)
         events.push({ kind: "message", text: VANISH_LINES.passThrough(displayName(defender)) })
         return

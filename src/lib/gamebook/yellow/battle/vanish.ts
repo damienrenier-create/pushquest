@@ -5,13 +5,14 @@
 // (performMove → castVanish / endVanish).
 //
 // RÈGLES : lancement 90 % (jet PLAT, sur soi : ni esquive ni invulnérabilité adverse) → le lanceur DISPARAÎT 1 à 5 tours
-// (sprite masqué) : INTOUCHABLE, seul un coup sûr (Météores) le touche, comme sous Tunnel/Vol ; chaque action choisie
+// (sprite masqué) : INTOUCHABLE, seul un coup sûr (Météores) le touche ; les attaques que l'adversaire lance SUR LUI-MÊME
+// marchent (Repos, Danse-Lames, concentration de Mitra-Poing… : cf. targetsFoe, Sartay 01/11/2026) ; chaque action choisie
 // pendant ce temps n'aboutit qu'une fois sur deux (raté : énergie dépensée quand même). À la fin : SOMMEIL (même tirage
 // qu'un sommeil infligé, écrase le statut comme Repos) + TOUS ses PV. Le rappel y met fin, sans soin.
 // JOUEUR : sans limite. ORDINATEUR : jamais plus de 2 lancers d'affilée (série du CAMP : elle passe au Daemon entrant), et le
 // soin final compte dans ses 3 régénérations (déjà consommées → l'orage retombe sans soin ni sommeil).
 
-import type { BattleMon, MoveData } from "./types"
+import type { BattleMon, MoveData, MoveEffect } from "./types"
 
 /** Durée de la disparition, tirée UNIFORMÉMENT au lancement = nombre de tours où le Daemon choisit une action caché. */
 export const VANISH_TURNS_MIN = 1
@@ -30,6 +31,24 @@ export function isVanished(m: Pick<BattleMon, "vanishTurns"> | null | undefined)
 /** Ce move est-il Rancœur Céleste (ou tout futur move portant l'effet) ? Clé = l'EFFET, jamais l'espèce (fusions). */
 export function isVanishMove(mv: Pick<MoveData, "effect"> | null | undefined): boolean {
     return !!mv?.effect?.vanish
+}
+
+/** Effets qui ne touchent QUE le lanceur (ou son camp). Un move de STATUT fait uniquement de ceux-là marche même contre une
+ *  cible invisible : Repos, Danse-Lames, Mur de Fer, Mirage, Machination, Aromathérapie, Cristallisation… */
+const SELF_ONLY_EFFECTS: ReadonlySet<string> = new Set(["chance", "healPct", "restSleep", "selfVolatile", "healTeamStatus", "statChanges", "vanish"])
+
+/** Ce move, CE tour, VISE-t-il l'adversaire (→ il manque une cible invisible, sauf coup sûr) ? NON pour (Sartay, 01/11/2026) :
+ *  - un statut SUR SOI (tous ses effets touchent le lanceur : soin, Repos, hausses de stats sur soi, carapace…) ;
+ *  - la PHASE 1 d'un move en deux tours qui ne frappe pas encore : concentration (Mitra-Poing), creuser (Tunnel), s'envoler
+ *    (Vol). `releasing` = le lanceur libère sa charge (phase 2) : ce coup-là vise l'adversaire.
+ *  Tout autre effet (statut infligé, stat adverse, dégâts fixes, vol de boosts, Brume Sporale…) vise l'adversaire. */
+export function targetsFoe(mv: MoveData, releasing: boolean): boolean {
+    const fx = mv.effect
+    if (!releasing && (fx?.focusCharge || fx?.dig || fx?.fly)) return false
+    if (mv.power > 0) return true
+    if (!fx) return false // ne fait rien (« Mais rien ne se passe… ») : rien à manquer
+    return Object.entries(fx).some(([k, v]) => v !== undefined && (!SELF_ONLY_EFFECTS.has(k)
+        || (k === "statChanges" && ((v as MoveEffect["statChanges"]) ?? []).some((c) => c.target !== "self"))))
 }
 
 /** Garde-fou ORDINATEUR : peut-il la lancer maintenant ? Pas déjà disparu, moins de 2 lancers d'affilée et (camp plafonné)
@@ -65,4 +84,5 @@ export const VANISH_UI = {
     menuSelfFree: "👻 Invisible : 1 chance sur 2 de surgir pour agir.",
     menuFoe: "👻 Cible invisible : cette attaque la manquera.",
     menuFoeSure: "✓ Ne rate jamais : touche même une cible invisible.",
+    menuFoeCharge: "👻 Cible invisible : la préparation marche, mais le coup la manquera si elle l'est encore.",
 } as const

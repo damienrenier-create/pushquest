@@ -16,7 +16,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveEffectTag } from "@/lib/gamebook/yellow/data/moveEffectTag"
-import { isVanished, isVanishMove, VANISH_UI } from "@/lib/gamebook/yellow/battle/vanish"
+import { isVanished, isVanishMove, targetsFoe, VANISH_UI } from "@/lib/gamebook/yellow/battle/vanish"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -427,9 +427,14 @@ export default function BattleScreen() {
                     // 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : rappel durable (le message d'ouverture ne survit pas à un rechargement).
                     battle.thiefFree && !lastAttack ? "🥷 Offert par le Voleur" : "",
                     meVeiled && !locked ? (freePvp || battle.thiefFree ? VANISH_UI.menuSelfFree : VANISH_UI.menuSelf) : "",
-                    // Coup sûr : il ne touche une cible invisible que si son type peut l'AFFECTER (Météores, Normal, ne fait rien à
-                    //   un Spectre) → sinon, même avertissement que les autres attaques.
-                    foeVeiled && mv && !isVanishMove(mv) ? (mv.effect?.sureHit && sureHitAffects(mv, player, enemy) ? VANISH_UI.menuFoeSure : VANISH_UI.menuFoe) : "",
+                    // Cible invisible : coup sûr qui peut l'AFFECTER (Météores, Normal, ne fait rien à un Spectre) → il touche ;
+                    //   phase 1 de Mitra-Poing / Tunnel / Vol → la préparation marche, le coup manquera si elle l'est encore ;
+                    //   attaque SUR SOI (Repos, Danse-Lames…) → elle marche, rien à signaler ; toute autre attaque la manquera.
+                    foeVeiled && mv && !isVanishMove(mv) ? (
+                        mv.effect?.sureHit && sureHitAffects(mv, player, enemy) ? VANISH_UI.menuFoeSure
+                            : (mv.effect?.focusCharge || mv.effect?.dig || mv.effect?.fly) && player.chargingMove !== slot.moveId ? VANISH_UI.menuFoeCharge
+                                : targetsFoe(mv, player.chargingMove === slot.moveId) ? VANISH_UI.menuFoe : ""
+                    ) : "",
                 ].filter(Boolean).join(" · ")
                 options.push({
                     label: `${mv?.name ?? slot.moveId}${freePvp || locked ? "" : `  ⚡${pays[i]}`}`,

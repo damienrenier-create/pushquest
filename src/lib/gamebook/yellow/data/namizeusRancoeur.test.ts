@@ -144,5 +144,6 @@ describe("garde-fous : némésis d'ACE et PvP", () => {
     })
     it("protocole PvP relevé (moteur + données changés : un vieil onglet refuse le duel au lieu de se désynchroniser)", () => {
         expect(MP_VERSION).not.toBe("mp-2026-07-20.1")
+        expect(MP_VERSION).not.toBe("mp-2026-11-01.1") // 01/11 : les attaques sur soi marchent contre un Daemon invisible
     })
 })

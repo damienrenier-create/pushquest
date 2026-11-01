@@ -138,6 +138,9 @@ export interface MoveData {
      *  cf. moveCategory). Ce champ force phys/spéc pour une poignée de moves-signature (ex. Crocs de
      *  Feu / Griffe Draconique = FEU/DRAGON mais PHYSIQUES pour taper sur l'ATQ). Absent = règle Gen 1. */
     category?: "PHYSICAL" | "SPECIAL"
+    /** SIGNATURE APPRISE EN MONTANT DE NIVEAU, ET NULLE PART AILLEURS (Sartay, 01/11/2026) : ni CT, ni Maître des capacités,
+     *  ni Créateur de Daemon. Ex. Ronces Vampires (Florapanthe), Rancœur Céleste et Raitei (Namizeus). */
+    levelUpOnly?: boolean
     /** LIBELLÉ de TYPE affiché (badge UI) — override purement COSMÉTIQUE (ex. "Transcendance", type inédit).
      *  Absent → libellé du `type` réel. N'affecte NI la catégorie, NI l'efficacité, NI l'apprentissage. */
     displayType?: string
