@@ -8,6 +8,7 @@
 import { useState } from "react"
 import type { MonInstance, MoveData, PokeType } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { moveEffectTag } from "@/lib/gamebook/yellow/data/moveEffectTag"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { moveCategoryOf, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
@@ -19,25 +20,8 @@ const TYPE_FR: Record<PokeType, string> = {
     ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal", TENEBRES: "Ténèbres",
 }
 
-// Tag d'effet COURT (la raison de garder/jeter une attaque au-delà des chiffres).
-function effectTag(mv: MoveData): string | null {
-    const e = mv.effect
-    if (!e) return null
-    if (e.adaptiveStab) return "Adaptatif : type primaire + meilleure stat (toujours STAB)"
-    if (e.recoilPct) return `Recul ${e.recoilPct}%`
-    if (e.drainPct) return `Vol de PV ${e.drainPct}%`
-    if (e.healPct) return `Soigne ${e.healPct}% PV`
-    if (e.fixedDamage) return `${e.fixedDamage} PV fixes`
-    if (e.multiHit) { const [a, b] = e.multiHit; return a === b ? `Frappe ${a}×` : `Frappe ${a}-${b}×` }
-    if (e.inflictStatus) return e.chance && e.chance < 100 ? `${e.inflictStatus} ${e.chance}%` : `${e.inflictStatus}`
-    if (e.inflictVolatile) return `${e.inflictVolatile}`
-    if (e.flinch) return e.chance ? `Apeure ${e.chance}%` : "Peut apeurer"
-    if (e.statChanges?.length) { const c = e.statChanges[0]; return `${c.stages > 0 ? "+" : ""}${c.stages} ${c.stat}${c.target === "self" ? "" : " adv."}` }
-    if (e.highCrit) return "Crit élevé"
-    if (e.sureHit) return "Ne rate jamais"
-    if (e.twoTurn || e.dig || e.fly) return "Charge 2 tours"
-    return null
-}
+// Tag d'effet COURT (la raison de garder/jeter une attaque au-delà des chiffres) : TOUS les effets, en français (data/moveEffectTag).
+const effectTag = (mv: MoveData): string | null => moveEffectTag(mv, "short")
 
 interface Line {
     name: string; effType: PokeType; isPhysical: boolean; isStatus: boolean

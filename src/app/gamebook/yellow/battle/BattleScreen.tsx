@@ -15,6 +15,7 @@ import { moveCategoryOf, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battl
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { moveEffectTag } from "@/lib/gamebook/yellow/data/moveEffectTag"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -895,36 +896,7 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
 
 
 // Libellés FR courts pour la fiche d'attaque.
-const STATUS_FR: Record<string, string> = { BURN: "Brûlure", PARALYSIS: "Paralysie", POISON: "Poison", TOXIC: "Poison grave", SLEEP: "Sommeil", FREEZE: "Gel" }
-const VOLATILE_FR: Record<string, string> = { SEEDED: "Vampigraine", CONFUSION: "Confusion" }
-const STAGE_FR: Record<string, string> = { atk: "ATQ", def: "DÉF", spe: "VIT", spc: "SPÉ", acc: "Préc.", eva: "Esq." }
-
-// Résumé EN UNE LIGNE de l'effet d'une attaque (le plus saillant) — null si rien de notable.
-function moveEffectTag(mv: MoveData): string | null {
-    const e = mv.effect
-    if (!e) return null
-    if (e.adaptiveStab) return "STAB adaptatif : type PRIMAIRE du Daemon, catégorie calée sur sa meilleure stat"
-    if (e.recoilPct) return `Recul : ${e.recoilPct}% des dégâts subis`
-    if (e.drainPct) return `Vol de PV : ${e.drainPct}%`
-    if (e.healPct) return `Soigne ${e.healPct}% des PV`
-    if (e.fixedDamage) return `Inflige ${e.fixedDamage} PV fixes`
-    if (e.multiHit) { const [a, b] = e.multiHit; return a === b ? `Frappe ${a}×` : `Frappe ${a} à ${b}×` }
-    if (e.inflictStatus) { const s = STATUS_FR[e.inflictStatus] ?? e.inflictStatus; return e.chance && e.chance < 100 ? `${s} (${e.chance}%)` : s }
-    if (e.inflictVolatile) return VOLATILE_FR[e.inflictVolatile] ?? null
-    if (e.flinch) return e.chance ? `Peut apeurer (${e.chance}%)` : "Peut apeurer"
-    if (e.statChanges?.length) {
-        const c = e.statChanges[0]
-        const sign = c.stages > 0 ? `+${c.stages}` : `${c.stages}`
-        const base = `${sign} ${STAGE_FR[c.stat] ?? c.stat}${c.target === "self" ? "" : " adv."}`
-        // FIABILITÉ : sur un coup OFFENSIF (puissance > 0), le changement est un effet SECONDAIRE (chance = e.chance ?? 100)
-        //   → on précise « (10%) » ou « (à coup sûr) ». Sur un move de STATUT pur, il est toujours garanti (c'est son but).
-        return mv.power > 0 ? `${base}${e.chance && e.chance < 100 ? ` (${e.chance}%)` : " (à coup sûr)"}` : base
-    }
-    if (e.highCrit) return "Taux de critique élevé"
-    if (e.twoTurn || e.dig || e.fly) return "Charge sur 2 tours"
-    if (e.sureHit) return "Ne rate jamais"
-    return null
-}
+// Résumé EN UNE LIGNE de TOUS les effets d'une attaque (data/moveEffectTag) — null si rien de notable.
 
 // Fiche détaillée d'une attaque (panneau de droite du menu Attaque) — façon « carte » du jeu :
 // type + catégorie, puissance / précision / PP, puis l'effet et un texte de saveur.

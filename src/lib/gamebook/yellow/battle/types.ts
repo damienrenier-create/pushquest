@@ -186,6 +186,11 @@ export interface SpeciesData {
     /** TALENT SECRET d'une lignée CUSTOM (créateur de Daemon) : clé de talent lue par le moteur (talentEffects).
      *  Undefined pour toute espèce standard → aucun effet (le combat existant est strictement inchangé). */
     secretTalent?: string
+    /** 🌸 ÉPANOUISSEMENT TARDIF (Florapanthe, Sartay 31/10/2026) : du niveau `fromLevel` au niveau `fullLevel`, les stats de base
+     *  listées gagnent `bonus` NIVEAU APRÈS NIVEAU (part linéaire, pleine à `fullLevel` et au-delà). Lu par stats.ts
+     *  (effectiveBaseStats) → combat, fiche, PvP et fusion (stats réelles figées au moment de fuser) suivent. Le jeu n'en parle
+     *  NULLE PART (choix Sartay : une découverte) : le Pokédex garde les stats de base d'origine, la fiche n'affiche que les stats. */
+    lateBloom?: { fromLevel: number; fullLevel: number; bonus: Partial<Record<StatKey, number>> }
     /** GÉKROC : apprend TOUTES les CT, quel que soit le type (couteau-suisse). Défaut : compat normale. */
     learnsAllCts?: boolean
     /** GALIJAH (façon Mew) : combiné à learnsAllCts, EXCLUT ces types de l'apprentissage universel de CT

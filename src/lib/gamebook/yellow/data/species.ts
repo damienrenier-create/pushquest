@@ -1173,9 +1173,16 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Panthéreau sombre et vif, réceptif aux énergies élémentaires.",
         sprite: "/yellow/sprites/dex/pantheon.png",
     },
+    // 🌸 ÉPANOUISSEMENT TARDIF (Sartay, 31/10/2026) : la plus plate des six panthères (440, aucune stat qui dépasse, sa grosse
+    //   attaque au 50 quand les autres l'ont vers 35) devient un investissement de long terme — du niveau 60 au 89, +1 PV et
+    //   +1 Défense de base par niveau, soit +30 et +30 (total 500 : ses dominantes deviennent PV / Défense / Spéciale, celles
+    //   d'Aquapanthe → Nénufauve est la fusion de panthères la plus synergique) ; au 85, sa signature RONCES VAMPIRES (cf.
+    //   moves.ts). L'as du Doyen (niveau 16) ne change pas ; la Florapanthe d'ACE au run 3 s'épanouit comme les autres. Le jeu
+    //   n'en parle nulle part (choix Sartay) : les joueurs le découvrent en la montant.
     florapanthe: {
         id: "florapanthe", dexNo: 68, name: "Florapanthe", types: ["PLANTE"],
         baseStats: { hp: 90, atk: 80, def: 82, spe: 90, spc: 98 },
+        lateBloom: { fromLevel: 60, fullLevel: 89, bonus: { hp: 30, def: 30 } },
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "fouet_lianes" },
@@ -1187,6 +1194,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 50, moveId: "tempete_verte" },
             { level: 70, moveId: "lance_soleil" },
             { level: 80, moveId: "repos" },
+            { level: 85, moveId: "ronces_vampires" }, // signature (aucune CT) : seule Florapanthe, et ses fusions, l'ont
         ],
         catchRate: 45, baseExp: 190, rarity: "RARE", growthRate: "medium_fast", role: "Plante — panthère (boss)",
         description: "Panthère sylvestre aux lianes vives ; bondit comme le lierre s'élance.",

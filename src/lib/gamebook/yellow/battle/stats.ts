@@ -14,9 +14,31 @@ import { talentSpeedMult } from "./talentEffects"
 // Stats absolues (hors combat)
 // ============================================================
 
+/** 🌸 Bonus d'ÉPANOUISSEMENT TARDIF à ce niveau, stat par stat : rien avant `fromLevel`, puis une part du bonus qui grandit à
+ *  chaque niveau (Florapanthe : +1 PV et +1 Défense de base par niveau du 60 au 89, soit +30 ; Sartay 31/10/2026 : « dilué
+ *  sur chacun des niveaux à partir de 60 »). Pleine à `fullLevel` et au-delà. {} pour toute espèce sans `lateBloom`. */
+export function bloomBonusAt(species: SpeciesData, level: number): Partial<Record<StatKey, number>> {
+    const lb = species.lateBloom
+    if (!lb || level < lb.fromLevel) return {}
+    const total = Math.max(1, lb.fullLevel - lb.fromLevel + 1)
+    const share = Math.min(1, (level - lb.fromLevel + 1) / total)
+    const out: Partial<Record<StatKey, number>> = {}
+    for (const k of Object.keys(lb.bonus) as StatKey[]) out[k] = Math.round((lb.bonus[k] ?? 0) * share)
+    return out
+}
+/** Stats de BASE effectives à ce niveau : celles de l'espèce, plus son épanouissement tardif. Sans `lateBloom` : l'objet d'origine. */
+export function effectiveBaseStats(species: SpeciesData, level: number): Record<StatKey, number> {
+    const b = bloomBonusAt(species, level)
+    const keys = Object.keys(b) as StatKey[]
+    if (!keys.length) return species.baseStats
+    const out = { ...species.baseStats }
+    for (const k of keys) out[k] += b[k] ?? 0
+    return out
+}
+
 /** PV max : floor(((2*Base + IV + ⌊EV/4⌋) * niveau) / 100) + niveau + 10. */
 export function maxHp(species: SpeciesData, level: number, ivHp: number, evHp = 0): number {
-    return Math.floor(((2 * species.baseStats.hp + ivHp + evStatBonus(evHp)) * level) / 100) + level + 10
+    return Math.floor(((2 * effectiveBaseStats(species, level).hp + ivHp + evStatBonus(evHp)) * level) / 100) + level + 10
 }
 
 /**
@@ -55,12 +77,13 @@ export function fullStats(
         hm[k] = (hm[k] ?? 1) * (1 + sig.pct / 100)
     }
     const it = (n: number, k: StatKey) => sh(Math.floor(n * (hm[k] ?? 1)))
+    const base = effectiveBaseStats(species, lv) // 🌸 épanouissement tardif compris (Florapanthe, niveau après niveau dès le 60)
     return {
         hp: it(maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0), "hp"),
-        atk: it(computeStat(species.baseStats.atk, inst.ivs.atk, lv, e.atk ?? 0) + allocatedBonus("atk", a.atk ?? 0), "atk"),
-        def: it(computeStat(species.baseStats.def, inst.ivs.def, lv, e.def ?? 0) + allocatedBonus("def", a.def ?? 0), "def"),
-        spe: it(computeStat(species.baseStats.spe, inst.ivs.spe, lv, e.spe ?? 0) + allocatedBonus("spe", a.spe ?? 0), "spe"),
-        spc: it(computeStat(species.baseStats.spc, inst.ivs.spc, lv, e.spc ?? 0) + allocatedBonus("spc", a.spc ?? 0), "spc"),
+        atk: it(computeStat(base.atk, inst.ivs.atk, lv, e.atk ?? 0) + allocatedBonus("atk", a.atk ?? 0), "atk"),
+        def: it(computeStat(base.def, inst.ivs.def, lv, e.def ?? 0) + allocatedBonus("def", a.def ?? 0), "def"),
+        spe: it(computeStat(base.spe, inst.ivs.spe, lv, e.spe ?? 0) + allocatedBonus("spe", a.spe ?? 0), "spe"),
+        spc: it(computeStat(base.spc, inst.ivs.spc, lv, e.spc ?? 0) + allocatedBonus("spc", a.spc ?? 0), "spc"),
     }
 }
 
