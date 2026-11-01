@@ -12,6 +12,7 @@ import {
     resolveTurnPvp,
     applyForfeitWin,
     maxHpOf,
+    displayName,
     catchGuaranteeDecisive,
     type BattleState,
     type BattleEvent,
@@ -19,6 +20,7 @@ import {
     type SideId,
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
+import { isVanished, isVanishMove, VANISH_LINES } from "../battle/vanish"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
 import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam, thiefCatchCharges, consumeThiefCatch, thiefHealsUsable, consumeThiefHeal, thiefMinitelCalls, consumeThiefMinitelCall, thiefFreeFightsUsable, consumeThiefFreeFight, recordThiefFrenzyCapture, consumeThiefFrenzyStartMessage } from "./playerStore"
@@ -799,6 +801,23 @@ export function moveCostForDisplay(moveIndex: number): number {
     return b ? moveCostRepsForAction(b, moveIndex) : 0
 }
 
+/** 🌩️ RANCŒUR CÉLESTE — refus qui ne coûtent RIEN (ni Ball, ni énergie, ni tour, ni tirage) et se LISENT : viser un sauvage
+ *  invisible, ou relancer Rancœur Céleste en étant déjà invisible. L'écran grise déjà ces choix : ceci est le filet.
+ *  `side` = camp du joueur LOCAL (l'invité B d'un PvP joue côté "enemy"). */
+function vanishRefusal(b: BattleState, action: PlayerAction, side: SideId = "player"): string | null {
+    const foeSide: SideId = side === "player" ? "enemy" : "player"
+    const me = b[side].team[b[side].activeIndex], foe = b[foeSide].team[b[foeSide].activeIndex]
+    if (action.kind === "ball" && b.isWild && foe && isVanished(foe)) return VANISH_LINES.ballRefused(displayName(foe), getItem(action.itemId)?.name ?? "Ball")
+    if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX && me && isVanished(me) && isVanishMove(getMove(me.moves[action.moveIndex]?.moveId ?? "")))
+        return VANISH_LINES.recastRefused(displayName(me))
+    return null
+}
+/** Affiche un refus SANS résoudre de tour : NOUVEL objet `battle` (même état, même seed, même tour) dont la file ne contient
+ *  que ce message → l'écran le rejoue puis rend la main. (Sans nouvel objet, l'écran resterait figé : cf. actedRef.) */
+function showRefusal(b: BattleState, text: string): void {
+    setStore({ battle: { ...b, events: [{ kind: "message", text }] } })
+}
+
 export function submitPlayerAction(action: PlayerAction) {
     const battle = storeState.battle
     // Défense-en-profondeur : après la fin d'un combat, storeState.battle reste l'objet ENDED (non null) → sans le
@@ -813,6 +832,9 @@ export function submitPlayerAction(action: PlayerAction) {
     if (action.kind === "ball" && isBallLocked()) return
     // MODE GENÈSE : Ball VERROUILLÉE jusqu'à la victoire à la Ligue de Fusion (refus autoritaire, avant consommation/tour).
     if (action.kind === "ball" && genesisCaptureLocked()) return
+    // 🌩️ RANCŒUR CÉLESTE : Ball sur un sauvage invisible / relance en étant invisible → refus lisible, AVANT de consommer la
+    //   Ball ou de facturer l'attaque (aucun tour joué).
+    { const r = vanishRefusal(battle, action); if (r) { showRefusal(battle, r); return } }
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     if (action.kind === "ball") bumpStat("ballsUsed") // STAT : ball lancée
@@ -873,6 +895,7 @@ export function submitPlayerAction(action: PlayerAction) {
     }
     // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
     // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
+    // 🌩️ RANCŒUR CÉLESTE : l'action d'un Daemon INVISIBLE qui échoue à surgir (1 fois sur 2) est JOUÉE → jamais remboursée.
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
         grantReps(paidMoveCost, true) // force : on rend au joueur SA propre énergie (attaque non partie) — même en run 3
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
@@ -2230,6 +2253,7 @@ function swapEvent(e: BattleEvent): BattleEvent {
         case "faint":
         case "status":
         case "switchIn":
+        case "vanish": // 🌩️ RANCŒUR CÉLESTE : sans bascule, l'invité B masquerait le MAUVAIS Daemon
             return { ...e, side: flipSide(e.side) }
         case "end": {
             const o = e.outcome
@@ -2317,6 +2341,9 @@ function submitPvpAction(action: PlayerAction) {
     if (ctx.myAction) return // déjà joué ce tour
     // Changement forcé de l'ADVERSAIRE : je dois attendre (je ne joue pas ce tour).
     if (battle.forcedSwitch && battle.forcedSwitch !== mySide(ctx)) return
+    // 🌩️ RANCŒUR CÉLESTE : relance en étant invisible → refus LOCAL lisible (rien n'est envoyé ni facturé ; l'état partagé et le
+    //   checksum ne bougent pas, seule la file d'affichage change).
+    { const r = vanishRefusal(battle, action, mySide(ctx)); if (r) { showRefusal(battle, r); return } }
 
     // COÛT EN REPS — RUN 3 uniquement (concours) : le PvP coûte les REPS NORMAUX par attaque (comme le solo), pour que
     //   les duels du concours aient un vrai enjeu d'énergie. Hors run 3 : PvP GRATUIT (inchangé) ; le run FUSION paie

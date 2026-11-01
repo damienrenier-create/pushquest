@@ -417,8 +417,9 @@ function effectSummary(m: MoveData): string {
 }
 
 // Placeholders jamais sélectionnables (Lutte etc.). Les CT-only sont déjà exclues par isLearnableMove.
-// 🌸 SIGNATURES D'ESPÈCE (aucune CT, une seule espèce) : jamais proposées au Créateur — Ronces Vampires est à Florapanthe seule (31/10/2026).
-const MOVE_DENYLIST = new Set(["struggle", "lutte", "ronces_vampires"])
+// 🌸 SIGNATURES D'ESPÈCE (aucune CT, une seule espèce) : jamais proposées au Créateur — Ronces Vampires est à Florapanthe seule (31/10/2026),
+//   Rancœur Céleste et Raitei à Namizeus seul (01/11/2026).
+const MOVE_DENYLIST = new Set(["struggle", "lutte", "ronces_vampires", "rancoeur_celeste", "raitei"])
 
 /**
  * Attaques ACCESSIBLES pour un slot donné (lignée de types + niveau) : uniquement des attaques réellement

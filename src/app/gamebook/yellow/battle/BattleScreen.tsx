@@ -11,11 +11,12 @@ import { useEffect, useRef, useState } from "react"
 import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, getBattleTrainerId, getMinitelState, armMinitel, setBattleInputHandler, resolveBattleLearn, moveCostForDisplay, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
-import { moveCategoryOf, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategoryOf, resolveAdaptiveStab, typeEffectiveness } from "@/lib/gamebook/yellow/battle/typeChart"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveEffectTag } from "@/lib/gamebook/yellow/data/moveEffectTag"
+import { isVanished, isVanishMove, VANISH_UI } from "@/lib/gamebook/yellow/battle/vanish"
 import { SHINY_FILTER } from "@/lib/gamebook/yellow/data/shinyFx"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -67,6 +68,8 @@ export default function BattleScreen() {
     // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
     // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
     const [dispIdx, setDispIdx] = useState<{ p: number; e: number } | null>(null)
+    // 🌩️ RANCŒUR CÉLESTE : sprite VOILÉ par côté, synchronisé sur le playback (events `vanish`) comme les PV et les statuts.
+    const [dispVeil, setDispVeil] = useState<{ p: boolean; e: boolean } | null>(null)
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean } | null>(null)
@@ -125,6 +128,7 @@ export default function BattleScreen() {
             setDisp({ p: p.currentHp, pMax: maxHpOf(p), e: e.currentHp, eMax: maxHpOf(e) })
             setDispStatus({ p: p.status, e: e.status })
             setDispIdx({ p: battle.player.activeIndex, e: battle.enemy.activeIndex })
+            setDispVeil({ p: isVanished(p), e: isVanished(e) }) // reprise d'un combat (instantané) en pleine disparition
         }
     }, [battle, disp])
 
@@ -143,7 +147,14 @@ export default function BattleScreen() {
             if (step !== 0) { setStep(0); return }
         }
         const ev = battle.events[step]
-        if (!ev) return                      // file terminée → menu/fin
+        if (!ev) {                           // file terminée → menu/fin
+            // 🌩️ RANCŒUR CÉLESTE : resynchro du voile sur les actifs RÉELS, ICI (step à jour) et non dans l'effet « anti-bug »
+            //   plus bas : à l'arrivée d'un nouveau tour, celui-ci tourne encore avec le step du tour précédent → il effacerait le
+            //   sprite avant même « … utilise Rancœur Céleste ! » (et trahirait le jet de 90 %).
+            const pVan = isVanished(battle.player.team[battle.player.activeIndex]), eVan = isVanished(battle.enemy.team[battle.enemy.activeIndex])
+            setDispVeil((d) => (d && (d.p !== pVan || d.e !== eVan) ? { p: pVan, e: eVan } : d))
+            return
+        }
         if (ev.kind === "message") return    // on attend un tap du joueur
 
         // Événement non-textuel : on l'applique puis on enchaîne automatiquement.
@@ -180,10 +191,15 @@ export default function BattleScreen() {
                 return { ...d, e: m.currentHp, eMax: maxHpOf(m) }
             })
             setDispStatus((d) => (d ? (ev.side === "player" ? { ...d, p: m.status } : { ...d, e: m.status }) : d)) // le Daemon entrant apporte SON statut
+            setDispVeil((d) => (d ? (ev.side === "player" ? { ...d, p: isVanished(m) } : { ...d, e: isVanished(m) }) : d)) // 🌩️ le rappel lève le voile
         } else if (ev.kind === "status") {
             // STATUT infligé (poison/sommeil/brûlure/gel/para) : on l'AFFICHE seulement MAINTENANT — le moteur pousse
             //   cet event APRÈS l'anim d'attaque, donc le badge n'apparaît jamais avant le coup. Fin du spoiler.
             setDispStatus((d) => (d ? (ev.side === "player" ? { ...d, p: ev.status } : { ...d, e: ev.status }) : d))
+        } else if (ev.kind === "vanish") {
+            // 🌩️ RANCŒUR CÉLESTE : le sprite s'efface / revient AU MOMENT de l'event (jamais en avance sur le récit).
+            setDispVeil((d) => (d ? (ev.side === "player" ? { ...d, p: ev.hidden } : { ...d, e: ev.hidden }) : d))
+            delay = 380 // fondu CSS 0,35 s
         } else if (ev.kind === "move") {
             // Anim d'attaque (catégorie déduite du moveId) : on LAISSE le temps de la voir
             // avant d'enchaîner sur les dégâts.
@@ -315,6 +331,10 @@ export default function BattleScreen() {
     const showEHp = previewEnemy ? previewEnemy.currentHp : eHp
     const showEMax = previewEnemy ? maxHpOf(previewEnemy) : eMax
     const showEStatus = previewEnemy ? previewEnemy.status : eStatus
+    // 🌩️ RANCŒUR CÉLESTE — voile affiché : suit le playback (comme PV/statuts) ; fin de combat → toujours visible.
+    const veilOf = (m: BattleMon, d?: boolean) => (playbackDone ? !isEnded && isVanished(m) : d ?? isVanished(m))
+    const pVeiled = veilOf(player, dispVeil?.p)
+    const eVeiled = previewEnemy ? false : veilOf(enemy, dispVeil?.e)
 
     // #7 — APPRENTISSAGE EN COMBAT : à la reprise de la main (menu normal, hors PvP), si l'actif a
     // débloqué une attaque ce tour mais a 4 slots pleins, on propose de l'apprendre MAINTENANT
@@ -392,17 +412,30 @@ export default function BattleScreen() {
             //   (même montant que la déduction du store, cf. run3LastAttackPay).
             const pays = costs.map((c) => run3LastAttackPay(c, reps, effectiveRunWorld() === "run3"))
             const canUse = (c: number) => freePvp || (c <= reps && c <= remainingEnergy)
+            // 🌩️ RANCŒUR CÉLESTE : déjà invisible → la relancer ne ferait rien → GRISÉE, raison écrite SUR la ligne (une ligne
+            //   grisée n'affiche pas son détail). Invisible → rappel « 1 chance sur 2 ». Cible invisible → l'attaque la manquera.
+            const meVeiled = isVanished(player), foeVeiled = isVanished(enemy)
+            const veilLocked = (i: number) => meVeiled && isVanishMove(getMove(player.moves[i]?.moveId ?? ""))
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
-            if (!pays.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
+            if (!pays.some((c, i) => canUse(c) && !veilLocked(i))) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 const lastAttack = !freePvp && pays[i] < costs[i]
-                options.push({
-                    label: `${mv?.name ?? slot.moveId}${freePvp ? "" : `  ⚡${pays[i]}`}`,
-                    onSelect: () => doMove(i), disabled: !canUse(pays[i]), moveSlot: i,
-                    ...(lastAttack ? { detail: `Dernière attaque : elle prend toute ton énergie restante (⚡${pays[i]} au lieu de ⚡${costs[i]}).` } : {}),
+                const locked = veilLocked(i)
+                const detail = [
+                    lastAttack ? `Dernière attaque : elle prend toute ton énergie restante (⚡${pays[i]} au lieu de ⚡${costs[i]}).` : "",
                     // 🥷 COUPS GRATUITS DU VOLEUR (vol 8) : rappel durable (le message d'ouverture ne survit pas à un rechargement).
-                    ...(battle.thiefFree && !lastAttack ? { detail: "🥷 Offert par le Voleur" } : {}),
+                    battle.thiefFree && !lastAttack ? "🥷 Offert par le Voleur" : "",
+                    meVeiled && !locked ? (freePvp || battle.thiefFree ? VANISH_UI.menuSelfFree : VANISH_UI.menuSelf) : "",
+                    // Coup sûr : il ne touche une cible invisible que si son type peut l'AFFECTER (Météores, Normal, ne fait rien à
+                    //   un Spectre) → sinon, même avertissement que les autres attaques.
+                    foeVeiled && mv && !isVanishMove(mv) ? (mv.effect?.sureHit && sureHitAffects(mv, player, enemy) ? VANISH_UI.menuFoeSure : VANISH_UI.menuFoe) : "",
+                ].filter(Boolean).join(" · ")
+                options.push({
+                    label: `${mv?.name ?? slot.moveId}${freePvp || locked ? "" : `  ⚡${pays[i]}`}`,
+                    onSelect: () => doMove(i), disabled: !canUse(pays[i]) || locked, moveSlot: i,
+                    ...(locked ? { right: VANISH_UI.menuLocked } : {}),
+                    ...(detail ? { detail } : {}),
                 })
             })
             options.push({ label: "RETOUR", onSelect: () => setMenu("root"), detail: "Revenir au menu de combat sans attaquer." })
@@ -424,8 +457,10 @@ export default function BattleScreen() {
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setReviveItemId(it.id); setMenu("reviveTarget") }, disabled: !battle.player.team.some((m) => m.currentHp <= 0) }))
             // VŒU DU GÉNIE : Balls verrouillées tant que le quota d'⚡ n'est pas dépensé (grisage ; backstop autoritatif côté store).
             const ballLocked = repsWallet.ballLockRemaining > 0
+            // 🌩️ RANCŒUR CÉLESTE : on ne vise pas un sauvage invisible → Balls grisées, raison sur la ligne (filet : store).
+            const foeVeiled = isVanished(enemy)
             if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && owned(it.id))
-                .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id), disabled: ballLocked, detail: ballLocked ? `Verrouillé par le génie : dépense encore ${repsWallet.ballLockRemaining}⚡.` : undefined }))
+                .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id), disabled: ballLocked || foeVeiled, ...(foeVeiled ? { right: VANISH_UI.ballRowHint } : {}), detail: ballLocked ? `Verrouillé par le génie : dépense encore ${repsWallet.ballLockRemaining}⚡.` : undefined }))
             options.push({ label: "RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "confirmRun") {
@@ -513,18 +548,18 @@ export default function BattleScreen() {
                         : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
                     {/* key sur l'uid : au switchIn, la barre se REMONTE nette (pas de flash 0→100%).
                         #4 : pendant la fenêtre d'envoi, on montre le PROCHAIN Daemon (showEnemy). */}
-                    <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} status={showEStatus} />
+                    <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} status={showEStatus} veiled={eVeiled} />
                 </div>
                 <div style={S.enemySpot}>
-                    {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
+                    {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} veiled={eVeiled} />}
                     {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} topGradient={ballGradient(lastBallId)} />}
                 </div>
                 {/* Joueur : sprite de dos en bas-gauche, fiche + pips en bas-droite. */}
                 <div style={S.playerSpot}>
-                    <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} victory={playbackDone && playerWon && battle.pvp} />
+                    <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} victory={playbackDone && playerWon && battle.pvp} veiled={pVeiled} />
                 </div>
                 <div style={S.playerSide}>
-                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} status={pStatus} />
+                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} status={pStatus} veiled={pVeiled} />
                     {!battle.isWild && <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />}
                 </div>
                 {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
@@ -748,7 +783,7 @@ const MIN: Record<string, React.CSSProperties> = {
 // Sous-composants
 // ============================================================
 
-function MonInfo({ mon, self, hp, max, status }: { mon: BattleMon; self?: boolean; hp: number; max: number; status: string }) {
+function MonInfo({ mon, self, hp, max, status, veiled }: { mon: BattleMon; self?: boolean; hp: number; max: number; status: string; veiled?: boolean }) {
     const pct = Math.max(0, Math.min(100, (hp / max) * 100))
     const col = pct > 50 ? "#48c048" : pct > 20 ? "#f0c040" : "#e04040"
     // #6 — petite LUEUR discrète de la barre d'XP quand CE Daemon passe un niveau (event moins anodin).
@@ -796,6 +831,7 @@ function MonInfo({ mon, self, hp, max, status }: { mon: BattleMon; self?: boolea
                 )
             })()}
             {hp > 0 && status !== "NONE" && <span style={S.statusTag}>{status}</span>}
+            {veiled && hp > 0 && <span style={S.veilTag}>{VANISH_UI.infoTag}</span>}
         </div>
     )
 }
@@ -848,7 +884,7 @@ function WildDexPip({ caught }: { caught: boolean }) {
     )
 }
 
-function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number; victory?: boolean }) {
+function MonSprite({ mon, facing, alive, hitKey, victory, veiled }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number; victory?: boolean; veiled?: boolean }) {
     // Sprite PNG (public/) avec repli sur l'initiale si le fichier manque.
     // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
@@ -869,26 +905,29 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
         // Wrapper keyé sur l'uid : remonte à chaque ENTRÉE de Daemon (combat/switch)
         // → joue l'anim "monEnter" (chute + rebond). Le shake reste sur le div interne.
         <div key={mon.uid} style={{ animation: "monEnter 0.42s cubic-bezier(.17,.67,.33,.99)" }}>
-            <div
-                key={hitKey}
-                style={{
-                    ...(glyph ? S.sprite : S.spriteBox),
-                    position: "relative",
-                    opacity: alive ? 1 : 0.25,
-                    transform: facing === "back" ? "scaleX(-1)" : "none",
-                    // Victoire : halo doré pulsé (PRIME sur le shake) ; ne pulse QUE le filtre → préserve le scaleX du dos.
-                    animation: victory ? "victoryPulse 1.2s ease-in-out infinite" : hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
-                }}
-            >
-                {imgSrc
-                    ? <img src={imgSrc} alt={sp.name} onError={() => (realSrc ? setRealErr(true) : setGenErr(true))}
-                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: SHINY_FILTER } : {}) }} />
-                    : chimera
-                        ? <ChimeraPlaceholder aSprite={chimera.a} bSprite={chimera.b} types={sp.types} size={76} />
-                        : <span style={S.spriteGlyph}>{sp.name[0]}</span>}
-                {/* CHROMATIQUE (shiny) : halo doré (SHINY_FILTER, sans recolorer) + ✨ scintillantes (2, décalées). */}
-                {mon.shiny && imgSrc && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
-                {mon.shiny && imgSrc && <span style={{ position: "absolute", bottom: 2, left: 0, fontSize: 12, animation: "victoryPulse 1.6s ease-in-out 0.4s infinite", pointerEvents: "none" }}>✨</span>}
+            {/* 🌩️ RANCŒUR CÉLESTE : calque de VOILE (fondu) entre l'entrée et le tremblement → aucun des deux ne lui dispute l'opacité. */}
+            <div aria-hidden={veiled || undefined} style={{ opacity: veiled ? 0 : 1, transform: veiled ? "translateY(-8px) scale(0.9)" : "none", filter: veiled ? "blur(3px)" : "none", transition: "opacity 0.35s ease, transform 0.35s ease, filter 0.35s ease", pointerEvents: veiled ? "none" : undefined }}>
+                <div
+                    key={hitKey}
+                    style={{
+                        ...(glyph ? S.sprite : S.spriteBox),
+                        position: "relative",
+                        opacity: alive ? 1 : 0.25,
+                        transform: facing === "back" ? "scaleX(-1)" : "none",
+                        // Victoire : halo doré pulsé (PRIME sur le shake) ; ne pulse QUE le filtre → préserve le scaleX du dos.
+                        animation: victory ? "victoryPulse 1.2s ease-in-out infinite" : hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
+                    }}
+                >
+                    {imgSrc
+                        ? <img src={imgSrc} alt={sp.name} onError={() => (realSrc ? setRealErr(true) : setGenErr(true))}
+                            style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: SHINY_FILTER } : {}) }} />
+                        : chimera
+                            ? <ChimeraPlaceholder aSprite={chimera.a} bSprite={chimera.b} types={sp.types} size={76} />
+                            : <span style={S.spriteGlyph}>{sp.name[0]}</span>}
+                    {/* CHROMATIQUE (shiny) : halo doré (SHINY_FILTER, sans recolorer) + ✨ scintillantes (2, décalées). */}
+                    {mon.shiny && imgSrc && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
+                    {mon.shiny && imgSrc && <span style={{ position: "absolute", bottom: 2, left: 0, fontSize: 12, animation: "victoryPulse 1.6s ease-in-out 0.4s infinite", pointerEvents: "none" }}>✨</span>}
+                </div>
             </div>
         </div>
     )
@@ -900,6 +939,19 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
 
 // Fiche détaillée d'une attaque (panneau de droite du menu Attaque) — façon « carte » du jeu :
 // type + catégorie, puissance / précision / PP, puis l'effet et un texte de saveur.
+/** 🌩️ RANCŒUR CÉLESTE — un coup sûr (sureHit) touche une cible invisible… s'il peut l'AFFECTER : même type effectif que le
+ *  moteur (dealMoveDamage : transmutation de fusion, STAB adaptatif, Transcendance). Météores (Normal) ne fait rien à
+ *  Namizeus (Spectre) → le menu ne lui promet pas « touche même une cible invisible ». */
+function sureHitAffects(mv: MoveData, atk: BattleMon, def: BattleMon): boolean {
+    if (mv.power <= 0) return true
+    const defTypes = speciesOf(def).types
+    const override = mv.effect?.effectivenessOverride
+    if (override) return defTypes.reduce((m, t) => m * (override[t] ?? 1), 1) > 0
+    let t = atk.moveTypeOverride?.[mv.id] ?? mv.type
+    if (mv.effect?.adaptiveStab) { const fs = fullStats(atk, speciesOf(atk)); t = resolveAdaptiveStab(speciesOf(atk).types, fs.atk, fs.spc).type }
+    return typeEffectiveness(t, defTypes) > 0
+}
+
 function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
     // STAB ADAPTATIF (Apothéose) : type & catégorie EFFECTIFS calculés sur le Daemon porteur (et non le
     // NORMAL/PHYS figé du move stocké) → l'affichage colle à ce que le combat fera vraiment.
@@ -1108,6 +1160,7 @@ const S: Record<string, React.CSSProperties> = {
     xpTrack: { width: 84, height: 3, background: "#404040", borderRadius: 2, overflow: "hidden", border: "1px solid #1c1408" },
     xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease, background 0.5s ease, box-shadow 0.5s ease" },
     statusTag: { display: "inline-block", marginTop: 2, fontSize: 7, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
+    veilTag: { display: "inline-block", marginTop: 2, marginLeft: 3, fontSize: 7, fontWeight: 700, background: "#3a1f6e", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 }, // 🌩️ « INVISIBLE »
 
     // Sprites
     sprite: { width: 64, height: 64, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },

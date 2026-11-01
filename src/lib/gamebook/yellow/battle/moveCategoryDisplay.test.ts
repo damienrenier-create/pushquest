@@ -8,9 +8,9 @@ import { MOVES, getMove } from "../data/moves"
 // CATÉGORIE D'UNE ATTAQUE : UN SEUL VERDICT, PARTOUT
 //
 // LE BUG (signalé par Sartay le 15/10/2026 : « croc de feu, les affichages se contredisent »). En Gen 1 la
-// catégorie découle du TYPE. Mais trois attaques portent une surcharge assumée — une morsure ou une griffade
+// catégorie découle du TYPE. Mais quatre attaques portent une surcharge assumée — une morsure ou une griffade
 // frappe à l'Attaque, pas au Spécial :
-//     Crocs de Feu (FEU) · Griffe Draconique (DRAGON) · Frappe Cavitation (EAU)
+//     Crocs de Feu (FEU) · Griffe Draconique (DRAGON) · Frappe Cavitation (EAU) · Raitei (ÉLEC, Namizeus, 01/11/2026)
 // Le calcul de dégâts respectait la surcharge, mais SIX affichages redérivaient la catégorie depuis le seul
 // type et annonçaient « Spécial » pour une attaque qui frappe physiquement. Le joueur lisait donc une étiquette
 // qui contredisait ce qu'il subissait en combat.
@@ -20,7 +20,7 @@ import { MOVES, getMove } from "../data/moves"
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 /** Les attaques dont la catégorie CONTREDIT leur type. Le cœur du sujet. */
-const SURCHARGEES = ["crocs_de_feu", "griffe_draconique", "frappe_cavitation"] as const
+const SURCHARGEES = ["crocs_de_feu", "griffe_draconique", "frappe_cavitation", "raitei"] as const
 
 describe("le verdict : une attaque surchargée est PHYSIQUE", () => {
     for (const id of SURCHARGEES) {

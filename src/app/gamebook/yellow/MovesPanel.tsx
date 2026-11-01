@@ -16,6 +16,7 @@ import { usePlayer, useActiveWorld, effectiveRunWorld } from "@/lib/gamebook/yel
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { moveCategoryOf } from "@/lib/gamebook/yellow/battle/typeChart"
 import type { MoveData, PokeType, StageKey, MajorStatus, VolatileStatus } from "@/lib/gamebook/yellow/battle/types"
+import { VANISH_TURNS_MIN, VANISH_TURNS_MAX } from "@/lib/gamebook/yellow/battle/vanish"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 
@@ -97,6 +98,13 @@ function effectBits(m: MoveData): string[] {
     if (fx.drainPct) bits.push(`Draine ${fx.drainPct}% des dégâts en PV`)
     if (fx.recoilPct) bits.push(`Recul : ${fx.recoilPct}% des dégâts subis`)
     if (fx.healPct) bits.push(`Soigne ${fx.healPct}% des PV max`)
+    if (fx.vanish) {
+        // 🌩️ RANCŒUR CÉLESTE (Namizeus) : disparition, 1 chance sur 2 d'agir, puis soin total + sommeil.
+        bits.push(`Disparaît ${VANISH_TURNS_MIN} à ${VANISH_TURNS_MAX} tours : intouchable, sauf par une attaque qui ne rate jamais`)
+        bits.push("Invisible, il n'a qu'une chance sur deux d'agir (énergie dépensée même si c'est raté)")
+        bits.push("À la fin : s'endort et récupère tous ses PV")
+        bits.push(`Réussite ${m.accuracy} % : l'esquive adverse n'y change rien`)
+    }
     if (fx.highCrit) bits.push("Taux de coup critique élevé")
     return bits
 }

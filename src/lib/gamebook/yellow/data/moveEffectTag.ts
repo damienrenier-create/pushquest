@@ -6,6 +6,7 @@
 // désormais TOUS les effets, séparés par « · » ; une attaque à un seul effet s'affiche comme avant. Module pur.
 
 import type { MoveData } from "../battle/types"
+import { VANISH_TURNS_MIN, VANISH_TURNS_MAX } from "../battle/vanish"
 
 export const STATUS_FR: Record<string, string> = { BURN: "Brûlure", PARALYSIS: "Paralysie", POISON: "Poison", TOXIC: "Poison grave", SLEEP: "Sommeil", FREEZE: "Gel" }
 // La graine est nommée pour ce qu'elle fait, pas d'après Vampigraine : Ronces Vampires (Florapanthe) la pose aussi.
@@ -22,6 +23,8 @@ export function moveEffectTag(mv: MoveData, style: "long" | "short" = "long"): s
     if (e.recoilPct) parts.push(long ? `Recul : ${e.recoilPct}% des dégâts subis` : `Recul ${e.recoilPct}%`)
     if (e.drainPct) parts.push(long ? `Vol de PV : ${e.drainPct}%` : `Vol de PV ${e.drainPct}%`)
     if (e.healPct) parts.push(long ? `Soigne ${e.healPct}% des PV` : `Soigne ${e.healPct}% PV`)
+    // 🌩️ RANCŒUR CÉLESTE (Namizeus) : disparition 1 à 5 tours (intouchable), 1 chance sur 2 d'agir, puis soin total + sommeil.
+    if (e.vanish) parts.push(long ? `Invisible ${VANISH_TURNS_MIN} à ${VANISH_TURNS_MAX} tours (intouchable) · 1 chance sur 2 d'agir · puis dort, PV au max` : `Invisible ${VANISH_TURNS_MIN}-${VANISH_TURNS_MAX} tours · 1 chance sur 2 d'agir · puis dort, PV max`)
     if (e.fixedDamage) parts.push(long ? `Inflige ${e.fixedDamage} PV fixes` : `${e.fixedDamage} PV fixes`)
     if (e.multiHit) { const [a, b] = e.multiHit; parts.push(a === b ? `Frappe ${a}×` : long ? `Frappe ${a} à ${b}×` : `Frappe ${a}-${b}×`) }
     if (e.inflictStatus) { const s = STATUS_FR[e.inflictStatus] ?? e.inflictStatus; parts.push(e.chance && e.chance < 100 ? (long ? `${s} (${e.chance}%)` : `${s} ${e.chance}%`) : s) }

@@ -65,7 +65,7 @@ export const ATTACK_CATEGORY: Record<string, AtkCategory> = {
     tempete_verte: "projectile", etreinte_sylvestre: "drain", fouet_lianes: "impact",
     vampigraine: "debuff", tranche_feuille: "impact_heavy", mega_sangsue: "drain", spores_dodo: "debuff",
     // ELEC
-    etincelle: "projectile", fulgurance: "projectile", cage_eclair: "debuff",
+    etincelle: "projectile", fulgurance: "projectile", cage_eclair: "debuff", raitei: "impact_heavy",
     // GLACE
     souffle_polaire: "projectile", coup_d_givre: "projectile",
     // COMBAT
@@ -83,7 +83,7 @@ export const ATTACK_CATEGORY: Record<string, AtkCategory> = {
     // ROCHE
     lame_de_roche: "impact_heavy", eboulis: "projectile", jet_pierres: "projectile", carapace_diamant: "boost",
     // SPECTRE
-    ball_ombre: "projectile", ombre_furtive: "priority", lechouille: "impact",
+    ball_ombre: "projectile", ombre_furtive: "priority", lechouille: "impact", rancoeur_celeste: "boost", // 🌩️ joue sur le LANCEUR
     // DRAGON
     draco_charge: "impact_heavy", draco_souffle: "projectile",
 }

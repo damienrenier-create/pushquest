@@ -79,6 +79,12 @@ export interface MoveEffect {
     healTeamStatus?: boolean
     /** REPOS : le LANCEUR s'endort volontairement pour EXACTEMENT 1 tour (en plus du soin healPct). */
     restSleep?: boolean
+    /** RANCŒUR CÉLESTE (signature de Namizeus, Sartay 01/11/2026) — statut sur SOI. Réussite = `accuracy` du move, jet PLAT
+     *  (ni précision/esquive, ni objets/talents, ni l'invulnérabilité adverse). Réussi → le lanceur DISPARAÎT 1 à 5 tours :
+     *  sprite masqué, INTOUCHABLE (seul un coup sûr le touche, comme Tunnel/Vol) ; chaque action choisie n'aboutit qu'une fois
+     *  sur deux (énergie dépensée quand même). À la fin : TOUS ses PV + SOMMEIL (même tirage qu'un sommeil infligé, écrase le
+     *  statut comme Repos). Rappel = fin sans soin. Cf. battle/vanish.ts + engine (castVanish / endVanish). */
+    vanish?: boolean
     /** HYPNOSE : précision de base FIXE (move.accuracy), INDÉPENDANTE de l'esquive, modulée par le ratio
      *  de Vitesse lanceur/cible (plus rapide → plus précis, plus lent → moins précis). Clampée. */
     speedScaledAcc?: boolean
@@ -394,6 +400,15 @@ export interface BattleMon extends MonInstance {
     /** TUNNEL (dig) : le Daemon est SOUS TERRE (tour 1 de Tunnel) → les attaques adverses le MANQUENT,
      *  jusqu'à ce qu'il ressorte au tour 2. Posé/levé en même temps que chargingMove. Runtime, non persisté. */
     semiInvuln?: boolean
+    /** RANCŒUR CÉLESTE : fins de tour restantes avant de réapparaître (la fin du tour de lancement compte) ; > 0 = DISPARU.
+     *  Levé au rappel et au K.O. (sans soin) ; à 0 → soin total + sommeil. Runtime : voyage dans l'instantané de combat,
+     *  JAMAIS en save (toMonInstance ne le copie pas). */
+    vanishTurns?: number
+    /** RANCŒUR CÉLESTE — garde-fou ORDINATEUR (camp ennemi, hors PvP) : lancers consécutifs faits À DÉCOUVERT. +1 par lancer
+     *  (réussi ou non), remis à 0 par toute autre attaque utilisée à découvert ; inchangé par une action faite caché ou un tour
+     *  sans agir (sommeil, peur…). Série du CAMP : un rappel la fait passer au Daemon entrant (doSwitch). Tenu par le moteur
+     *  (performMove), lu par l'IA. Runtime, jamais en save. */
+    vanishCastStreak?: number
     /** MITRA-POING (Focus Punch) : le Daemon CONCENTRE son énergie (tour 1) → il est vulnérable ; `focusBroken`
      *  passe à true s'il subit des dégâts pendant la charge → il rate au tour 2. Posés/levés avec chargingMove. */
     focusing?: boolean

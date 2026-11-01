@@ -31,6 +31,7 @@ import { flamaroktoGuaranteed } from "../data/run3Legend"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, evTotal, EV_YIELD_PER_WIN, EV_STAT_CAP } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
+import { isVanished, isVanishMove, aiMayCastVanish, VANISH_TURNS_MIN, VANISH_TURNS_MAX, VANISH_ACT_PCT, VANISH_LINES } from "./vanish"
 
 // ============================================================
 // Types d'état & événements
@@ -46,6 +47,7 @@ export type BattleEvent =
     | { kind: "status"; side: SideId; status: MajorStatus }
     | { kind: "switchIn"; side: SideId; name: string; teamIndex: number }
     | { kind: "minitel"; name: string; teamIndex: number } // 📟 RENFORT MINITEL : le 7e Daemon débarque (déclenche l'anim minibus)
+    | { kind: "vanish"; side: SideId; hidden: boolean } // 🌩️ RANCŒUR CÉLESTE : sprite masqué (hidden) / de retour
     | { kind: "ball"; action: "throw" | "shake" | "result" | "miss"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
@@ -306,7 +308,7 @@ export function createBattle(
 const STALL_LIMIT = 10 // tours consécutifs SANS changement avant HARA-KIRI² (règle anti-impasse, ex. Normal/Spectre)
 /** Signature de position des 2 actifs (uid + PV + stages + statut) → identique d'un tour à l'autre = personne ne bouge. */
 function stallSignature(state: BattleState): string {
-    const sig = (m: BattleMon) => `${m.uid}#${m.currentHp}#${JSON.stringify(m.stages)}#${m.status ?? ""}`
+    const sig = (m: BattleMon) => `${m.uid}#${m.currentHp}#${JSON.stringify(m.stages)}#${m.status ?? ""}${m.vanishTurns ? "#v" + m.vanishTurns : ""}`
     return sig(active(state.player)) + "||" + sig(active(state.enemy))
 }
 
@@ -630,7 +632,100 @@ function orderActions(
 // Exécution d'une capacité
 // ============================================================
 
+/** Énergie de l'ennemi (ACE) pour une action qui n'atteint pas performMoveCore — même formule que lui (Struggle gratuit). */
+function payEnemyEnergy(state: BattleState, side: SideId, moveIndex: number) {
+    if (side !== "enemy" || !state.enemyEnergy || moveIndex === STRUGGLE_INDEX) return
+    const me = active(state[side])
+    state.enemyEnergy.spent += attackCost(getMove(me.moves[moveIndex]?.moveId ?? ""), me.level, QUOTA_STD)
+}
+function clearChargeLocks(m: BattleMon) { m.chargingMove = undefined; m.semiInvuln = undefined; m.focusing = undefined; m.focusBroken = undefined }
+
+/** Exécute l'action choisie. 🌩️ RANCŒUR CÉLESTE : un Daemon DISPARU n'agit qu'une fois sur deux (1 tirage, APRÈS canAct,
+ *  AVANT « utilise », la confusion et la précision) ; raté → action perdue, énergie dépensée (playerActed est déjà vrai →
+ *  le store ne rembourse pas ; l'ACE paie). Réussi → il surgit, agit normalement, puis disparaît de nouveau.
+ *  Sans disparition en jeu : performMoveCore à l'identique (aucun tirage en plus). */
 function performMove(state: BattleState, side: SideId, moveIndex: number, events: BattleEvent[], rng: Rng) {
+    const me = active(state[side])
+    const isStruggle = moveIndex === STRUGGLE_INDEX
+    const move = isStruggle ? getMove(STRUGGLE_MOVE_ID) : getMove(me.moves[moveIndex]?.moveId ?? "")
+    if (!move) return
+    if (!isVanished(me)) {
+        // GARDE-FOU ORDINATEUR (camp ennemi, hors PvP) : +1 par Rancœur Céleste utilisée à découvert (réussie ou non), remise
+        //   à 0 par toute autre attaque utilisée à découvert. Un tour sans agir ou une action cachée n'y touchent pas ; un rappel
+        //   la transmet au Daemon entrant (doSwitch) : c'est la série de l'ORDINATEUR, pas d'un Daemon.
+        if (side === "enemy" && !state.pvp) {
+            if (isVanishMove(move)) me.vanishCastStreak = (me.vanishCastStreak ?? 0) + 1
+            else if (me.vanishCastStreak) me.vanishCastStreak = undefined
+        }
+        performMoveCore(state, side, moveIndex, events, rng)
+        return
+    }
+    // Déjà disparu : relancer Rancœur Céleste ne fait rien (aucun tirage) — l'écran la grise ; filet pour le PvP / l'IA.
+    if (isVanishMove(move)) {
+        payEnemyEnergy(state, side, moveIndex)
+        events.push({ kind: "message", text: VANISH_LINES.alreadyVanished(displayName(me), move.name) })
+        return
+    }
+    if (!rng.chance(VANISH_ACT_PCT)) {
+        payEnemyEnergy(state, side, moveIndex)
+        clearChargeLocks(me) // une décharge / émergence attendue se perd (pas de verrou bloqué)
+        events.push({ kind: "message", text: VANISH_LINES.reappearFail(displayName(me), move.name) })
+        return
+    }
+    events.push({ kind: "vanish", side, hidden: false })
+    events.push({ kind: "message", text: VANISH_LINES.reappear(displayName(me)) })
+    performMoveCore(state, side, moveIndex, events, rng)
+    if (active(state[side]) === me && me.currentHp > 0 && isVanished(me)) events.push({ kind: "vanish", side, hidden: true })
+}
+
+/** RANCŒUR CÉLESTE — lancement (appelé par performMoveCore après « utilise » et la confusion, AVANT le test Tunnel/Vol :
+ *  c'est un move sur SOI). Jet PLAT de `move.accuracy` (90) ; durée 1..5 tirée uniformément. */
+function castVanish(state: BattleState, side: SideId, move: MoveData, events: BattleEvent[], rng: Rng) {
+    const me = active(state[side])
+    me.swarmStacks = 0
+    // 🩹 PLAFOND DE RÉGÉNÉRATION (dresseur/sauvage, PvE) : le soin final en est une → 3 consommées = l'orage ne répond plus.
+    if (healCapApplies(side, state.pvp) && !healAllowed(me.healsUsed, true)) {
+        events.push({ kind: "message", text: VANISH_LINES.castSpent(displayName(me)) })
+        return
+    }
+    if (!rng.chance(move.accuracy > 0 ? move.accuracy : 100)) {
+        events.push({ kind: "message", text: VANISH_LINES.castFail(displayName(me)) })
+        return
+    }
+    me.vanishTurns = rng.int(VANISH_TURNS_MIN, VANISH_TURNS_MAX) + 1 // +1 : la fin du tour de lancement est décomptée aussi
+    events.push({ kind: "vanish", side, hidden: true })
+    events.push({ kind: "message", text: VANISH_LINES.cast(displayName(me)) })
+}
+
+/** RANCŒUR CÉLESTE — fin de l'effet (endOfTurn, après les résiduels) : réapparition, TOUS ses PV, puis SOMMEIL (même tirage
+ *  qu'un sommeil infligé ; écrase le statut comme Repos, sans Baie Pure). Ordinateur dont les 3 régénérations sont déjà
+ *  consommées (un soin pris PENDANT l'orage) : ni soin ni sommeil, comme un Repos refusé. */
+function endVanish(state: BattleState, side: SideId, events: BattleEvent[], rng: Rng) {
+    const mon = active(state[side])
+    mon.vanishTurns = undefined
+    clearChargeLocks(mon) // il s'endort : une charge en cours (Surtension, Tunnel…) se perd (sinon il dormirait sous terre)
+    events.push({ kind: "vanish", side, hidden: false })
+    events.push({ kind: "message", text: VANISH_LINES.stormEnds(displayName(mon)) })
+    // 🩹 PLAFOND DE RÉGÉNÉRATION (dresseur/sauvage, PvE) : le soin final en est une. Plafond atteint → l'orage retombe sans soin
+    //   ni sommeil (« ne pas endormir pour rien », comme Repos refusé). Le joueur et le PvP ne sont pas plafonnés.
+    const capped = healCapApplies(side, state.pvp)
+    if (!healAllowed(mon.healsUsed, capped)) {
+        events.push({ kind: "message", text: VANISH_LINES.healSpent(displayName(mon)) })
+        return
+    }
+    if (capped) mon.healsUsed = (mon.healsUsed ?? 0) + 1
+    const max = maxHpOf(mon)
+    if (mon.currentHp < max) {
+        applyHeal(state, side, max - mon.currentHp, events)
+        events.push({ kind: "message", text: VANISH_LINES.fullHeal(displayName(mon)) })
+    }
+    mon.status = "SLEEP"
+    mon.statusCounter = Status.initialStatusCounter("SLEEP", rng)
+    events.push({ kind: "status", side, status: "SLEEP" })
+    events.push({ kind: "message", text: VANISH_LINES.fallsAsleep(displayName(mon)) })
+}
+
+function performMoveCore(state: BattleState, side: SideId, moveIndex: number, events: BattleEvent[], rng: Rng) {
     const atkSide = state[side]
     const defSide = state[other(side)]
     const attacker = active(atkSide)
@@ -668,6 +763,15 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         }
     }
 
+    // --- 🌩️ RANCŒUR CÉLESTE : move sur SOI → ni l'esquive ni l'invulnérabilité adverses ne s'en mêlent. ---
+    if (move.effect?.vanish) { castVanish(state, side, move, events, rng); return }
+    // --- 🌩️ RANCŒUR CÉLESTE : une cible DISPARUE est INTOUCHABLE → TOUT move la manque (statut compris), comme sous Tunnel/Vol ;
+    //     seul un coup sûr (Météores, sureHit) la touche. Une décharge / émergence de l'attaquant se perd (pas de verrou bloqué). ---
+    if (isVanished(defender) && !move.effect?.sureHit) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) clearChargeLocks(attacker)
+        events.push({ kind: "message", text: VANISH_LINES.passThrough(displayName(defender)) })
+        return
+    }
     // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris).
     //     EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité). ---
     if (defender.semiInvuln && !move.effect?.sureHit) {
@@ -1268,6 +1372,14 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
             events.push({ kind: "message", text: heldRegen?.leftoversFrac ? `${displayName(mon)} récupère des PV grâce à ${heldRegen.name} !` : `${displayName(mon)} récupère un peu de PV.` })
         }
     }
+    // 🌩️ RANCŒUR CÉLESTE : décompte APRÈS les résiduels (le poison ronge un Daemon disparu) ; à 0 → réapparition + soin total +
+    //   sommeil. Aucun tirage tant qu'aucun effet ne se termine → combats sans Rancœur : flux RNG inchangé.
+    for (const side of order) {
+        const mon = active(state[side])
+        if (mon.currentHp <= 0 || !isVanished(mon)) continue
+        mon.vanishTurns = (mon.vanishTurns ?? 0) - 1
+        if (mon.vanishTurns <= 0) endVanish(state, side, events, rng)
+    }
 }
 
 // ============================================================
@@ -1343,10 +1455,18 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     out.volatiles = keepConfusion ? { CONFUSION: keepConfusion } : {}
     out.chargingMove = undefined
     out.semiInvuln = undefined // le sortant ressort du tunnel (annule une charge Tunnel en cours)
+    out.vanishTurns = undefined // 🌩️ RANCŒUR CÉLESTE : le rappel met fin à l'effet, SANS soin (la série de l'ordinateur passe au Daemon entrant, plus bas)
     out.focusing = undefined; out.focusBroken = undefined // le switch annule aussi une charge Mitra-Poing
     out.swarmStacks = 0        // se retirer brise la frénésie de l'Essaim Vorace
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
+    // 🌩️ RANCŒUR CÉLESTE — « l'ordi ne l'utilise jamais plus de 2 fois d'affilée » : la série est celle de l'ORDINATEUR (camp
+    //   ennemi, hors PvP), pas d'un Daemon → elle passe au Daemon entrant (deux porteurs ne l'enchaînent pas à 3). Combat sans
+    //   Rancœur Céleste : aucun des deux n'a de série → rien n'est écrit.
+    if (side === "enemy" && !state.pvp && (out.vanishCastStreak || incoming.vanishCastStreak)) {
+        incoming.vanishCastStreak = out.vanishCastStreak
+        out.vanishCastStreak = undefined
+    }
     // Le Daemon entrant a "participé" → il partagera l'XP des futurs K.O. (joueur uniquement).
     if (side === "player" && !state.participated.includes(incoming.uid)) {
         state.participated.push(incoming.uid)
@@ -1398,12 +1518,14 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
                 mon.status = "NONE"; mon.statusCounter = 0
                 mon.stages = neutralStages()
                 mon.volatiles = {}
+                if (isVanished(mon)) { mon.vanishTurns = undefined; events.push({ kind: "vanish", side, hidden: false }) } // 🌩️ revient, sans soin
                 events.push({ kind: "hp", side, hp: 1, max: maxHpOf(mon) })
                 if (hadStatus) events.push({ kind: "status", side, status: "NONE" }) // retire le badge de statut à l'écran
                 events.push({ kind: "message", text: `🔥 ${displayName(mon)} a mangé sa ${eaten.name} et refuse de tomber (survit à 1 PV) !` })
                 continue
             }
             ;(mon as any).__fainted = true
+            if (isVanished(mon)) { mon.vanishTurns = undefined; events.push({ kind: "vanish", side, hidden: false }) } // 🌩️ réapparaît AVANT la chute, sans soin
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
             // PvP : le camp ADVERSE (celui dont l'actif vient de KO l'autre) gagne l'XP.
@@ -1495,7 +1617,10 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     if (self.openingMoves && self.openingMoves.length > 0) {
         const forced = self.openingMoves.shift()!
         const idx = self.moves.findIndex((m) => m.moveId === forced)
-        if (idx >= 0) return { side: "enemy", kind: "move", moveIndex: idx }
+        // 🌩️ RANCŒUR CÉLESTE : même scriptée, jamais une 3e fois d'affilée (ni disparu, ni soins épuisés) → l'entrée est
+        //   consommée et l'IA décide ce tour.
+        const barred = idx >= 0 && isVanishMove(getMove(forced)) && !aiMayCastVanish(self, healAllowed(self.healsUsed, healCapApplies("enemy", state.pvp)))
+        if (idx >= 0 && !barred) return { side: "enemy", kind: "move", moveIndex: idx }
         // Sécurité : move non connu → entrée retirée, on enchaîne sur l'IA normale ce tour.
     }
     const choice = chooseAiAction(self, foe, state.enemy.team, state.enemy.activeIndex, state.aiLevel, rng)
@@ -1518,6 +1643,19 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
             })
             moveIndex = best >= 0 ? best : STRUGGLE_INDEX
         }
+    }
+    // 🌩️ RANCŒUR CÉLESTE — filet du moteur (toute IA : dresseurs, sauvages, Zone de Combat, Archiviste, reflets…) : jamais une
+    //   3e fois d'affilée, ni déjà disparu, ni soins épuisés → meilleure autre attaque abordable, sinon Charge Désespérée.
+    if (moveIndex >= 0 && isVanishMove(getMove(self.moves[moveIndex]?.moveId ?? "")) && !aiMayCastVanish(self, healAllowed(self.healsUsed, healCapApplies("enemy", state.pvp)))) {
+        const remaining = state.enemyEnergy ? state.enemyEnergy.cap - state.enemyEnergy.spent : Infinity
+        let best = -1, bestPow = -1
+        self.moves.forEach((slot, i) => {
+            const mv = getMove(slot.moveId)
+            if (!mv || isVanishMove(mv)) return
+            if (state.enemyEnergy && attackCost(mv, self.level, QUOTA_STD) > remaining) return
+            if (mv.power > bestPow) { bestPow = mv.power; best = i }
+        })
+        moveIndex = best >= 0 ? best : STRUGGLE_INDEX
     }
     return { side: "enemy", kind: "move", moveIndex }
 }
@@ -1664,6 +1802,13 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         || flamaroktoGuaranteed(wild.speciesId, ballBonusOf(itemId), wild.currentHp / Math.max(1, maxHpOf(wild)), wild.status)
         || state.genieCatchGuaranteed === true // 🧞 vœu « captures garanties »
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    // 🌩️ RANCŒUR CÉLESTE : un sauvage DISPARU est intouchable, Ball comprise (même Master-Éclair) — aucun tirage, l'escalade ne
+    //   monte pas, aucune charge de capture garantie consommée. Filet du moteur : le store refuse le lancer AVANT de prendre la Ball.
+    if (isVanished(wild)) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: VANISH_LINES.ballThrough(displayName(wild)) })
+        return
+    }
     if (state.genieCatchGuaranteed) events.push({ kind: "message", text: state.catchGuaranteeBy === "thief" ? "🥷 Le Voleur guide ta Ball : cette capture est GARANTIE." : "🧞 Le génie guide ta Ball : cette capture est GARANTIE." })
     // RAILLERIE (créations finales niv 75 de la Grotte du Nexus) : au 1er lancer, la bête toise le dresseur. Une
     //   seule fois par combat (flag captureTauntShown). Purement flavor → n'affecte pas les chances de capture.

@@ -6,7 +6,7 @@
 // combat (engine.ts), de resolveTurnPvp, du format des messages réseau, ou de
 // toute logique qui influe sur le déterminisme. Deux clients de versions
 // différentes refusent de se battre (sinon désync silencieuse — cf. note casino-pvp).
-export const MP_VERSION = "mp-2026-07-20.1" // bump : PvP de FUSION (species dans le hello + ephemeralTeam + canal yellow_autel)
+export const MP_VERSION = "mp-2026-11-01.1" // bump : Namizeus 85/90/80/115/105 + Raitei + Rancœur Céleste (données + moteur + event « vanish »)
 
 /** Le mode debug multijoueur est-il actif ? (?mpdebug dans l'URL, ou localStorage). */
 export function mpDebugEnabled(): boolean {

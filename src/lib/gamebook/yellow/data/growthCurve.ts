@@ -51,6 +51,9 @@ const GROWTH_MULT_OVERRIDE: Record<string, number> = {
     // Air (picidés) = ×0.8 rapide ; Roche (pandas) = ×1.25 lente. Combat (lapins) = ×1.0 → défaut (pas d'override).
     pivinci: 0.8, vengbec: 0.8, picassault: 0.8,
     fujipanda: 1.25, kilipanda: 1.25, pandapurna: 1.25,
+    // LIGNÉE NAMIZEUS (Sartay, 01/11/2026) : son BST passe de 415 à 475 (→ « puissant » ×1.10) mais son rythme d'XP ne change
+    //   pas. Les DEUX stades : Namicha lit le BST de sa finale.
+    namicha: 0.9, namizeus: 0.9,
 }
 
 /** Tier correspondant à un multiplicateur (reverse-lookup pour le libellé d'une espèce à courbe forcée). */

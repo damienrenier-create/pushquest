@@ -9,9 +9,12 @@ import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { typeEffectiveness, moveCategoryOf, resolveAdaptiveStab } from "./typeChart"
 import { computeDamage } from "./damage"
-import { fullStats } from "./stats"
+import { fullStats, effectiveStat } from "./stats"
 import type { Rng } from "./rng"
 import { healAllowed } from "../data/healCap"
+import { residualDamage } from "./status"
+import { STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { isVanished, isVanishMove, aiMayCastVanish } from "./vanish"
 
 // "hof" = boss ultimes / miroirs (le plus malin, PEUT changer de Daemon) ; "elite" = gauntlet de Ligue (Conseil des
 // Chimères) — MÊME intelligence de coup que "hof" mais ne CHANGE JAMAIS de Daemon (combat jusqu'au KO, choix de Sartay).
@@ -24,6 +27,68 @@ export interface AiChoice {
 }
 
 const STAGE_CAP = 6 // plafond des crans de stat (±6), comme le moteur
+
+// ═══════════════ 🌩️ RANCŒUR CÉLESTE (signature de Namizeus, Sartay 01/11/2026) ═══════════════
+// L'ordinateur PEUT la lancer, mais jamais plus de 2 fois d'affilée (vanishCastStreak, tenu par le moteur À L'USAGE), jamais
+// déjà disparu, jamais ses 3 régénérations consommées (data/healCap : le soin final en est une). Valeur : un soin TOTAL
+// différé (échelle de Repos : PV manquants), ou une ESQUIVE quand le foe peut l'achever ce tour et qu'il joue avant lui
+// (IA « ace » et plus). Interdite → MASQUÉE dans les scorers (jamais choisie, comme un move sans PP). Le moteur double ce
+// garde-fou (chooseEnemyAction : ouvertures scriptées, repli d'énergie).
+const CELESTE_ESCAPE_GENERIC = 1000 // > toute attaque non létale du scorer générique (170 × ×4 × bruit 1,15 ≈ 782)
+const CELESTE_ESCAPE_HOF = 2e5       // > toute attaque non létale du scorer hof (≈ 6e4), < un K.O. (1e6 × précision)
+const isCeleste = (moveId: string): boolean => isVanishMove(getMove(moveId))
+function effSpe(m: BattleMon): number {
+    const sp = getSpecies(m.speciesId)
+    return sp ? effectiveStat(fullStats(m, sp).spe, "spe", m.stages?.spe ?? 0, m.status) : 0
+}
+/** Poison/brûlure/graine : mourrait-il pendant sa disparition (≈ 3 tours, la moyenne de 1 à 5), donc AVANT le soin final ? */
+function residualKillsDuringVanish(self: BattleMon): boolean {
+    const sp = getSpecies(self.speciesId)
+    if (!sp) return false
+    const max = fullStats(self, sp).hp
+    let total = 0
+    for (let t = 0; t < 3; t++) {
+        total += residualDamage(self.status, max, "", self.status === "TOXIC" ? self.statusCounter + t : self.statusCounter).damage
+        if (self.volatiles?.SEEDED) total += Math.max(1, Math.floor(max / 8))
+        if (self.volatiles?.OSMOSED) total += Math.max(1, Math.floor(max / 8))
+    }
+    return total >= self.currentHp
+}
+/** L'IA a-t-elle le DROIT de la lancer ce tour ? false → masquée. (Règle dure = aiMayCastVanish, partagée avec le moteur.) */
+function celesteBlocked(self: BattleMon): boolean {
+    return !aiMayCastVanish(self, healAllowed(self.healsUsed, true)) || residualKillsDuringVanish(self)
+}
+/** ÉCHAPPER À UN K.O. : le foe peut m'achever CE tour (coup ni sûr ni prioritaire), je joue AVANT lui et je ne peux pas
+ *  l'achever moi-même → disparaître esquive le coup fatal. */
+function celesteEscape(self: BattleMon, foe: BattleMon): boolean {
+    if (bestKoMove(self, foe) >= 0) return false
+    // Le foe ne frappera pas CE tour : endormi sans se réveiller (canAct décrémente, réveil à 0) ou gelé depuis 0 tour (100 %).
+    if ((foe.status === "SLEEP" && foe.statusCounter > 1) || (foe.status === "FREEZE" && foe.statusCounter === 0)) return false
+    let threat = false
+    for (const s of foe.moves) {
+        if (s.pp <= 0) continue
+        const mv = getMove(s.moveId)
+        if (!mv || estMoveDamage(foe, self, s.moveId) < self.currentHp) continue
+        if (mv.effect?.sureHit || (mv.priority ?? 0) > 0) return false
+        threat = true
+    }
+    return threat && effSpe(self) > effSpe(foe)
+}
+/** Le foe me reprendrait-il toute ma barre pendant le sommeil (~2 tours) qui suit le soin ? → soin inutile. */
+function celesteSleepRisk(self: BattleMon, foe: BattleMon): boolean {
+    const sp = getSpecies(self.speciesId)
+    if (!sp) return false
+    const max = fullStats(self, sp).hp
+    let best = 0
+    for (const s of foe.moves) if (s.pp > 0) best = Math.max(best, estMoveDamage(foe, self, s.moveId))
+    return best * 2 >= max
+}
+/** Score de Rancœur Céleste (déjà autorisée). Soin TOTAL différé → même échelle que Repos (healPct × PV manquants). */
+function celesteScore(self: BattleMon, foe: BattleMon, missingFrac: number, smart: boolean, escapeScore: number): number {
+    if (smart && celesteEscape(self, foe)) return escapeScore
+    if (smart && celesteSleepRisk(self, foe)) return 5
+    return 100 * missingFrac
+}
 
 /** Un move de STATUT est-il INUTILE ce tour (aucun effet possible) ? → l'IA ne doit pas le spammer (softlock).
  *  Vrai si TOUS ses effets sont déjà « au max » : chaque changement de stat vise une stat déjà à son plafond
@@ -45,7 +110,7 @@ function statusMoveWasted(mv: NonNullable<ReturnType<typeof getMove>>, self: Bat
 
 interface ScoredMove { index: number; score: number; eff: number; power: number }
 
-function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
+function scoreMoves(self: BattleMon, foe: BattleMon, smart = false): ScoredMove[] {
     const selfSp = getSpecies(self.speciesId)
     const foeTypes = getSpecies(foe.speciesId)?.types ?? []
     const maxHp = selfSp ? fullStats(self, selfSp).hp : Math.max(1, self.currentHp)
@@ -55,6 +120,12 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
     self.moves.forEach((slot, index) => {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
+        // 🌩️ RANCŒUR CÉLESTE : masquée si interdite, sinon soin total différé (+ esquive d'un K.O. pour l'IA « ace »).
+        if (isCeleste(slot.moveId)) {
+            if (celesteBlocked(self)) return
+            out.push({ index, score: celesteScore(self, foe, missingFrac, smart, CELESTE_ESCAPE_GENERIC), eff: 1, power: 0 })
+            return
+        }
         const isStatus = mv.power <= 0
         const { type: mt } = effMoveProfile(self, selfSp?.types ?? [], selfSp ? fullStats(self, selfSp) : null, mv)
         const eff = isStatus ? 1 : typeEffectiveness(mt, foeTypes)
@@ -67,7 +138,8 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
             // l'échelonne sur les PV MANQUANTS (fini le « Repos en premier alors qu'il a toute sa vie »).
             // 🩹 Soin ÉPUISÉ (3 régénérations déjà consommées, cf. data/healCap) : le moteur le refuserait → l'IA
             //   ne doit pas y gâcher ses tours. Score de rejet, comme un statut déjà posé.
-            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) ? mv.effect.healPct * missingFrac : -2
+            // 🌩️ INVISIBLE (Rancœur Céleste) : le soin TOTAL de fin d'orage arrive → se soigner maintenant gâche un tour caché.
+            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) && !isVanished(self) ? mv.effect.healPct * missingFrac : -2
             // AUTO-BOOST (Focalisation, Danse-Lames…) : ne JAMAIS se mettre en place sous 50 % PV (on tombe avant d'en
             //   profiter — plainte joueur : « focalisation alors qu'il va se faire tuer ») ; sinon score TRÈS bas → une
             //   vraie attaque passe presque toujours devant. On ne « focalise » qu'en dernier recours (aucun coup utile).
@@ -102,6 +174,12 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
     self.moves.forEach((slot, index) => {
         const mv = getMove(slot.moveId)
         if (!mv || slot.pp <= 0) return
+        // 🌩️ RANCŒUR CÉLESTE : masquée si interdite, sinon soin total différé ou esquive d'un K.O.
+        if (isCeleste(slot.moveId)) {
+            if (celesteBlocked(self)) return
+            out.push({ index, score: celesteScore(self, foe, missingFrac, true, CELESTE_ESCAPE_HOF), eff: 1 })
+            return
+        }
         const isStatus = mv.power <= 0
         const prof = effMoveProfile(self, selfTypes, sStats, mv)
         const mt = prof.type
@@ -112,7 +190,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             if (statusMoveWasted(mv, self, foe)) score = -2
             // SOIN : inutile à pleine vie, précieux à basse vie → échelonné sur les PV MANQUANTS (anti « Repos à full »).
             //   ÉPUISÉ (3 régénérations consommées, cf. data/healCap) → rejet : le moteur le refuserait de toute façon.
-            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) ? mv.effect.healPct * missingFrac : -2
+            //   🌩️ INVISIBLE (Rancœur Céleste) : le soin TOTAL de fin d'orage arrive → rejet aussi.
+            else if (mv.effect?.healPct) score = healAllowed(self.healsUsed, true) && !isVanished(self) ? mv.effect.healPct * missingFrac : -2
             // BUFF de stat sur SOI (Danse-Lames…) : à ÉVITER à bas PV (on meurt avant d'en profiter) ET si le boost
             //   OFFENSIF ne matche pas notre stat d'attaque dominante (ex. +Atk sur un attaquant SPÉCIAL = quasi
             //   inutile). Sinon, mise en place raisonnable (sous un bon coup). Corrige « Danse-Lames à bas PV / spé ».
@@ -328,7 +407,8 @@ const findMove = (self: BattleMon, pred: (moveId: string) => boolean): number =>
 function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
     // 🩹 -1 si les 3 régénérations sont consommées (data/healCap) : le pilote d'archétype doit alors passer au
     //   coup suivant de son échelle au lieu de relancer un soin que le moteur refusera.
-    const iHeal = healAllowed(self.healsUsed, true) ? findMove(self, (m) => (getMove(m)?.effect?.healPct ?? 0) > 0) : -1
+    //   🌩️ Invisible (Rancœur Céleste) : -1 aussi, le soin TOTAL de fin d'orage arrive.
+    const iHeal = healAllowed(self.healsUsed, true) && !isVanished(self) ? findMove(self, (m) => (getMove(m)?.effect?.healPct ?? 0) > 0) : -1
     const iEva = findMove(self, (m) => boostsSelf(m, "eva"))
     const iAtk = findMove(self, (m) => boostsSelf(m, "atk"))
     const iSpc = findMove(self, (m) => boostsSelf(m, "spc"))
@@ -354,12 +434,18 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
     const safe = !foePhys || (eva >= 4 && canDodge) || foeNeutralized
     // Win-con « bas PV » (Patience, dynamicPower lowHp) : NE PAS se soigner tant qu'un tel coup grimpe (PV bas = arme).
     const hasLowHpNuke = self.moves.some((s) => s.pp > 0 && getMove(s.moveId)?.effect?.dynamicPower === "lowHp")
+    // 🌩️ RANCŒUR CÉLESTE (hors du test « kit banal » ci-dessus : un kit sans autre rôle reste sur scoreMovesHof).
+    const iCeleste = celesteBlocked(self) ? -1 : findMove(self, isCeleste)
+    // Soin de repli : un vrai soin d'abord ; sinon Rancœur Céleste (soin TOTAL différé), sauf si le sommeil qui suit est fatal.
+    const iHealAny = iHeal >= 0 ? iHeal : (iCeleste >= 0 && !celesteSleepRisk(self, foe) ? iCeleste : -1)
 
     // 1) FINIR
     const ko = bestKoMove(self, foe)
     if (ko >= 0) return ko
+    // 1 bis) 🌩️ ÉCHAPPER à un K.O. certain en disparaissant (on joue avant lui).
+    if (iCeleste >= 0 && celesteEscape(self, foe)) return iCeleste
     // 2) SOIN d'urgence (PV bas ET tour sûr) — sauf win-con bas-PV vivante.
-    if (iHeal >= 0 && frac < 0.5 && safe && !hasLowHpNuke) return iHeal
+    if (iHealAny >= 0 && frac < 0.5 && safe && !hasLowHpNuke) return iHealAny
     // 3) SURVIE : monter l'esquive face à un physique esquivable, tant qu'on n'est pas au plafond.
     if (iEva >= 0 && foePhys && canDodge && eva < 6) return iEva
     // 4) USURE / DISABLE sur un foe FRAIS et sans statut : Toxik (si empoisonnable) > Sommeil.
@@ -387,7 +473,7 @@ function chooseArchetypeMove(self: BattleMon, foe: BattleMon): number | null {
         if (!physAttacker && iSpc >= 0 && (self.stages?.spc ?? 0) < 4) return iSpc
     }
     // 8) SOIN d'entretien (PV bas, hors win-con bas-PV) — mieux que mourir sans rien faire.
-    if (iHeal >= 0 && frac < 0.4 && !hasLowHpNuke) return iHeal
+    if (iHealAny >= 0 && frac < 0.4 && !hasLowHpNuke) return iHealAny
     // 9) SNOWBALL : meilleur coup offensif.
     const atk = bestDamageMove(self, foe, safe)
     return atk >= 0 ? atk : null
@@ -446,6 +532,13 @@ export function chooseAiAction(
         const dmg = bestDamageMove(self, foe, true)
         if (dmg >= 0) choice = { kind: "move", moveIndex: dmg }
     }
+    // 🌩️ FILET « jamais 3 d'affilée » : quel que soit le chemin (pilote, repli index 0, placeholder hof), une Rancœur Céleste
+    //   interdite ne sort JAMAIS → meilleur coup offensif, sinon le 1er autre move, sinon la Charge Désespérée.
+    if (choice.kind === "move" && isCeleste(self.moves[choice.moveIndex ?? 0]?.moveId ?? "") && celesteBlocked(self)) {
+        const dmg = bestDamageMove(self, foe, true)
+        const other = self.moves.findIndex((s) => s.pp > 0 && !isCeleste(s.moveId))
+        choice = { kind: "move", moveIndex: dmg >= 0 ? dmg : other >= 0 ? other : STRUGGLE_INDEX }
+    }
     // Série de statuts consécutifs : +1 sur un coup de statut, remise à 0 sur un coup offensif OU un switch.
     self.aiStatusStreak = (choice.kind === "move" && isStatusIdx(choice.moveIndex)) ? (self.aiStatusStreak ?? 0) + 1 : 0
     return choice
@@ -467,7 +560,7 @@ function chooseAiActionInner(
         const ti = chooseArchetypeMove(self, foe)
         if (ti !== null) return { kind: "move", moveIndex: ti }
     }
-    const scored = scoreMoves(self, foe)
+    const scored = scoreMoves(self, foe, level === "ace")
     if (scored.length === 0) return { kind: "move", moveIndex: 0 } // Lutte (placeholder)
 
     // --- "hof" (Hall of Fame) : la plus maligne. Dégâts attendus (STAB + bonne stat), ouverture statut,
@@ -486,7 +579,8 @@ function chooseAiActionInner(
             // Se replie dès un matchup PERDANT (faiblesse ×2, plus seulement ×4) qu'on ne peut pas punir en retour,
             //   vers un banc STRICTEMENT plus résistant. DÉTERMINISTE : plus de rng.chance(75) — le miroir ne « rate »
             //   plus jamais son repli (fini le sweep facile). L'anti yo-yo (incomingOnCand < incomingOnMe) borne le va-et-vient.
-            if (incomingOnMe >= 2 && myBestEff < 2) {
+            // 🌩️ Invisible (Rancœur Céleste) : jamais de repli — il jetterait l'orage et son soin total.
+            if (incomingOnMe >= 2 && myBestEff < 2 && !isVanished(self)) {
                 const sw = bestVoluntarySwitch(team, activeIndex, foe) // banc strictement + résistant ET le + menaçant (off+déf)
                 if (sw !== null) return { kind: "switch", teamIndex: sw }
             }
@@ -502,7 +596,7 @@ function chooseAiActionInner(
         const foeTypes = getSpecies(foe.speciesId)?.types ?? []
         const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
         const myBestEff = Math.max(...scored.map((s) => s.eff))
-        if (incomingOnMe >= 2 && myBestEff < 2) {
+        if (incomingOnMe >= 2 && myBestEff < 2 && !isVanished(self)) { // 🌩️ invisible : il garde l'orage (et son soin)
             const sw = bestSwitchIndex(team, activeIndex, foe)
             if (sw !== null && rng.chance(60)) return { kind: "switch", teamIndex: sw }
         }

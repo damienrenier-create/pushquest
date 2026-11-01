@@ -1721,14 +1721,17 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Chaton fait d'ombre et de statique ; se faufile entre deux éclairs.",
         sprite: "/yellow/sprites/dex/namicha.png",
     },
+    // 01/11/2026 (Sartay) : 70/80/60/110/95 → 85/90/80/115/105 (BST 415 → 475) ; Rancœur Céleste au 50, Raitei au 66 ;
+    //   courbe d'XP INCHANGÉE (forcée à ×0.90 dans growthCurve, sinon le BST la ferait passer « puissante »).
     namizeus: {
         id: "namizeus", dexNo: 114, name: "Namizeus", types: ["SPECTRE", "ELEC"],
-        baseStats: { hp: 70, atk: 80, def: 60, spe: 110, spc: 95 },
+        baseStats: { hp: 85, atk: 90, def: 80, spe: 115, spc: 105 },
         learnset: [
             { level: 1, moveId: "leche" }, { level: 1, moveId: "mirage" },
             { level: 1, moveId: "ombre_furtive" }, { level: 1, moveId: "vive_attaque" },
             { level: 34, moveId: "fulgurance" }, { level: 40, moveId: "ball_ombre" },
-            { level: 48, moveId: "onde_folie" }, { level: 66, moveId: "frappe_audela" },
+            { level: 48, moveId: "onde_folie" }, { level: 50, moveId: "rancoeur_celeste" },
+            { level: 66, moveId: "frappe_audela" }, { level: 66, moveId: "raitei" },
         ],
         catchRate: 45, baseExp: 188, rarity: "RARE", growthRate: "medium_fast", role: "Spectre/Élec — félin spectral",
         description: "Félin spectral foudroyant ; frappe depuis les ombres avant que le tonnerre ne gronde.",

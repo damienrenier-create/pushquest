@@ -233,6 +233,12 @@ export const MOVES: Record<string, MoveData> = {
     fracas_acier: { id: "fracas_acier", name: "Fracas d'Acier", type: "METAL", power: 100, accuracy: 90, pp: 5, description: "Un assaut d'acier titanesque : gros dégâts MÉTAL bruts. La grosse attaque physique du type." },
     astre_feerique: { id: "astre_feerique", name: "Astre Féerique", type: "FEE", power: 100, accuracy: 90, pp: 5, description: "Un astre de lumière féerique s'abat sur la cible : gros dégâts FÉE spéciaux. La grosse attaque du type." },
     vortex_obscur: { id: "vortex_obscur", name: "Vortex Obscur", type: "TENEBRES", power: 100, accuracy: 90, pp: 5, description: "Un maelström de ténèbres pures engloutit la cible : gros dégâts TÉNÈBRES spéciaux." },
+    // ── SIGNATURES DE NAMIZEUS (Sartay, 01/11/2026) : aucune CT, refusées au Créateur (customSpecies MOVE_DENYLIST). ⚠️ NOMS
+    //    FIGÉS À VIE : les équipes gelées (Hall of Fame, fantômes, boss du run 3) retrouvent leurs attaques par leur NOM.
+    // RANCŒUR CÉLESTE : statut sur SOI ; `accuracy` = chance de lancement (jet PLAT, cf. engine castVanish) ; coûte comme Repos.
+    rancoeur_celeste: { id: "rancoeur_celeste", name: "Rancœur Céleste", type: "SPECTRE", power: 0, accuracy: 90, pp: 10, costPower: 100, effect: { vanish: true }, description: "Signature de NAMIZEUS : il se dissout dans l'orage (9 fois sur 10) et disparaît de 1 à 5 tours. Invisible, il est intouchable, sauf par une attaque qui ne rate jamais comme Météores. Il peut agir caché, mais chaque apparition n'a qu'une chance sur deux de réussir. Quand l'orage retombe, il s'endort et récupère tous ses PV." },
+    // RAITEI : Élec PHYSIQUE (catégorie forcée, comme Crocs de Feu) → frappe sur l'Attaque ; sans effet secondaire.
+    raitei: { id: "raitei", name: "Raitei", type: "ELEC", category: "PHYSICAL", power: 150, accuracy: 90, pp: 5, description: "Signature de NAMIZEUS : il abat la foudre d'un coup de sceptre. Attaque Élec PHYSIQUE (frappe sur l'Attaque), sans effet secondaire." },
 }
 
 export function getMove(id: string): MoveData | null {

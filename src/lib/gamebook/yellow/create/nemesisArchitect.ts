@@ -264,8 +264,10 @@ function lineageBaseOf(id: string): string {
 
 /** Lignées EXCLUES des némésis. Mottoche (la lignée « mème », 9 stades) : depuis que sa finale Mégalithe s'atteint enfin par
  *  niveau (28/10/2026), elle serait devenue la némésis de 29 typages sur 171. Exclue pour garder les némésis telles quelles ;
- *  à rouvrir seulement sur décision de Sartay. */
-const NEMESIS_EXCLUDED_LINEAGES: ReadonlySet<string> = new Set(["mottoche"])
+ *  à rouvrir seulement sur décision de Sartay. Namicha (01/11/2026) : à 475, le volume de Namizeus le ferait passer devant
+ *  Oragron (lignée Piouflot) sur des créations COMBAT/VOL, VOL/INSECTE ou EAU/INSECTE à Spécial < Défense ; elle n'était la
+ *  némésis de personne → exclue pour que les némésis restent exactement celles d'avant. */
+const NEMESIS_EXCLUDED_LINEAGES: ReadonlySet<string> = new Set(["mottoche", "namicha"])
 
 export function existingNemesisBase(p: DaemonProfile): string | null {
     const eligible = (id: string): boolean => {
