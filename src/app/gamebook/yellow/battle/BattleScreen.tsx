@@ -252,6 +252,17 @@ export default function BattleScreen() {
         if (!battle || step < battle.events.length) return
         setDispIdx((d) => (d && (d.p !== battle.player.activeIndex || d.e !== battle.enemy.activeIndex)
             ? { ...d, p: battle.player.activeIndex, e: battle.enemy.activeIndex } : d))
+        // 🌩️ RANCŒUR CÉLESTE : si cette resynchro CHANGE le Daemon affiché d'un camp (rappel d'un Daemon invisible), son voile suit le
+        //   Daemon désormais affiché — sinon l'entrant apparaîtrait une image « invisible ». Le tour du lancement ne change pas de
+        //   Daemon : le voile n'y est pas touché (pas de spoiler du jet de 90 %).
+        if (dispIdx) {
+            const swapP = dispIdx.p !== battle.player.activeIndex, swapE = dispIdx.e !== battle.enemy.activeIndex
+            if (swapP || swapE) {
+                const pV = isVanished(battle.player.team[battle.player.activeIndex]), eV = isVanished(battle.enemy.team[battle.enemy.activeIndex])
+                setDispVeil((v) => { if (!v) return v; const p = swapP ? pV : v.p, e = swapE ? eV : v.e; return p !== v.p || e !== v.e ? { p, e } : v })
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battle, step])
 
     if (!battle) return null
