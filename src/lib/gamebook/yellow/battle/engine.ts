@@ -122,7 +122,8 @@ export interface BattleState {
      *  consécutive, plancher 30. Calculée par le store et figée pour ce combat. Défaut 100. */
     fleeChance: number
     /** Transitoire : le Daemon JOUEUR a-t-il pu exécuter son action ce tour ? false s'il a été
-     *  mis K.O. avant d'agir (adversaire plus rapide) → le store rembourse alors les reps. */
+     *  mis K.O. avant d'agir (adversaire plus rapide), ou si HARA-KIRI² a clos le combat avant son
+     *  attaque → le store rembourse alors les reps. */
     lastPlayerActed?: boolean
     /** DÉFI CT (labo) : cumul des dégâts INFLIGÉS PAR LE JOUEUR ce combat, par type d'attaque (PvE solo).
      *  Lu en fin de combat (finishBattle) pour alimenter le défi. Absent en PvP. */
@@ -438,6 +439,8 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         events.push({ kind: "hp", side: "enemy", hp: 0, max: maxHpOf(foe) })
         events.push({ kind: "hp", side: "player", hp: 0, max: maxHpOf(me) })
         state.stallTurns = 0
+        // L'attaque choisie ce tour ne part jamais → le store REMBOURSE son énergie (comme un K.O. avant d'agir, #4).
+        state.lastPlayerActed = playerAction.kind !== "move"
         checkFaints(state, events)
         return commit(state, events, rng, prev.turn, /*advance*/ true)
     }
@@ -863,6 +866,14 @@ function performMoveCore(state: BattleState, side: SideId, moveIndex: number, ev
         return
     }
 
+    // --- LANCE-SOLEIL (solarCharge) : PHASE 1 = absorbe la lumière, AUCUN dégât. Traitée AVANT l'accuracyCheck : une charge ne
+    //     rate pas (comme la concentration de Mitra-Poing). Le rayon part au tour suivant (PHASE 2 : branche twoTurn ci-dessous). ---
+    if (move.effect?.twoTurn && move.effect.solarCharge && attacker.chargingMove !== (slot?.moveId ?? move.id)) {
+        attacker.chargingMove = slot?.moveId ?? move.id
+        events.push({ kind: "message", text: `${displayName(attacker)} absorbe la lumière… le rayon partira au prochain tour !` })
+        return
+    }
+
     // --- Précision ---
     if (!accuracyCheck(move, attacker, defender, rng)) {
         attacker.swarmStacks = 0 // un raté brise aussi la frénésie de l'Essaim Vorace
@@ -873,10 +884,11 @@ function performMoveCore(state: BattleState, side: SideId, moveIndex: number, ev
     // --- Move à 2 TOURS (charge → décharge), ex. Surtension de VOLTA ---
     if (move.effect?.twoTurn) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
-            // PHASE 2 : libération automatique — frappe foudroyante (power 100, coup normal).
+            // PHASE 2 : libération automatique — frappe foudroyante (power 100, coup normal). LANCE-SOLEIL : le rayon, au power du move.
             attacker.chargingMove = undefined
-            events.push({ kind: "message", text: `${displayName(attacker)} libère sa décharge !` })
-            dealMoveDamage(state, side, { ...move, power: 100, effect: undefined }, rng, events)
+            const solar = !!move.effect.solarCharge
+            events.push({ kind: "message", text: solar ? `${displayName(attacker)} libère son rayon solaire !` : `${displayName(attacker)} libère sa décharge !` })
+            dealMoveDamage(state, side, { ...move, power: solar ? move.power : 100, effect: undefined }, rng, events)
             return
         }
         // PHASE 1 : décharge faible (power du move) + statChanges (ex. -2 Vitesse), puis on CHARGE.

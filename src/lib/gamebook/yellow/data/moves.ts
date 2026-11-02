@@ -29,7 +29,7 @@ export const MOVES: Record<string, MoveData> = {
     fouet_lianes: { id: "fouet_lianes", name: "Fouet Lianes", type: "PLANTE", power: 45, accuracy: 100, pp: 25, description: "Cingle avec des lianes." },
     tempete_verte: { id: "tempete_verte", name: "Tempête Verte", type: "PLANTE", power: 90, accuracy: 100, pp: 10, description: "Rafale de feuilles." },
     // LA plus forte attaque Plante : se charge un tour (absorbe la lumière) puis libère un rayon dévastateur.
-    lance_soleil: { id: "lance_soleil", name: "Lance-Soleil", type: "PLANTE", power: 120, accuracy: 100, pp: 10, effect: { twoTurn: true }, description: "Tour 1 : absorbe la lumière. Tour 2 : libère un rayon solaire dévastateur (120). La plus puissante des attaques Plante." },
+    lance_soleil: { id: "lance_soleil", name: "Lance-Soleil", type: "PLANTE", power: 120, accuracy: 100, pp: 10, effect: { twoTurn: true, solarCharge: true }, description: "Tour 1 : absorbe la lumière. Tour 2 : libère un rayon solaire dévastateur (120). La plus puissante des attaques Plante." },
     vampigraine: { id: "vampigraine", name: "Vampigraine", type: "PLANTE", power: 0, accuracy: 90, pp: 10, effect: { inflictVolatile: "SEEDED" }, description: "Draine des PV chaque tour." },
     // 🌸 RONCES VAMPIRES — signature de FLORAPANTHE (Sartay, 31/10/2026 : « une sorte de liane étrangleuse qui aspire la vie de l'hôte,
     //   la ralentit, diminue sa défense, sa précision, son attaque et sa spé »), apprise au niveau 85. Une vraie ATTAQUE (Plante,

@@ -24,8 +24,10 @@ import type { BattleMon } from "./types"
 const firstSpeciesTyped = (types: string[]) =>
     Object.values(SPECIES).find((s) => s.types.length === types.length && types.every((t, i) => s.types[i] === t))
 
-const pick = (self: BattleMon, foeSpeciesId: string): string => {
+const pick = (self: BattleMon, foeSpeciesId: string, outOfReach = false): string => {
     const foe = toBattleMon(createMonInstance(foeSpeciesId, 100))
+    // Hors de portée d'un seul coup (aucun K.O. possible ce tour), Vampigraine déjà posée : reste le choix du meilleur coup.
+    if (outOfReach) { foe.currentHp = 99999; foe.volatiles.SEEDED = 1 }
     const c = chooseAiAction(self, foe, [self], 0, "hof", new Rng(7))
     return c.kind === "move" ? self.moves[c.moveIndex ?? 0].moveId : c.kind
 }
@@ -44,10 +46,12 @@ describe("IA — le type transmuté d'une fusion est pris en compte", () => {
 
             // PSY et SPECTRE encaissent ×2 des TÉNÈBRES. Avant le correctif : lance_flammes (l'IA croyait
             // Lance-Soleil PLANTE). Après : lance_soleil, qui frappe deux fois plus fort.
+            // Lance-Soleil charge un tour avant de frapper (01/11/2026) : il n'ACHÈVE jamais ce tour-ci, l'IA prend alors le coup
+            //   qui achève. D'où une cible hors de portée : le type transmuté décide (Plante/Psy : ×2 en Ténèbres, ×0,5 lu Plante).
             for (const types of [["PSY"], ["SPECTRE"], ["PLANTE", "PSY"]]) {
                 const sp = firstSpeciesTyped(types)
                 if (!sp) continue // le dex évolue : on n'échoue pas sur un typage absent
-                expect(pick(self, sp.id), `cible ${sp.name} [${types.join("/")}]`).toBe("lance_soleil")
+                expect(pick(self, sp.id, true), `cible ${sp.name} [${types.join("/")}]`).toBe("lance_soleil")
             }
         } finally { disposeFusionLeagueTeam(team) }
     })
@@ -60,7 +64,8 @@ describe("IA — le type transmuté d'une fusion est pris en compte", () => {
             const cendre = team.find((f) => getSpecies(f.speciesId)?.name === "Cendrecerf")!
             const self = toBattleMon(cendre.instance)
             const plante = firstSpeciesTyped(["PLANTE"])
-            if (plante) expect(pick(self, plante.id)).toBe("lance_flammes")
+            // Hors de portée, comme au-dessus : sinon Lance-Flammes achève d'emblée et Lance-Soleil (qui charge) n'est jamais comparé.
+            if (plante) expect(pick(self, plante.id, true)).toBe("lance_flammes")
         } finally { disposeFusionLeagueTeam(team) }
     })
 })

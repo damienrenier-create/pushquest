@@ -6,7 +6,7 @@
 // combat (engine.ts), de resolveTurnPvp, du format des messages réseau, ou de
 // toute logique qui influe sur le déterminisme. Deux clients de versions
 // différentes refusent de se battre (sinon désync silencieuse — cf. note casino-pvp).
-export const MP_VERSION = "mp-2026-11-01.4" // bump : PvP — verrou de charge : Tunnel/Vol/Mitra-Poing… obligés de finir, comme en solo (01/11)
+export const MP_VERSION = "mp-2026-11-01.5" // bump : Lance-Soleil — tour 1 = charge (aucun dégât), tour 2 = le rayon (120) (01/11)
 
 /** Le mode debug multijoueur est-il actif ? (?mpdebug dans l'URL, ou localStorage). */
 export function mpDebugEnabled(): boolean {

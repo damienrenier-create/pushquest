@@ -57,8 +57,11 @@ export interface MoveEffect {
     /** Move à haute chance de critique (Gen 1 : ratio basé sur la vitesse de base ×8). */
     highCrit?: boolean
     /** Move à DEUX TOURS : tour 1 = décharge faible (power du move) + statChanges, puis le Daemon
-     *  est verrouillé et LIBÈRE automatiquement au tour suivant une frappe forte (power 60, highCrit). */
+     *  est verrouillé et LIBÈRE automatiquement au tour suivant une frappe forte (power 100). Ex. Surtension. */
     twoTurn?: boolean
+    /** LANCE-SOLEIL (avec twoTurn) : tour 1 = absorbe la lumière (AUCUN dégât, ne rate jamais), tour 2 = le rayon frappe
+     *  au power DU MOVE (120), pas la décharge à 100 de Surtension. */
+    solarCharge?: boolean
     /** KAMIKAZE : après avoir infligé ses dégâts, l'attaquant tombe à 1 PV (au lieu de s'auto-K.O.
      *  comme une vraie Destruction). Ex. « Détonation » de Bouh → reste systématiquement à 1 PV. */
     selfHpToOne?: boolean

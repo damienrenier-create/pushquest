@@ -147,13 +147,13 @@ describe("Rancœur Céleste — les attaques SUR SOI marchent contre un Daemon i
         expect(P(s).stages.atk).toBe(0)
         expect(E(s).stages.atk).toBe(0)
     })
-    it("classement FIGÉ de tout le jeu : 16 statuts sur soi, 3 préparations ; toute autre attaque vise l'adversaire", () => {
+    it("classement FIGÉ de tout le jeu : 16 statuts sur soi, 4 préparations ; toute autre attaque vise l'adversaire", () => {
         const all = Object.values(MOVES)
         expect(all.filter((m) => m.power <= 0 && !targetsFoe(m, false)).map((m) => m.id).sort()).toEqual([
             "aimantation", "aromatherapie", "carapace_diamant", "cristallisation", "danse_fauve", "danse_lames", "elan", "focalisation",
             "linceul", "machination", "mirage", "mur_de_fer", "rancoeur_celeste", "repos", "reprise_ailes", "visee",
         ])
-        expect(all.filter((m) => m.power > 0 && !targetsFoe(m, false)).map((m) => m.id).sort()).toEqual(["mitra_poing", "tunnel", "vol"])
+        expect(all.filter((m) => m.power > 0 && !targetsFoe(m, false)).map((m) => m.id).sort()).toEqual(["lance_soleil", "mitra_poing", "tunnel", "vol"])
         for (const m of all) if (m.power > 0) expect(targetsFoe(m, true), m.id).toBe(true) // phase 2 / attaque normale : vise l'adversaire
     })
 })

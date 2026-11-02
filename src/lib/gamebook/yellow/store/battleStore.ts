@@ -23,7 +23,7 @@ import type { AiLevel } from "../battle/ai"
 import { isVanished, isVanishMove, VANISH_LINES } from "../battle/vanish"
 import type { MonInstance, PokeType, MoveSlot, BattleMon, SpeciesData } from "../battle/types"
 import { markSeen, markCaught, getPokedex, recordSeenZone, recordFirstCatch } from "./pokedexStore"
-import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam, thiefCatchCharges, consumeThiefCatch, thiefHealsUsable, consumeThiefHeal, thiefMinitelCalls, consumeThiefMinitelCall, thiefFreeFightsUsable, consumeThiefFreeFight, recordThiefFrenzyCapture, consumeThiefFrenzyStartMessage } from "./playerStore"
+import { getPlayer, getCurrentPlayerId, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, refundReps, awardBadge, recordSbireWin, grantReps, grantBonusEnergyUncapped, logEnergyIncome, addItem, recordPvpResult, recordEvo3IfFinal, recordTeamCompoAchievements, recordCaptureResult, recordBattleLoss, resetFoeLossStreak, recordTrainerWinNoKo, recordPvpUse, recordPvpDamage, recordDomeUse, recordFrontierUse, recordAceDefeat, recordAceStreakLoss, grantCt, ctAlreadyReceived, markGekrocResolved, recordHhCollectorWin, setChampion, recordLeagueCompoAchievements, awardLeagueCompoMarkers, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, isBallLocked, setFusionLeagueCarry, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, ananasVariant, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, isAbundanceCurseActive, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markSeenThisRun, unlockFichesFromSeen, archivisteMatchesToday, recordArchivisteWin, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter, hasSurfCt, grantSurfCt, markSurferRematchDone, getCurrentMapId, getGameMode, getClan, getClanTrainPeaks, setClanTrainPeaks, setDailyMarker, isMinitelUnlocked, genieCatchCharges, consumeGenieCatchCharge, recoverStolen, hasWildHealPerk, healStandingTeam, thiefCatchCharges, consumeThiefCatch, thiefHealsUsable, consumeThiefHeal, thiefMinitelCalls, consumeThiefMinitelCall, thiefFreeFightsUsable, consumeThiefFreeFight, recordThiefFrenzyCapture, consumeThiefFrenzyStartMessage } from "./playerStore"
 import { getItem } from "../data/items"
 import { getTodayISO } from "@/lib/challenge"
 import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
@@ -873,6 +873,7 @@ export function submitPlayerAction(action: PlayerAction) {
     }
     // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
     let paidMoveCost = 0
+    let repsBeforeBilling = 0 // solde juste avant la facture : un remboursement (#4) n'y redescend jamais en dessous
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
         // RUN 3 — DERNIÈRE ATTAQUE : si l'énergie restante ne couvre plus le prix, l'attaque coûte tout ce qui reste (cf.
         //   run3LastAttackPay ; l'écran de combat affiche le même montant).
@@ -881,6 +882,7 @@ export function submitPlayerAction(action: PlayerAction) {
             // Cap d'énergie PAR COMBAT (relevé par les badges d'arène).
             const cap = battleEnergyCap(getPlayer().badges.length)
             if (storeState.energySpent + cost > cap) return // plus d'énergie ce combat (UI grise déjà)
+            repsBeforeBilling = getPlayer().reps
             if (!spendReps(cost)) return                    // solde global insuffisant
             // VOLET « reps en Ligue » : si ce combat est un affrontement de Ligue (y_ligue_*), on compte aussi ces
             //   reps à part (miroir de energySpent : bump ici, pas de dé-bump au refund #4 → cohérent avec energyConsumed).
@@ -911,11 +913,11 @@ export function submitPlayerAction(action: PlayerAction) {
         const would = moveCostRepsForAction(battle, action.moveIndex, undefined, true)
         if (would > 0) { next.thiefFreeCounted = true; next.thiefFreeWould = (battle.thiefFreeWould ?? 0) + would }
     }
-    // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
-    // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
+    // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide ; ou HARA-KIRI² déclenché
+    // avant elle) → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
     // 🌩️ RANCŒUR CÉLESTE : l'action d'un Daemon INVISIBLE qui échoue à surgir (1 fois sur 2) est JOUÉE → jamais remboursée.
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
-        grantReps(paidMoveCost, true) // force : on rend au joueur SA propre énergie (attaque non partie) — même en run 3
+        refundReps(paidMoveCost, repsBeforeBilling) // SA propre énergie (attaque non partie), même en run 3 ; sans rogner un surplus au-dessus du cap
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
     }
     // ZONE DE COMBAT — FÉTICHES (Daemon + attaque) du Dôme, de la Tour et de l'Usine, comptés ICI, au chemin SOLO où ces

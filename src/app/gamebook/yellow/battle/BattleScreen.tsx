@@ -446,11 +446,11 @@ export default function BattleScreen() {
                     battle.thiefFree && !lastAttack ? "🥷 Offert par le Voleur" : "",
                     meVeiled && !locked ? (freePvp || battle.thiefFree ? VANISH_UI.menuSelfFree : VANISH_UI.menuSelf) : "",
                     // Cible invisible : coup sûr qui peut l'AFFECTER (Météores, Normal, ne fait rien à un Spectre) → il touche ;
-                    //   phase 1 de Mitra-Poing / Tunnel / Vol → la préparation marche, le coup manquera si elle l'est encore ;
+                    //   phase 1 de Mitra-Poing / Tunnel / Vol / Lance-Soleil → la préparation marche, le coup manquera si elle l'est encore ;
                     //   attaque SUR SOI (Repos, Danse-Lames…) → elle marche, rien à signaler ; toute autre attaque la manquera.
                     foeVeiled && mv && !isVanishMove(mv) ? (
                         mv.effect?.sureHit && sureHitAffects(mv, player, enemy) ? VANISH_UI.menuFoeSure
-                            : (mv.effect?.focusCharge || mv.effect?.dig || mv.effect?.fly) && player.chargingMove !== slot.moveId ? VANISH_UI.menuFoeCharge
+                            : (mv.effect?.focusCharge || mv.effect?.dig || mv.effect?.fly || mv.effect?.solarCharge) && player.chargingMove !== slot.moveId ? VANISH_UI.menuFoeCharge
                                 : targetsFoe(mv, player.chargingMove === slot.moveId) ? VANISH_UI.menuFoe : ""
                     ) : "",
                     // 🔒 Verrou de charge : rappel COURT et en DERNIER (le cadre de détail est petit : les avertissements ci-dessus passent avant).

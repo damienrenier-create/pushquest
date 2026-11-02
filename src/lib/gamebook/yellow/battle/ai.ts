@@ -227,7 +227,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             else {
                 // KO : le coup TUE la cible ce tour (dégâts RÉELS estimés, sans crit, aléa moyen 0,9 → conservateur)
                 //   ≥ PV restants → priorité ABSOLUE (finir le travail). Pondéré par la précision (KO fiable > KO risqué).
-                const est = computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: stab > 1, typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
+                //   LANCE-SOLEIL (solarCharge) : le tour 1 ne fait qu'absorber la lumière → aucun K.O. possible CE tour.
+                const est = mv.effect?.solarCharge ? 0 : computeDamage({ level: self.level, power: mv.power, attack: off, defense: def, stab: stab > 1, typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
                 const isKO = est >= foe.currentHp
                 if (isKO) score += 1e6 * acc
                 // PRIORITÉ : un KO PRIORITAIRE sécurise le kill même en étant plus lent → préféré à un KO non-prioritaire.
@@ -371,11 +372,11 @@ function estMoveDamage(self: BattleMon, foe: BattleMon, moveId: string): number 
     const def = phys ? fs.def : (foe.frozenSpd ?? fs.spc)
     return computeDamage({ level: self.level, power, attack: off, defense: def, stab: selfSp.types.includes(mt), typeEff: eff, isCrit: false, randomFactor: 0.9 }).damage
 }
-/** Index du meilleur coup (PP > 0) qui MET KO le foe ce tour, ou -1. */
+/** Index du meilleur coup (PP > 0) qui MET KO le foe ce tour, ou -1. Lance-Soleil n'en est jamais un (tour 1 = charge). */
 function bestKoMove(self: BattleMon, foe: BattleMon): number {
     let bi = -1, bd = 0
     self.moves.forEach((s, i) => {
-        if (s.pp <= 0) return
+        if (s.pp <= 0 || getMove(s.moveId)?.effect?.solarCharge) return
         const d = estMoveDamage(self, foe, s.moveId)
         if (d >= foe.currentHp && d > bd) { bd = d; bi = i }
     })

@@ -2140,14 +2140,24 @@ export function logDialogueMessage(npcId: string, name: string, lines: readonly 
 
 /** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté.
  *  RUN 3 (concours) : l'énergie a une SOURCE UNIQUE (500 de départ + paliers d'arène) → tout crédit est BLOQUÉ
- *  sauf `force` (utilisé par startRun3, les paliers d'arène, et le remboursement d'une attaque qui n'est jamais
- *  partie = on rend au joueur SA propre énergie). Casino/ACE/sbire/dresseurs/gauntlet → bloqués en run 3. */
+ *  sauf `force` (utilisé par startRun3 et les paliers d'arène ; le remboursement d'une attaque qui n'est jamais
+ *  partie passe par refundReps). Casino/ACE/sbire/dresseurs/gauntlet → bloqués en run 3. */
 export function grantReps(n: number, force = false): number {
     if (runMode() === "run3" && !force) return 0
     const before = st.reps
     st = { ...st, reps: Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(n))) }
     emit()
     return st.reps - before
+}
+
+/** REMBOURSE une attaque qui n'est jamais partie (combat, #4) : on rend au joueur SA propre énergie, même en run 3. À la
+ *  différence de grantReps, ne rogne pas un solde qui était AU-DESSUS du cap avant la facture (surplus d'un cadeau souple, cf.
+ *  grantRepsSoftCap) : plafond = max(cap, `before`), le solde lu juste avant spendReps. Renvoie le montant rendu. */
+export function refundReps(n: number, before: number): number {
+    const prev = st.reps
+    st = { ...st, reps: Math.min(Math.max(st.repsCap, before), prev + Math.max(0, Math.floor(n))) }
+    emit()
+    return st.reps - prev
 }
 
 /** Crédite INTÉGRALEMENT (cash-out poker) : relève le cap AU MINIMUM nécessaire pour ne JAMAIS tronquer

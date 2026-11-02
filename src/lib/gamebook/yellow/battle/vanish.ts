@@ -41,11 +41,11 @@ const SELF_ONLY_EFFECTS: ReadonlySet<string> = new Set(["chance", "healPct", "re
  *  (Sartay, 01/11/2026 ; même règle pour Rancœur Céleste et pour Tunnel/Vol) :
  *  - un statut SUR SOI (tous ses effets touchent le lanceur : soin, Repos, hausses de stats sur soi, carapace…) ;
  *  - la PHASE 1 d'un move en deux tours qui ne frappe pas encore : concentration (Mitra-Poing), creuser (Tunnel), s'envoler
- *    (Vol). `releasing` = le lanceur libère sa charge (phase 2) : ce coup-là vise l'adversaire.
+ *    (Vol), absorber la lumière (Lance-Soleil). `releasing` = le lanceur libère sa charge (phase 2) : ce coup-là vise l'adversaire.
  *  Tout autre effet (statut infligé, stat adverse, dégâts fixes, vol de boosts, Brume Sporale…) vise l'adversaire. */
 export function targetsFoe(mv: MoveData, releasing: boolean): boolean {
     const fx = mv.effect
-    if (!releasing && (fx?.focusCharge || fx?.dig || fx?.fly)) return false
+    if (!releasing && (fx?.focusCharge || fx?.dig || fx?.fly || fx?.solarCharge)) return false
     if (mv.power > 0) return true
     if (!fx) return false // ne fait rien (« Mais rien ne se passe… ») : rien à manquer
     return Object.entries(fx).some(([k, v]) => v !== undefined && (!SELF_ONLY_EFFECTS.has(k)
